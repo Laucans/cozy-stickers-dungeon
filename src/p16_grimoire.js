@@ -25,7 +25,7 @@ const WIKI = {
     <p>Un chantier porte une horloge de 4, 6 ou 8 segments. À chaque {c:nuit|aube}, tes ouvriers en remplissent ${CONSTS.WORK}, plus 1 par diablotin et par orque (2 s’ils sont ravis). Le plus ancien chantier passe en premier.</p>
     <ul><li><b>Coup de pouce</b> : 2 or pour 1 segment tout de suite, depuis la fiche du chantier.</li><li><b>Décoller</b> une pièce terminée rend la moitié de son prix ; un chantier annulé est remboursé.</li><li>Les <b>couloirs</b> se posent instantanément et relient tout.</li></ul>
     <p>Voir aussi {c:regles}, {c:portes} et {c:meubler}.</p>` },
-  regles: { cat: 'build', t: 'Règles de placement', x: () => `<ul><li>Une pièce se colle sur le terrain nu du domaine et doit <b>toucher</b> le château (une pièce ou un couloir). Ses murs viennent avec elle.</li><li>La {room:tour} doit toucher le bord du domaine.</li>
+  regles: { cat: 'build', t: 'Règles de placement', x: () => `<ul><li>Une pièce doit <b>toucher</b> le château (une pièce ou un couloir) et rester dans les remparts.</li><li>La {room:tour} doit toucher les remparts.</li>
     <li>Certaines pièces veulent être <b>loin du porche</b> (en pas) : ${Object.keys(ROOMS).filter(k => ROOMS[k].far).map(k => `{room:${k}} ${ROOMS[k].far}`).join(', ')}.</li><li>Des pièces sont <b>uniques</b> ou demandent un {c:paliers|palier}. Chaque {c:themes|thème} offre sa pièce unique.</li>
     <li><b>Voisinage</b> : ${Object.keys(ROOMS).filter(k => ROOMS[k].syn).map(k => `{room:${k}} contre {room:${ROOMS[k].syn.adj}}`).join(', ')} donnent un bonus.</li></ul>` },
   portes: { cat: 'build', t: 'Portes et chemins', x: () => `<p>Une porte s’ouvre toute seule entre un couloir et sa voisine. Entre deux pièces collées, une seule porte s’ouvre, au milieu du mur commun.</p>
@@ -104,7 +104,7 @@ function wikiArticle(id) {
       <p>${esc(r.desc || '')}</p>${statRows(r) ? `<h3>Effets de base</h3><div>${statRows(r)}</div>` : ''}
       ${furn.length ? `<h3>Meubles</h3><p>${furn.map(k => `{furn:${k}}`).join(', ')}</p>` : ''}${r.preset ? `<h3>Livrée avec</h3><p>${r.preset.map(k => `{furn:${k}}`).join(', ')}</p>` : ''}
       ${(r.attracts || []).length ? `<h3>Attire</h3><p>${r.attracts.map(s => `{sp:${s}}`).join(', ')} (une fois meublée)</p>` : fans.length ? `<h3>Attire</h3><p>${fans.map(s => `{sp:${s}}`).join(', ')}</p>` : ''}
-      <h3>Règles</h3><ul>${r.edge ? '<li>Doit toucher le bord du domaine.</li>' : ''}${r.far ? `<li>À ${r.far} pas du porche au moins.</li>` : ''}${r.unique ? '<li>Unique.</li>' : ''}${r.open ? '<li>À ciel ouvert : entourée de haies.</li>' : ''}${r.syn ? `<li>Bonus si elle touche {room:${r.syn.adj}}.</li>` : ''}<li>Voir {c:regles} et {c:construire}.</li></ul>`;
+      <h3>Règles</h3><ul>${r.edge ? '<li>Doit toucher les remparts.</li>' : ''}${r.far ? `<li>À ${r.far} pas du porche au moins.</li>` : ''}${r.unique ? '<li>Unique.</li>' : ''}${r.open ? '<li>À ciel ouvert : entourée de haies.</li>' : ''}${r.syn ? `<li>Bonus si elle touche {room:${r.syn.adj}}.</li>` : ''}<li>Voir {c:regles} et {c:construire}.</li></ul>`;
   }
   if (kind === 'furn') {
     const f = FURN[key]; if (!f) return '<p>Article introuvable.</p>';

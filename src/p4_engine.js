@@ -222,7 +222,7 @@ function availability(kind, t) {
 /* ---------- placement ---------- */
 function checkRoom(t, x, y, w, h) {
   const d = ROOMS[t];
-  if (x < 0 || y < 0 || x + w > W || y + h > H) return 'Hors du domaine';
+  if (x < 0 || y < 0 || x + w > W || y + h > H) return 'Hors des remparts';
   for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) if (roomAt(x + dx, y + dy)) return 'Cet endroit est déjà occupé';
   const touching = [];
   for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) for (const [ax, ay] of DIRS) {
@@ -231,7 +231,7 @@ function checkRoom(t, x, y, w, h) {
     if (roomAt(nx, ny)) touching.push([nx, ny]);
   }
   if (!touching.length) return 'Doit toucher une pièce ou un couloir du château';
-  if (d.edge && Z === 0 && !(x === 0 || y === 0 || x + w === W || y + h === H)) return 'Doit toucher le bord du domaine';
+  if (d.edge && Z === 0 && !(x === 0 || y === 0 || x + w === W || y + h === H)) return 'Doit toucher les remparts';
   if (d.far && Z === 0) {
     const dist = gateDist(); let best = Infinity;
     touching.forEach(([nx, ny]) => { const v = dist.get(ny * W + nx); if (v !== undefined) best = Math.min(best, v + 1); });
@@ -550,15 +550,14 @@ const floorsDug = () => new Set(S.rooms.map(zOf).filter(z => z !== 0)).size;
 const floorRoot = z => S.rooms.find(o => o.land && zOf(o) === z);
 const floorsOpen = () => [...new Set([0, ...S.rooms.map(zOf)])].sort((a, b) => b - a);
 const SIZE_MAX = 2, SIZE_COST = [null, { g: 12, s: 16 }, { g: 22, s: 28 }];
-// agrandir le domaine (terrain constructible)
 function expandStatus() { const n = (S.size || 0) + 1; if (n > SIZE_MAX) return null; return { n, need: n, cost: SIZE_COST[n], ok: S.tier >= n && canAfford(SIZE_COST[n]) }; }
 // agrandir : une rangée de chaque côté et deux au fond ; tout le château glisse d'autant
 function expandCastle() {
-  const st = expandStatus(); if (!st) return 'Le domaine est déjà au plus large';
+  const st = expandStatus(); if (!st) return 'Les remparts sont déjà au plus large';
   if (S.tier < st.need) return `Palier ${st.need} requis`; if (!canAfford(st.cost)) return `Il te faut ${costText(st.cost)}`;
   pay(st.cost); [...S.rooms, ...S.furn, ...S.defs].forEach(o => { o.x += 1; o.y += 2; });
   S.size = st.n; dirty();
-  addLog(`Le domaine s’agrandit : il fait maintenant ${W}×${H} cases.`, 'ev');
+  addLog(`Les remparts s’élargissent : le château fait maintenant ${W}×${H} cases.`, 'ev');
   return null;
 }
 

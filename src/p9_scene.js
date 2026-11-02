@@ -22,10 +22,31 @@ const footprint = r => [WP(r.x, r.y), WP(r.x + r.w, r.y), WP(r.x + r.w, r.y + r.
 const worldXf = () => ctx.setTransform(V.dpr * CAM.s, 0, 0, V.dpr * CAM.s, V.dpr * CAM.x, V.dpr * CAM.y);
 const screenXf = () => ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
 
-// plus de remparts ni de murs déjà là : le domaine est un terrain nu, seules les pièces ont des murs
-function backDraw(t) { }
+function backDraw(t) {
+  if (Z > 0) { [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => { for (let i = 0; i < n; i++) rampart(ctx, lerp2(A, B, i / n), lerp2(A, B, (i + 1) / n), RAMP_LOW, side, 2); }); return; }
+  if (Z < 0) { [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => { for (let i = 0; i < n; i++) { const a = lerp2(A, B, i / n), b = lerp2(A, B, (i + 1) / n); texQuad(ctx, texWall('rock', i % 3), a, b, 150, side ? .35 : .1); } }); return; }
+  tower(ctx, -.5, -.5, .62, 210, '#9c2f2a', t);
+  [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => {
+    for (let i = 0; i < n; i++) rampart(ctx, lerp2(A, B, i / n), lerp2(A, B, (i + 1) / n), RAMP_H, side, 2);
+    for (let i = 1; i < n; i += 3) { const p = lerp2(A, B, (i + .5) / n); ln(ctx, [[p[0], p[1] - RAMP_H * .5 + 8], [p[0], p[1] - RAMP_H * .5 - 4]], '#2a1c16', 5); ln(ctx, [[p[0], p[1] - RAMP_H * .5 + 8], [p[0], p[1] - RAMP_H * .5 - 4]], '#6a4a2a', 2.6); drawFlame(ctx, p[0], p[1] - RAMP_H * .5 - 6, 1.7, t, i * 3 + (side ? 1 : 0)); }
+  });
+}
 function frontItems(list, t) {
-  if (Z === 0) braziers().forEach(([x, y]) => list.push({ d: x + y, f: () => { const [wx, wy] = WP(x, y); drawSprite(ctx, getSprite('x', 'brazier'), wx, wy, 1); drawFlame(ctx, wx, wy - 58, 2.1, t, x); } }));
+  if (Z > 0) { for (let x = 0; x < W; x++) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW * .7, false, 2) }); for (let y = 0; y < H; y++) list.push({ d: W + y + .6, f: () => rampart(ctx, WP(W, y), WP(W, y + 1), RAMP_LOW * .7, true, 2) }); return; }
+  if (Z < 0) return;
+  for (let x = 0; x < W; x++) if (x !== GATE.x) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW, false, 2) });
+  for (let y = 0; y < H; y++) list.push({ d: W + y + .6, f: () => rampart(ctx, WP(W, y), WP(W, y + 1), RAMP_LOW, true, 2) });
+  list.push({ d: W - 1, f: () => tower(ctx, W + .5, -.5, .56, 175, '#9c2f2a', t) });
+  list.push({ d: H - 1, f: () => tower(ctx, -.5, H + .5, .56, 175, '#9c2f2a', t) });
+  list.push({ d: W + H + 1.4, f: () => tower(ctx, W + .45, H + .45, .5, 60, '#9c2f2a', t) });
+  list.push({ d: GATE.x + H + .55, f: () => {
+    tower(ctx, GATE.x - .02, H + .12, .22, 104, '#9c2f2a', t); tower(ctx, GATE.x + 1.02, H + .12, .22, 104, '#9c2f2a', t);
+    const A = WP(GATE.x, H), B = WP(GATE.x + 1, H), hh = 78;
+    texQuad(ctx, texWall('low', 1), [A[0], A[1] - hh], [B[0], B[1] - hh], 20, 0); capQuad(ctx, [A[0], A[1] - hh - 20], [B[0], B[1] - hh - 20], 0, [7, -3.5], '#a39886');
+    for (let i = 1; i < 6; i++) { const p = lerp2(A, B, i / 6); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#1e1612', 3); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#5a5560', 1.4); }
+    ln(ctx, [[A[0], A[1] - hh * .64], [B[0], B[1] - hh * .64]], '#5a5560', 2.4);
+  } });
+  braziers().forEach(([x, y]) => list.push({ d: x + y, f: () => { const [wx, wy] = WP(x, y); drawSprite(ctx, getSprite('x', 'brazier'), wx, wy, 1); drawFlame(ctx, wx, wy - 58, 2.1, t, x); } }));
 }
 
 function drawScene(t) {
@@ -38,10 +59,8 @@ function drawScene(t) {
   if (Z > 0) { screenXf(); drawSky(t); }
   worldXf(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const M = TERRAIN_M, tt = TERRAIN_T;
-  if (Z > 0) {   // en hauteur : rien sous les pieds, sauf l'ombre de l'étage du dessous pour s'y retrouver
-    path(ctx, footprint({ x: 0, y: 0, w: W, h: H })); ctx.fillStyle = 'rgba(190,200,255,.05)'; ctx.fill(); ctx.setLineDash([12, 10]); ctx.strokeStyle = 'rgba(200,210,255,.3)'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
-    S.rooms.filter(r => zOf(r) === Z - 1 && r.built).forEach(r => { path(ctx, footprint(r)); ctx.fillStyle = 'rgba(230,220,255,.07)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,220,255,.16)'; ctx.lineWidth = 1.5; ctx.stroke(); });
-  }
+  if (Z > 0) { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(0, 0)); ctx.drawImage(roofTexture(), 0, 0); ctx.restore(); }
+
   else { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(-M, -M)); ctx.drawImage(Z < 0 ? caveTexture() : terrainTexture(), 0, 0); ctx.restore(); }
   const here = o => zOf(o) === Z, actors = [...ACT.values()].filter(a => (a.z || 0) === Z), heros = Z === 0 ? HEROS : [];
   for (const r of S.rooms) {

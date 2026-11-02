@@ -181,12 +181,12 @@ function openTier() {
     <div class="btnrow"><button class="sbtn pri" type="button" id="tGo" ${st.ok ? '' : 'disabled'}>⭐ Monter de palier</button></div>`
     : `<h2>⭐ Palier ${S.tier}</h2><p>Ton château a atteint le palier maximal. Bravo, Maître !</p>`;
   html += `<h3>🪜 Étages (${fl}/${Math.min(3, S.tier)})</h3><p class="hint">Chaque palier permet d’ouvrir un étage : vers le haut avec l’<b>Escalier de la tour</b> (les Hauteurs, puis les Cimes : jardin suspendu, volière, belvédère), ou vers le bas avec l’<b>Escalier des caves</b> (les Caves, puis les Profondeurs : mine, reliquaire, lac souterrain). Chaque direction a ses stickers et attire ses propres créatures rares.</p>`;
-  html += ex ? `<h3>🧱 Agrandir le domaine</h3><p>Le terrain constructible passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
+  html += ex ? `<h3>🧱 Agrandir les remparts</h3><p>Le château passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
     <ul class="req"><li>${S.tier >= ex.need ? '✅' : '⬜'} Palier ${ex.need}</li><li>${canAfford(ex.cost) ? '✅' : '⬜'} Payer ${costText(ex.cost)}</li></ul>
-    <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir le domaine</button></div>` : '<h3>🧱 Domaine</h3><p class="hint">Le domaine est au plus large.</p>';
+    <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir les remparts</button></div>` : '<h3>🧱 Remparts</h3><p class="hint">Les remparts sont au plus large.</p>';
   const m = openModal(html + '<div class="mfoot"><button class="sbtn" type="button" data-close>Plus tard</button></div>', { label: 'Palier' });
   m.querySelector('#tGo') && m.querySelector('#tGo').addEventListener('click', () => { if (!run('tierUp')) return; sfx('chime'); closeModal(); afterChange(); banner(`⭐ Palier ${S.tier} !`, 'De nouveaux stickers sont disponibles', 1800); });
-  m.querySelector('#tExp') && m.querySelector('#tExp').addEventListener('click', () => { if (!run('expand')) return; sfx('chime'); closeModal(); afterChange(); CAM.user = false; fitCamera(); banner('🧱 Domaine agrandi !', `Il fait maintenant ${W}×${H} cases`, 1800); });
+  m.querySelector('#tExp') && m.querySelector('#tExp').addEventListener('click', () => { if (!run('expand')) return; sfx('chime'); closeModal(); afterChange(); CAM.user = false; fitCamera(); banner('🧱 Remparts agrandis !', `Le château fait maintenant ${W}×${H} cases`, 1800); });
 }
 function openHelp() {
   openModal(`<div class="help"><h2>Le manuel du Maître</h2>
@@ -202,7 +202,7 @@ function openHelp() {
     <ul><li>Une pièce doit toucher le château. Une porte s’ouvre toute seule entre deux pièces voisines.</li>
     <li>Chaque pièce démarre en chantier, avec une horloge de 4, 6 ou 8 segments. Tes ouvriers en remplissent 2 par nuit, plus un par diablotin ou orque.</li>
     <li>Les <b>meubles</b> donnent leurs effets à la pièce et l’éclairent : lits au Dortoir, chaudron en Cuisine, candélabres… Une pièce meublée attire son espèce.</li>
-    <li>La Tour de guet touche le bord du domaine ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
+    <li>La Tour de guet touche les remparts ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
     <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Décoller un meuble est gratuit : il retourne dans ta barre.</li></ul>
     <h3>Créatures</h3>
     <ul><li>Caresse-les, offre-leur des friandises, pose la déco qu’elles aiment. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>

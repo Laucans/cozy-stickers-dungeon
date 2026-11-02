@@ -178,18 +178,13 @@ function terrainTexture() {
   if (TERRAIN) return TERRAIN;
   const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T;
   const c = texGrass(Wp, Hp, 77), g = c.getContext('2d'), R = rng(91);
-  // le domaine : de la terre nue, à peine piétinée ; on y colle ses pièces là où il n'y a rien
-  g.save(); rr(g, M * T - 6, M * T - 6, W * T + 12, H * T + 12, T * .4); g.clip();
-  g.fillStyle = 'rgba(118,94,60,.5)'; g.fillRect(M * T - 6, M * T - 6, W * T + 12, H * T + 12);
-  for (let i = 0; i < W * H * 3; i++) { const x = M * T + R() * W * T, y = M * T + R() * H * T, r = 6 + R() * 22; g.fillStyle = R() < .55 ? `rgba(138,110,72,${.14 + R() * .2})` : `rgba(96,126,62,${.12 + R() * .2})`; g.beginPath(); g.ellipse(x, y, r, r * .7, R() * 3, 0, 7); g.fill(); }
-  grunge(g, Wp, Hp, 92, .16); g.restore();
-  // une cordelette entre quatre piquets marque les limites du domaine
-  g.setLineDash([10, 9]); g.strokeStyle = 'rgba(232,208,156,.3)'; g.lineWidth = 2.4; rr(g, M * T - 4, M * T - 4, W * T + 8, H * T + 8, T * .3); g.stroke(); g.setLineDash([]);
-  [[0, 0], [W, 0], [0, H], [W, H]].forEach(([i, j]) => { g.fillStyle = '#4a3020'; g.beginPath(); g.arc((M + i) * T, (M + j) * T, 5, 0, 7); g.fill(); });
+  // dans les remparts, là où rien n'est construit : un plancher sobre, posé à plat
+  planks(g, M * T, M * T, W * T, H * T, T, 33, '#57493e');
   // route depuis le porche
   const rx = (M + GATE.x) * T, ry = (M + H) * T;
   g.save(); g.beginPath(); g.moveTo(rx - 4, ry); g.bezierCurveTo(rx - 10, ry + T, rx + T * .4, ry + T * 2, rx + T * .1, Hp); g.lineTo(rx + T * 1.2, Hp); g.bezierCurveTo(rx + T * 1.4, ry + T * 2, rx + T * 1.1, ry + T, rx + T + 4, ry); g.closePath();
-  g.fillStyle = '#7a5a3a'; g.fill(); g.clip(); grunge(g, Wp, Hp, 12, .35); for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(${R() < .5 ? '40,25,12' : '170,140,100'},.4)`; g.beginPath(); g.arc(rx - 10 + R() * T * 1.4, ry + R() * T * M, 1 + R() * 2, 0, 7); g.fill(); } g.restore();
+  g.fillStyle = '#7a5a3a'; g.fill(); g.clip(); grunge(g, Wp, Hp, 12, .35); for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(${R() < .5 ? '40,25,12' : '170,140,100'},.4)`; g.beginPath(); g.arc(rx - 10 + R() * T * 1.4, ry + R() * T * M, 1 + R() * 2, 0, 7); g.fill(); }
+  g.restore();
   // brume vers les bords
   const fog = g.createRadialGradient(Wp / 2, Hp / 2, Math.min(Wp, Hp) * .38, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(8,6,14,0)'); fog.addColorStop(1, 'rgba(8,6,14,.92)');
   g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
@@ -224,8 +219,9 @@ function caveTexture() {
   const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T, c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(57);
   g.fillStyle = '#211b18'; g.fillRect(0, 0, Wp, Hp);
   for (let i = 0; i < Wp * Hp / 1300; i++) { const x = R() * Wp, y = R() * Hp, r = 10 + R() * 40; g.fillStyle = shade('#2d2521', (R() - .5) * .5); g.beginPath(); g.ellipse(x, y, r, r * .6, R() * 3, 0, 7); g.fill(); }
-  g.fillStyle = 'rgba(150,125,95,.16)'; rr(g, M * T, M * T, W * T, H * T, T * .5); g.fill();
-  grunge(g, Wp, Hp, 58, .3);
+  // sous terre, là où rien n'est creusé : de la terre battue, tout simplement
+  earth(g, M * T, M * T, W * T, H * T, 58);
+  grunge(g, Wp, Hp, 58, .2);
   const fog = g.createRadialGradient(Wp / 2, Hp / 2, Math.min(Wp, Hp) * .3, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(6,4,8,0)'); fog.addColorStop(1, 'rgba(6,4,8,.96)');
   g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
   return CAVE = c;
@@ -233,9 +229,35 @@ function caveTexture() {
 // étages en hauteur : une grande terrasse dallée au sommet du château
 function roofTexture() {
   if (ROOF) return ROOF;
-  const T = TERRAIN_T, c = texFlag(W, H, T, 61, '#6a6670'), g = c.getContext('2d');
-  edgeAO(g, W * T, H * T, T * .4, .55);
+  const T = TERRAIN_T, c = mk(W * T, H * T); planks(c.getContext('2d'), 0, 0, W * T, H * T, T, 61, '#5a4c41');
   return ROOF = c;
+}
+// plancher sobre : trois planches par case, des joints discrets, presque pas de veinage (il doit rester au sol, sous les pièces)
+function planks(g, x0, y0, w, h, T, seed, base) {
+  const R = rng(seed), bh = T / 3;
+  g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip();
+  g.fillStyle = base; g.fillRect(x0, y0, w, h);
+  for (let y = y0, row = 0; y < y0 + h; y += bh, row++) {
+    let x = x0 - R() * T * 1.5;
+    while (x < x0 + w) {
+      const len = T * (1.5 + R() * 1.5); g.fillStyle = shade(base, (R() - .5) * .06); g.fillRect(x, y, len, bh);
+      g.fillStyle = 'rgba(24,17,12,.22)'; g.fillRect(x, y, 1.2, bh);
+      x += len;
+    }
+    g.fillStyle = 'rgba(24,17,12,.26)'; g.fillRect(x0, y, w, 1.3);
+    g.fillStyle = 'rgba(255,236,200,.035)'; g.fillRect(x0, y + 1.3, w, 1.1);
+  }
+  grunge(g, w + x0, h + y0, seed, .07);
+  g.restore();
+}
+// terre battue : un brun chaud, quelques taches et de rares cailloux
+function earth(g, x0, y0, w, h, seed) {
+  const R = rng(seed);
+  g.save(); rr(g, x0, y0, w, h, 18); g.clip();
+  g.fillStyle = '#5a4734'; g.fillRect(x0, y0, w, h);
+  for (let i = 0; i < w * h / 2600; i++) { const x = x0 + R() * w, y = y0 + R() * h, r = 14 + R() * 34; g.fillStyle = R() < .5 ? 'rgba(110,88,64,.16)' : 'rgba(58,44,32,.18)'; g.beginPath(); g.ellipse(x, y, r, r * .62, R() * 3, 0, 7); g.fill(); }
+  for (let i = 0; i < w * h / 9000; i++) { g.fillStyle = 'rgba(150,135,115,.35)'; g.beginPath(); g.ellipse(x0 + R() * w, y0 + R() * h, 2 + R() * 2.5, 1.5 + R() * 1.5, R() * 3, 0, 7); g.fill(); }
+  g.restore();
 }
 
 /* ---------- murs en pierre de taille ---------- */
