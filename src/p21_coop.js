@@ -84,7 +84,7 @@ function coopHostMsg(m, pk) {
     let err = null; try { err = f(m.a || {}); } catch (e) { err = 'Action impossible'; }
     if (err) { coopSend({ t: 'nack', to: m.from, err }); coopDirty(); return; }
     afterChange(); coopDirty();
-  } else if (m.t === 'cur') { Object.assign(p, { x: +m.x, y: +m.y, hand: Array.isArray(m.h) ? m.h : null, curAt: Date.now() }); }
+  } else if (m.t === 'cur') { Object.assign(p, { x: +m.x, y: +m.y, z: +m.z || 0, hand: Array.isArray(m.h) ? m.h : null, curAt: Date.now() }); }
   else if (m.t === 'ready') { p.ready = !!m.on; renderCoopBar(); coopSend({ t: 'peers', list: coopPeerList() }); if (m.on && [...COOP.peers.values()].every(x => x.ready)) toast('🌙 Tout le monde est prêt : lance la nuit quand tu veux !'); }
   else if (m.t === 'ping') { p.name = cleanName(m.name, 24) || p.name; p.ready = !!m.ready; }
   else if (m.t === 'chat') coopShowChat(p, m.text);
@@ -130,7 +130,7 @@ function coopGuestMsg(m) {
   if (m.t === 'welcome' && m.to === COOP.me.id) {
     if (COOP.role !== 'joining') return;
     clearTimeout(COOP.helloT); COOP.role = 'guest'; COOP.host = m.host; COOP.me.color = m.color || '#5ad1ff';
-    COOP.own = S; resetActors(); dropSticker(); closeModal(true); advisorHide();
+    COOP.own = S; Z = 0; resetActors(); dropSticker(); closeModal(true); advisorHide();
     coopApply(m, true); CAM.user = false; fitCamera(); setGuestBusy(!!m.busy);
     document.body.classList.add('coop-guest'); renderCoopBar(); sfx('chime');
     banner(`🤝 ${esc(S.name)}`, `Château de ${esc(m.host.name)}`, 1800);
@@ -154,7 +154,7 @@ function coopGuestMsg(m) {
     m.list.slice(0, 8).forEach(p => { if (p && p.id && p.id !== COOP.me.id) COOP.peers.set(p.id, { id: p.id, name: cleanName(p.name, 24) || 'Maître', color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#ffffff', ready: !!p.ready, host: !!p.host, at: Date.now() }); });
     renderCoopBar();
   }
-  else if (m.t === 'cur') { let p = COOP.peers.get(m.from); if (p) Object.assign(p, { x: +m.x, y: +m.y, hand: Array.isArray(m.h) ? m.h : null, curAt: Date.now() }); }
+  else if (m.t === 'cur') { let p = COOP.peers.get(m.from); if (p) Object.assign(p, { x: +m.x, y: +m.y, z: +m.z || 0, hand: Array.isArray(m.h) ? m.h : null, curAt: Date.now() }); }
   else if (m.t === 'chat') { const p = COOP.peers.get(m.from); if (p) coopShowChat(p, m.text); }
   else if (m.t === 'end') { toast(`${COOP.host.name} a fermé son château partagé. Retour chez toi !`); coopLeave(); }
 }
@@ -183,7 +183,7 @@ function coopLeave(silent) {
   Object.assign(COOP, { role: null, code: '', tag: '', key: null, sub: null, host: null, busy: false, ready: false, rev: 0 }); COOP.peers.clear();
   document.body.classList.remove('coop-guest');
   if (was === 'guest' || was === 'joining') {
-    if (COOP.own) { S = COOP.own; COOP.own = null; dirty(); resetActors(); V.dirty = true; UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false; setPhase('roder'); closeModal(true); renderAll(); CAM.user = false; fitCamera(); if (!silent) toast('🏰 De retour dans ton château.'); }
+    if (COOP.own) { S = COOP.own; COOP.own = null; Z = 0; dirty(); resetActors(); V.dirty = true; UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false; setPhase('roder'); closeModal(true); renderAll(); CAM.user = false; fitCamera(); if (!silent) toast('🏰 De retour dans ton château.'); }
     if (S && !S.started) setTimeout(openIntro, 300);
     valFlush();
   }
@@ -197,9 +197,9 @@ function coopCursor(e) {
   if (COOP.role !== 'host' && COOP.role !== 'guest') return;
   const now = performance.now(); if (now - COOP.curT < 230) return;
   const r = cv.getBoundingClientRect(), [gx, gy] = tileAtScreen(e.clientX - r.left, e.clientY - r.top);
-  const x = Math.round(gx * 4) / 4, y = Math.round(gy * 4) / 4, h = UI.hand ? [UI.hand.kind, UI.hand.t, UI.hand.w, UI.hand.h] : null, key = x + ',' + y + ',' + (h ? h.join(':') : '');
+  const x = Math.round(gx * 4) / 4, y = Math.round(gy * 4) / 4, h = UI.hand ? [UI.hand.kind, UI.hand.t, UI.hand.w, UI.hand.h] : null, key = x + ',' + y + ',' + Z + ',' + (h ? h.join(':') : '');
   if (key === COOP.curKey) return; COOP.curT = now; COOP.curKey = key;
-  coopSend({ t: 'cur', x, y, h });
+  coopSend({ t: 'cur', x, y, h, z: Z });
 }
 function coopShowChat(p, text) {
   const t = cleanName(text, 120); if (!t) return;
@@ -209,7 +209,7 @@ function coopChat() {
   const inp = $('#coopMsg'); if (!inp) return; const t = cleanName(inp.value, 120); if (!t) return;
   inp.value = ''; coopSend({ t: 'chat', text: t }); coopShowChat({ name: 'Toi' }, t);
 }
-const livePeers = () => [...COOP.peers.values()].filter(p => Number.isFinite(p.x) && Number.isFinite(p.y) && Date.now() - (p.curAt || 0) < 20000);
+const livePeers = () => [...COOP.peers.values()].filter(p => Number.isFinite(p.x) && Number.isFinite(p.y) && (p.z || 0) === Z && Date.now() - (p.curAt || 0) < 20000);
 function drawPeersWorld(t) {
   livePeers().forEach(p => {
     const col = hexRgb(p.color), h = p.hand, tx = Math.floor(p.x), ty = Math.floor(p.y);

@@ -8,7 +8,8 @@ function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.
 const UI = { tab: 'room', hand: null, busy: false, phase: 'roder', prev: {}, tracker: true };
 const PHASES = [['roder', 'Rôder'], ['calamite', 'Calamité'], ['raid', 'Raid'], ['contrecoup', 'Contrecoup'], ['aube', 'Aube']];
 const STAT_LABELS = { gold: ['💰', 'or / nuit'], mat: ['🪵', 'matériaux / nuit'], hype: ['🔥', 'notoriété / nuit'], food: ['🍲', 'repas'], beds: ['🛏️', 'lits'],
-  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde'], harass: ['🪨', 'courage retiré à l’arrivée'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'] };
+  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde'], harass: ['🪨', 'courage retiré à l’arrivée'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
+  sight: ['🔭', 'cases de carte en vue'], glow: ['✨', 'rayonnement'] };
 const statTags = o => Object.keys(STAT_LABELS).filter(k => o[k]).map(k => `<span class="tag2">${STAT_LABELS[k][0]} ${o[k] > 0 ? '+' : ''}${o[k]} ${STAT_LABELS[k][1]}</span>`).join('');
 const hearts = m => `<span class="hearts" aria-label="Humeur ${m} sur 5">${'❤️'.repeat(m)}<span class="off">${'🤍'.repeat(5 - m)}</span></span>`;
 const moodWord = m => m >= 4 ? 'Ravi·e (compétence ×2)' : m >= 2 ? 'Content·e' : m === 1 ? 'Boudeur·se (compétence éteinte)' : 'Furieux·se (compétence éteinte)';
@@ -26,7 +27,8 @@ function renderHUD() {
   $('#dname').textContent = S.name; $('#dtitle').textContent = castleTitle();
   const food = foodCap(), eat = eaters(), bd = beds(), n = S.creatures.length;
   const res = [['gold', 'Or', S.gold, 'Or : construire, meubler, monter de palier.'], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
-    ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
+    ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus il attire des héros puissants (et de beaux butins), et plus la carte se dévoile.'],
+    ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
     ['beds', 'Lits', `${n}/${bd}`, 'Créatures / lits. Sans lit libre, personne de nouveau ne s’installe.', n >= bd], ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food],
     ['tier', 'Palier', S.tier, 'Palier du château.'], ['night', 'Nuit', S.night, 'Nuit en cours.']];
   const box = $('#res');
@@ -52,6 +54,7 @@ function sheetGroups() {
   if (UI.tab === 'room') return [[null, ROOM_ORDER.map(t => ['room', t])]];
   if (UI.tab === 'def') return [[null, DEF_ORDER.map(t => ['def', t])]];
   if (UI.tab === 'decor') return [[null, DECOR_ORDER.map(t => ['furn', t])]];
+  if (UI.tab === 'arte') return [[null, ARTEFACTS.filter(k => (S.free[k] || 0) > 0 || hasItem(k)).map(t => ['furn', t])]];
   const by = {}; FURN_ORDER.forEach(t => { (by[FURN[t].room] = by[FURN[t].room] || []).push(['furn', t]); });
   return Object.keys(by).map(r => [ROOMS[r].name, by[r]]);
 }
@@ -70,6 +73,7 @@ function renderSheet() {
       sh.appendChild(b);
     }
   }
+  if (!sh.children.length && UI.tab === 'arte') sh.appendChild(el('div', 'empty', '<b>Aucun artefact pour l’instant.</b> Les héros vaincus en abandonnent, les expéditions en rapportent, et les marchands de la ville en vendent (à prix d’or).'));
 }
 function tipHTML(kind, t) {
   let html = '';
@@ -127,7 +131,14 @@ function renderHand(msg, tone) {
   hb.innerHTML = `${imgThumb(kind, t, 'mini')}<span class="msg ${tone || ''}">${msg ? esc(msg) : `<b>${esc(itemName(t))}</b> en main (${costText(costOf(kind, t))}). Touche le château pour coller.`}</span>` +
     (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>';
 }
-function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); syncActors(); }
+function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); }
+// sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit
+function renderFloors() {
+  const box = $('#floors'); if (!box) return;
+  const fl = floorsOpen(); if (fl.length < 2 && Z === 0) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = '<span class="flab">Étage</span>' + fl.map(z => `<button type="button" data-z="${z}" aria-pressed="${z === Z}" title="${FLOOR_NAMES[z]} (Page↑ / Page↓)">${z > 0 ? '▲' : z < 0 ? '▼' : '⌂'} ${FLOOR_SHORT[z]}</button>`).join('');
+}
 
 /* ---------- placement ---------- */
 function takeSticker(kind, t) {
@@ -168,7 +179,7 @@ function tryPlace(a, fromDrag) {
   const err = validate(a);
   if (err) { toast(err, true); sfx('bad'); if (fromDrag) dropSticker(); return; }
   const { kind, t, w, h } = UI.hand;
-  const e2 = cmd('place', { kind, t, x: a.x, y: a.y, w, h });
+  const e2 = cmd('place', { kind, t, x: a.x, y: a.y, w, h, z: Z });
   if (e2) { toast(e2, true); sfx('bad'); if (fromDrag) dropSticker(); return; }
   sfx('pop'); afterChange();
   const av = availability(kind, t);
@@ -211,7 +222,8 @@ function openRoom(id) {
   else if (!isHall(r)) html += `<h3>Effets</h3><div>${statTags(roomStats(r)) || '<span class="hint">Aucun effet pour l’instant : ajoute des meubles.</span>'}</div>`;
   if (d.syn) html += `<p class="hint">${neighborsTypes(r).has(d.syn.adj) ? '✅' : '➕'} Bonus si elle touche : ${ROOMS[d.syn.adj].name}.</p>`;
   if (d.attracts) html += `<p class="hint">Attire ${d.attracts.map(s => SPECIES[s].name + (SPECIES[s].tier && S.tier < SPECIES[s].tier ? ` (Palier ${SPECIES[s].tier})` : '')).join(' et ')} une fois meublée${furnished(r) ? ' ✅' : ''}.</p>`;
-  if (!isHall(r) && r.t !== 'porche') {
+  if (d.stairs) { const z2 = zOf(r) + (r.land ? -d.stairs : d.stairs); html += `<p>${r.land ? 'Ce palier ramène' : r.built ? 'Cet escalier mène' : 'Une fois terminé, cet escalier mènera'} vers <b>${esc(FLOOR_NAMES[z2])}</b>.</p>${r.built ? `<div class="btnrow"><button class="sbtn pri" type="button" id="mGoFloor">${z2 > zOf(r) ? '▲ Monter' : '▼ Descendre'} : ${esc(FLOOR_NAMES[z2])}</button></div>` : ''}`; }
+  else if (!isHall(r) && r.t !== 'porche') {
     html += `<h3>Meubles (${items.length}/${r.w * r.h})</h3><div class="flist">${items.map(f => `<div class="frow">${imgThumb('furn', f.t)}<span><b>${esc(FURN[f.t].name)}</b><br>${statTags(FURN[f.t])}</span>${f.fixed ? '<span class="hint">fixe</span>' : `<button class="sbtn" type="button" data-unstick="${f.id}">Décoller</button>`}</div>`).join('') || '<p class="hint">Aucun meuble.</p>'}</div>`;
     const can = (d.furn || []).filter(t => !(FURN[t].tier && S.tier < FURN[t].tier));
     if (can.length && items.length < r.w * r.h) html += `<h3>Ajouter</h3><div class="btnrow">${can.map(t => `<button class="sbtn" type="button" data-take="${t}">${imgThumb('furn', t, 'mini')} ${esc(FURN[t].name)} · ${costText(costOf('furn', t))}</button>`).join('')}</div>`;
@@ -227,6 +239,7 @@ function openRoom(id) {
     const u = e.target.closest('[data-unstick]'); if (u) { if (run('unstick', { id: u.dataset.unstick })) { sfx('peel'); afterChange(); openRoom(id); } return; }
     const tk = e.target.closest('[data-take]'); if (tk) { closeModal(); takeSticker('furn', tk.dataset.take); }
   });
+  q('#mGoFloor') && q('#mGoFloor').addEventListener('click', () => { closeModal(); setFloor(zOf(r) + (r.land ? -d.stairs : d.stairs)); sfx('tick'); });
   q('#mRemove') && q('#mRemove').addEventListener('click', e => confirmBtn(e.currentTarget, 'Sûr ? Décoller', () => {
     if (!run('removeRoom', { id })) return;
     sfx('peel'); closeModal(); afterChange();
@@ -271,8 +284,8 @@ function openCreature(id) {
   const sp = SPECIES[c.sp], mf = moodFactors(c), ef = epaFactors(c), q = questOf(c), out = isOut(c);
   const line = c.away ? 'Je suis parti·e en mission, je reviens vite !' : c.tempt ? pick([`Il paraît qu’à ${c.tempt.name}, on choie les ${sp.name.toLowerCase()}s…`, 'Je réfléchis à mon avenir, c’est tout.', 'Rien. Je regardais par la fenêtre. Vers là-bas.'])
     : c.mood <= 1 ? pick(['Laisse-moi tranquille.', 'Je boude. Ça se voit pas ?', 'Il fait froid, j’ai faim, et personne ne m’aime.']) : q && q.st === 'offered' ? 'Dis, Maître… j’aurais une petite faveur à te demander.' : pick(sp.lines);
-  const rooms = builtRooms().filter(r => !isHall(r));
-  const opts = '<option value="">Libre (garde le Cœur)</option>' + rooms.map(r => { const fav = r.t === sp.from || (ROOMS[r.t].attracts || []).includes(c.sp); return `<option value="${r.id}" ${c.post === r.id ? 'selected' : ''}>${fav ? '★ ' : ''}${esc(ROOMS[r.t].name)}</option>`; }).join('');
+  const rooms = builtRooms().filter(r => !isHall(r) && !ROOMS[r.t].stairs);
+  const opts = '<option value="">Libre (garde le Cœur)</option>' + rooms.map(r => { const fav = r.t === sp.from || (ROOMS[r.t].attracts || []).includes(c.sp); return `<option value="${r.id}" ${c.post === r.id ? 'selected' : ''}>${fav ? '★ ' : ''}${esc(ROOMS[r.t].name)}${zOf(r) ? ' · ' + FLOOR_SHORT[zOf(r)] : ''}</option>`; }).join('');
   const perks = [2, 3, 4, 5].filter(l => c.lvl >= l).map(l => LVL_PERK[l]);
   const m = openModal(`<div class="cardhead"><div class="portrait char"><img class="th" alt="" src="${thumb('char', c.sp, true)}"></div>
       <div><h2>${esc(c.name)}</h2><p><span class="tag2">${sp.name}</span><span class="tag2">Niv. ${c.lvl}</span>${c.legend ? '<span class="tag2 gold">🗿 Légende</span>' : ''}${sp.tag ? `<span class="tag2">${TAGS[sp.tag]}</span>` : ''}${c.away ? '<span class="tag2">🧭 en mission</span>' : c.raid ? '<span class="tag2">🗺️ en raid</span>' : ''}</p><div>${hearts(c.mood)} <span class="hint">${moodWord(c.mood)}</span></div></div></div>
@@ -317,7 +330,7 @@ function openCreature(id) {
     afterChange(); openCreature(id);
   });
 }
-function focusActor(id) { const a = ACT.get(id); if (!a) return; const [wx, wy] = WP(a.x, a.y), ts = Math.max(CAM.s, Math.min(1.1, CAM.max)); CAM.s = ts; CAM.x = V.w / 2 - wx * ts; CAM.y = V.h / 2 - (wy - 50) * ts; clampCam(); V.selected = id; say(id, pick(['Coucou chef !', 'Oui ?', 'J’ai rien fait !']), 2000); }
+function focusActor(id) { const a = ACT.get(id); if (!a) return; if ((a.z || 0) !== Z) setFloor(a.z || 0); const [wx, wy] = WP(a.x, a.y), ts = Math.max(CAM.s, Math.min(1.1, CAM.max)); CAM.s = ts; CAM.x = V.w / 2 - wx * ts; CAM.y = V.h / 2 - (wy - 50) * ts; clampCam(); V.selected = id; say(id, pick(['Coucou chef !', 'Oui ?', 'J’ai rien fait !']), 2000); }
 function openBestiary() {
   const list = [...S.creatures].sort((a, b) => SPECIES_ORDER.indexOf(a.sp) - SPECIES_ORDER.indexOf(b.sp)).map(c => { const sp = SPECIES[c.sp], post = c.post && S.rooms.find(r => r.id === c.post); return `<button class="crow" type="button" data-crit="${c.id}"><img class="th" alt="" src="${thumb('char', c.sp)}"><span class="who"><b>${esc(c.name)}${c.legend ? ' 🗿' : ''}</b><span>${sp.name} · niv. ${c.lvl || 1} · ${c.away ? '🧭 en mission' : c.raid ? '🗺️ en raid' : post ? '📍 ' + esc(ROOMS[post.t].name) : 'libre'}${c.tempt ? ' · 👀 tenté·e' : ''}</span></span><span class="loy" title="Loyauté ${c.loy}">${bar(c.loy, '#e9b949', 'Loyauté')}</span>${hearts(c.mood)}</button>`; }).join('');
   const album = SPECIES_ORDER.map(k => `<button class="s ${S.album[k] ? '' : 'no'}" type="button" data-album="${k}" title="${S.album[k] ? SPECIES[k].name : '???'}"><img class="th" alt="" src="${thumb('char', k)}"></button>`).join('');

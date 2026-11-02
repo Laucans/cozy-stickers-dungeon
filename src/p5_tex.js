@@ -163,6 +163,8 @@ function roomTexture(r) {
   else if (d.floor === 'checker') c = texChecker(r.w, r.h, T, seed, shade(d.color, -.15), '#e8dcc2');
   else if (d.floor === 'carpet') { c = texWood(r.w, r.h, T, seed, '#6b4228'); carpet(c.getContext('2d'), T * .32, T * .32, Wp - T * .64, Hp - T * .64, shade(d.color, -.1), seed); }
   else if (d.floor === 'garden') c = texSoil(r.w, r.h, T, seed);
+  else if (d.floor === 'rock') c = texRock(r.w, r.h, T, seed);
+  else if (d.floor === 'water') c = texWater(r.w, r.h, T, seed);
   else if (d.floor === 'magic') { c = texFlag(r.w, r.h, T, seed, '#3d3652'); runes(c.getContext('2d'), Wp / 2, Hp / 2, Math.min(Wp, Hp) * .4); }
   else c = texFlag(r.w, r.h, T, seed, r.t === 'couloir' || r.t === 'porche' ? '#6e6962' : '#76706a', r.t === 'caveau' || r.t === 'oubliettes');
   edgeAO(c.getContext('2d'), Wp, Hp, T * .2, isHall(r) ? .3 : .45);
@@ -188,13 +190,63 @@ function terrainTexture() {
   TERRAIN = c; return c;
 }
 
+/* ---------- sous terre et en hauteur ---------- */
+// sol de mine : roche brute et éclats de minerai
+function texRock(wt, ht, T, seed) {
+  const Wp = wt * T, Hp = ht * T, c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(seed);
+  g.fillStyle = '#4a4038'; g.fillRect(0, 0, Wp, Hp);
+  for (let i = 0; i < Wp * Hp / 900; i++) { const x = R() * Wp, y = R() * Hp, r = 6 + R() * 22; g.fillStyle = shade('#5a4e44', (R() - .5) * .4); g.beginPath(); g.ellipse(x, y, r, r * (.5 + R() * .4), R() * 3, 0, 7); g.fill(); }
+  for (let i = 0; i < Wp * Hp / 5000; i++) { g.fillStyle = R() < .6 ? 'rgba(233,185,73,.6)' : 'rgba(180,200,230,.4)'; g.beginPath(); g.arc(R() * Wp, R() * Hp, 1.5 + R() * 2.5, 0, 7); g.fill(); }
+  grunge(g, Wp, Hp, seed, .3);
+  return c;
+}
+// eau noire du lac souterrain, rive de pierre et reflets
+function texWater(wt, ht, T, seed) {
+  const Wp = wt * T, Hp = ht * T, c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(seed), m = T * .2;
+  g.fillStyle = '#58524e'; g.fillRect(0, 0, Wp, Hp); grunge(g, Wp, Hp, seed, .25);
+  rr(g, m, m, Wp - 2 * m, Hp - 2 * m, T * .55);
+  const gr = g.createRadialGradient(Wp / 2, Hp / 2, 0, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .6); gr.addColorStop(0, '#2f6a86'); gr.addColorStop(1, '#10243a'); g.fillStyle = gr; g.fill();
+  g.save(); g.clip();
+  for (let i = 0; i < Wp * Hp / 2200; i++) { const x = R() * Wp, y = R() * Hp, w = 8 + R() * 28; g.strokeStyle = `rgba(160,220,255,${.08 + R() * .2})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x - w / 2, y); g.quadraticCurveTo(x, y - 3, x + w / 2, y); g.stroke(); }
+  g.restore();
+  return c;
+}
+// étages souterrains : de la roche partout ; l'emprise du château est juste un peu plus claire (on peut y creuser)
+let CAVE = null, ROOF = null;
+function caveTexture() {
+  if (CAVE) return CAVE;
+  const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T, c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(57);
+  g.fillStyle = '#211b18'; g.fillRect(0, 0, Wp, Hp);
+  for (let i = 0; i < Wp * Hp / 1300; i++) { const x = R() * Wp, y = R() * Hp, r = 10 + R() * 40; g.fillStyle = shade('#2d2521', (R() - .5) * .5); g.beginPath(); g.ellipse(x, y, r, r * .6, R() * 3, 0, 7); g.fill(); }
+  g.fillStyle = 'rgba(150,125,95,.2)'; g.fillRect(M * T, M * T, W * T, H * T);
+  g.strokeStyle = 'rgba(170,145,110,.14)'; g.lineWidth = 2; g.setLineDash([6, 10]);
+  for (let i = 0; i <= W; i++) { g.beginPath(); g.moveTo((M + i) * T, M * T); g.lineTo((M + i) * T, (M + H) * T); g.stroke(); }
+  for (let j = 0; j <= H; j++) { g.beginPath(); g.moveTo(M * T, (M + j) * T); g.lineTo((M + W) * T, (M + j) * T); g.stroke(); }
+  g.setLineDash([]); grunge(g, Wp, Hp, 58, .3);
+  const fog = g.createRadialGradient(Wp / 2, Hp / 2, Math.min(Wp, Hp) * .3, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(6,4,8,0)'); fog.addColorStop(1, 'rgba(6,4,8,.96)');
+  g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
+  return CAVE = c;
+}
+// étages en hauteur : une grande terrasse dallée au sommet du château
+function roofTexture() {
+  if (ROOF) return ROOF;
+  const T = TERRAIN_T, c = texFlag(W, H, T, 61, '#6a6670'), g = c.getContext('2d');
+  edgeAO(g, W * T, H * T, T * .4, .55);
+  return ROOF = c;
+}
+
 /* ---------- murs en pierre de taille ---------- */
 const WALL_CACHE = new Map();
 function texWall(kind, k) {
   const key = kind + k; if (WALL_CACHE.has(key)) return WALL_CACHE.get(key);
-  const R = rng(seedOf(key)), Wp = 144, Hp = kind === 'ramp' ? 264 : kind === 'full' ? 176 : 48;
+  const R = rng(seedOf(key)), Wp = 144, Hp = kind === 'ramp' || kind === 'rock' ? 264 : kind === 'full' ? 176 : 48;
   const c = mk(Wp, Hp), g = c.getContext('2d');
-  if (kind === 'hedge') {
+  if (kind === 'rock') {
+    g.fillStyle = '#1c1714'; g.fillRect(0, 0, Wp, Hp);
+    for (let i = 0; i < 90; i++) { const x = R() * Wp, y = R() * Hp, r = 8 + R() * 26; g.fillStyle = shade('#3a312b', (R() - .5) * .5 - (1 - y / Hp) * .2); g.beginPath(); g.ellipse(x, y, r, r * (.6 + R() * .5), R() * 3, 0, 7); g.fill(); }
+    for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(10,6,4,.6)'; g.lineWidth = 1.5; g.beginPath(); let x = R() * Wp, y = 0; g.moveTo(x, y); while (y < Hp) { x += (R() - .5) * 18; y += 10 + R() * 14; g.lineTo(x, y); } g.stroke(); }
+    grunge(g, Wp, Hp, seedOf(key), .3);
+  } else if (kind === 'hedge') {
     g.fillStyle = '#2f4a22'; g.fillRect(0, 0, Wp, Hp);
     for (let i = 0; i < 260; i++) { const x = R() * Wp, y = R() * Hp, col = mixc('#3d6a2c', '#8ac260', R() * (1 - y / Hp * .7)); g.fillStyle = col; g.beginPath(); g.ellipse(x, y, 4 + R() * 3, 2.5 + R() * 2, R() * 3, 0, 7); g.fill(); }
   } else {

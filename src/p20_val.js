@@ -4,7 +4,7 @@
    Visites, livre d’or, cadeaux, escarmouches (avec bouclier),
    palmarès de saison, créatures qui changent de château.
    ========================================================= */
-const VAL = { castles: new Map(), loading: false, loadedAt: 0, pubAt: 0, lastMap: '', mail: [], pending: [], open: false, tab: 'chateaux', sort: 'recent', q: '', board: 'hype', gb: null, inbox: null };
+const VAL = { castles: new Map(), loading: false, loadedAt: 0, pubAt: 0, lastMap: '', mail: [], pending: [], open: false, tab: 'chateaux', sort: 'recent', q: '', board: 'glow', gb: null, inbox: null };
 let VISIT = null;
 const GB_LINES = ['Quel château douillet !', 'Tes pièges m’ont fait peur (c’est un compliment).', 'Superbe déco, je vole l’idée.', 'Tes créatures ont l’air si heureuses !', 'Ta taverne sent bon la bière tiède.',
   'J’ai croisé un gobelin très poli.', 'Ce couloir est un chef-d’œuvre de traîtrise.', 'Je repasserai pour le goûter.', 'Un château qui donne envie de se faire envahir.', 'Les aventuriers n’ont aucune chance !',
@@ -39,13 +39,13 @@ function bindVal() {
 function defenseScore() { try { return planInvasion().steps.reduce((a, s) => a + s.dmg, 0); } catch (e) { return 0; } }
 function valSummary() {
   return { v: 1, master: NET.name || 'Maître anonyme', name: S.name, theme: S.theme, tier: S.tier, night: S.night, title: castleTitle(), amb: ambiance(), hype: S.hype,
-    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(),
+    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(),
     rep: Object.fromEntries(SPECIES_ORDER.map(sp => [sp, repOf(sp)])), pvp: !!S.val.pvp, season: seasonId(),
     top: [...S.creatures].sort((a, b) => (b.lvl || 1) - (a.lvl || 1) || b.loy - a.loy).slice(0, 3).map(c => [c.sp, c.name, c.lvl || 1]) };
 }
 function valMapDoc() {
   const idx = new Map(S.rooms.map((r, i) => [r.id, i]));
-  return { v: 1, rooms: S.rooms.map(r => [r.t, r.x, r.y, r.w, r.h, r.built ? 1 : 0, r.prog || 0]), furn: S.furn.map(f => [f.t, f.x, f.y]), defs: S.defs.map(d => [d.t, d.x, d.y]),
+  return { v: 2, size: S.size || 0, rooms: S.rooms.map(r => [r.t, r.x, r.y, r.w, r.h, r.built ? 1 : 0, r.prog || 0, zOf(r), r.land ? 1 : 0]), furn: S.furn.map(f => [f.t, f.x, f.y, zOf(f)]), defs: S.defs.map(d => [d.t, d.x, d.y]),
     crit: S.creatures.filter(c => !isOut(c)).map(c => [c.sp, c.name, c.mood, c.lvl || 1, c.legend ? 1 : 0, c.post && idx.has(c.post) ? idx.get(c.post) : -1]) };
 }
 async function valPublish(force) {
@@ -67,7 +67,7 @@ function cleanSummary(o, ev) {
   if (o.rep && typeof o.rep === 'object') Object.keys(o.rep).slice(0, 60).forEach(k => { if (SPECIES[k]) rep[k] = num(o.rep[k], 0, 100); });
   return { pk: ev.pubkey, at: ev.created_at, master: cleanName(o.master, 24) || 'Maître anonyme', name: cleanName(o.name, 40) || 'Château sans nom', theme: THEMES[o.theme] ? o.theme : 'forge',
     tier: num(o.tier, 0, 3), night: num(o.night, 1, 99999), title: cleanName(o.title, 48), amb: num(o.amb, 0, 9999), hype: num(o.hype, 0, 99999), crit: num(o.crit, 0, 999), sp: num(o.sp, 0, 99),
-    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
+    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
     top: (Array.isArray(o.top) ? o.top : []).slice(0, 3).filter(t => Array.isArray(t) && SPECIES[t[0]]).map(t => [t[0], cleanName(t[1], 24), num(t[2], 1, 5)]), me: ev.pubkey === NET.pk };
 }
 function valIngest(ev) {
@@ -135,19 +135,20 @@ function valMigrate(c, best) { valSend('migr', best.pk, { sp: c.sp, name: c.name
 /* ---------- visite d’un château voisin ---------- */
 function visitState(m, c) {
   if (!m || !Array.isArray(m.rooms)) return null;
-  const s = upgradeState({ v: 2, seq: 1, name: c.name, theme: c.theme, started: true, night: c.night, gold: 0, mat: 0, hype: c.hype, tier: c.tier, calamity: 0, menace: 0, prisoners: 0,
+  const size = clamp(+m.size || 0, 0, SIZE_MAX), N = 12 + 2 * size;
+  const s = upgradeState({ v: 2, seq: 1, name: c.name, theme: c.theme, started: true, night: c.night, gold: 0, mat: 0, hype: c.hype, tier: c.tier, calamity: 0, menace: 0, prisoners: 0, size,
     rooms: [], furn: [], defs: [], creatures: [], raid: null, goals: {}, album: {}, free: {}, log: [], usedNames: [], rep: c.rep, tuto: { on: false, done: true }, tipsOff: true, tips: {} });
-  const inside = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < W && y < H, used = new Set();
-  m.rooms.slice(0, 160).forEach(r => {
-    if (!Array.isArray(r)) return; const [t, x, y, w, h, b, p] = r;
-    if (!ROOMS[t] || !inside(x, y) || !(w >= 1 && h >= 1 && w <= 3 && h <= 3 && x + w <= W && y + h <= H)) return;
-    const cells = []; for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) cells.push((y + dy) * W + x + dx);
+  const inside = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < N && y < N, okZ = z => Number.isInteger(z) && z >= -DEPTH_MAX && z <= HEIGHT_MAX, used = new Set();
+  m.rooms.slice(0, 400).forEach(r => {
+    if (!Array.isArray(r)) return; const [t, x, y, w, h, b, p] = r, z = okZ(r[7]) ? r[7] : 0;
+    if (!ROOMS[t] || !inside(x, y) || !(w >= 1 && h >= 1 && w <= 3 && h <= 3 && x + w <= N && y + h <= N)) return;
+    const cells = []; for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) cells.push(z + ':' + ((y + dy) * N + x + dx));
     if (cells.some(k => used.has(k))) return; cells.forEach(k => used.add(k));
-    s.rooms.push({ id: 'v' + s.seq++, t, x, y, w, h, built: !!b, prog: clamp(+p || 0, 0, 20) });
+    const room = { id: 'v' + s.seq++, t, x, y, w, h, built: !!b, prog: clamp(+p || 0, 0, 20) }; if (z) room.z = z; if (r[8]) room.land = true; s.rooms.push(room);
   });
   const spots = new Set();
-  (m.furn || []).slice(0, 400).forEach(f => { if (!Array.isArray(f)) return; const [t, x, y] = f; if (FURN[t] && inside(x, y) && !spots.has(y * W + x)) { spots.add(y * W + x); s.furn.push({ id: 'v' + s.seq++, t, x, y }); } });
-  (m.defs || []).slice(0, 200).forEach(d => { if (!Array.isArray(d)) return; const [t, x, y] = d; if (DEFS[t] && inside(x, y) && !spots.has(y * W + x)) { spots.add(y * W + x); s.defs.push({ id: 'v' + s.seq++, t, x, y }); } });
+  (m.furn || []).slice(0, 800).forEach(f => { if (!Array.isArray(f)) return; const [t, x, y] = f, z = okZ(f[3]) ? f[3] : 0, k = z + ':' + (y * N + x); if (FURN[t] && inside(x, y) && !spots.has(k)) { spots.add(k); const o = { id: 'v' + s.seq++, t, x, y }; if (z) o.z = z; s.furn.push(o); } });
+  (m.defs || []).slice(0, 200).forEach(d => { if (!Array.isArray(d)) return; const [t, x, y] = d, k = '0:' + (y * N + x); if (DEFS[t] && inside(x, y) && !spots.has(k)) { spots.add(k); s.defs.push({ id: 'v' + s.seq++, t, x, y }); } });
   (m.crit || []).slice(0, 60).forEach(k => {
     if (!Array.isArray(k) || !SPECIES[k[0]]) return;
     const cr = upgradeCreature({ id: 'v' + s.seq++, sp: k[0], name: cleanName(k[1], 24) || '?', mood: clamp(+k[2] || 3, 0, 5), lvl: clamp(+k[3] || 1, 1, 5), legend: !!k[4], post: null, joined: 1 });
@@ -172,7 +173,7 @@ function enterVisit(st, info) {
   if (VISIT) leaveVisit(true);
   if (UI.busy) return;
   closeModal(true); dropSticker(); showTip(null); advisorHide();
-  VISIT = { back: S, info, cam: { x: CAM.x, y: CAM.y, s: CAM.s, user: CAM.user }, path: V.showPath };
+  VISIT = { back: S, info, cam: { x: CAM.x, y: CAM.y, s: CAM.s, user: CAM.user }, path: V.showPath, z: Z }; Z = 0;
   const me = S; if (!me.val.visited.includes(info.pk)) { me.val.visited.push(info.pk); me.stats.visits++; if (me.val.visited.length > 300) me.val.visited.shift(); }
   save();
   S = st; dirty(); resetActors(); V.dirty = true;
@@ -182,7 +183,7 @@ function enterVisit(st, info) {
 }
 function leaveVisit(silent) {
   if (!VISIT) return;
-  const v = VISIT; VISIT = null; S = v.back; dirty(); resetActors(); V.dirty = true; V.showPath = v.path;
+  const v = VISIT; VISIT = null; S = v.back; Z = floorsOpen().includes(v.z) ? v.z : 0; dirty(); resetActors(); V.dirty = true; V.showPath = v.path;
   document.body.classList.remove('visiting'); $('#visitbar').hidden = true; closeModal(true);
   renderAll(); Object.assign(CAM, v.cam); clampCam();
   if (!silent) { announceAch(checkAch()); save(); valFlush(); }
@@ -333,7 +334,7 @@ function renderVal() {
     <div id="valTab"></div>`;
   const t = box.querySelector('#valTab');
   if (VAL.tab === 'chateaux') {
-    t.innerHTML = `<div class="vtools"><input id="valQ" type="search" placeholder="Chercher un château ou un Maître" value="${esc(VAL.q)}" aria-label="Chercher"><select id="valSort" class="sel" aria-label="Trier"><option value="recent" ${VAL.sort === 'recent' ? 'selected' : ''}>Les plus récents</option><option value="hype" ${VAL.sort === 'hype' ? 'selected' : ''}>Notoriété</option><option value="amb" ${VAL.sort === 'amb' ? 'selected' : ''}>Ambiance</option><option value="crit" ${VAL.sort === 'crit' ? 'selected' : ''}>Créatures</option></select><button class="sbtn" type="button" data-act="reload">↻</button></div><div class="vlist" id="valList"></div>
+    t.innerHTML = `<div class="vtools"><input id="valQ" type="search" placeholder="Chercher un château ou un Maître" value="${esc(VAL.q)}" aria-label="Chercher"><select id="valSort" class="sel" aria-label="Trier"><option value="recent" ${VAL.sort === 'recent' ? 'selected' : ''}>Les plus récents</option><option value="glow" ${VAL.sort === 'glow' ? 'selected' : ''}>Rayonnement</option><option value="hype" ${VAL.sort === 'hype' ? 'selected' : ''}>Notoriété</option><option value="amb" ${VAL.sort === 'amb' ? 'selected' : ''}>Ambiance</option><option value="crit" ${VAL.sort === 'crit' ? 'selected' : ''}>Créatures</option></select><button class="sbtn" type="button" data-act="reload">↻</button></div><div class="vlist" id="valList"></div>
       <label class="tutochk"><input type="checkbox" id="valPvp" ${S.val.pvp ? 'checked' : ''}> Escarmouches entre voisins (décoche pour un château pacifique : on ne peut ni te viser, ni viser les autres)</label>`;
     renderValList();
   } else if (VAL.tab === 'palmares') t.innerHTML = renderBoard();
@@ -346,18 +347,18 @@ function castleCard(c) {
   const on = nowS() - c.at < ONLINE_S;
   return `<div class="vcard ${c.me ? 'me' : ''}"><div class="vtop">${c.top.map(([sp]) => `<img class="th" alt="" src="${thumb('char', sp)}">`).join('')}</div>
     <div class="vtxt"><b>${esc(c.name)}</b><span>${esc(c.master)} · <i class="dot ${on ? 'on' : ''}"></i>${agoText(c.at)}</span>
-    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
+    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
     <div class="vbtn">${c.me ? '<span class="tag2">C’est toi !</span>' : `<button class="sbtn pri" type="button" data-visit="${c.pk}">Visiter</button>`}</div></div>`;
 }
 function renderValList() {
   const box = $('#valList'); if (!box) return;
-  const q = VAL.q.trim().toLowerCase(), key = { recent: 'at', hype: 'hype', amb: 'amb', crit: 'crit' }[VAL.sort] || 'at';
+  const q = VAL.q.trim().toLowerCase(), key = { recent: 'at', glow: 'glow', hype: 'hype', amb: 'amb', crit: 'crit' }[VAL.sort] || 'at';
   const all = [...VAL.castles.values()].filter(c => !q || (c.name + ' ' + c.master).toLowerCase().includes(q)).sort((a, b) => b[key] - a[key] || b.at - a.at).slice(0, 80);
   box.innerHTML = all.map(castleCard).join('') || `<p class="hint">${VAL.loading ? 'On interroge les relais du Val…' : 'Aucun château trouvé pour l’instant. Invite tes amis à jouer !'}</p>`;
 }
 function renderBoard() {
   const season = seasonId(), list = [...VAL.castles.values()].filter(c => c.season === season || seasonId(c.at * 1000) === season);
-  const cats = [['hype', '🔥 Notoriété'], ['amb', '🕯️ Ambiance'], ['crit', '🐾 Créatures'], ['ach', '🏆 Hauts faits'], ['legends', '🗿 Légendes']];
+  const cats = [['glow', '✨ Rayonnement'], ['hype', '🔥 Notoriété'], ['amb', '🕯️ Ambiance'], ['crit', '🐾 Créatures'], ['ach', '🏆 Hauts faits'], ['legends', '🗿 Légendes']];
   const k = VAL.board, top = [...list].sort((a, b) => b[k] - a[k]).slice(0, 10);
   const leaders = SPECIES_ORDER.map(sp => { let best = null; list.forEach(c => { const v = c.rep[sp] || 0; if (!best || v > best.v) best = { c, v }; }); return best && best.v > 0 ? [sp, best] : null; }).filter(Boolean);
   return `<p class="hint">Saison de ${SEASON_NAME(season)} : ${list.length} château${list.length > 1 ? 'x' : ''} actif${list.length > 1 ? 's' : ''} ce mois-ci.</p>

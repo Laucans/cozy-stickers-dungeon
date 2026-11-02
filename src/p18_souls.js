@@ -52,6 +52,9 @@ const ACH = [
   { id: 'zen',       cat: 'Stratège',  ico: '🍵', name: 'Zénitude',               desc: 'Enchaîne 8 nuits sans Calamité.',              test: s => s.stats.calmNights >= 8,       pw: 'Grand festin',           pd: 'Pouvoir : toutes les créatures gagnent 1 ❤️.', active: 'festin', cd: 5 },
   { id: 'palier1',   cat: 'Château',   ico: '⭐', name: 'Ça prend forme',         desc: 'Atteins le Palier 1.',                         test: s => s.tier >= 1,                   pw: 'Coffre du Maître',       pd: '+1 🪵 chaque nuit.' },
   { id: 'palier2',   cat: 'Château',   ico: '👑', name: 'Seigneur des lieux',     desc: 'Atteins le Palier 2.',                         test: s => s.tier >= 2,                   pw: 'Cloche du rappel',       pd: 'Pouvoir : retient une créature tentée de partir (+25 loyauté).', active: 'rappel', cd: 3 },
+  { id: 'carto',     cat: 'Château',   ico: '🗺️', name: 'Cartographe',            desc: 'Découvre 120 cases de la carte.',              test: s => !!s.world && s.world.known.length >= 120, pw: 'Longue-vue du Maître', pd: 'Tu vois une lieue plus loin sur la carte.' },
+  { id: 'collec',    cat: 'Château',   ico: '🏺', name: 'Collectionneur',         desc: 'Expose 5 artefacts.',                          test: s => s.furn.filter(f => FURN[f.t] && FURN[f.t].artefact).length >= 5, pw: 'Vitrines blindées', pd: 'Les héros ne peuvent plus voler d’artefacts.' },
+  { id: 'etages',    cat: 'Château',   ico: '🪜', name: 'Bâtisseur de tours',     desc: 'Ouvre deux étages, en haut ou en bas.',         test: s => floorsDug() >= 2,              pw: 'Monte-charge',           pd: '+1 segment de travaux chaque nuit.' },
   { id: 'nuit20',    cat: 'Château',   ico: '🌙', name: 'Increvable',             desc: 'Atteins la nuit 20.',                          test: s => s.night >= 20,                 pw: 'Aimant à monstres',      pd: 'Les nouvelles créatures viennent plus volontiers.' },
   { id: 'voisin',    cat: 'Val des Maîtres', online: true, ico: '🏮', name: 'Bon voisin',      desc: 'Visite 3 châteaux du Val.',         test: s => s.stats.visits >= 3,       pw: 'Lanterne de voyage',     pd: '+1 Ambiance.' },
   { id: 'genereux',  cat: 'Val des Maîtres', online: true, ico: '🎁', name: 'Cœur sur la main', desc: 'Offre 3 cadeaux.',                 test: s => s.stats.gifts >= 3,        pw: 'Corne d’abondance',      pd: 'Les cadeaux que tu reçois valent double.' },
@@ -64,7 +67,7 @@ const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
 const PW = id => !!(S && S.ach && S.ach[id]);
 const pwRep = () => (PW('menagerie') ? 10 : 0) + (PW('livredor') ? 5 : 0) + (PW('aimant') ? 5 : 0);
 const pwAmb = () => (PW('deco') ? 2 : 0) + (PW('voisin') ? 1 : 0);
-const workPerNight = () => CONSTS.WORK + sumCrit('build') + (PW('pierre') ? 1 : 0) + (PW('coop') ? 1 : 0);
+const workPerNight = () => CONSTS.WORK + sumCrit('build') + (PW('pierre') ? 1 : 0) + (PW('coop') ? 1 : 0) + (PW('etages') ? 1 : 0);
 const questSlots = () => 2 + (PW('conteur') ? 1 : 0);
 function checkAch() {
   const done = [];
@@ -93,7 +96,7 @@ function repTarget(sp) {
   const f = [];
   if (d.from === 'coeur') f.push(['Né du Cœur du château', 25]);
   else if (d.fromDecor) { const ok = countItem('toile') >= d.fromDecor.toile; f.push([ok ? 'Toiles accueillantes' : 'Pas assez de toiles', ok ? 25 : 0]); }
-  else if (d.from && ROOMS[d.from]) { const n = homeRooms(d.from); f.push(n ? [`${ROOMS[d.from].name} meublée${n > 1 ? ' ×' + n : ''}`, Math.min(32, 22 + (n - 1) * 5)] : [`Pas de ${ROOMS[d.from].name} meublée`, 0]); }
+  else if (d.from && ROOMS[d.from]) { const n = nestsOf(sp); f.push(n ? [`${ROOMS[d.from].name} meublée${n > 1 ? ' (' + n + ' pièces)' : ''}`, Math.min(32, 22 + (n - 1) * 5)] : [`Pas de ${ROOMS[d.from].name} meublée`, 0]); }
   if (d.likes && FURN[d.likes]) f.push(hasItem(d.likes) ? [`${itemName(d.likes)} au château`, 10] : [`Pas de ${itemName(d.likes)}`, 0]);
   const mates = S.creatures.filter(c => c.sp === sp && !c.away);
   if (mates.length) {
@@ -107,6 +110,8 @@ function repTarget(sp) {
   if (d.rival && SPECIES[d.rival] && countSp(d.rival)) f.push([`Des ${SPECIES[d.rival].name.toLowerCase()}s rôdent`, -10]);
   const des = (S.desertLog || []).filter(x => x.sp === sp && S.night - x.n < 6).length; if (des) f.push(['Désertions récentes', -8 * des]);
   const pw = pwRep(); if (pw) f.push(['Pouvoirs du château', pw]);
+  const art = ARTEFACTS.filter(k => FURN[k].repSp === sp && hasItem(k)); if (art.length) f.push([`${itemName(art[0])} exposé`, 12]);
+  if (d.rare && typeof radiance === 'function') { const g = radiance(); f.push([`Rayonnement ${g}`, Math.min(15, Math.floor(g / 10))]); }
   return { v: clamp(Math.round(f.reduce((a, x) => a + x[1], 0)), 0, 100), f };
 }
 const repOf = sp => (S.rep && S.rep[sp] != null) ? S.rep[sp] : repTarget(sp).v;
@@ -121,7 +126,8 @@ const RIVALS = [
 ];
 function rivalRep(r, sp) {
   const fav = r.likes.includes(sp), grow = Math.min(30, S.night * .75), wob = Math.round(Math.sin(S.night * .7 + (seedOf(r.id + sp) % 628) / 100) * 7);
-  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob), 0, 90);
+  const hit = S.world && S.world.hit && S.world.hit[r.id] > S.night ? 15 : 0;
+  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob - hit), 0, 90);
 }
 // le rival le plus attirant pour une espèce : châteaux du jeu + châteaux des autres joueurs (Val des Maîtres)
 function bestRival(sp) {
@@ -248,7 +254,7 @@ function soulsDawn(report) {
   const out = [], hungry = hungrySet();
   // retours d’expédition
   S.creatures.forEach(c => {
-    if (!c.away || S.night + 1 < c.awayUntil) return;
+    if (!c.away || c.expe || S.night + 1 < c.awayUntil) return;
     const q = questOf(c), sp = SPECIES[c.sp] || {}, e = EXPE[c.sp] || EXPE._;
     const pool = Math.max(1, diceOf(c) + Math.floor((c.lvl || 1) / 2) + (c.mood >= 4 ? 1 : 0)), roll = rollPool(pool);
     c.away = 0; c.awayUntil = 0; c.raid = false; c.back = true;
@@ -306,8 +312,10 @@ function usePower(id, a) {
 
 /* ---------- commandes (toutes les actions qui modifient la partie) ---------- */
 const CMD = {
-  place(a) {
+  place(a) { return withZ(Number.isInteger(a.z) && a.z >= -DEPTH_MAX && a.z <= HEIGHT_MAX ? a.z : Z, () => CMD.place0(a)); },
+  place0(a) {
     const { kind, t } = a, x = a.x | 0, y = a.y | 0, w = a.w | 0 || 1, h = a.h | 0 || 1;
+    if (Z !== 0 && !S.rooms.some(r => zOf(r) === Z)) return 'Cet étage n’existe pas encore';
     if (!(kind === 'room' ? ROOMS[t] : kind === 'def' ? DEFS[t] : kind === 'furn' ? FURN[t] : null)) return 'Sticker inconnu';
     const av = availability(kind, t);
     if (av && av.hide) return 'Indisponible pour ce château';
@@ -331,7 +339,7 @@ const CMD = {
   push(a) {
     const r = S.rooms.find(x => x.id === a.id); if (!r || r.built) return 'Ce chantier est terminé'; if (S.gold < 2) return 'Il te faut 2 💰';
     const d = ROOMS[r.t]; S.gold -= 2; r.prog++;
-    if (r.prog >= d.clock) { r.built = true; dirty(); poof(r.x, r.y, r.w, r.h); addLog(`${d.name} terminé.`, 'good'); }
+    if (r.prog >= d.clock) { r.built = true; roomBuilt(r); dirty(); poof(r.x, r.y, r.w, r.h); addLog(`${d.name} terminé.`, 'good'); }
     return null;
   },
   pet(a) { const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e'; if (c.pet) return 'Déjà caressé·e cette nuit'; c.pet = 1; c.mood = clamp(c.mood + 1, 0, 5); c.petN = (c.petN || 0) + 1; S.stats.pets++; addLoy(c, 2 + (PW('calins') ? 3 : 0)); return null; },
@@ -374,6 +382,7 @@ const CMD = {
   raidCancel() { cancelRaid(); return null; },
   tierUp() { const st = tierStatus(); if (!st || !st.ok) return 'Conditions non remplies'; pay(st.next.cost); S.tier++; addLog(`Le château atteint le Palier ${S.tier} !`, 'ev'); return null; },
   power(a) { return usePower(a.pw, a); },
+  expand() { return expandCastle(); },
   rename(a) { const n = String(a.name || '').trim().slice(0, 40); if (!n) return 'Nom vide'; S.name = n; return null; },
 };
 // exécute une commande : en solo tout de suite, en château partagé elle passe aussi par l’hôte

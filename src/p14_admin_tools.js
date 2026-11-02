@@ -56,7 +56,7 @@ Object.assign(ACTIONS, {
   sbSpawn: () => spawnCreature($('#sbSp').value, clamp(+$('#sbN').value || 1, 1, 10)),
   sbMood: v => { S.creatures.forEach(c => { c.mood = +v; }); afterChange(); toast('Humeurs modifiées.'); },
   sbClear: (a, btn) => confirmBtn(btn, 'Sûr ? Tout le monde dehors', () => { S.creatures.forEach(c => critterLeave(c.id)); S.creatures = []; afterChange(); }),
-  sbBuild: () => { S.rooms.forEach(r => { if (!r.built) { r.built = true; r.prog = ROOMS[r.t].clock; poof(r.x, r.y, r.w, r.h); } }); dirty(); afterChange(); toast('Tous les chantiers sont terminés.'); },
+  sbBuild: () => { S.rooms.forEach(r => { if (!r.built) { r.built = true; r.prog = ROOMS[r.t].clock; roomBuilt(r); poof(r.x, r.y, r.w, r.h); } }); dirty(); afterChange(); toast('Tous les chantiers sont terminés.'); },
   sbStickers: () => { [...Object.keys(FURN), ...Object.keys(DEFS)].forEach(k => { S.free[k] = (S.free[k] || 0) + 5; }); afterChange(); toast('+5 de chaque meuble, déco et piège.'); },
   sbAlbum: () => { SPECIES_ORDER.forEach(k => { S.album[k] = true; }); afterChange(); },
   sbGoals: () => { GOALS.forEach(g => { S.goals[g.id] = true; }); afterChange(); },

@@ -93,7 +93,7 @@ function bindTutorial() {
     else if (act === 'wiki') { advisorHide(); openGrimoire(b.dataset.wid); }
     else if (act === 'start') startTutorial();
   });
-  $('#res').addEventListener('click', e => { const c = e.target.closest('[data-k]'); if (c && CHIP_WIKI[c.dataset.k]) openGrimoire(CHIP_WIKI[c.dataset.k]); });
+  $('#res').addEventListener('click', e => { const c = e.target.closest('[data-k]'); if (c && c.dataset.k === 'glow') { if (!UI.busy) openRadiance(); return; } if (c && CHIP_WIKI[c.dataset.k]) openGrimoire(CHIP_WIKI[c.dataset.k]); });
   $('#clocks').addEventListener('click', e => { const d = e.target.closest('.dial'); if (d) openGrimoire(d === $('#clocks').firstElementChild ? 'calamite' : 'menace'); });
   $('#sheet').addEventListener('contextmenu', e => { const c = e.target.closest('.card'); if (!c) return; e.preventDefault(); openGrimoire(`${c.dataset.kind}:${c.dataset.t}`); });
   $('#modalRoot').addEventListener('click', e => { const b = e.target.closest('[data-wiki-open]'); if (b) openGrimoire(b.dataset.wikiOpen); });

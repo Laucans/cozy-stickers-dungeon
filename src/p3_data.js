@@ -5,8 +5,13 @@
    verrous / pièges / ruses sur le chemin des aventuriers,
    cycle Rôder → Calamité → Raid → Contrecoup.
    ========================================================= */
-const W = 12, H = 12;
+// taille du château : 12×12 au départ, agrandie de 2 à chaque extension des remparts (voir syncGeom)
+let W = 12, H = 12;
 const GATE = { x: 6, y: 11 };
+// étages : un nouvel étage par palier, vers le haut (les Hauteurs, les Cimes) ou vers le bas (les Caves, les Profondeurs)
+const DEPTH_MAX = 2, HEIGHT_MAX = 2;
+const FLOOR_NAMES = { 2: 'Les Cimes', 1: 'Les Hauteurs', 0: 'Rez-de-chaussée', '-1': 'Les Caves', '-2': 'Les Profondeurs' };
+const FLOOR_SHORT = { 2: 'Cimes', 1: 'Hauteurs', 0: 'Rez', '-1': 'Caves', '-2': 'Profondeurs' };
 const HEART = { x: 5, y: 1, w: 2, h: 2 };
 let CAL_MAX = 8, MENACE_MAX = 6;
 const CONSTS = { START_GOLD: 10, START_MAT: 8, WORK: 2 };
@@ -61,8 +66,25 @@ const ROOMS = {
               beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits, −3 courage aux héros qui la traversent.' },
   observatoire: { name: 'Observatoire', theme: 'enclave', unique: true, size: [2,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'magic', color: '#8f9fe8',
               amb: 2, hype: 1, dice: 1, preset: ['longuevue','cristal'], desc: 'Pièce de thème, livrée meublée. +2 Ambiance, +1 🔥, +1 dé aux raids.' },
+  // sous le château : un escalier ouvre l'étage du dessous (les héros n'y descendent jamais)
+  escalier: { name: 'Escalier des caves', size: [1,1], cost: { g: 4, s: 6 }, clock: 4, floor: 'flag', color: '#8a8f9c', preset: ['colimacon'], stairs: -1,
+              desc: 'Creuse un étage sous le château : les Caves, puis les Profondeurs. Un nouvel étage par palier, vers le haut ou vers le bas : à toi de choisir. Les héros ne quittent jamais le rez-de-chaussée.' },
+  montee:   { name: 'Escalier de la tour', size: [1,1], cost: { g: 5, s: 5 }, clock: 4, floor: 'wood', color: '#b08a5a', preset: ['montee'], stairs: 1,
+              desc: 'Monte un étage au-dessus du château : les Hauteurs, puis les Cimes. Un nouvel étage par palier, vers le haut ou vers le bas : à toi de choisir.' },
+  jardin:   { name: 'Jardin suspendu', high: 1, size: [3,2], cost: { g: 5, s: 4 }, clock: 6, floor: 'garden', open: true, color: '#8fd47a', food: 1, amb: 1,
+              furn: ['ruche','tonnelle','fontaine'], attracts: ['fee'], desc: 'En hauteur seulement. Des fleurs au-dessus des toits : +1 repas, +1 Ambiance. Attire la Fée grincheuse, une créature rare.' },
+  voliere:  { name: 'Volière', high: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'straw', color: '#d8c08a',
+              furn: ['nid','mangeoire'], attracts: ['harpie','gargouille'], desc: 'En hauteur seulement. Le royaume des créatures ailées. Attire la Harpie mélomane (rare) et les Gargouilles.' },
+  belvedere: { name: 'Belvédère', high: 2, size: [2,2], cost: { g: 6, s: 5 }, clock: 8, floor: 'flag', open: true, color: '#a8c6e8', harass: 2, sight: 2,
+              furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et les héros reçoivent des cailloux dès l’approche (−2 courage).' },
+  mine:     { name: 'Mine', deep: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'rock', color: '#a08a6a', mat: 2,
+              furn: ['wagonnet','filon','etai'], attracts: ['golem'], desc: 'Sous terre seulement. +2 🪵 par nuit, plus avec ses filons. Attire le Golem de mousse, une créature rare.' },
+  reliquaire: { name: 'Reliquaire', deep: 1, size: [3,2], cost: { g: 8, s: 5 }, clock: 8, floor: 'carpet', color: '#c9a2e8', amb: 1,
+              furn: ['vitrine','socle'], attracts: ['liche'], desc: 'Sous terre seulement. Les artefacts exposés ici rayonnent moitié plus. Attire la Liche frileuse, une créature rare.' },
+  lac:      { name: 'Lac souterrain', deep: 2, size: [3,3], cost: { g: 6, s: 6 }, clock: 8, floor: 'water', color: '#5aa0c8', amb: 2, cal: 1,
+              furn: ['nenuphar','barque'], attracts: ['crapaud'], desc: 'Dans les Profondeurs seulement. Une eau noire et paisible : −1 Calamité, +2 Ambiance, du poisson aveugle au menu. Les Crapauds adorent.' },
 };
-const ROOM_ORDER = ['couloir','dortoir','cuisine','potager','taverne','atelier','tour','fonderie','chapelle','planque','garde','observatoire','bibli','labo','caveau','forge','oubliettes','tresor','salon','trone'];
+const ROOM_ORDER = ['couloir','dortoir','cuisine','potager','taverne','atelier','tour','fonderie','chapelle','planque','garde','observatoire','bibli','labo','caveau','forge','oubliettes','tresor','salon','trone','escalier','mine','reliquaire','lac','montee','jardin','voliere','belvedere'];
 
 // meubles (room = pièce autorisée) et déco (room: 'any')
 const FURN = {
@@ -114,9 +136,41 @@ const FURN = {
   theiere:    { name: 'Service à thé', room: 'any', cost: { g: 2 }, amb: 2 },
   tableau:    { name: 'Portrait d’ancêtre', room: 'any', cost: { g: 3 }, amb: 2 },
   cristal:    { name: 'Cristal', room: 'any', cost: { g: 3 }, amb: 3 },
+  // sous terre
+  colimacon:  { name: 'Escalier en colimaçon', room: 'escalier', hidden: true, cost: {} },
+  wagonnet:   { name: 'Wagonnet', room: 'mine', cost: { g: 2, s: 1 }, mat: 1 },
+  filon:      { name: 'Filon doré', room: 'mine', cost: { g: 3 }, gold: 1, mat: 1 },
+  etai:       { name: 'Étais et lanterne', room: 'mine', cost: { g: 1, s: 2 }, guard: 1, amb: 1 },
+  vitrine:    { name: 'Vitrine', room: 'reliquaire', cost: { g: 3 }, amb: 1, hype: 1 },
+  socle:      { name: 'Socle de velours', room: 'reliquaire', cost: { g: 2 }, amb: 1 },
+  nenuphar:   { name: 'Nénuphars lumineux', room: 'lac', cost: { g: 2 }, amb: 2 },
+  barque:     { name: 'Barque', room: 'lac', cost: { g: 2, s: 2 }, food: 2 },
+  // en hauteur
+  montee:     { name: 'Escalier montant', room: 'montee', hidden: true, cost: {} },
+  ruche:      { name: 'Ruche', room: 'jardin', cost: { g: 2 }, food: 2 },
+  tonnelle:   { name: 'Tonnelle fleurie', room: 'jardin', cost: { g: 2, s: 1 }, amb: 2 },
+  fontaine:   { name: 'Fontaine', room: 'jardin', cost: { g: 3, s: 1 }, amb: 1, cal: 1 },
+  nid:        { name: 'Nid géant', room: 'voliere', cost: { g: 1, s: 1 }, beds: 2 },
+  mangeoire:  { name: 'Mangeoire', room: 'voliere', cost: { g: 1 }, food: 1, amb: 1 },
+  girouette:  { name: 'Girouette', room: 'belvedere', cost: { g: 2, s: 1 }, harass: 1 },
+  lanterne:   { name: 'Lanterne de guet', room: 'belvedere', cost: { g: 2 }, amb: 1, sight: 1 },
+  // artefacts : trouvés, pillés, achetés… jamais en vente dans la barre. Ils font rayonner le château.
+  couronne:     { name: 'Couronne du Roi Gobelin', room: 'any', artefact: true, glow: 8, hype: 1, repSp: 'gobelin', desc: 'Un peu trop grande, un peu cabossée. Les gobelins se prosternent devant elle.' },
+  epeefaux:     { name: 'Épée qui chante faux', room: 'any', artefact: true, glow: 6, dice: 1, desc: 'Elle fredonne en combat. Faux. Les ennemis en perdent leurs moyens.' },
+  grimoire:     { name: 'Grimoire des recettes interdites', room: 'any', artefact: true, glow: 6, food: 2, desc: 'Ragoût de mandragore, tarte aux araignées : interdit, mais nourrissant.' },
+  oeufbasilic:  { name: 'Œuf de basilic', room: 'any', artefact: true, glow: 7, guard: 2, desc: 'Personne n’ose s’en approcher. On ne sait pas s’il va éclore.' },
+  miroir:       { name: 'Miroir qui ment', room: 'any', artefact: true, glow: 5, amb: 2, desc: 'Il dit à tout le monde qu’il est magnifique. Le moral remonte.' },
+  cranecristal: { name: 'Crâne de cristal', room: 'any', artefact: true, glow: 10, cal: 1, desc: 'Il chuchote des choses apaisantes, en ancien elfique.' },
+  heaume:       { name: 'Heaume du chevalier Tamponné', room: 'any', artefact: true, glow: 5, guard: 2, desc: 'Cabossé par trente ans de portes mal ouvertes.' },
+  potdechambre: { name: 'Le Saint Pot de Chambre', room: 'any', artefact: true, glow: 9, amb: 1, hype: 1, desc: 'Relique sacrée d’un roi oublié. Les pèlerins en parlent à voix basse.' },
+  dentdragon:   { name: 'Dent de dragon', room: 'any', artefact: true, glow: 8, guard: 1, repSp: 'dragonnet', desc: 'Les dragonnets la trouvent rassurante. Les héros, beaucoup moins.' },
+  baton:        { name: 'Bâton de l’archimage distrait', room: 'any', artefact: true, glow: 7, cal: 1, amb: 1, desc: 'Son propriétaire le cherche encore. Il a oublié où il l’a posé.' },
+  harpe:        { name: 'Harpe ensorcelée', room: 'any', artefact: true, glow: 6, amb: 2, repSp: 'fee', desc: 'Elle joue toute seule des berceuses. Les fées adorent.' },
+  sablier:      { name: 'Sablier à l’envers', room: 'any', artefact: true, glow: 7, gold: 1, desc: 'Le sable remonte. Le temps, c’est de l’argent : il en rapporte.' },
 };
-const FURN_ORDER = Object.keys(FURN).filter(k => FURN[k].room !== 'any');
-const DECOR_ORDER = Object.keys(FURN).filter(k => FURN[k].room === 'any');
+const FURN_ORDER = Object.keys(FURN).filter(k => FURN[k].room !== 'any' && !FURN[k].hidden);
+const DECOR_ORDER = Object.keys(FURN).filter(k => FURN[k].room === 'any' && !FURN[k].artefact);
+const ARTEFACTS = Object.keys(FURN).filter(k => FURN[k].artefact);
 
 // défenses posées dans les couloirs
 const DEFS = {
@@ -170,6 +224,15 @@ const SPECIES = {
     lines: ['Je suis un coffre. Un coffre tout à fait normal.', 'Clac.', 'Ce coffre-fort est très séduisant.'] },
   vampire:   { name: 'Vampire', from: 'salon', tier: 2, hype: 1, guard: 2, dice: 2, tag: 'ruse', likes: 'tableau', rival: 'fantome', skill: 'Charisme', sd: '+1 🔥 par nuit et 2 dés en raid.',
     lines: ['Ce velours… exquis.', 'Le fantôme traverse mes murs sans frapper.', 'Un portrait de moi ? Je n’ai pas de reflet, hélas.'] },
+  // créatures rares : il faut les avoir rencontrées sur la carte (site), et que le château rayonne assez (glow)
+  golem:     { name: 'Golem de mousse', from: 'mine', rare: true, tier: 1, glow: 45, site: 'grotte', build: 2, guard: 5, dice: 1, tag: 'combat', likes: 'filon', skill: 'Bâtisseur de pierre', sd: '+2 travaux par nuit et garde 5. Ne dit presque rien.',
+    lines: ['…', 'Mousse. Contente.', 'Pierre sur pierre. Lentement. Bien.'] },
+  fee:       { name: 'Fée grincheuse', from: 'jardin', rare: true, tier: 2, glow: 80, site: 'foret', amb: 2, cal: 1, guard: 1, dice: 2, tag: 'magie', likes: 'harpe', rival: 'gobelin', skill: 'Enchantements', sd: '+2 Ambiance et −1 Calamité par nuit. 2 dés de magie en raid.',
+    lines: ['Quoi, encore ? J’étais en train de bouder.', 'Ton lac est humide. C’est normal, mais quand même.', 'Si un gobelin me touche les ailes, je le change en navet.'] },
+  liche:     { name: 'Liche frileuse', from: 'reliquaire', rare: true, tier: 2, glow: 110, site: 'ruines', hype: 2, guard: 4, dice: 3, tag: 'magie', likes: 'cranecristal', rival: 'fantome', skill: 'Nécromancie douillette', sd: '+2 🔥 par nuit, garde 4 et 3 dés de magie. Réclame une bouillotte.',
+    lines: ['Mille ans de non-vie, et toujours ce courant d’air.', 'Tu n’aurais pas une bouillotte ?', 'Mes artefacts. MES artefacts. Bon, d’accord : tes artefacts.'] },
+  harpie:    { name: 'Harpie mélomane', from: 'voliere', rare: true, tier: 1, glow: 45, site: 'pic', hype: 1, amb: 1, guard: 2, dice: 2, tag: 'ruse', likes: 'mangeoire', rival: 'gargouille', skill: 'Chant perçant', sd: '+1 🔥 et +1 Ambiance par nuit, 2 dés de ruse. Elle chante faux, mais très fort.',
+    lines: ['Laaaaa ! Pardon, je m’échauffais.', 'Les gargouilles n’ont aucune oreille musicale.', 'Une mangeoire bien garnie, et je fais les chœurs.'] },
 };
 const SPECIES_ORDER = Object.keys(SPECIES);
 

@@ -54,24 +54,27 @@ function rebuild() {
   V.walls = computeWalls(); V.lights = []; V.flames = [];
   const L = (x, y, r, col, i, o = {}) => V.lights.push({ x, y, r, col, i, glow: o.glow ?? .3, flick: o.flick ?? 0, pulse: o.pulse, seed: hash(x, y, r) * 10 });
   for (const r of S.rooms) {
-    if (!r.built || r.t === 'coeur') continue;
+    if (!r.built || r.t === 'coeur' || zOf(r) !== Z) continue;
     if (isHall(r)) L(r.x + .5, r.y + .5, 1.25, 'warm', .3, { glow: 0 });
     else L(r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w, r.h) * .8 + .6, 'warm', .55, { glow: .1 });
   }
-  const h = heartRoom(); L(h.x + 1, h.y + 1, 4.2, 'violet', 1, { glow: .7, pulse: 1 });
+  const h = heartRoom(); if (h && Z === 0) L(h.x + 1, h.y + 1, 4.2, 'violet', 1, { glow: .7, pulse: 1 });
   V.walls.forEach(w => {
     const mx = (w.x0 + w.x1) / 2, my = (w.y0 + w.y1) / 2, ox = w.face === 'W' ? .22 : 0, oy = w.face === 'N' ? .22 : 0;
     if (w.deco === 'torch') { L(mx + ox, my + oy, 2.6, 'fire', 1, { glow: .45, flick: 1 }); const p = lerp2(WP(w.x0, w.y0), WP(w.x1, w.y1), .5); V.flames.push({ wx: p[0], wy: p[1] - w.h * .62 - 4, s: 1.7, d: w.d + .02, seed: mx * 3 + my }); }
     if (w.deco === 'window') L(mx + ox * 2, my + oy * 2, 1.7, 'moon', .5, { glow: .2 });
   });
   S.furn.forEach(f => {
+    if (zOf(f) !== Z) return;
     const r = roomAt(f.x, f.y); if (!r || !r.built) return;
     const l = LIGHTS[f.t] || LIGHTS[(FURN[f.t] || {}).sprite]; if (l) L(f.x + .5, f.y + .5, l[0], l[1], l[2], { glow: .4, flick: l[1] === 'fire' || l[1] === 'warm' ? 1 : 0 });
     (FLAMES[f.t] || FLAMES[(FURN[f.t] || {}).sprite] || []).forEach(([ax, ay, az, sc]) => { const [px, py] = pt(ax, ay, az), [bx, by] = WP(f.x + .5, f.y + .5); V.flames.push({ wx: bx + px * AU, wy: by + py * AU, s: sc * 1.9, d: f.x + f.y + 1.02, seed: f.x * 7 + f.y }); });
   });
-  for (let i = 1; i < W; i += 3) L(i + .5, .35, 2.3, 'fire', .85, { glow: .35, flick: 1 });
-  for (let i = 1; i < H; i += 3) L(.35, i + .5, 2.3, 'fire', .85, { glow: .35, flick: 1 });
-  BRAZIERS.forEach(([x, y]) => L(x, y, 2.8, 'fire', 1, { glow: .5, flick: 1 }));
+  if (Z === 0) {
+    for (let i = 1; i < W; i += 3) L(i + .5, .35, 2.3, 'fire', .85, { glow: .35, flick: 1 });
+    for (let i = 1; i < H; i += 3) L(.35, i + .5, 2.3, 'fire', .85, { glow: .35, flick: 1 });
+    braziers().forEach(([x, y]) => L(x, y, 2.8, 'fire', 1, { glow: .5, flick: 1 }));
+  } else if (Z > 0) L(W / 2, H / 2, W * .75, 'moon', .5, { glow: 0 });
   if (!V.outside.length) {
     const R = rng(4242);
     for (let i = 0; i < 46; i++) {
@@ -86,7 +89,7 @@ function rebuild() {
 function computeWalls() {
   const out = [], D = doors();
   for (const r of S.rooms) {
-    if (!r.built || r.t === 'porche') continue;
+    if (!r.built || r.t === 'porche' || zOf(r) !== Z) continue;
     const d = ROOMS[r.t]; let banner = false;
     for (const [x, y] of cellsOf(r)) {
       for (const [face, nx, ny, x0, y0, x1, y1, dep] of [['N', x, y - 1, x, y, x + 1, y, x + y + .5], ['W', x - 1, y, x, y, x, y + 1, x + y + .5], ['S', x, y + 1, x, y + 1, x + 1, y + 1, x + y + 1.5], ['E', x + 1, y, x + 1, y, x + 1, y + 1, x + y + 1.5]]) {
@@ -103,7 +106,7 @@ function computeWalls() {
           const k = hash(x * 3, y * 5, face.charCodeAt(0));
           if (isHall(r)) w.deco = (x + y) % 3 === 0 ? 'torch' : null;
           else if (!banner && r.t !== 'coeur') { w.deco = 'banner'; banner = true; }
-          else w.deco = k < .34 ? 'torch' : k < .55 ? 'window' : k < .72 && ['cuisine', 'labo', 'bibli', 'taverne', 'atelier'].includes(r.t) ? 'shelf' : k < .84 && ['forge', 'garde', 'trone', 'tour'].includes(r.t) ? 'shield' : null;
+          else w.deco = k < .34 ? 'torch' : k < .55 ? (Z < 0 ? 'torch' : 'window') : k < .72 && ['cuisine', 'labo', 'bibli', 'taverne', 'atelier'].includes(r.t) ? 'shelf' : k < .84 && ['forge', 'garde', 'trone', 'tour'].includes(r.t) ? 'shield' : null;
         }
         out.push(w);
       }
@@ -207,6 +210,16 @@ function updateActors(now) {
     if (p >= 1) { a.dur = 0; const r = a.res; a.res = null; r && r(); }
   });
 }
+// ciel des étages en hauteur : dégradé de nuit, étoiles, lune, nuages qui passent
+const SKY_STARS = Array.from({ length: 140 }, (_, i) => [hash(i, 1), hash(i, 2), .4 + hash(i, 3) * 1.4, hash(i, 4) * 6]);
+function drawSky(t) {
+  const g = ctx, w = V.w, h = V.h, gr = g.createLinearGradient(0, 0, 0, h);
+  gr.addColorStop(0, '#0a0c24'); gr.addColorStop(.6, '#1b1f4a'); gr.addColorStop(1, '#3a2c52'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  SKY_STARS.forEach(([x, y, r, ph]) => { g.globalAlpha = .45 + .45 * Math.sin(t / 900 + ph); g.fillStyle = '#fff6dc'; g.beginPath(); g.arc(x * w, y * h * .8, r, 0, 7); g.fill(); });
+  g.globalAlpha = 1; const mx = w * .82, my = h * .16; g.fillStyle = 'rgba(255,240,200,.12)'; g.beginPath(); g.arc(mx, my, 60, 0, 7); g.fill();
+  g.fillStyle = '#f6ecc8'; g.beginPath(); g.arc(mx, my, 26, 0, 7); g.fill(); g.fillStyle = '#1b1f4a'; g.beginPath(); g.arc(mx + 11, my - 7, 23, 0, 7); g.fill();
+  for (let i = 0; i < 6; i++) { const x = ((t / 90 * (.4 + hash(i, 9) * .5) + hash(i, 7) * w * 1.6) % (w * 1.6)) - w * .3, y = h * (.12 + hash(i, 8) * .75); g.fillStyle = 'rgba(190,190,230,.08)'; [0, 1, 2].forEach(k => { g.beginPath(); g.ellipse(x + k * 46, y + (k % 2) * 8, 70, 22, 0, 0, 7); g.fill(); }); }
+}
 function drawActor(c, a, t) {
   const [wx, wy] = WP(a.x, a.y), s = getSprite(a.kind, a.key), k = AU / SQ() * 1.08;
   const bob = a.walking ? Math.abs(Math.sin(t / 95 + a.ph)) * 5 : 0, breath = a.walking ? 1 : 1 + Math.sin(t / 520 + a.ph) * .018;
@@ -231,10 +244,10 @@ function drawLighting(t, lights) {
   const g = LIGHTMAP.getContext('2d');
   if (!CARVE) { CARVE = g.createRadialGradient(0, 0, 0, 0, 0, 1); CARVE.addColorStop(0, 'rgba(0,0,0,1)'); CARVE.addColorStop(.38, 'rgba(0,0,0,.82)'); CARVE.addColorStop(1, 'rgba(0,0,0,0)'); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, lw, lh);
-  g.fillStyle = `rgba(12,9,28,${TUNE.ambient})`; g.fillRect(0, 0, lw, lh);
+  g.fillStyle = Z < 0 ? `rgba(8,6,12,${Math.min(.86, TUNE.ambient + .05)})` : Z > 0 ? `rgba(16,18,44,${Math.max(.3, TUNE.ambient - .12)})` : `rgba(12,9,28,${TUNE.ambient})`; g.fillRect(0, 0, lw, lh);
   g.globalCompositeOperation = 'destination-out';
   const k = V.dpr * q; g.setTransform(k * CAM.s, 0, 0, k * CAM.s, k * CAM.x, k * CAM.y);
-  const [cx, cy] = WP(W / 2, H / 2); g.save(); g.translate(cx, cy); g.scale(W * 70, W * 38); g.globalAlpha = .22; g.fillStyle = CARVE; g.fillRect(-1, -1, 2, 2); g.restore();
+  const [cx, cy] = WP(W / 2, H / 2); g.save(); g.translate(cx, cy); g.scale(W * 70, W * 38); g.globalAlpha = Z < 0 ? .34 : .22; g.fillStyle = CARVE; g.fillRect(-1, -1, 2, 2); g.restore();
   for (const l of lights) { const [x, y] = WP(l.x, l.y); const r = l.r * 128 * TUNE.lightScale; g.save(); g.translate(x, y); g.scale(r, r * .62); g.globalAlpha = Math.min(1, l.i); g.fillStyle = CARVE; g.fillRect(-1, -1, 2, 2); g.restore(); }
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(LIGHTMAP, 0, 0, cv.width, cv.height);
   ctx.setTransform(V.dpr * CAM.s, 0, 0, V.dpr * CAM.s, V.dpr * CAM.x, V.dpr * CAM.y); ctx.globalCompositeOperation = 'lighter';

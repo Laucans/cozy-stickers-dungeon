@@ -483,3 +483,55 @@ body.visiting .hud-bottom, body.visiting .hud-actions, body.visiting .tracker, b
 <style>
 @media (max-width:560px){ .vcard{flex-wrap:wrap} .vtop{width:70px} .vtxt{flex:1 1 calc(100% - 84px)} .vtxt b{white-space:normal} .vbtn{width:100%; display:flex; justify-content:flex-end} .vbtn:empty{display:none} }
 </style>
+<style>
+/* ---------- étages, trésors ---------- */
+.barhead{display:flex; gap:6px 10px; align-items:center; flex-wrap:wrap}
+.floors{display:flex; gap:4px; align-items:center; margin-left:auto}
+.floors .flab{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--cream-2); margin-right:2px}
+.floors button{border:1.5px solid var(--bronze-2); background:rgba(0,0,0,.25); border-radius:999px; padding:3px 11px; font-weight:800; font-size:12.5px; color:var(--cream-2)}
+.floors button[aria-pressed="true"]{background:linear-gradient(180deg,#9fc4ff,#5a86d0); color:#0e1830; border-color:#cfe0ff}
+.hud-bottom{right:calc(var(--gr) + 490px)}
+@media (max-width:900px){ .hud-bottom{right:var(--gr)} }
+.sheet .empty{flex:1; align-self:center; padding:10px 14px; font-size:13px; color:var(--cream-2); max-width:520px}
+.sheet .empty b{color:var(--gold)}
+.glowbar{display:flex; gap:4px; margin:8px 0}
+.glowbar span{flex:1; text-align:center; font-size:11.5px; font-weight:800; padding:5px 2px; border-radius:8px; background:var(--parch-2); color:var(--ink-soft); border:1.5px solid var(--parch-3)}
+.glowbar span small{display:block; font-weight:600; font-size:10px}
+.glowbar span.on{background:linear-gradient(180deg,#ffe7a0,#e9b949); color:var(--ink); border-color:#c99a3a}
+
+/* ---------- la carte du Val ---------- */
+.world{position:absolute; inset:0; z-index:35; background:#0d0a12}
+.world canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:grab}
+.wtop{position:absolute; left:var(--gl); right:var(--gr); top:var(--gt); display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; padding:7px 12px}
+.wtop b{font-family:var(--f-display); font-size:22px; color:var(--gold)}
+.wtop #wglow{font-size:13px; color:var(--cream-2)}
+.wtop .wbtns{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
+.wpanel{position:absolute; right:var(--gr); top:calc(var(--gt) + 64px); width:330px; max-height:calc(100% - var(--gt) - var(--gb) - 80px); overflow:auto; padding:10px 14px 14px; color:var(--cream)}
+.wpanel:empty{display:none}
+.wpanel h3{font-family:var(--f-display); font-size:23px; color:var(--gold); margin:2px 0 4px; line-height:1.05}
+.wpanel h4{font-family:var(--f-display); font-size:17px; margin:10px 0 4px; color:var(--cream)}
+.wpanel p{margin:6px 0; font-size:13.5px}
+.wpanel .hint{color:var(--cream-2)} .wpanel .no{color:#ff9a8a}
+.wpanel .tag2{background:rgba(255,240,210,.1); border-color:rgba(233,185,73,.35); color:var(--cream-2)}
+.wpanel .sbtn{box-shadow:0 2px 0 #000}
+.wteam{display:grid; grid-template-columns:repeat(auto-fill, minmax(86px,1fr)); gap:6px; margin-top:6px}
+.wmate{display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px; border-radius:10px; border:1.5px solid var(--bronze-2); background:rgba(0,0,0,.25); color:var(--cream); font-size:11px; font-weight:700}
+.wmate img{width:40px; height:44px; object-fit:contain} .wmate span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.wmate[aria-pressed="true"]{border-color:#ffc25a; background:rgba(233,185,73,.22); box-shadow:0 0 10px rgba(255,190,90,.4)}
+@media (max-width:760px){ .wpanel{left:var(--gl); right:var(--gr); width:auto; top:auto; bottom:var(--gb); max-height:46%} .wtop b{font-size:18px} }
+
+/* ---------- en ville ---------- */
+.modal.townm{max-width:880px}
+.town .shop{background:var(--edge); border:2px solid var(--ink); border-radius:16px; padding:6px 14px 10px; margin:12px 0; box-shadow:0 3px 0 var(--ink)}
+.town .shop h3{margin:6px 0 2px}
+.town .keeper{font-family:var(--f-hand); font-size:17px; color:var(--ink-soft); margin:0 0 6px}
+.srow{display:flex; gap:10px; align-items:center; padding:6px 0; border-top:1px dashed var(--parch-3)}
+.srow:first-of-type{border-top:0}
+.srow .emo{font-size:24px; width:32px; text-align:center; flex:none}
+.srow img.th{width:44px; height:44px; flex:none}
+.srow .sdesc{flex:1; min-width:0}
+.srow .sinfo{flex:1.2; font-size:13px}
+.srow.art{background:linear-gradient(90deg, rgba(233,185,73,.16), transparent); border-radius:10px; padding-left:6px}
+.srecr{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:0 14px}
+@media (max-width:560px){ .srow{flex-wrap:wrap} .srow .sbtn{margin-left:42px} }
+</style>

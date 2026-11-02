@@ -10,6 +10,10 @@ Un petit château maléfique… mais douillet. On colle des pièces, des meubles
 - **Accueillir des créatures** : chaque pièce meublée attire son espèce. Humeur, postes, raids aux dés, invasions animées, calamités.
 - **Les âmes du château** : réputation du château auprès de chaque espèce, loyauté et épanouissement de chaque créature, désertions possibles vers des châteaux mieux réputés (optionnelles), missions personnelles en trois chapitres avec expédition, niveaux et légendes.
 - **Hauts faits** qui débloquent des pouvoirs permanents (et quelques pouvoirs à activer).
+- **Étages et remparts** : un nouvel étage par palier, vers le haut (jardin suspendu, volière, belvédère) ou vers le bas (mine, reliquaire, lac souterrain), chacun avec ses stickers, ses bonus et ses créatures rares ; des remparts qu’on élargit.
+- **Rayonnement** : artefacts, trésors, créatures rares et légendes font briller le château… et attirent des aventuriers de plus en plus loin, donc de plus en plus forts (apprentis des villages, aventuriers des villes, héros de la cité).
+- **La carte du Val** : une carte en hexagones façon Civilization, avec brouillard de guerre et le cercle doré de ton rayonnement. Les héros repoussés perdent leurs carnets de route (la carte se dévoile), les éclaireurs explorent, les expéditions rapportent artefacts et rencontres rares. Villages, ville, cité, cibles de raid, donjons rivaux et châteaux des autres joueurs y apparaissent.
+- **En ville** : bazar, apothicaire, taverne, Guilde des Aventuriers Patentés, cartographe et bureau de placement pour monstres, à visiter avec une fausse moustache.
 - **Le Val des Maîtres** (en ligne) : visite les châteaux des autres joueurs, signe leur livre d’or, offre des cadeaux, tente des escarmouches (avec boucliers), grimpe au palmarès de la saison… et vois des créatures passer d’un château à l’autre selon la réputation de chacun.
 - **Le château partagé** : jusqu’à 5 Maîtres dans le même château en temps réel, avec curseurs, discussion et vote de fin de nuit.
 - Un **Grimoire** façon Civilopédie, un **tutoriel** guidé et l’**Atelier du Maître** pour régler le jeu.

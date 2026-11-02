@@ -35,16 +35,17 @@ function toggleSound() {
 
 /* ---------- raid ---------- */
 function cancelRaid() { if (!S.raid) return; S.raid.team.forEach(id => { const c = S.creatures.find(x => x.id === id); if (c) { c.raid = false; c.back = true; } }); S.raid = null; }
-function openRaid() {
+function openRaid(pre) {
   if (UI.busy) return;
-  UI.raidSel = S.raid ? { target: S.raid.target, team: new Set(S.raid.team) } : { target: null, team: new Set() };
+  const pk = typeof pre === 'string' && RAIDS[pre] ? pre : null;
+  UI.raidSel = S.raid ? { target: pk || S.raid.target, team: new Set(S.raid.team) } : { target: pk, team: new Set() };
   const m = openModal('<div id="raidBody"></div>', { wide: true, label: 'Raid' });
   const draw = () => {
     const sel = UI.raidSel, crew = S.creatures.filter(c => diceOf(c) > 0 && !c.away && (!c.raid || sel.team.has(c.id)));
     const b = sel.target ? raidBreakdown(sel.target, [...sel.team]) : null;
     m.querySelector('#raidBody').innerHTML = `<h2>Raid sur le Val Douillet</h2>
       <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
-      <h3>Cible</h3><div class="choices">${Object.entries(RAIDS).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
+      <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
       <h3>Équipe (${sel.team.size}/3)</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= 3 ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
       ${b ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
       <div class="mfoot">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>🗺️ Planifier le raid</button></div>`;
@@ -130,7 +131,7 @@ async function runInvasion(report) {
 async function endNight() {
   if (UI.busy) return;
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
-  dropSticker(); closeModal(true);
+  dropSticker(); closeModal(true); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
   const n = S.night, report = [];
   try {
@@ -174,12 +175,18 @@ function chronicle(n, report) {
 
 /* ---------- palier, aide, menu, accueil ---------- */
 function openTier() {
-  const st = tierStatus();
-  if (!st) { openModal(`<h2>⭐ Palier ${S.tier}</h2><p>Ton château a atteint le palier maximal. Bravo, Maître !</p>`); return; }
-  const m = openModal(`<h2>⭐ Monter au Palier ${S.tier + 1}</h2><p>Un château plus grand attire des créatures plus puissantes… et des aventuriers plus coriaces.</p>
-    <ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul><p><b>Débloque :</b> ${esc(st.next.unlock)}.</p>
-    <div class="mfoot"><button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="tGo" ${st.ok ? '' : 'disabled'}>⭐ Monter de palier</button></div>`, { label: 'Palier' });
-  m.querySelector('#tGo').addEventListener('click', () => { if (!run('tierUp')) return; sfx('chime'); closeModal(); afterChange(); banner(`⭐ Palier ${S.tier} !`, 'De nouveaux stickers sont disponibles', 1800); });
+  const st = tierStatus(), ex = expandStatus(), fl = floorSet().size;
+  let html = st ? `<h2>⭐ Monter au Palier ${S.tier + 1}</h2><p>Un château plus grand attire des créatures plus puissantes… et des aventuriers plus coriaces.</p>
+    <ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul><p><b>Débloque :</b> ${esc(st.next.unlock)}, et un étage de plus.</p>
+    <div class="btnrow"><button class="sbtn pri" type="button" id="tGo" ${st.ok ? '' : 'disabled'}>⭐ Monter de palier</button></div>`
+    : `<h2>⭐ Palier ${S.tier}</h2><p>Ton château a atteint le palier maximal. Bravo, Maître !</p>`;
+  html += `<h3>🪜 Étages (${fl}/${Math.min(3, S.tier)})</h3><p class="hint">Chaque palier permet d’ouvrir un étage : vers le haut avec l’<b>Escalier de la tour</b> (les Hauteurs, puis les Cimes : jardin suspendu, volière, belvédère), ou vers le bas avec l’<b>Escalier des caves</b> (les Caves, puis les Profondeurs : mine, reliquaire, lac souterrain). Chaque direction a ses stickers et attire ses propres créatures rares.</p>`;
+  html += ex ? `<h3>🧱 Agrandir les remparts</h3><p>Le château passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
+    <ul class="req"><li>${S.tier >= ex.need ? '✅' : '⬜'} Palier ${ex.need}</li><li>${canAfford(ex.cost) ? '✅' : '⬜'} Payer ${costText(ex.cost)}</li></ul>
+    <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir les remparts</button></div>` : '<h3>🧱 Remparts</h3><p class="hint">Les remparts sont au plus large.</p>';
+  const m = openModal(html + '<div class="mfoot"><button class="sbtn" type="button" data-close>Plus tard</button></div>', { label: 'Palier' });
+  m.querySelector('#tGo') && m.querySelector('#tGo').addEventListener('click', () => { if (!run('tierUp')) return; sfx('chime'); closeModal(); afterChange(); banner(`⭐ Palier ${S.tier} !`, 'De nouveaux stickers sont disponibles', 1800); });
+  m.querySelector('#tExp') && m.querySelector('#tExp').addEventListener('click', () => { if (!run('expand')) return; sfx('chime'); closeModal(); afterChange(); CAM.user = false; fitCamera(); banner('🧱 Remparts agrandis !', `Le château fait maintenant ${W}×${H} cases`, 1800); });
 }
 function openHelp() {
   openModal(`<div class="help"><h2>Le manuel du Maître</h2>
@@ -295,6 +302,8 @@ function bindEvents() {
   $('#btnTier').addEventListener('click', () => { if (!UI.busy) openTier(); });
   $('#btnPath').addEventListener('click', e => { V.showPath = !V.showPath; e.currentTarget.classList.toggle('on', V.showPath); e.currentTarget.setAttribute('aria-pressed', V.showPath); sfx('tick'); });
   $('#btnBest').addEventListener('click', openBestiary);
+  $('#floors').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (b) { setFloor(+b.dataset.z); sfx('tick'); } });
+  $('#btnMap').addEventListener('click', () => { if (!UI.busy) openWorld(); });
   $('#btnLog').addEventListener('click', openJournal);
   $('#trackHead').addEventListener('click', () => { UI.tracker = !UI.tracker; renderGoals(); });
   $('#zin').addEventListener('click', () => zoomAt(V.w / 2, V.h / 2, 1.25));
@@ -309,6 +318,7 @@ function bindEvents() {
     else if (e.key === 'r' || e.key === 'R') rotateHand();
     else if (e.key === '+' || e.key === '=') zoomAt(V.w / 2, V.h / 2, 1.2);
     else if (e.key === '-') zoomAt(V.w / 2, V.h / 2, .83);
+    else if (e.key === 'PageUp' || e.key === 'PageDown') { const fl = floorsOpen(), i = fl.indexOf(Z), j = i + (e.key === 'PageUp' ? -1 : 1); if (fl[j] != null) setFloor(fl[j]); e.preventDefault(); }
     else if (e.key.startsWith('Arrow') && !$('#modalRoot').children.length) { const d = 60; CAM.x += e.key === 'ArrowLeft' ? d : e.key === 'ArrowRight' ? -d : 0; CAM.y += e.key === 'ArrowUp' ? d : e.key === 'ArrowDown' ? -d : 0; clampCam(); }
   });
 }
@@ -334,7 +344,7 @@ function tap(e) {
 function boot(data) {
   const saved = (data && data.S) || load();
   if (saved) { S = upgradeState(saved); dirty(); } else newState();
-  sortLimbo();
+  sortLimbo(); worldInit();
   document.querySelectorAll('img[data-ico]').forEach(i => { i.src = iconURL(i.dataset.ico); });
   if (innerWidth < 900) UI.tracker = false;
   bindEvents(); resize(); renderAll(); fitCamera();

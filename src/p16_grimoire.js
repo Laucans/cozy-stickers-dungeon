@@ -4,7 +4,7 @@
    Articles de mécaniques écrits à la main + fiches générées depuis
    les données vivantes (elles suivent les réglages de l'Atelier)
    ========================================================= */
-const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Val des Maîtres'],
+const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Le Val : carte et voisins'],
   ['room', 'Pièces'], ['furn', 'Meubles'], ['decor', 'Déco'], ['def', 'Pièges'], ['sp', 'Bestiaire'], ['hero', 'Aventuriers'], ['raid', 'Cibles de raid']];
 const WIKI = {
   accueil: { cat: 'bases', t: 'Bienvenue dans le Grimoire', x: () => `<p>Ce grimoire explique tout le jeu. Chaque mot souligné mène à un autre article.</p>

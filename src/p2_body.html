@@ -40,12 +40,13 @@
     <div class="handbar panel" id="handbar" hidden></div>
     <div class="raidnote panel" id="raidnote" hidden></div>
     <div class="buildbar panel">
-      <div class="tabs" id="tabs" role="tablist">
+      <div class="barhead"><div class="tabs" id="tabs" role="tablist">
         <button type="button" role="tab" data-tab="room" aria-selected="true">Pièces</button>
         <button type="button" role="tab" data-tab="furn" aria-selected="false">Meubles</button>
         <button type="button" role="tab" data-tab="def" aria-selected="false">Pièges</button>
         <button type="button" role="tab" data-tab="decor" aria-selected="false">Déco</button>
-      </div>
+        <button type="button" role="tab" data-tab="arte" aria-selected="false">Trésors</button>
+      </div><div class="floors" id="floors" hidden></div></div>
       <div class="sheet" id="sheet"></div>
     </div>
   </div>
@@ -54,6 +55,7 @@
     <button class="round" id="btnPath" type="button" aria-pressed="false"><img data-ico="path" alt=""><span>Chemin</span></button>
     <button class="round" id="btnRaid" type="button"><img data-ico="raid" alt=""><span>Raid</span></button>
     <button class="round" id="btnTier" type="button"><img data-ico="tier" alt=""><span>Palier</span></button>
+    <button class="round" id="btnMap" type="button"><img data-ico="map" alt=""><span>Carte</span></button>
     <button class="round" id="btnVal" type="button"><img data-ico="val" alt=""><span>Le Val</span></button>
     <button class="round night" id="btnNight" type="button"><img data-ico="night" alt=""><span>Finir la nuit</span></button>
   </div>
