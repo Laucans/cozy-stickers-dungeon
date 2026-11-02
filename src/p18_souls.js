@@ -80,7 +80,7 @@ function announceAch(list) {
   list.forEach((a, i) => setTimeout(() => { toast(`🏆 Haut fait : ${a.name} → ${a.pw}`); sfx('chime'); }, i * 900));
 }
 TIPS.push(
-  { id: 'nouveau2', when: () => S.night > 1 && !(S.tuto && S.tuto.on), t: 'Du nouveau au château !', x: 'Tes créatures ont maintenant une loyauté, des missions personnelles et des niveaux. Ton château a une réputation par espèce et des hauts faits qui débloquent des pouvoirs. Et le Val des Maîtres t’attend en ligne !', wiki: 'reputation' },
+  { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 à gauche. Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
   { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'offered'), t: 'Une demande personnelle', x: 'Une créature a une mission à te proposer (❗ sur son portrait). Accepte-la depuis sa fiche : la réussir rend loyal, fait gagner de l’expérience et rapporte des cadeaux.', wiki: 'missions' },
   { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Rassure-la depuis sa fiche, caresse-la, confie-lui une mission… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
   { id: 'haut1', when: () => Object.keys(S.ach || {}).length >= 1, t: 'Premier haut fait !', x: 'Chaque haut fait débloque un pouvoir permanent pour ton château. Retrouve-les tous dans 🏆 Hauts faits.', wiki: 'hautsfaits' },

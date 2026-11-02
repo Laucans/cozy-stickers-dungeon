@@ -30,7 +30,7 @@ const TUTO_STEPS = [
   { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
   { id: 'horloges', t: 'Surveille tes horloges', x: 'En haut : la {c:calamite|Calamité} (rouge) monte quand le château va mal, la {c:menace|Menace} (bleue) quand le village s’agace. Pleine, la Menace amène des aventuriers.', target: '#clocks', btn: 'next' },
   { id: 'envies', t: 'Tes envies', x: 'À droite, les Envies du château te guident et rapportent des récompenses. Vise le {c:paliers|Palier 1} pour débloquer de nouvelles pièces et créatures.', target: '#tracker', btn: 'next' },
-  { id: 'fin', t: 'À toi de jouer !', x: 'Tout le reste est dans le Grimoire (bouton 📖) : chaque mécanique, pièce, meuble et créature. Je reviendrai te souffler des conseils au bon moment. Bonne nuit, Maître !', btn: 'end' },
+  { id: 'fin', t: 'À toi de jouer !', x: 'Tout le reste est dans le Grimoire (bouton 📖) : chaque mécanique, pièce, meuble et créature. Bientôt, tes créatures te confieront leurs missions (📜), et le bouton « Le Val » te mènera chez les autres Maîtres. Je reviendrai te souffler des conseils au bon moment. Bonne nuit, Maître !', btn: 'end' },
 ];
 const TIPS = [
   { id: 'faim', when: () => eaters() > foodCap(), t: 'Des ventres vides !', x: 'Tu as plus de bouches que de repas. Les affamés boudent et la Calamité monte. Meuble un {room:potager} ou une {room:cuisine}.', wiki: 'lits_repas' },

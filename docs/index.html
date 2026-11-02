@@ -3847,7 +3847,7 @@ const TUTO_STEPS = [
   { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
   { id: 'horloges', t: 'Surveille tes horloges', x: 'En haut : la {c:calamite|Calamité} (rouge) monte quand le château va mal, la {c:menace|Menace} (bleue) quand le village s’agace. Pleine, la Menace amène des aventuriers.', target: '#clocks', btn: 'next' },
   { id: 'envies', t: 'Tes envies', x: 'À droite, les Envies du château te guident et rapportent des récompenses. Vise le {c:paliers|Palier 1} pour débloquer de nouvelles pièces et créatures.', target: '#tracker', btn: 'next' },
-  { id: 'fin', t: 'À toi de jouer !', x: 'Tout le reste est dans le Grimoire (bouton 📖) : chaque mécanique, pièce, meuble et créature. Je reviendrai te souffler des conseils au bon moment. Bonne nuit, Maître !', btn: 'end' },
+  { id: 'fin', t: 'À toi de jouer !', x: 'Tout le reste est dans le Grimoire (bouton 📖) : chaque mécanique, pièce, meuble et créature. Bientôt, tes créatures te confieront leurs missions (📜), et le bouton « Le Val » te mènera chez les autres Maîtres. Je reviendrai te souffler des conseils au bon moment. Bonne nuit, Maître !', btn: 'end' },
 ];
 const TIPS = [
   { id: 'faim', when: () => eaters() > foodCap(), t: 'Des ventres vides !', x: 'Tu as plus de bouches que de repas. Les affamés boudent et la Calamité monte. Meuble un {room:potager} ou une {room:cuisine}.', wiki: 'lits_repas' },
@@ -3998,7 +3998,7 @@ function announceAch(list) {
   list.forEach((a, i) => setTimeout(() => { toast(`🏆 Haut fait : ${a.name} → ${a.pw}`); sfx('chime'); }, i * 900));
 }
 TIPS.push(
-  { id: 'nouveau2', when: () => S.night > 1 && !(S.tuto && S.tuto.on), t: 'Du nouveau au château !', x: 'Tes créatures ont maintenant une loyauté, des missions personnelles et des niveaux. Ton château a une réputation par espèce et des hauts faits qui débloquent des pouvoirs. Et le Val des Maîtres t’attend en ligne !', wiki: 'reputation' },
+  { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 à gauche. Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
   { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'offered'), t: 'Une demande personnelle', x: 'Une créature a une mission à te proposer (❗ sur son portrait). Accepte-la depuis sa fiche : la réussir rend loyal, fait gagner de l’expérience et rapporte des cadeaux.', wiki: 'missions' },
   { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Rassure-la depuis sa fiche, caresse-la, confie-lui une mission… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
   { id: 'haut1', when: () => Object.keys(S.ach || {}).length >= 1, t: 'Premier haut fait !', x: 'Chaque haut fait débloque un pouvoir permanent pour ton château. Retrouve-les tous dans 🏆 Hauts faits.', wiki: 'hautsfaits' },
