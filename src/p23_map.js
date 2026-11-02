@@ -272,3 +272,22 @@ function openRadiance() {
     <li>Plus ils sont forts, plus ils sèment d’or en fuyant, et plus ils laissent tomber d’artefacts et de carnets de route.</li><li>Les créatures rares exigent un rayonnement minimum (Golem et Harpie 45, Fée 80, Liche 110).</li><li>La carte se dévoile autour du château, aussi loin que porte ta renommée.</li></ul>
     <div class="btnrow"><button class="sbtn pri" type="button" id="rgMap">🗺️ Voir la carte</button><button class="sbtn" type="button" data-wiki-open="rayonnement">📖 Grimoire</button></div>`, { wide: true, label: 'Rayonnement' }).querySelector('#rgMap').addEventListener('click', () => { closeModal(); if (!MAPV.open) openWorld(); });
 }
+
+/* ---------- mini-carte (en bas à droite, comme dans Civilization) ---------- */
+let MM_SIG = '';
+function renderMinimap() {
+  const c = $('#mmcv'); if (!c || !S || !S.started || VISIT || !c.clientWidth) return;
+  const w = world(), vis = mapVisible(), fr = glowRadius(), vr = Math.max(4, visionRadius() + 1), W2 = c.clientWidth, H2 = c.clientHeight;
+  const sig = [w.seed, vis.size, fr, vr, W2, H2, S.world.known.length].join(':'); if (sig === MM_SIG) return; MM_SIG = sig;
+  const dpr = Math.min(2, devicePixelRatio || 1); c.width = Math.round(W2 * dpr); c.height = Math.round(H2 * dpr);
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#16121c'; g.fillRect(0, 0, W2, H2);
+  const s = Math.min(W2 / (SQ3 * (2 * vr + 1)), H2 / (3 * vr + 2)), ox = W2 / 2, oy = H2 / 2, XY = cc => { const [x, y] = hexXY(cc.q, cc.r, s); return [ox + x, oy + y]; };
+  w.list.forEach(cell => { const [x, y] = XY(cell); if (x < -s || x > W2 + s || y < -s || y > H2 + s) return; hexPath(g, x, y, s + .4); g.fillStyle = vis.has(cell.i) ? BIOMES[cell.t].col : '#2a2236'; g.fill(); });
+  g.strokeStyle = 'rgba(217,183,122,.85)'; g.lineWidth = 1;
+  w.roads.forEach(p => { for (let k = 1; k < p.length; k++) { if (!vis.has(p[k - 1]) || !vis.has(p[k])) continue; const [x1, y1] = XY(w.list[p[k - 1]]), [x2, y2] = XY(w.list[p[k]]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } });
+  g.strokeStyle = 'rgba(255,214,120,.95)'; g.lineWidth = 1.5; g.beginPath();
+  w.list.forEach(cell => { if (hdist(cell.q, cell.r) > fr) return; const [hx, hy] = hexXY(cell.q, cell.r, s); HEX_DIRS.forEach(([dq, dr]) => { if (hdist(cell.q + dq, cell.r + dr) <= fr) return; const [nx, ny] = hexXY(cell.q + dq, cell.r + dr, s), mx = (hx + nx) / 2, my = (hy + ny) / 2, dx = ny - hy, dy = -(nx - hx), L = Math.hypot(dx, dy), e = s / SQ3; g.moveTo(ox + mx + dx / L * e, oy + my + dy / L * e); g.lineTo(ox + mx - dx / L * e, oy + my - dy / L * e); }); });
+  g.stroke();
+  allSites().forEach(st => { if (!vis.has(st.i)) return; const [x, y] = XY(st); g.fillStyle = st.kind === 'chateau' ? '#ffd86a' : SITE_KINDS[st.kind].rank ? '#f3e3c0' : st.kind === 'rival' || st.kind === 'joueur' ? '#c49bff' : st.kind === 'raid' ? '#ff9a7a' : '#8fd4ff'; g.beginPath(); g.arc(x, y, st.kind === 'chateau' ? 3.4 : 2.3, 0, 7); g.fill(); g.lineWidth = 1; g.strokeStyle = 'rgba(20,12,8,.8)'; g.stroke(); });
+}
+addEventListener('resize', () => requestAnimationFrame(() => { MM_SIG = ''; renderMinimap(); }));

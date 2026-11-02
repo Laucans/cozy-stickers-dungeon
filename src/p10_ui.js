@@ -27,26 +27,22 @@ function renderHUD() {
   $('#dname').textContent = S.name; $('#dtitle').textContent = castleTitle();
   const food = foodCap(), eat = eaters(), bd = beds(), n = S.creatures.length;
   const res = [['gold', 'Or', S.gold, 'Or : construire, meubler, monter de palier.'], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
-    ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus il attire des héros puissants (et de beaux butins), et plus la carte se dévoile.'],
+    ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus les héros qui viennent sont forts, et plus la carte se dévoile.'],
     ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
-    ['beds', 'Lits', `${n}/${bd}`, 'Créatures / lits. Sans lit libre, personne de nouveau ne s’installe.', n >= bd], ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food],
-    ['tier', 'Palier', S.tier, 'Palier du château.'], ['night', 'Nuit', S.night, 'Nuit en cours.']];
+    ['beds', 'Lits', `${n}/${bd}`, 'Créatures / lits. Sans lit libre, personne de nouveau ne s’installe.', n >= bd], ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
   const box = $('#res');
-  if (!box.children.length) res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); });
+  if (box.children.length !== res.length) { box.innerHTML = ''; res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); }); }
   res.forEach(([k, label, val, tip, warn]) => {
-    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.title = tip;
+    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.title = `${label} : ${tip}`;
     c.innerHTML = `${ico(k)}<span><b class="num">${val}</b><small>${label}</small></span>`;
     if (UI.prev[k] !== undefined && UI.prev[k] !== val) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
     UI.prev[k] = val;
   });
-  const scout = S.creatures.some(c => SPECIES[c.sp].scout), pp = partyPreview();
   $('#clocks').innerHTML =
-    `<div class="dial" title="Calamité : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}/${CAL_MAX}</b></span></div>` +
-    `<div class="dial" title="Menace : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace${scout ? ` · ${pp.size} héros ~${pp.courage}` : ''}</small><b class="num">${S.menace}/${MENACE_MAX}</b></span></div>`;
+    `<div class="dial" title="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
+    `<div class="dial" title="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
+  $('#turn').innerHTML = `<b>Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}</small>`;
   $('#phases').innerHTML = PHASES.map(([k, l], i) => (i ? '<i>›</i>' : '') + `<span class="${UI.phase === k ? 'on' : ''}">${l}</span>`).join('');
-  const rn = $('#raidnote');
-  if (S.raid) { const b = raidBreakdown(S.raid.target, S.raid.team); rn.innerHTML = `${RAIDS[S.raid.target].emo} Raid prévu : <b>${esc(RAIDS[S.raid.target].name)}</b> · ${Math.max(0, b.pool)} dé${b.pool > 1 ? 's' : ''}`; rn.hidden = false; }
-  else rn.hidden = true;
 }
 
 /* ---------- barre de construction ---------- */
@@ -103,27 +99,43 @@ function renderPortraits() {
   });
   $('#critCount').textContent = S.creatures.length;
 }
+// ce qui demande l'attention du Maître : des pastilles à droite, comme les notifications de Civilization
+function notifList() {
+  const n = [], add = (k, ico, text, act, pri = 1, cls = '') => n.push({ k, ico, text, act, pri, cls });
+  S.creatures.forEach(c => {
+    if (c.tempt) add('tm' + c.id, '👀', `${c.name} lorgne vers ${c.tempt.name}`, () => openCreature(c.id), 6, 'bad');
+    const q = questOf(c); if (q && q.st === 'done') add('qd' + c.id, '✨', `${c.name} : mission accomplie, à réclamer`, () => openCreature(c.id), 5);
+    else if (q && q.st === 'offered') add('qo' + c.id, '❗', `${c.name} a une demande`, () => openCreature(c.id), 3);
+  });
+  if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
+  if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
+  if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
+  const st = tierStatus(); if (st && st.ok) add('tier', '⭐', `Palier ${S.tier + 1} disponible`, openTier, 4);
+  if (S.night > 1 && S.creatures.length >= beds()) add('beds', '🛏️', 'Plus un lit de libre', () => openBuild('furn'), 2);
+  const arts = ARTEFACTS.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
+  if (S.raid) add('raid', '🗺️', `Raid prévu : ${RAIDS[S.raid.target].name}`, () => openRaid(), 1);
+  if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
+  const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
+  if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  const dis = S.ndis || {};
+  return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
+}
 function renderGoals() {
-  const ul = $('#goals'); ul.innerHTML = '';
-  GOALS.filter(g => !S.goals[g.id]).slice(0, 3).forEach(g => ul.appendChild(el('li', '', `<span class="ck">✦</span><span>${esc(g.text)}</span><span class="rw">${esc(rewardText(g.reward))}</span>`)));
-  const n = GOALS.filter(g => S.goals[g.id]).length;
-  if (n === GOALS.length) ul.appendChild(el('li', '', '<span class="ck">👑</span><span>Toutes les envies sont comblées !</span>'));
-  $('#goalCount').textContent = `${n}/${GOALS.length}`;
-  $('#tracker').classList.toggle('closed', !UI.tracker);
-  renderQuests();
+  const box = $('#notifs'); if (!box) return;
+  const list = notifList(); UI.nacts = {};
+  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${esc(x.text)}</span><span class="ni emo">${x.ico}</span><span class="nx" data-nx="${x.k}" title="Masquer jusqu’à la prochaine nuit" aria-label="Masquer">✕</span></button>`; }).join('');
 }
-function renderQuests() {
-  const ul = $('#quests'); if (!ul) return;
-  const qs = S.creatures.filter(c => questOf(c)).sort((a, b) => ({ done: 0, offered: 1, active: 2, away: 3 })[a.quest.st] - ({ done: 0, offered: 1, active: 2, away: 3 })[b.quest.st]);
-  ul.innerHTML = qs.map(c => { const q = c.quest, T = QT[q.k], st = q.st === 'offered' ? 'nouvelle demande' : q.st === 'done' ? 'à réclamer !' : q.st === 'away' ? `retour nuit ${c.awayUntil}` : T.prog(q, c);
-    return `<li class="q-${q.st}"><button type="button" data-crit="${c.id}"><span class="ck">${q.st === 'done' ? '✨' : q.st === 'offered' ? '❗' : T.ico}</span><span class="qt"><b>${esc(c.name)}</b> · ${esc(q.title)}<small>${esc(st)}</small></span></button></li>`; }).join('')
-    || `<li class="none"><span class="hint">${S.night < 3 ? 'Tes créatures te confieront leurs envies dès la nuit 3.' : 'Pas de demande en ce moment.'}</span></li>`;
-  $('#questCount').textContent = `${qs.length}/${questSlots()}`;
-  requestAnimationFrame(placeZoom);
+function renderQuests() {}
+// tiroir de construction (bouton Construire) et panneau des créatures, repliés par défaut
+function uiPrefs(o) { try { const p = JSON.parse(localStorage.getItem('csd-ui') || '{}'); if (o) { Object.assign(p, o); localStorage.setItem('csd-ui', JSON.stringify(p)); } return p; } catch (e) { return {}; } }
+function openBuild(tab) {
+  if (tab && typeof tab === 'string') UI.tab = tab;
+  UI.build = true; $('#hudBottom').hidden = false; $('#btnBuild').setAttribute('aria-expanded', 'true'); document.body.classList.add('building');
+  renderSheet(); if (typeof tab === 'string') $('#sheet').scrollLeft = 0;
 }
-// les boutons de zoom se rangent sous le suivi des envies, quelle que soit sa hauteur
-function placeZoom() { const z = $('.zoom'), tr = $('#tracker'); if (!z || !tr) return; z.style.top = innerWidth > 900 && tr.offsetParent ? Math.round(tr.getBoundingClientRect().bottom + 12) + 'px' : ''; }
-addEventListener('resize', () => requestAnimationFrame(placeZoom));
+function closeBuild() { UI.build = false; $('#hudBottom').hidden = true; $('#btnBuild').setAttribute('aria-expanded', 'false'); document.body.classList.remove('building'); showTip(null); }
+function toggleBuild() { if (UI.build) { dropSticker(); closeBuild(); } else openBuild(); sfx('tick'); }
+function toggleLeft(on) { const p = $('#leftPanel'), v = on == null ? p.hidden : on; p.hidden = !v; $('#btnCrit').setAttribute('aria-expanded', v); uiPrefs({ left: v }); }
 function renderHand(msg, tone) {
   const hb = $('#handbar');
   if (!UI.hand) { hb.hidden = true; return; }
@@ -131,7 +143,7 @@ function renderHand(msg, tone) {
   hb.innerHTML = `${imgThumb(kind, t, 'mini')}<span class="msg ${tone || ''}">${msg ? esc(msg) : `<b>${esc(itemName(t))}</b> en main (${costText(costOf(kind, t))}). Touche le château pour coller.`}</span>` +
     (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>';
 }
-function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); }
+function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); if (typeof renderMinimap === 'function') renderMinimap(); }
 // sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit
 function renderFloors() {
   const box = $('#floors'); if (!box) return;
@@ -344,3 +356,8 @@ function openSpecies(k) {
     ${has ? `<p><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</p><p class="hint">Aime : ${itemName(sp.likes)}${sp.rival ? ` · Rival : ${SPECIES[sp.rival].name}` : ''}</p>` : '<p>Cette page de l’album est encore vide.</p>'}`, { label: 'Album' });
 }
 function openJournal() { openModal(`<h2>Chronique du château</h2><ul class="chron">${S.log.map(l => `<li class="${l.tone}"><span class="emo">N${l.n}</span><span>${esc(l.text)}</span></li>`).join('')}</ul>`, { wide: true, label: 'Chronique' }); }
+// icône du bouton Construire : un maillet et un sticker
+ICON_DRAW.build = g => {
+  g.save(); g.rotate(-.5); rrect(g, -3, -2, 6, 26, 2, '#a8683a'); rrect(g, -13, -16, 26, 13, 4, '#9aa0aa'); ln(g, [[-9, -9.5], [9, -9.5]], 'rgba(255,255,255,.5)', 1.6); g.restore();
+  rrect(g, 4, 2, 14, 14, 3, '#f3e3c0'); ln(g, [[7, 9], [15, 9]], '#c99a4a', 1.6); ln(g, [[11, 5], [11, 13]], '#c99a4a', 1.6);
+};

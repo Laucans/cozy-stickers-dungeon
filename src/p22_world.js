@@ -16,7 +16,7 @@ function glowParts() {
   const leg = S.creatures.filter(c => c.legend).length * 5 + S.creatures.filter(c => c.lvl >= 5).length * 3; if (leg) f.push(['Légendes vivantes', leg]);
   if (S.tier) f.push([`Palier ${S.tier}`, S.tier * 8]);
   const fl = floorsDug(); if (fl) f.push([`${fl} étage${fl > 1 ? 's' : ''} en plus`, fl * 5]);
-  if (S.size) f.push(['Remparts agrandis', S.size * 5]);
+  if (S.size) f.push(['Domaine agrandi', S.size * 5]);
   const amb = Math.floor(ambiance() / 4); if (amb) f.push(['Ambiance', amb]);
   const hy = Math.min(25, Math.floor(S.hype / 3)); if (hy) f.push(['Notoriété', hy]);
   const ach = Object.keys(S.ach || {}).length; if (ach) f.push(['Hauts faits', ach]);

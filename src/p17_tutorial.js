@@ -4,7 +4,7 @@
    (à la manière des conseillers de Civilization)
    ========================================================= */
 const TUTO = { flags: {}, shown: null, cells: null, tip: null };
-function setTab(t) { if (UI.tab !== t) { UI.tab = t; renderSheet(); } }
+function setTab(t) { openBuild(t); }
 function suggestRoom(t) {
   const d = ROOMS[t]; if (!d) return null;
   const h = heartRoom(), hx = h.x + 1, hy = h.y + 1; let best = null;
@@ -18,18 +18,18 @@ const cellsOfType = t => { const r = S.rooms.find(x => x.t === t); return r ? ce
 const hasFood = () => S.furn.some(f => FURN[f.t] && FURN[f.t].food && FURN[f.t].room !== 'any');
 const TUTO_STEPS = [
   { id: 'intro', t: 'Bienvenue, Maître !', x: 'Je suis Gribouille, ton vieux conseiller. Je vais t’apprendre à transformer ce tas de pierres en château douillet et redouté. Tu peux passer le tutoriel quand tu veux.', btn: 'next' },
-  { id: 'camera', t: 'Regarde autour de toi', x: 'Fais glisser le château pour te déplacer, zoome avec la molette, le pincement ou les boutons + et −. Le bouton ⤢ recadre tout le château.', target: '.zoom', until: () => CAM.user, btn: 'next' },
-  { id: 'dortoir', t: 'Ta première pièce', x: 'Tes créatures ont besoin de lits. Dans la barre du bas, onglet Pièces, prends le {room:dortoir} et colle-le sur les cases qui brillent, contre le couloir.', target: '.card[data-kind="room"][data-t="dortoir"]', enter: () => setTab('room'), cells: () => suggestRoom('dortoir'), until: () => S.rooms.some(r => r.t === 'dortoir') },
+  { id: 'camera', t: 'Regarde autour de toi', x: 'Fais glisser le château pour te déplacer, zoome avec la molette ou en pinçant l’écran. Le bouton ⤢, en bas à droite, recadre tout le château.', target: '#zfit', until: () => CAM.user, btn: 'next' },
+  { id: 'dortoir', t: 'Ta première pièce', x: 'Tes créatures ont besoin de lits. Le bouton Construire (en bas à gauche) ouvre tes stickers : onglet Pièces, prends le {room:dortoir} et colle-le sur les cases qui brillent, contre le couloir.', target: '.card[data-kind="room"][data-t="dortoir"]', enter: () => setTab('room'), cells: () => suggestRoom('dortoir'), until: () => S.rooms.some(r => r.t === 'dortoir') },
   { id: 'chantier', t: 'Un chantier', x: 'La pièce démarre en chantier : l’horloge rouge au-dessus se remplit pendant la nuit. Tes ouvriers posent quelques segments par nuit, plus encore avec des diablotins. Voir {c:construire}.', btn: 'next' },
   { id: 'meuble', t: 'Meuble-la', x: 'Une pièce vide ne sert à rien. Onglet Meubles : pose la {furn:paillasse} offerte (badge vert) dans le Dortoir. Chaque lit accueille une créature de plus, et un Dortoir meublé attire les gobelins.', target: '.card[data-kind="furn"][data-t="paillasse"]', enter: () => setTab('furn'), cells: () => cellsOfType('dortoir'), until: () => S.furn.some(f => FURN[f.t] && FURN[f.t].beds && roomAt(f.x, f.y) && roomAt(f.x, f.y).t === 'dortoir') },
-  { id: 'repas', t: 'Pense aux repas', x: 'En haut, Repas compare les bouches à nourrir et les repas produits. Le Cœur nourrit 3 créatures ; ensuite il te faut un {room:potager} ou une {room:cuisine} meublés. Voir {c:lits_repas}.', target: '#res [data-k="food"]', until: hasFood, btn: 'later' },
+  { id: 'repas', t: 'Pense aux repas', x: 'En haut, le bol 🍲 compare les bouches à nourrir et les repas produits. Le Cœur nourrit 3 créatures ; ensuite il te faut un {room:potager} ou une {room:cuisine} meublés. Voir {c:lits_repas}.', target: '#res [data-k="food"]', until: hasFood, btn: 'later' },
   { id: 'nuit', t: 'Finis la nuit', x: 'Ton tour est fini ? Appuie sur Finir la nuit. Les chantiers avancent, les pièces produisent, et de nouvelles créatures arrivent à l’aube. Voir {c:nuit}.', target: '#btnNight', enter: () => { TUTO.night0 = S.night; }, until: () => S.night > (TUTO.night0 || S.night) && !UI.busy },
-  { id: 'creature', t: 'Fais connaissance', x: 'Touche une créature dans le château, ou son portrait à gauche, pour ouvrir sa fiche : compétence, humeur, poste.', target: '#portraits', until: () => TUTO.flags.creature },
+  { id: 'creature', t: 'Fais connaissance', x: 'Touche une créature dans le château, ou ouvre la liste de tes créatures (🐾, en haut à gauche), pour voir sa fiche : compétence, humeur, poste.', target: '#btnCrit', until: () => TUTO.flags.creature },
   { id: 'caresse', t: 'Un peu de tendresse', x: 'Caresse-la ! Ravie (4 ou 5 cœurs), une créature utilise sa compétence en double ; boudeuse, elle ne fait plus rien. Voir {c:humeur}.', target: '#mPet', until: () => S.stats.pets >= 1, btn: 'later' },
-  { id: 'piege', t: 'Prépare l’accueil des héros', x: 'Les aventuriers viendront par le plus court chemin jusqu’au Cœur. Touche Chemin pour le voir, puis colle un piège (onglet Pièges) dans un couloir sur ce chemin. Voir {c:pieges}.', target: '#btnPath', enter: () => setTab('def'), until: () => S.defs.length > 0, btn: 'later' },
-  { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
+  { id: 'piege', t: 'Prépare l’accueil des héros', x: 'Les aventuriers viendront par le plus court chemin jusqu’au Cœur. Touche le bouton des empreintes (en bas à droite) pour le voir, puis colle un piège (Construire, onglet Pièges) dans un couloir sur ce chemin. Voir {c:pieges}.', target: '#btnPath', enter: () => setTab('def'), until: () => S.defs.length > 0, btn: 'later' },
+  { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid (la carte au trésor, en bas à droite) envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
   { id: 'horloges', t: 'Surveille tes horloges', x: 'En haut : la {c:calamite|Calamité} (rouge) monte quand le château va mal, la {c:menace|Menace} (bleue) quand le village s’agace. Pleine, la Menace amène des aventuriers.', target: '#clocks', btn: 'next' },
-  { id: 'envies', t: 'Tes envies', x: 'À droite, les Envies du château te guident et rapportent des récompenses. Vise le {c:paliers|Palier 1} pour débloquer de nouvelles pièces et créatures.', target: '#tracker', btn: 'next' },
+  { id: 'envies', t: 'Tes envies', x: 'À droite, les pastilles te signalent ce qui compte : les Envies du château (✦) qui rapportent des récompenses, les demandes de tes créatures, les dangers. Touche-les pour agir. Vise le {c:paliers|Palier 1} pour débloquer de nouvelles pièces et créatures.', target: '#notifs', btn: 'next' },
   { id: 'fin', t: 'À toi de jouer !', x: 'Tout le reste est dans le Grimoire (bouton 📖) : chaque mécanique, pièce, meuble et créature. Bientôt, tes créatures te confieront leurs missions (📜), et le bouton « Le Val » te mènera chez les autres Maîtres. Je reviendrai te souffler des conseils au bon moment. Bonne nuit, Maître !', btn: 'end' },
 ];
 const TIPS = [
@@ -76,9 +76,11 @@ function tutoTick() {
     return;
   }
   if (!T) { S.tuto = { on: false, i: 0, asked: true }; save(); if (S.night > 1) advisorShow({ title: 'Du nouveau au château !', text: 'Le Grimoire (📖) explique désormais toutes les mécaniques, et je peux te faire un tutoriel pas à pas. On y va ?', buttons: [{ id: 'start', label: 'Lancer le tutoriel', pri: true }, { id: 'ok', label: 'Non merci' }] }); return; }
-  if (S.tipsOff || TUTO.tip || !$('#advisor').hidden || $('#modalRoot').children.length) return;
+  // les conseils ne s'imposent plus : ils attendent dans une pastille 💡, à droite
+  if (S.tipsOff) { if (TUTO.pending) { TUTO.pending = null; renderGoals(); } return; }
+  if (TUTO.pending) return;
   const tip = TIPS.find(t => { if (S.tips && S.tips[t.id]) return false; try { return t.when(); } catch (e) { return false; } });
-  if (tip) { S.tips = S.tips || {}; S.tips[tip.id] = true; save(); TUTO.tip = tip.id; advisorShow({ title: tip.t, text: tip.x, buttons: [{ id: 'ok', label: 'Compris', pri: true }], wiki: tip.wiki, cls: 'tip' }); }
+  if (tip) { TUTO.pending = tip; renderGoals(); }
 }
 function bindTutorial() {
   $('#advisor').addEventListener('click', e => {
@@ -98,4 +100,9 @@ function bindTutorial() {
   $('#sheet').addEventListener('contextmenu', e => { const c = e.target.closest('.card'); if (!c) return; e.preventDefault(); openGrimoire(`${c.dataset.kind}:${c.dataset.t}`); });
   $('#modalRoot').addEventListener('click', e => { const b = e.target.closest('[data-wiki-open]'); if (b) openGrimoire(b.dataset.wikiOpen); });
   setInterval(tutoTick, 700);
+}
+function showPendingTip() {
+  const tip = TUTO.pending; if (!tip) return;
+  TUTO.pending = null; (S.tips = S.tips || {})[tip.id] = true; save(); TUTO.tip = tip.id;
+  advisorShow({ title: tip.t, text: tip.x, buttons: [{ id: 'ok', label: 'Compris', pri: true }], wiki: tip.wiki, cls: 'tip' }); renderGoals();
 }

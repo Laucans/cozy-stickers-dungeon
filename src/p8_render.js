@@ -29,9 +29,9 @@ function resize() {
   first ? fitCamera() : clampCam(); return true;
 }
 function computeInsets() {
-  const g = id => document.getElementById(id), top = g('hudTop'), bot = g('hudBottom'), left = g('hudLeft');
-  const t = top ? top.getBoundingClientRect().bottom + 8 : 90, b = bot ? V.h - bot.getBoundingClientRect().top + 8 : 170;
-  V.insets = { t: Math.min(t, V.h * .2), b: Math.min(b, V.h * .26), l: left && left.offsetParent ? Math.min(left.getBoundingClientRect().right + 6, V.w * .12) : 16, r: Math.min(60, V.w * .05) };
+  const g = id => document.getElementById(id), top = g('hudTop'), bld = g('hudBuild');
+  const t = top && top.offsetParent ? top.getBoundingClientRect().bottom + 8 : 60, b = bld && bld.offsetParent ? V.h - bld.getBoundingClientRect().top + 8 : 100;
+  V.insets = { t: Math.min(t, V.h * .2), b: Math.min(b, V.h * .2), l: 16, r: Math.min(56, V.w * .05) };
 }
 function fitCamera() {
   computeInsets();
@@ -70,11 +70,8 @@ function rebuild() {
     const l = LIGHTS[f.t] || LIGHTS[(FURN[f.t] || {}).sprite]; if (l) L(f.x + .5, f.y + .5, l[0], l[1], l[2], { glow: .4, flick: l[1] === 'fire' || l[1] === 'warm' ? 1 : 0 });
     (FLAMES[f.t] || FLAMES[(FURN[f.t] || {}).sprite] || []).forEach(([ax, ay, az, sc]) => { const [px, py] = pt(ax, ay, az), [bx, by] = WP(f.x + .5, f.y + .5); V.flames.push({ wx: bx + px * AU, wy: by + py * AU, s: sc * 1.9, d: f.x + f.y + 1.02, seed: f.x * 7 + f.y }); });
   });
-  if (Z === 0) {
-    for (let i = 1; i < W; i += 3) L(i + .5, .35, 2.3, 'fire', .85, { glow: .35, flick: 1 });
-    for (let i = 1; i < H; i += 3) L(.35, i + .5, 2.3, 'fire', .85, { glow: .35, flick: 1 });
-    braziers().forEach(([x, y]) => L(x, y, 2.8, 'fire', 1, { glow: .5, flick: 1 }));
-  } else if (Z > 0) L(W / 2, H / 2, W * .75, 'moon', .5, { glow: 0 });
+  if (Z === 0) { braziers().forEach(([x, y]) => L(x, y, 2.8, 'fire', 1, { glow: .5, flick: 1 })); L(W / 2, H / 2, W * .6, 'moon', .35, { glow: 0 }); }
+  else if (Z > 0) L(W / 2, H / 2, W * .75, 'moon', .5, { glow: 0 });
   if (!V.outside.length) {
     const R = rng(4242);
     for (let i = 0; i < 46; i++) {

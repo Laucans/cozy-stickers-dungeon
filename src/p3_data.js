@@ -37,7 +37,7 @@ const ROOMS = {
   atelier:  { name: 'Atelier', size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'wood', color: '#d9b38c',
               furn: ['etabli','caisse'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Attire les Kobolds.' },
   tour:     { name: 'Tour de guet', size: [2,2], cost: { g: 3, s: 3 }, clock: 4, edge: true, floor: 'flag', color: '#a8c6e8', harass: 1,
-              furn: ['longuevue','perchoir'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Les héros arrivent déjà fatigués. Attire les Gargouilles.' },
+              furn: ['longuevue','perchoir'], attracts: ['gargouille'], desc: 'Doit toucher le bord du domaine. Les héros arrivent déjà fatigués. Attire les Gargouilles.' },
   bibli:    { name: 'Bibliothèque', tier: 1, size: [3,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'carpet', color: '#c27a5a',
               furn: ['etagere','pupitre','fauteuil'], attracts: ['fantome'], desc: 'Grimoires poussiéreux et fauteuils qui grincent. Attire les Fantômes.' },
   labo:     { name: 'Laboratoire', tier: 1, size: [2,2], cost: { g: 5, s: 3 }, clock: 6, floor: 'checker', color: '#8fd6c6',

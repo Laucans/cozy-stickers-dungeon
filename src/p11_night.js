@@ -181,12 +181,12 @@ function openTier() {
     <div class="btnrow"><button class="sbtn pri" type="button" id="tGo" ${st.ok ? '' : 'disabled'}>⭐ Monter de palier</button></div>`
     : `<h2>⭐ Palier ${S.tier}</h2><p>Ton château a atteint le palier maximal. Bravo, Maître !</p>`;
   html += `<h3>🪜 Étages (${fl}/${Math.min(3, S.tier)})</h3><p class="hint">Chaque palier permet d’ouvrir un étage : vers le haut avec l’<b>Escalier de la tour</b> (les Hauteurs, puis les Cimes : jardin suspendu, volière, belvédère), ou vers le bas avec l’<b>Escalier des caves</b> (les Caves, puis les Profondeurs : mine, reliquaire, lac souterrain). Chaque direction a ses stickers et attire ses propres créatures rares.</p>`;
-  html += ex ? `<h3>🧱 Agrandir les remparts</h3><p>Le château passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
+  html += ex ? `<h3>🧱 Agrandir le domaine</h3><p>Le terrain constructible passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
     <ul class="req"><li>${S.tier >= ex.need ? '✅' : '⬜'} Palier ${ex.need}</li><li>${canAfford(ex.cost) ? '✅' : '⬜'} Payer ${costText(ex.cost)}</li></ul>
-    <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir les remparts</button></div>` : '<h3>🧱 Remparts</h3><p class="hint">Les remparts sont au plus large.</p>';
+    <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir le domaine</button></div>` : '<h3>🧱 Domaine</h3><p class="hint">Le domaine est au plus large.</p>';
   const m = openModal(html + '<div class="mfoot"><button class="sbtn" type="button" data-close>Plus tard</button></div>', { label: 'Palier' });
   m.querySelector('#tGo') && m.querySelector('#tGo').addEventListener('click', () => { if (!run('tierUp')) return; sfx('chime'); closeModal(); afterChange(); banner(`⭐ Palier ${S.tier} !`, 'De nouveaux stickers sont disponibles', 1800); });
-  m.querySelector('#tExp') && m.querySelector('#tExp').addEventListener('click', () => { if (!run('expand')) return; sfx('chime'); closeModal(); afterChange(); CAM.user = false; fitCamera(); banner('🧱 Remparts agrandis !', `Le château fait maintenant ${W}×${H} cases`, 1800); });
+  m.querySelector('#tExp') && m.querySelector('#tExp').addEventListener('click', () => { if (!run('expand')) return; sfx('chime'); closeModal(); afterChange(); CAM.user = false; fitCamera(); banner('🧱 Domaine agrandi !', `Il fait maintenant ${W}×${H} cases`, 1800); });
 }
 function openHelp() {
   openModal(`<div class="help"><h2>Le manuel du Maître</h2>
@@ -202,7 +202,7 @@ function openHelp() {
     <ul><li>Une pièce doit toucher le château. Une porte s’ouvre toute seule entre deux pièces voisines.</li>
     <li>Chaque pièce démarre en chantier, avec une horloge de 4, 6 ou 8 segments. Tes ouvriers en remplissent 2 par nuit, plus un par diablotin ou orque.</li>
     <li>Les <b>meubles</b> donnent leurs effets à la pièce et l’éclairent : lits au Dortoir, chaudron en Cuisine, candélabres… Une pièce meublée attire son espèce.</li>
-    <li>La Tour de guet touche les remparts ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
+    <li>La Tour de guet touche le bord du domaine ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
     <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Décoller un meuble est gratuit : il retourne dans ta barre.</li></ul>
     <h3>Créatures</h3>
     <ul><li>Caresse-les, offre-leur des friandises, pose la déco qu’elles aiment. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
@@ -303,18 +303,23 @@ function bindEvents() {
   $('#btnPath').addEventListener('click', e => { V.showPath = !V.showPath; e.currentTarget.classList.toggle('on', V.showPath); e.currentTarget.setAttribute('aria-pressed', V.showPath); sfx('tick'); });
   $('#btnBest').addEventListener('click', openBestiary);
   $('#floors').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (b) { setFloor(+b.dataset.z); sfx('tick'); } });
-  $('#btnMap').addEventListener('click', () => { if (!UI.busy) openWorld(); });
-  $('#btnLog').addEventListener('click', openJournal);
-  $('#trackHead').addEventListener('click', () => { UI.tracker = !UI.tracker; renderGoals(); });
-  $('#zin').addEventListener('click', () => zoomAt(V.w / 2, V.h / 2, 1.25));
-  $('#zout').addEventListener('click', () => zoomAt(V.w / 2, V.h / 2, .8));
+  $('#minimap').addEventListener('click', () => { if (!UI.busy) openWorld(); });
+  $('#btnBuild').addEventListener('click', () => { if (!UI.busy) toggleBuild(); });
+  $('#btnBuildClose').addEventListener('click', () => { dropSticker(); closeBuild(); });
+  $('#btnCrit').addEventListener('click', () => { toggleLeft(); sfx('tick'); });
+  $('#turn').addEventListener('click', () => openGrimoire('nuit'));
+  $('#notifs').addEventListener('click', e => {
+    const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; } save(); renderGoals(); return; }
+    const b = e.target.closest('[data-n]'); if (!b || UI.busy) return; const f = UI.nacts && UI.nacts[b.dataset.n]; if (f) { sfx('tick'); f(); }
+  });
   $('#zfit').addEventListener('click', () => { CAM.user = false; fitCamera(); });
   $('#btnHelp').addEventListener('click', () => openGrimoire());
   $('#btnMenu').addEventListener('click', () => { if (!UI.busy) openMenu(); });
   $('#btnSound').addEventListener('click', toggleSound);
   document.addEventListener('keydown', e => {
     if (e.target.matches('input, select, textarea')) return;
-    if (e.key === 'Escape') { if ($('#modalRoot').children.length && !UI.modalNoClose) closeModal(); else dropSticker(); }
+    if (e.key === 'Escape') { if ($('#modalRoot').children.length && !UI.modalNoClose) closeModal(); else if (UI.hand) dropSticker(); else if (UI.build) closeBuild(); }
+    else if (e.key === 'b' || e.key === 'B') { if (!UI.busy) toggleBuild(); }
     else if (e.key === 'r' || e.key === 'R') rotateHand();
     else if (e.key === '+' || e.key === '=') zoomAt(V.w / 2, V.h / 2, 1.2);
     else if (e.key === '-') zoomAt(V.w / 2, V.h / 2, .83);
@@ -346,7 +351,7 @@ function boot(data) {
   if (saved) { S = upgradeState(saved); dirty(); } else newState();
   sortLimbo(); worldInit();
   document.querySelectorAll('img[data-ico]').forEach(i => { i.src = iconURL(i.dataset.ico); });
-  if (innerWidth < 900) UI.tracker = false;
+  if (uiPrefs().left) toggleLeft(true);
   bindEvents(); resize(); renderAll(); fitCamera();
   try { new ResizeObserver(() => { if (resize()) { if (CAM.user) clampCam(); else fitCamera(); } }).observe(cv); } catch (e) { addEventListener('resize', resize); }
   renderAll(); requestAnimationFrame(loop);

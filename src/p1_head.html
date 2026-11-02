@@ -535,3 +535,106 @@ body.visiting .hud-bottom, body.visiting .hud-actions, body.visiting .tracker, b
 .srecr{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:0 14px}
 @media (max-width:560px){ .srow{flex-wrap:wrap} .srow .sbtn{margin-left:42px} }
 </style>
+<style>
+/* =========================================================
+   Interface épurée, façon Civilization : l'essentiel en haut,
+   ce qui demande ton attention à droite, le reste replié
+   ========================================================= */
+.topbar{position:absolute; top:var(--gt); left:var(--gl); right:var(--gr); z-index:6; display:flex; align-items:center; gap:6px 14px; flex-wrap:wrap; padding:5px 8px; border-radius:14px;
+  background:linear-gradient(180deg, rgba(36,26,19,.9), rgba(20,14,10,.9)); border:1.5px solid var(--bronze-2); box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.tbtn{width:34px; height:34px; flex:none; border-radius:10px; border:1.5px solid var(--bronze-2); background:rgba(0,0,0,.25); color:var(--cream); font-size:16px; display:flex; align-items:center; justify-content:center; padding:0}
+.tbtn:hover{border-color:var(--gold)}
+.tcastle{display:flex; flex-direction:column; line-height:1.05; min-width:0}
+.tcastle b{font-family:var(--f-display); font-size:17px; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px}
+.tcastle small{font-size:11px; color:var(--cream-2); white-space:nowrap}
+.tres{display:flex; gap:2px 8px; flex-wrap:wrap; align-items:center; min-width:0}
+.tres .res{display:flex; align-items:center; gap:4px; padding:2px 5px; border-radius:8px; cursor:pointer}
+.tres .res:hover{background:rgba(255,240,210,.08)}
+.tres .res b{font-family:var(--f-display); font-size:17px; color:var(--cream); line-height:1}
+.tres .res small{display:none}
+.tres img.ico{width:20px; height:20px}
+.tres .res.warn{background:rgba(200,65,58,.42)}
+.tclocks{display:flex; gap:6px}
+.tclocks .dial{padding:1px 8px 1px 1px; gap:4px; border-width:1.5px; box-shadow:none; background:rgba(0,0,0,.25)}
+.tclocks .dial svg{width:24px; height:24px} .tclocks .dial small{display:none} .tclocks .dial b{font-size:15px}
+.tturn{margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; line-height:1.05; border:0; background:none; color:var(--cream); padding:0 4px}
+.tturn b{font-family:var(--f-display); font-size:17px; color:var(--gold)} .tturn small{font-size:11px; color:var(--cream-2)}
+.tsys{display:flex; gap:5px}
+.phases{top:calc(var(--gt) + 56px); display:none}
+body.busy .phases{display:flex}
+
+/* à gauche : les créatures, repliées */
+.hud-left{top:calc(var(--gt) + 58px); bottom:auto; width:auto; align-items:flex-start; gap:8px}
+.chip{border:1.5px solid var(--bronze-2); border-radius:999px; padding:5px 12px; font-weight:800; font-size:13.5px; background:rgba(26,18,14,.9); color:var(--cream); box-shadow:0 4px 10px rgba(0,0,0,.45)}
+.chip:hover, .chip[aria-expanded="true"]{border-color:var(--gold)}
+.leftpanel{display:flex; flex-direction:column; align-items:center; gap:8px; width:80px; max-height:calc(100vh - var(--gt) - var(--gb) - 290px)}
+.leftpanel[hidden]{display:none}
+.leftpanel .minis{display:grid; grid-template-columns:1fr 1fr; gap:5px}
+.leftpanel .portraits{flex:1; min-height:0}
+
+/* à droite : les notifications */
+.notifs{position:absolute; right:var(--gr); top:calc(var(--gt) + 60px); z-index:5; display:flex; flex-direction:column; gap:9px; align-items:flex-end; pointer-events:none}
+.notif{pointer-events:auto; position:relative; display:flex; align-items:center; border:0; background:none; padding:0; color:var(--cream)}
+.notif .ni{width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:19px; background:radial-gradient(circle at 40% 35%, #4a3626, #1e1410); box-shadow:0 0 0 2px var(--gold-2), 0 4px 10px rgba(0,0,0,.6); animation:npop .35s}
+.notif.bad .ni{box-shadow:0 0 0 2px #e05a3a, 0 0 14px rgba(224,90,58,.55)}
+.notif.hint .ni{box-shadow:0 0 0 2px #8fb8ff, 0 4px 10px rgba(0,0,0,.6)}
+.notif .nl{position:absolute; right:52px; white-space:nowrap; font-size:13px; font-weight:700; padding:5px 10px; border-radius:10px; background:rgba(22,15,11,.96); border:1.5px solid var(--gold-2); opacity:0; transform:translateX(6px); transition:opacity .15s, transform .15s; pointer-events:none}
+.notif:hover .nl, .notif:focus-visible .nl{opacity:1; transform:none}
+.notif .nx{position:absolute; top:-6px; left:-6px; width:19px; height:19px; border-radius:50%; font-size:10px; background:#2a1c16; color:var(--cream-2); border:1px solid var(--bronze-2); display:none; align-items:center; justify-content:center; cursor:pointer}
+.notif:hover .nx{display:flex}
+@keyframes npop{from{transform:scale(.4); opacity:0}}
+
+/* en bas à gauche : construire (tiroir) et étages */
+.hud-build{position:absolute; left:var(--gl); bottom:var(--gb); z-index:5; display:flex; flex-direction:column-reverse; align-items:flex-start; gap:8px}
+.round.build img{background:radial-gradient(circle at 40% 35%, #7a9a4a, #1e2a12 78%)}
+.round.build[aria-expanded="true"] img{box-shadow:0 0 0 3px #ffc25a, 0 0 0 5px #2a1a0e, 0 0 20px rgba(255,170,60,.8)}
+.hud-build .floors{flex-direction:column; align-items:stretch; margin:0; gap:4px; background:rgba(20,14,10,.85); border:1.5px solid var(--bronze-2); border-radius:12px; padding:5px}
+.hud-build .floors .flab{text-align:center}
+.hud-bottom{left:var(--gl); right:calc(var(--gr) + 300px); bottom:calc(var(--gb) + 100px)}
+.hud-bottom[hidden]{display:none}
+.barhead .shut{margin-left:auto; padding:3px 10px}
+.handbar{position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--gt) + 60px); z-index:7; max-width:min(600px, calc(100% - 32px))}
+
+/* en bas à droite : mini-carte, actions, fin de nuit */
+.hud-actions{flex-direction:column; align-items:flex-end; gap:8px; left:auto}
+.minimap{position:relative; width:184px; height:122px; border-radius:14px; border:2px solid var(--bronze-2); background:#16121c; padding:0; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,.55)}
+.minimap canvas{width:100%; height:100%; display:block}
+.minimap span{position:absolute; left:7px; bottom:4px; font-size:11px; font-weight:800; color:var(--cream); text-shadow:0 1px 2px #000}
+.minimap:hover{border-color:var(--gold)}
+.actrow{display:flex; align-items:flex-end; gap:10px}
+.acts{display:flex; gap:6px; padding-bottom:10px}
+.act{width:38px; height:38px; flex:none; border-radius:50%; border:0; padding:7px; background:radial-gradient(circle at 40% 35%, #5a4430, #1e1410 75%); box-shadow:0 0 0 2px var(--gold-2), 0 4px 10px rgba(0,0,0,.6); color:var(--cream); font-size:17px; font-weight:800; display:flex; align-items:center; justify-content:center}
+.act img{width:100%; height:100%; object-fit:contain}
+.act:hover{box-shadow:0 0 0 2px var(--gold), 0 0 14px rgba(255,190,90,.6)}
+.act.on, .act[aria-pressed="true"]{box-shadow:0 0 0 2px #ffc25a, 0 0 14px rgba(255,150,50,.85)}
+.coopbar{top:calc(var(--gt) + 60px)}
+body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, body.visiting .hud-left, body.visiting #res, body.visiting #clocks, body.visiting #turn, body.visiting #btnMenu, body.visiting .hud-bottom{display:none !important}
+@media (max-width:900px){
+  .hud-actions{left:auto; right:var(--gr)}
+  .hud-bottom{right:var(--gr); bottom:calc(var(--gb) + 96px)}
+  .coopbar{top:auto; bottom:calc(var(--gb) + 220px)}
+}
+@media (max-width:640px){
+  .topbar{gap:4px 8px; padding:4px 6px} .tcastle{display:none}
+  .tres{order:5; flex-basis:100%; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none} .tres::-webkit-scrollbar{display:none}
+  .tres .res b{font-size:15px} .tres img.ico{width:18px; height:18px}
+  .hud-left, .notifs{top:calc(var(--gt) + 90px)}
+  .notif .ni{width:36px; height:36px; font-size:16px}
+  .minimap{width:122px; height:80px}
+  .act{width:33px; height:33px; padding:6px; font-size:15px} .acts{gap:5px; padding-bottom:8px}
+  .round.build{width:58px} .round.build img{width:50px; height:50px; padding:9px} .round.build span{font-size:11px}
+  .hud-bottom{bottom:calc(var(--gb) + 84px)}
+  .handbar{top:calc(var(--gt) + 92px)}
+}
+</style>
+<style>
+@media (min-width:641px){
+  .topbar{flex-wrap:nowrap}
+  .tres{flex:1 1 auto; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none} .tres::-webkit-scrollbar{display:none}
+  .tcastle b{max-width:170px}
+}
+@media (min-width:641px) and (max-width:1100px){ .tcastle small{display:none} .tres{gap:2px 4px} .tres .res{padding:2px 3px} }
+</style>
+<style>
+@media (min-width:901px){ .advisor{bottom:calc(var(--gb) + 252px)} }
+</style>

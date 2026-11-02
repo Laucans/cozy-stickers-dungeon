@@ -121,6 +121,7 @@ function valMail(ev) {
     text = `🧳 ${cleanName(o.name, 24)} (${SPECIES[o.sp].name}) quitte ${castle} et frappe à ta porte : ta réputation l’attire ! Il·elle entrera dès qu’un lit sera libre.`;
   }
   VAL.mail.unshift({ id: ev.id, t, at: ev.created_at, text: text || `${who} t’a écrit.`, who, castle, pk: ev.pubkey });
+  VAL.unread = (VAL.unread || 0) + 1;
   if (VAL.mail.length > 80) VAL.mail.length = 80;
   if (text) { toast(text); addLog(text.replace(/^\S+ /, ''), 'ev'); }
   clearTimeout(VAL.mt); VAL.mt = setTimeout(afterChange, 250);
@@ -339,6 +340,7 @@ function renderVal() {
     renderValList();
   } else if (VAL.tab === 'palmares') t.innerHTML = renderBoard();
   else if (VAL.tab === 'courrier') {
+    VAL.unread = 0;
     t.innerHTML = `<div class="btnrow"><button class="sbtn" type="button" data-act="mygb">✍️ Mon livre d’or</button><button class="sbtn" type="button" data-act="pub">📣 Publier mon château maintenant</button></div>
       <ul class="chron">${VAL.mail.map(x => `<li class="ev"><span class="emo">${agoText(x.at)}</span><span>${esc(x.text)}</span></li>`).join('') || '<li><span class="hint">Rien pour l’instant. Les cadeaux, les mots du livre d’or, les escarmouches et les créatures qui viennent te rejoindre arrivent ici.</span></li>'}</ul>`;
   } else t.innerHTML = coopPanelHTML();

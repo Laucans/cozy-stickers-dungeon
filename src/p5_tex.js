@@ -178,8 +178,14 @@ function terrainTexture() {
   if (TERRAIN) return TERRAIN;
   const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T;
   const c = texGrass(Wp, Hp, 77), g = c.getContext('2d'), R = rng(91);
-  const inside = (x, y) => x > M * T - 4 && x < (M + W) * T + 4 && y > M * T - 4 && y < (M + H) * T + 4;
-  g.drawImage(texCobble(Wp, Hp, T, 33, inside), 0, 0);
+  // le domaine : de la terre nue, à peine piétinée ; on y colle ses pièces là où il n'y a rien
+  g.save(); rr(g, M * T - 6, M * T - 6, W * T + 12, H * T + 12, T * .4); g.clip();
+  g.fillStyle = 'rgba(118,94,60,.5)'; g.fillRect(M * T - 6, M * T - 6, W * T + 12, H * T + 12);
+  for (let i = 0; i < W * H * 3; i++) { const x = M * T + R() * W * T, y = M * T + R() * H * T, r = 6 + R() * 22; g.fillStyle = R() < .55 ? `rgba(138,110,72,${.14 + R() * .2})` : `rgba(96,126,62,${.12 + R() * .2})`; g.beginPath(); g.ellipse(x, y, r, r * .7, R() * 3, 0, 7); g.fill(); }
+  grunge(g, Wp, Hp, 92, .16); g.restore();
+  // une cordelette entre quatre piquets marque les limites du domaine
+  g.setLineDash([10, 9]); g.strokeStyle = 'rgba(232,208,156,.3)'; g.lineWidth = 2.4; rr(g, M * T - 4, M * T - 4, W * T + 8, H * T + 8, T * .3); g.stroke(); g.setLineDash([]);
+  [[0, 0], [W, 0], [0, H], [W, H]].forEach(([i, j]) => { g.fillStyle = '#4a3020'; g.beginPath(); g.arc((M + i) * T, (M + j) * T, 5, 0, 7); g.fill(); });
   // route depuis le porche
   const rx = (M + GATE.x) * T, ry = (M + H) * T;
   g.save(); g.beginPath(); g.moveTo(rx - 4, ry); g.bezierCurveTo(rx - 10, ry + T, rx + T * .4, ry + T * 2, rx + T * .1, Hp); g.lineTo(rx + T * 1.2, Hp); g.bezierCurveTo(rx + T * 1.4, ry + T * 2, rx + T * 1.1, ry + T, rx + T + 4, ry); g.closePath();
@@ -218,11 +224,8 @@ function caveTexture() {
   const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T, c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(57);
   g.fillStyle = '#211b18'; g.fillRect(0, 0, Wp, Hp);
   for (let i = 0; i < Wp * Hp / 1300; i++) { const x = R() * Wp, y = R() * Hp, r = 10 + R() * 40; g.fillStyle = shade('#2d2521', (R() - .5) * .5); g.beginPath(); g.ellipse(x, y, r, r * .6, R() * 3, 0, 7); g.fill(); }
-  g.fillStyle = 'rgba(150,125,95,.2)'; g.fillRect(M * T, M * T, W * T, H * T);
-  g.strokeStyle = 'rgba(170,145,110,.14)'; g.lineWidth = 2; g.setLineDash([6, 10]);
-  for (let i = 0; i <= W; i++) { g.beginPath(); g.moveTo((M + i) * T, M * T); g.lineTo((M + i) * T, (M + H) * T); g.stroke(); }
-  for (let j = 0; j <= H; j++) { g.beginPath(); g.moveTo(M * T, (M + j) * T); g.lineTo((M + W) * T, (M + j) * T); g.stroke(); }
-  g.setLineDash([]); grunge(g, Wp, Hp, 58, .3);
+  g.fillStyle = 'rgba(150,125,95,.16)'; rr(g, M * T, M * T, W * T, H * T, T * .5); g.fill();
+  grunge(g, Wp, Hp, 58, .3);
   const fog = g.createRadialGradient(Wp / 2, Hp / 2, Math.min(Wp, Hp) * .3, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(6,4,8,0)'); fog.addColorStop(1, 'rgba(6,4,8,.96)');
   g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
   return CAVE = c;

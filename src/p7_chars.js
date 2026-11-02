@@ -263,3 +263,29 @@ function roomThumb(t) {
   path(g, [P2(0, 0), P2(w, 0), P2(w, h), P2(0, h)]); g.strokeStyle = 'rgba(20,12,8,.8)'; g.lineWidth = 1; g.stroke();
   const url = c.toDataURL(); THUMBS.set(id, url); return url;
 }
+/* ---------- ajouts : créatures rares (golem, fée, liche, harpie) ---------- */
+Object.assign(ITEMS, {
+  // baguette étoilée
+  wand: g => {
+    inkLn(g, [[HX - 1, HY + 5], [HX + 4, HY - 13]], '#7a4a28', 1.8);
+    const cx = HX + 5, cy = HY - 17, p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.4 : 5.8; p.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+    poly(g, p, '#ffd84a', 1);
+    [[HX + 13, HY - 23, 1.5], [HX - 2, HY - 25, 1.1]].forEach(([x, y, r]) => poly(g, [[x, y - r * 2], [x + r * .5, y - r * .5], [x + r * 2, y], [x + r * .5, y + r * .5], [x, y + r * 2], [x - r * .5, y + r * .5], [x - r * 2, y], [x - r * .5, y - r * .5]], '#fff6c8', .8));
+  },
+  // écharpe tricotée + bâton (liche frileuse)
+  scarfstaff: g => {
+    const wool = '#cf4a3a', cream = '#f1e4c8';
+    g.beginPath(); g.moveTo(-12.5, -34); g.quadraticCurveTo(0, -29.5, 12.5, -34); g.lineTo(13, -27.5); g.quadraticCurveTo(0, -22.5, -13, -27.5); g.closePath(); fi(g, wool, 1.4);
+    [-9, -5, -1, 3, 7, 11].forEach(x => ln(g, [[x, -32.2 + Math.abs(x) * .12], [x - .4, -25.6 + Math.abs(x) * .14]], 'rgba(110,25,15,.55)', .8));
+    poly(g, [[2, -28.5], [9, -28.5], [10, -12], [3, -11.5]], wool, 1.4);
+    [[-24, -21], [-17.5, -14.8]].forEach(([y0, y1]) => poly(g, [[2.3 + (y0 + 28.5) * .06, y0], [9.3 + (y0 + 28.5) * .06, y0], [9.3 + (y1 + 28.5) * .06, y1], [2.3 + (y1 + 28.5) * .06, y1]], cream, 1));
+    [3.8, 6, 8.2].forEach(x => inkLn(g, [[x + .5, -11.8], [x + .8, -8.4]], wool, .9));
+    ITEMS.staff(g);
+  },
+});
+Object.assign(CHAR, {
+  golem:  { sc: 1.3, skin: '#9fa29e', body: '#858a8d', belly: '#78a653', legs: '#6b6f73', ears: 'small', hair: '#5f9a3f', hairStyle: 'spiky', eyes: 'glow', nose: 'big', mouth: 'o' },
+  fee:    { sc: .75, skin: '#f2d3ea', body: '#62b45a', belly: '#9ad47a', legs: '#4f8c47', wings: '#c6e9ff', ears: 'pointy', hair: '#f2c84b', hairStyle: 'long', eyes: 'normal', iris: '#8a4ab8', brow: true, nose: 'small', mouth: 'smug', item: 'wand' },
+  liche:  { skin: '#dfe4ee', body: '#2c3f7c', legs: '#1e2b57', hat: 'wizard', hatc: '#2a2c5e', eyes: 'sockets', nose: 'none', mouth: 'teeth', item: 'scarfstaff' },
+  harpie: { sc: 1.02, skin: '#e8c6a2', body: '#55408c', belly: '#8d79c9', legs: '#e3a53a', wings: '#45297a', hair: '#2a2036', hairStyle: 'wild', eyes: 'normal', iris: '#f0b42a', nose: 'long', mouth: 'smug', item: 'lute' },
+});

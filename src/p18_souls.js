@@ -443,7 +443,6 @@ function openRenown() {
     ${vr.length ? `<p class="hint">+ ${vr.length} château${vr.length > 1 ? 'x' : ''} de joueurs du Val des Maîtres.</p>` : ''}</div>`, { wide: true, label: 'Renommée' });
 }
 function bindSouls() {
-  $('#quests').addEventListener('click', e => { const b = e.target.closest('[data-crit]'); if (b && !UI.busy) openCreature(b.dataset.crit); });
   $('#btnRen').addEventListener('click', () => { if (!UI.busy) openRenown(); });
   $('#btnAch').addEventListener('click', () => { if (!UI.busy) openAch(); });
   $('#btnQuests').addEventListener('click', () => { if (!UI.busy) openMissions(); });

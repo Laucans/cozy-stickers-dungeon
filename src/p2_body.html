@@ -2,42 +2,35 @@
 <div id="game">
   <canvas id="cv" aria-label="Le château, vu en isométrique"></canvas>
 
-  <header class="hud-top" id="hudTop">
-    <div class="brand" aria-label="Cozy Stickers Dungeon"><span class="small">Cozy Stickers</span><span class="big">Dungeon</span></div>
-    <div class="castle panel"><b id="dname">Le Château de Minuit</b><small id="dtitle"></small></div>
-    <div class="resbar panel" id="res"></div>
-    <div class="dials" id="clocks"></div>
-    <div class="sysbtns">
-      <button class="rbtn" id="btnAdmin" type="button" title="Atelier du Maître" aria-label="Ouvrir l'Atelier du Maître" hidden>🛠️</button>
-      <button class="rbtn" id="btnSound" type="button" title="Son" aria-label="Activer ou couper le son">🔈</button>
-      <button class="rbtn" id="btnHelp" type="button" title="Le manuel du Maître" aria-label="Comment jouer">📖</button>
-      <button class="rbtn" id="btnMenu" type="button" title="Partie" aria-label="Options de partie">⚙️</button>
+  <!-- barre du haut, fine, façon Civilization : ressources à gauche, nuit et menus à droite -->
+  <header class="topbar" id="hudTop">
+    <button class="tbtn" id="btnMenu" type="button" title="Partie" aria-label="Partie">☰</button>
+    <div class="tcastle"><b id="dname">Le Château de Minuit</b><small id="dtitle"></small></div>
+    <div class="tres" id="res"></div>
+    <div class="tclocks" id="clocks"></div>
+    <button class="tturn" id="turn" type="button" title="Nuit et palier"></button>
+    <div class="tsys">
+      <button class="tbtn" id="btnAdmin" type="button" title="Atelier du Maître" aria-label="Ouvrir l'Atelier du Maître" hidden>🛠️</button>
+      <button class="tbtn" id="btnSound" type="button" title="Son" aria-label="Activer ou couper le son">🔈</button>
+      <button class="tbtn" id="btnHelp" type="button" title="Le Grimoire" aria-label="Le Grimoire">📖</button>
     </div>
   </header>
   <div class="phases" id="phases"></div>
 
+  <!-- à gauche, replié : les créatures et leurs fiches -->
   <aside class="hud-left" id="hudLeft">
-    <button class="pill best" id="btnBest" type="button" title="Bestiaire et album">Bestiaire <span id="critCount"></span></button>
-    <div class="minis"><button class="mini" id="btnRen" type="button" title="Renommée du château auprès de chaque espèce" aria-label="Renommée">⭐</button><button class="mini" id="btnAch" type="button" title="Hauts faits et pouvoirs" aria-label="Hauts faits">🏆</button><button class="mini" id="btnQuests" type="button" title="Envies du château et missions des créatures" aria-label="Missions">📜</button></div>
-    <div class="portraits" id="portraits"></div>
+    <button class="chip" id="btnCrit" type="button" aria-expanded="false" title="Tes créatures">🐾 <span id="critCount"></span></button>
+    <div class="leftpanel" id="leftPanel" hidden>
+      <div class="minis"><button class="mini" id="btnBest" type="button" title="Bestiaire et album" aria-label="Bestiaire">📒</button><button class="mini" id="btnRen" type="button" title="Renommée du château auprès de chaque espèce" aria-label="Renommée">⭐</button><button class="mini" id="btnAch" type="button" title="Hauts faits et pouvoirs" aria-label="Hauts faits">🏆</button><button class="mini" id="btnQuests" type="button" title="Envies du château et missions des créatures" aria-label="Envies et missions">📜</button></div>
+      <div class="portraits" id="portraits"></div>
+    </div>
   </aside>
 
-  <aside class="tracker panel" id="tracker">
-    <button class="trackhead" id="trackHead" type="button">Envies du château <span id="goalCount"></span></button>
-    <ul class="goals" id="goals"></ul>
-    <div class="qhead">Missions des créatures <span id="questCount"></span></div>
-    <ul class="goals quests" id="quests"></ul>
-    <button class="link" id="btnLog" type="button">Lire la chronique</button>
-  </aside>
+  <!-- à droite : ce qui demande ton attention, comme les notifications de Civilization -->
+  <aside class="notifs" id="notifs" aria-live="polite"></aside>
 
-  <div class="zoom">
-    <button id="zin" type="button" aria-label="Zoomer">+</button>
-    <button id="zout" type="button" aria-label="Dézoomer">−</button>
-    <button id="zfit" type="button" aria-label="Voir tout le château" title="Voir tout le château">⤢</button>
-  </div>
-
-  <div class="hud-bottom" id="hudBottom">
-    <div class="handbar panel" id="handbar" hidden></div>
+  <!-- tiroir de construction, ouvert par le bouton Construire -->
+  <div class="hud-bottom" id="hudBottom" hidden>
     <div class="raidnote panel" id="raidnote" hidden></div>
     <div class="buildbar panel">
       <div class="barhead"><div class="tabs" id="tabs" role="tablist">
@@ -46,18 +39,29 @@
         <button type="button" role="tab" data-tab="def" aria-selected="false">Pièges</button>
         <button type="button" role="tab" data-tab="decor" aria-selected="false">Déco</button>
         <button type="button" role="tab" data-tab="arte" aria-selected="false">Trésors</button>
-      </div><div class="floors" id="floors" hidden></div></div>
+      </div><button class="pill shut" id="btnBuildClose" type="button" aria-label="Fermer la construction">✕</button></div>
       <div class="sheet" id="sheet"></div>
     </div>
   </div>
+  <div class="handbar panel" id="handbar" hidden></div>
+  <div class="hud-build" id="hudBuild">
+    <button class="round build" id="btnBuild" type="button" aria-expanded="false"><img data-ico="build" alt=""><span>Construire</span></button>
+    <div class="floors" id="floors" hidden></div>
+  </div>
 
-  <div class="hud-actions">
-    <button class="round" id="btnPath" type="button" aria-pressed="false"><img data-ico="path" alt=""><span>Chemin</span></button>
-    <button class="round" id="btnRaid" type="button"><img data-ico="raid" alt=""><span>Raid</span></button>
-    <button class="round" id="btnTier" type="button"><img data-ico="tier" alt=""><span>Palier</span></button>
-    <button class="round" id="btnMap" type="button"><img data-ico="map" alt=""><span>Carte</span></button>
-    <button class="round" id="btnVal" type="button"><img data-ico="val" alt=""><span>Le Val</span></button>
-    <button class="round night" id="btnNight" type="button"><img data-ico="night" alt=""><span>Finir la nuit</span></button>
+  <!-- en bas à droite : la mini-carte, quelques actions, et la fin de la nuit -->
+  <div class="hud-actions" id="hudActions">
+    <button class="minimap" id="minimap" type="button" title="Carte du Val" aria-label="Ouvrir la carte du Val"><canvas id="mmcv"></canvas><span>Carte du Val</span></button>
+    <div class="actrow">
+      <div class="acts">
+        <button class="act" id="zfit" type="button" title="Recadrer le château" aria-label="Recadrer le château">⤢</button>
+        <button class="act" id="btnPath" type="button" aria-pressed="false" title="Chemin des héros" aria-label="Chemin des héros"><img data-ico="path" alt=""></button>
+        <button class="act" id="btnRaid" type="button" title="Raid" aria-label="Raid"><img data-ico="raid" alt=""></button>
+        <button class="act" id="btnTier" type="button" title="Palier, étages et domaine" aria-label="Palier"><img data-ico="tier" alt=""></button>
+        <button class="act" id="btnVal" type="button" title="Le Val des Maîtres" aria-label="Le Val des Maîtres"><img data-ico="val" alt=""></button>
+      </div>
+      <button class="round night" id="btnNight" type="button"><img data-ico="night" alt=""><span>Finir la nuit</span></button>
+    </div>
   </div>
 
   <div class="coopbar panel" id="coopbar" hidden></div>
