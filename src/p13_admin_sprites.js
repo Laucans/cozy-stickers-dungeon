@@ -11,7 +11,7 @@ const ART_OPTS = {
   mouth: [['grin', 'sourire'], ['teeth', 'dents'], ['tusks', 'défenses'], ['fangs', 'crocs'], ['smug', 'moue'], ['o', 'bouche bée']],
   hat: [['', 'aucun'], ['wizard', 'mage'], ['witch', 'sorcière'], ['helmet', 'casque'], ['horned', 'casque à cornes'], ['bucket', 'heaume'], ['hood', 'capuche'], ['straw', 'paille'], ['feather', 'plume'], ['bandana', 'bandana']],
   hairStyle: [['', 'aucune'], ['spiky', 'en pétard'], ['slick', 'plaquée'], ['long', 'longue'], ['wild', 'sauvage']],
-  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche']],
+  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche'], ['wand', 'baguette'], ['scarfstaff', 'bâton et écharpe']],
 };
 const COLOR_FIELDS = [['skin', 'Peau', 0], ['body', 'Corps', 0], ['belly', 'Ventre', 1], ['legs', 'Jambes', 1], ['iris', 'Iris', 1], ['hair', 'Cheveux', 1], ['beard', 'Barbe', 1], ['hatc', 'Chapeau', 1], ['cape', 'Cape', 1], ['wings', 'Ailes', 1], ['tail', 'Queue', 1], ['horns', 'Cornes', 1]];
 const STAT_FIELDS = [['guard', 'Garde'], ['dice', 'Dés de raid'], ['eats', 'Mange (rations)'], ['build', 'Travaux / nuit'], ['gold', 'Or / nuit'], ['mat', 'Matériaux / nuit'], ['hype', 'Notoriété / nuit'], ['cal', 'Calamité −'], ['amb', 'Ambiance'], ['trap', 'Bonus pièges']];

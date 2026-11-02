@@ -158,13 +158,17 @@ function discover(idx, why) {
 const discAround = (q, r, n) => world().list.filter(c => hdist(c.q, c.r, q, r) <= n).map(c => c.i);
 const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 // cibles de raid connues (il faut avoir découvert l'endroit sur la carte)
-function raidKnown(k) { const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
+function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
 RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 7, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon de ${rv.master}. Réussi, ce raid ternit sa réputation pendant six nuits.` }; });
 
 /* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */
 function heroOrigin() {
   if (!S || !S.started) return null;
-  const w = world(), reach = glowRadius() + 1, cands = w.sites.filter(s => s.rank && hdist(s.q, s.r) <= reach);
+  const w = world(), reach = glowRadius() + 1, vc = S.vic;
+  // la croisade de Mirebrume (victoire de Légende) : ce sont ses héros qui viennent
+  if (vc && vc.croisade && vc.croisade.done < 3 && !vc.won.legende) { const c = w.sites.find(s => s.kind === 'cite'); if (c) return { id: c.id, name: c.name, rank: 3, q: c.q, r: c.r, crusade: true }; }
+  // les villages qui t'aiment bien (bonne volonté 70 ou plus) n'envoient plus d'aventuriers
+  const cands = w.sites.filter(s => s.rank && hdist(s.q, s.r) <= reach && !(typeof gwOf === 'function' && gwOf(s) >= 70));
   if (!cands.length) { const v = w.sites.filter(s => s.rank === 1).sort((a, b) => hdist(a.q, a.r) - hdist(b.q, b.r))[0]; return v ? { id: v.id, name: v.name, rank: 1, q: v.q, r: v.r } : { rank: 1, name: 'un hameau voisin' }; }
   let s = S.world.next && cands.find(x => x.id === S.world.next);
   if (!s) { const top = Math.max(...cands.map(x => x.rank)); s = Math.random() < .55 ? pick(cands.filter(x => x.rank === top)) : pick(cands); S.world.next = s.id; }
@@ -185,11 +189,13 @@ function worldAfterInvasion(plan, outcome, lines) {
     const ground = PW('collec') ? [] : S.furn.filter(f => FURN[f.t] && FURN[f.t].artefact && zOf(f) === 0);
     if (ground.length) { const f = pick(ground); S.furn = S.furn.filter(x => x !== f); (S.world.stolen = S.world.stolen || []).push(f.t); lines.push(['🏺', `Ils emportent aussi ${FURN[f.t].name} ! On le reverra peut-être chez un brocanteur… Les artefacts gardés aux étages ne craignent rien.`, 'bad']); }
   }
+  if (typeof victoryAfterInvasion === 'function') victoryAfterInvasion(plan, outcome, lines);
   S.world.next = null; S.world.decoy = false;
 }
 // un raid réussi contre un donjon rival ternit sa réputation
-function worldAfterRaid(target, roll) {
+function worldAfterRaid(target, roll, lines) {
   const tg = RAIDS[target]; if (!tg) return;
+  if (typeof victoryAfterRaid === 'function') victoryAfterRaid(target, roll, lines || []);
   if (tg.rival && roll.res !== 'fail') S.world.hit[tg.rival] = S.night + 6;
   const s = world().sites.find(x => x.raid === target || (tg.rival && x.rival === tg.rival)); if (s) discover(discAround(s.q, s.r, 1), 'raid');
 }
@@ -216,6 +222,7 @@ function worldDawn(report) {
   groups.forEach(team => {
     const e = team[0].expe, w = world();
     team.forEach(c => { c.away = 0; c.awayUntil = 0; c.raid = false; c.back = true; delete c.expe; });
+    if (e.req) { if (typeof reqDawn === 'function') reqDawn(team, e, out); return; }
     if (!e.site) {   // éclaireur
       const c = w.list[e.hex], d = c ? discover(discAround(c.q, c.r, 2), 'éclaireur') : { n: 0, found: [] }, g = Math.random() < .3 ? 2 + rnd(3) : 0; S.gold += g;
       team.forEach(x => { gainXP(x, 1, out); addLoy(x, 2); });

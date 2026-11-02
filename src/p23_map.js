@@ -224,12 +224,12 @@ function renderMapPanel() {
   } else if (K.rank) {
     const reach = d <= glowRadius() + 1;
     h += `<p>${esc(K.desc)}</p><p>${reach ? `✨ Ta renommée est arrivée jusqu’ici : ${HERO_RANK[sel.rank].label.toLowerCase()} pourraient venir tenter leur chance.` : `Ils n’ont pas encore entendu parler de toi (il faudrait rayonner jusqu’à ${d - 1} lieues).`}</p>
-      <div class="btnrow"><button class="sbtn pri" type="button" data-m="town">${sel.kind === 'village' ? '🏪 Aller à l’épicerie-buvette' : sel.kind === 'ville' ? '🏙️ Entrer en ville' : '🏰 Entrer dans la cité'}</button></div>`;
+      <div class="btnrow"><button class="sbtn pri" type="button" data-m="town">${sel.kind === 'village' ? '🏪 Aller à l’épicerie-buvette' : sel.kind === 'ville' ? '🏙️ Entrer en ville' : '🏰 Entrer dans la cité'}</button></div>${settleHTML(sel)}${sel.kind === 'cite' ? citeHTML() : ''}`;
   } else if (sel.kind === 'raid' || sel.kind === 'rival') {
     const key = sel.raid || 'r_' + sel.rival, tg = RAIDS[key];
-    if (sel.kind === 'rival') { const rv = RIVALS.find(r => r.id === sel.rival); h += `<p>Le donjon de ${esc(rv.master)}. Sa réputation : ${rv.likes.filter(s => SPECIES[s]).map(s => `${SPECIES[s].name} <b>${rivalRep(rv, s)}</b> <span class="hint">(toi : ${repOf(s)})</span>`).join(' · ')}.${S.world.hit[rv.id] ? ` <b>Il a perdu de sa superbe</b> jusqu’à la nuit ${S.world.hit[rv.id]}.` : ''} Tes créatures peu loyales pourraient être tentées d’y partir.</p>`; }
+    if (sel.kind === 'rival') { const rv = RIVALS.find(r => r.id === sel.rival); h += `<p>Le donjon de ${esc(rv.master)}. Sa réputation : ${rv.likes.filter(s => SPECIES[s]).map(s => `${SPECIES[s].name} <b>${rivalRep(rv, s)}</b> <span class="hint">(toi : ${repOf(s)})</span>`).join(' · ')}.${S.world.hit[rv.id] ? ` <b>Il a perdu de sa superbe</b> jusqu’à la nuit ${S.world.hit[rv.id]}.` : ''}${isVassal(rv.id) ? '' : ' Tes créatures peu loyales pourraient être tentées d’y partir.'}</p>${rivalHTML(rv)}`; }
     h += `<p>${esc(tg.desc)}</p><p class="hint">Butin ${costText(tg.reward)} · +${tg.hype} 🔥 · +${tg.menace} Menace · ${TAGS[tg.tag]}${tg.risk ? ` · bien gardé (−${tg.risk} dé)` : ''}${tg.tier > S.tier ? ` · 🔒 Palier ${tg.tier}` : ''}</p>
-      <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
+      <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier || (sel.rival && isVassal(sel.rival)) ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
   } else if (sel.kind === 'joueur') {
     h += `<p>Le château de <b>${esc(sel.master)}</b>, un autre Maître du Val. Rayonnement ${sel.glow || 0}, palier ${sel.tier || 0}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-m="visit">🏰 Lui rendre visite</button></div>`;
   } else if (K.expe) {
@@ -240,18 +240,21 @@ function renderMapPanel() {
   }
   p.innerHTML = h;
 }
-function teamPicker(max) {
-  const crew = S.creatures.filter(c => !isOut(c)); MAPV.team = (MAPV.team || []).filter(id => crew.some(c => c.id === id)).slice(0, max); MAPV.max = max;
+function teamPicker(max, list) {
+  const crew = list || S.creatures.filter(c => !isOut(c)); MAPV.team = (MAPV.team || []).filter(id => crew.some(c => c.id === id)).slice(0, max); MAPV.max = max;
   return `<div class="wteam">${crew.map(c => `<button type="button" class="wmate" data-mate="${c.id}" aria-pressed="${MAPV.team.includes(c.id)}" title="${esc(c.name)} · ${esc(SPECIES[c.sp].name)} · ${diceOf(c)} 🎲"><img alt="" src="${thumb('char', c.sp)}"><span>${esc(c.name)}</span></button>`).join('') || '<p class="hint">Personne de disponible.</p>'}</div>`;
 }
 function mapPanelClick(e) {
   const mt = e.target.closest('[data-mate]');
   if (mt) { const id = mt.dataset.mate, t = MAPV.team || []; if (t.includes(id)) MAPV.team = t.filter(x => x !== id); else { t.push(id); MAPV.team = t.slice(-MAPV.max); } sfx('tick'); renderMapPanel(); return; }
+  const rq = e.target.closest('[data-rq]');
+  if (rq && !rq.disabled) { if (!run('request', { id: rq.dataset.rq, team: MAPV.team || [] })) return; sfx('chime'); toast('🤝 C’est noté ! Le village s’en souviendra.'); MAPV.team = []; afterChange(); renderMapPanel(); return; }
   const b = e.target.closest('[data-m]'); if (!b || b.disabled) return;
   const k = b.dataset.m, sel = MAPV.sel;
   if (k === 'glow') openRadiance();
   else if (k === 'town') openTown(sel.id);
   else if (k === 'raid') { closeWorld(); openRaid(sel.raid || 'r_' + sel.rival); }
+  else if (k === 'siege') { closeWorld(); openRaid('mirebrume'); }
   else if (k === 'visit') { closeWorld(); valVisit(sel.pk); }
   else if (k === 'expe' || k === 'scout') {
     if (!(MAPV.team || []).length) { toast('Choisis qui part.', true); sfx('bad'); return; }

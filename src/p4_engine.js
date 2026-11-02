@@ -370,7 +370,7 @@ function applyRaid(roll) {
     lines.push(['🎒', `Butin : ${costText({ g, s })}, +${tg.hype} 🔥 Notoriété, +${tg.menace} Menace.`, 'good']);
     if (tg.bonus && roll.res !== 'partial') { S.free[tg.bonus] = (S.free[tg.bonus] || 0) + 1; lines.push(['🎁', `Trophée : un sticker ${FURN[tg.bonus].name} gratuit !`, 'good']); }
     if (roll.res === 'crit') { const k = pick(['cristal','tableau','armure','citrouille']); S.free[k] = (S.free[k] || 0) + 1; lines.push(['✨', `Critique ! Butin ×1,5 et un sticker ${FURN[k].name} en prime.`, 'good']); }
-    if (typeof worldAfterRaid === 'function') worldAfterRaid(S.raid.target, roll);
+    if (typeof worldAfterRaid === 'function') worldAfterRaid(S.raid.target, roll, lines);
     if (roll.res === 'partial' && PW('crit') && Math.random() < .5) lines.push(['🍀', 'Le trèfle à quatre feuilles vous évite la complication.', 'good']);
     else if (roll.res === 'partial') {
       const comp = pick(['cal','men','hurt']);
@@ -533,6 +533,7 @@ function dawn(report) {
   S.night++;
   S.creatures.forEach(c => { c.pet = 0; c.treat = 0; });
   updateRep();
+  if (typeof victoryDawn === 'function') victoryDawn(report);
   return arrived;
 }
 

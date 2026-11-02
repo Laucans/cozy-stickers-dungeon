@@ -39,7 +39,7 @@ function bindVal() {
 function defenseScore() { try { return planInvasion().steps.reduce((a, s) => a + s.dmg, 0); } catch (e) { return 0; } }
 function valSummary() {
   return { v: 1, master: NET.name || 'Maître anonyme', name: S.name, theme: S.theme, tier: S.tier, night: S.night, title: castleTitle(), amb: ambiance(), hype: S.hype,
-    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(),
+    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(), wins: S.vic ? Object.keys(S.vic.won) : [],
     rep: Object.fromEntries(SPECIES_ORDER.map(sp => [sp, repOf(sp)])), pvp: !!S.val.pvp, season: seasonId(),
     top: [...S.creatures].sort((a, b) => (b.lvl || 1) - (a.lvl || 1) || b.loy - a.loy).slice(0, 3).map(c => [c.sp, c.name, c.lvl || 1]) };
 }
@@ -67,7 +67,7 @@ function cleanSummary(o, ev) {
   if (o.rep && typeof o.rep === 'object') Object.keys(o.rep).slice(0, 60).forEach(k => { if (SPECIES[k]) rep[k] = num(o.rep[k], 0, 100); });
   return { pk: ev.pubkey, at: ev.created_at, master: cleanName(o.master, 24) || 'Maître anonyme', name: cleanName(o.name, 40) || 'Château sans nom', theme: THEMES[o.theme] ? o.theme : 'forge',
     tier: num(o.tier, 0, 3), night: num(o.night, 1, 99999), title: cleanName(o.title, 48), amb: num(o.amb, 0, 9999), hype: num(o.hype, 0, 99999), crit: num(o.crit, 0, 999), sp: num(o.sp, 0, 99),
-    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
+    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), wins: (Array.isArray(o.wins) ? o.wins : []).filter(k => typeof VIC_BY !== 'undefined' && VIC_BY[k]).slice(0, 5), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
     top: (Array.isArray(o.top) ? o.top : []).slice(0, 3).filter(t => Array.isArray(t) && SPECIES[t[0]]).map(t => [t[0], cleanName(t[1], 24), num(t[2], 1, 5)]), me: ev.pubkey === NET.pk };
 }
 function valIngest(ev) {
@@ -328,7 +328,7 @@ function askMasterName(then) {
 function renderVal() {
   const box = $('#valBody'); if (!box) return;
   const up = relaysUp(NET_STORE), n = valRivals().length, mail = VAL.mail.length;
-  const tabs = [['chateaux', '🏰 Châteaux'], ['palmares', '🏆 Palmarès'], ['courrier', `📬 Courrier${mail ? ' (' + mail + ')' : ''}`], ['partage', '🤝 Château partagé']];
+  const tabs = [['chateaux', '🏰 Châteaux'], ['palmares', '🏆 Palmarès'], ['pantheon', '🏛️ Panthéon'], ['courrier', `📬 Courrier${mail ? ' (' + mail + ')' : ''}`], ['partage', '🤝 Château partagé']];
   box.innerHTML = `<h2>🌐 Le Val des Maîtres</h2>
     <p class="hint">Tu es <b>${esc(NET.name)}</b> <button class="link2" type="button" data-act="rename">changer</button> · ${up ? `${up} relais connecté${up > 1 ? 's' : ''}` : 'connexion aux relais…'} · ${n} château${n > 1 ? 'x' : ''} voisin${n > 1 ? 's' : ''} · saison de ${SEASON_NAME(seasonId())}</p>
     <div class="vtabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${VAL.tab === k}">${l}</button>`).join('')}</div>
@@ -343,13 +343,14 @@ function renderVal() {
     VAL.unread = 0;
     t.innerHTML = `<div class="btnrow"><button class="sbtn" type="button" data-act="mygb">✍️ Mon livre d’or</button><button class="sbtn" type="button" data-act="pub">📣 Publier mon château maintenant</button></div>
       <ul class="chron">${VAL.mail.map(x => `<li class="ev"><span class="emo">${agoText(x.at)}</span><span>${esc(x.text)}</span></li>`).join('') || '<li><span class="hint">Rien pour l’instant. Les cadeaux, les mots du livre d’or, les escarmouches et les créatures qui viennent te rejoindre arrivent ici.</span></li>'}</ul>`;
-  } else t.innerHTML = coopPanelHTML();
+  } else if (VAL.tab === 'pantheon') { t.innerHTML = '<p class="hint">On interroge les relais…</p>'; pantheonLoad(t); }
+  else t.innerHTML = coopPanelHTML();
 }
 function castleCard(c) {
   const on = nowS() - c.at < ONLINE_S;
   return `<div class="vcard ${c.me ? 'me' : ''}"><div class="vtop">${c.top.map(([sp]) => `<img class="th" alt="" src="${thumb('char', sp)}">`).join('')}</div>
     <div class="vtxt"><b>${esc(c.name)}</b><span>${esc(c.master)} · <i class="dot ${on ? 'on' : ''}"></i>${agoText(c.at)}</span>
-    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
+    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0}${c.wins && c.wins.length ? ' · 🏛️ ' + c.wins.map(k => VIC_BY[k].ico).join('') : ''} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
     <div class="vbtn">${c.me ? '<span class="tag2">C’est toi !</span>' : `<button class="sbtn pri" type="button" data-visit="${c.pk}">Visiter</button>`}</div></div>`;
 }
 function renderValList() {
@@ -388,4 +389,17 @@ async function valRetire() {
   const gone = ['csd1:castle', 'csd1:map'].map(d => netPublish(NET_STORE, sign(30078, [['d', d], ['t', d === 'csd1:castle' ? 'csd1-val' : 'csd1-map']], JSON.stringify({ v: 1, gone: 1 }))));
   const del = netPublish(NET_STORE, sign(5, [['a', a('csd1:castle')], ['a', a('csd1:map')], ['k', '30078']], 'Château retiré du Val'));
   const r = await Promise.all([...gone, del]); VAL.castles.delete(NET.pk); return r;
+}
+
+/* ---------- le Panthéon du Val : les victoires de tous les Maîtres ---------- */
+function pantheonPublish(id) {
+  if (!NET.ok || VISIT || COOP.role === 'guest') return;
+  const ev = sign(30078, [['d', 'csd1:victoire:' + id], ['t', 'csd1-pantheon'], ['alt', 'Victoire au jeu Cozy Stickers Dungeon']], JSON.stringify({ v: id, night: S.night, era: S.vic.era, m: NET.name || 'Maître anonyme', from: S.name, season: seasonId() }));
+  netPublish(NET_STORE, ev).catch(() => {});
+}
+async function pantheonLoad(box) {
+  const evs = await netQuery(NET_STORE, [{ kinds: [30078], '#t': ['csd1-pantheon'], limit: 150 }], 6000);
+  if (!box.isConnected) return;
+  const rows = evs.filter(safeVerify).map(ev => { let o = {}; try { o = JSON.parse(ev.content); } catch (e) {} return { ev, o }; }).filter(x => VIC_BY[x.o.v]).sort((a, b) => b.ev.created_at - a.ev.created_at).slice(0, 60);
+  box.innerHTML = `<p class="hint">Les Maîtres qui ont remporté une victoire, du plus récent au plus ancien.</p><ol class="board">${rows.map(({ ev, o }) => `<li class="${ev.pubkey === NET.pk ? 'me' : ''}"><span class="rk">${VIC_BY[o.v].ico}</span><span class="who"><b>${esc(VIC_BY[o.v].name)}</b><small>${esc(cleanName(o.from, 40) || '?')}, de ${esc(cleanName(o.m, 24) || 'Maître anonyme')} · nuit ${clamp(+o.night || 0, 0, 99999)} · ${agoText(ev.created_at)}</small></span></li>`).join('') || '<li class="hint">Personne n’est encore entré au Panthéon. À toi l’honneur !</li>'}</ol>`;
 }

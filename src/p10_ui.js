@@ -41,7 +41,8 @@ function renderHUD() {
   $('#clocks').innerHTML =
     `<div class="dial" title="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
     `<div class="dial" title="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
-  $('#turn').innerHTML = `<b>Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}</small>`;
+  const lau = S.vic ? Object.keys(S.vic.won).length : 0;
+  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').title = 'Les victoires du Val (et la nuit en cours)';
   $('#phases').innerHTML = PHASES.map(([k, l], i) => (i ? '<i>›</i>' : '') + `<span class="${UI.phase === k ? 'on' : ''}">${l}</span>`).join('');
 }
 
@@ -117,6 +118,7 @@ function notifList() {
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
   const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
   if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  if (typeof victoryNotifs === 'function') victoryNotifs(add);
   const dis = S.ndis || {};
   return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
 }

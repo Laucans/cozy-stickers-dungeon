@@ -203,8 +203,9 @@ const ICON_DRAW = {
     const p = []; for (let i = 0; i < 7; i++) { const a = (i + hash(seed, i) * .5) / 7 * TAU, s = .8 + hash(i, seed) * .28; p.push([x + Math.cos(a) * r * s, y + Math.sin(a) * r * s * k]); }
     poly(g, p, col, .9); poly(g, [p[4], p[5], p[6], [x + r * .15, y - r * .05 * k]], shade(col, .22), 0);
   };
-  // tache d'eau sombre aux bords moussus
+  // contour organique (tache) projeté au sol
   const blob = (g, r, seed, z = .3, n = 14) => { const P = []; for (let i = 0; i < n; i++) P.push(pc(i / n * TAU, r * (1 + (hash(i, seed) - .5) * .2), z)); const M = i => [(P[i % n][0] + P[(i + 1) % n][0]) / 2, (P[i % n][1] + P[(i + 1) % n][1]) / 2]; g.beginPath(); g.moveTo(...M(0)); for (let i = 1; i <= n; i++) g.quadraticCurveTo(...P[i % n], ...M(i)); g.closePath(); };
+  // eau sombre aux bords moussus
   const pond = (g, r, seed) => {
     blob(g, r, seed, 0); g.fillStyle = radial(g, 0, 0, r * 45, '#46663a'); fi(g, g.fillStyle, 1);
     blob(g, r * .87, seed, .3); const gr = g.createRadialGradient(-5, -3, 1, 0, 0, r * 40); gr.addColorStop(0, '#2f6b7a'); gr.addColorStop(1, '#122f3a'); g.fillStyle = gr; g.fill(); g.strokeStyle = '#0c1f26'; g.lineWidth = .9; g.stroke();
@@ -218,18 +219,20 @@ const ICON_DRAW = {
       cyl(g, 0, 0, Ro, top, 0, '#8d8579');
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + .15; ln(g, [pc(a, Ri + .005, top), pc(a, Ro - .01, top)], 'rgba(48,34,26,.5)', .8); }
       g.save(); g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.clip();
-      let gr = g.createLinearGradient(0, hy - ry, 0, hy + ry); gr.addColorStop(0, '#5a5048'); gr.addColorStop(.55, '#211814'); gr.addColorStop(1, '#070403');
+      let gr = g.createLinearGradient(0, hy - ry, 0, hy + ry); gr.addColorStop(0, '#3b322c'); gr.addColorStop(.5, '#171010'); gr.addColorStop(1, '#050303');
       g.fillStyle = gr; g.fillRect(hx - rx - 2, hy - ry - 2, rx * 2 + 4, ry * 2 + 4);
-      for (let d = 4; d < 22; d += 4.5) { g.beginPath(); g.ellipse(hx, hy + d, rx, ry, 0, Math.PI, TAU); g.strokeStyle = `rgba(160,140,118,${Math.max(0, .3 - d * .013)})`; g.lineWidth = .8; g.stroke(); }
+      for (let d = 4; d < 22; d += 4.5) { g.beginPath(); g.ellipse(hx, hy + d, rx, ry, 0, Math.PI, TAU); g.strokeStyle = `rgba(150,128,108,${Math.max(0, .26 - d * .011)})`; g.lineWidth = .8; g.stroke(); }
       // marches : de la gauche (au ras du sol) vers le fond puis la droite, en s'enfonçant dans le noir
-      const N = 8, D = .5, h = 2.6, r0 = .05, r1 = Ri + .04, A = 2.5;
+      const N = 10, D = .4, h = 2.5, r0 = .19, r1 = Ri + .04, A = 3.25;
       const S = [...Array(N).keys()].map(k => ({ k, s: A + k * D, e: A + (k + 1) * D, z: top - (k + 1) * h })), front = st => Math.sin((st.s + st.e) / 2 + Q) > 0;
+      const arc = (u, v, r, z) => { const p = []; for (let i = 0; i <= 6; i++) p.push(pc(u + (v - u) * i / 6, r, z)); return p; };
       const step = ({ k, s, e, z }) => {
-        const col = mixc('#d6ccb9', '#140e0b', Math.min(1, k / (N - 2.5)));
+        const col = mixc('#e6dcc6', '#2a201a', Math.min(1, k / (N - .5))), m = (s + e) / 2;
         if (Math.sin(s) - Math.cos(s) > 0) poly(g, [pc(s, r0, z), pc(s, r1, z), pc(s, r1, z - h), pc(s, r0, z - h)], shade(col, -.5), .6);
         if (Math.cos(e) - Math.sin(e) > 0) poly(g, [pc(e, r0, z), pc(e, r1, z), pc(e, r1, z - h), pc(e, r0, z - h)], shade(col, -.4), .6);
-        const p = []; for (let i = 0; i <= 6; i++) p.push(pc(s + D * i / 6, r1, z)); p.push(pc(e, r0, z), pc(s, r0, z)); poly(g, p, col, .7);
-        ln(g, [pc(e, r0 + .02, z), pc(e, r1 - .02, z)], `rgba(255,244,222,${.65 * (1 - k / N)})`, .9);
+        if (Math.cos(m) + Math.sin(m) < 0) poly(g, [...arc(s, e, r0, z), ...arc(e, s, r0, z - h)], shade(col, -.3), .6);
+        poly(g, [...arc(s, e, r1, z), ...arc(e, s, r0, z)], col, .7);
+        ln(g, [pc(e, r0 + .01, z), pc(e, r1 - .02, z)], `rgba(255,244,222,${.65 * (1 - k / N)})`, .9);
       };
       S.filter(st => !front(st)).reverse().forEach(step);
       gr = g.createLinearGradient(hx - 2.4, 0, hx + 2.4, 0); gr.addColorStop(0, '#5f574f'); gr.addColorStop(.4, '#b0a698'); gr.addColorStop(1, '#3f3833');
@@ -237,10 +240,10 @@ const ICON_DRAW = {
       S.filter(front).reverse().forEach(step);
       g.restore();
       g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
-      const rr = (Ri + Ro) / 2, rz = top + 10, posts = [3.45, 4.2, 4.95, 5.7, 6.45];
-      posts.slice().sort((p, q) => Math.sin(p + Q) - Math.sin(q + Q)).forEach(a => box(g, Math.cos(a) * rr, Math.sin(a) * rr, .035, .035, rz - top, top, PAL.wood2));
+      const rr = (Ri + Ro) / 2, rz = top + 8.5, posts = [3.95, 4.62, 5.29, 5.96, 6.63];
+      posts.slice().sort((p, q) => Math.sin(p + Q) - Math.sin(q + Q)).forEach(a => box(g, Math.cos(a) * rr, Math.sin(a) * rr, .03, .03, rz - top, top, PAL.wood2));
       const [cx, cy] = pt(0, 0, rz);
-      g.beginPath(); g.ellipse(cx, cy, rr * 45, rr * 22.5, 0, posts[0] + Q, posts[4] + Q); g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3.4; g.stroke(); g.strokeStyle = PAL.wood; g.lineWidth = 1.8; g.stroke();
+      g.beginPath(); g.ellipse(cx, cy, rr * 45, rr * 22.5, 0, posts[0] + Q, posts[4] + Q); g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3; g.stroke(); g.strokeStyle = PAL.wood; g.lineWidth = 1.5; g.stroke();
       cyl(g, 0, 0, .058, 1.5, top - .5, '#b0a698');
     },
     montee: g => {
@@ -270,10 +273,10 @@ const ICON_DRAW = {
       poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y1, zt), pt(x0, y1, zt)], '#ffcf6a', .9);
       const gr = g.createLinearGradient(...pt(x0, y0, zt), ...pt(x1, y1, zt)); gr.addColorStop(0, '#fff6cf'); gr.addColorStop(1, '#ffad42');
       path(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y1, zt), pt(x0, y1, zt)]); g.fillStyle = gr; g.fill();
-      poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y0 - .02, zt + 19), pt(x0, y0 - .02, zt + 19)], '#9c6436', 1);
-      [x0 + .07, x0 + .15].forEach(x => ln(g, [pt(x, y0, zt + 1), pt(x, y0 - .02, zt + 18)], 'rgba(45,22,8,.4)', .8));
+      poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y0 - .02, zt + 15), pt(x0, y0 - .02, zt + 15)], '#9c6436', 1);
+      [x0 + .07, x0 + .15].forEach(x => ln(g, [pt(x, y0, zt + 1), pt(x, y0 - .02, zt + 14)], 'rgba(45,22,8,.4)', .8));
       ln(g, [pt(x0 + .02, y0, zt + 5), pt(x1 - .02, y0, zt + 5)], '#4a4850', 1.4);
-      ball(g, ...pt((x0 + x1) / 2, y0, zt + 12), 1.5, '#8a8f99', .6);
+      ball(g, ...pt((x0 + x1) / 2, y0, zt + 9.5), 1.5, '#8a8f99', .6);
     },
 
     /* ----- mine ----- */
@@ -582,9 +585,9 @@ const ICON_DRAW = {
       const bulb = () => { g.beginPath(); g.moveTo(a - 8, b - 40); g.bezierCurveTo(a - 11, b - 33, a - 3, b - 26, a - 1.4, b - 22.5); g.bezierCurveTo(a - 3, b - 19, a - 11, b - 12, a - 8, b - 5); g.lineTo(a + 8, b - 5); g.bezierCurveTo(a + 11, b - 12, a + 3, b - 19, a + 1.4, b - 22.5); g.bezierCurveTo(a + 3, b - 26, a + 11, b - 33, a + 8, b - 40); g.closePath(); };
       bulb(); let gr = g.createLinearGradient(a - 9, 0, a + 9, 0); gr.addColorStop(0, '#f2f9fd'); gr.addColorStop(.5, '#d4e8f4'); gr.addColorStop(1, '#a9c4d8'); g.fillStyle = gr; g.fill(); g.strokeStyle = '#5a7088'; g.lineWidth = .9; g.stroke();
       g.save(); bulb(); g.clip();
-      g.beginPath(); g.moveTo(a - 11, b - 41); g.lineTo(a + 11, b - 41); g.lineTo(a + 11, b - 32); g.quadraticCurveTo(a + 4, b - 31, a, b - 25.5); g.quadraticCurveTo(a - 4, b - 31, a - 11, b - 32); g.closePath(); g.fillStyle = radial(g, a - 3, b - 36, 10, '#e8c46a'); fi(g, g.fillStyle, .7);
-      g.beginPath(); g.moveTo(a - 11, b - 4); g.lineTo(a - 11, b - 7); g.quadraticCurveTo(a, b - 9.5, a + 11, b - 7); g.lineTo(a + 11, b - 4); g.closePath(); fi(g, '#e0b85a', .7);
-      ln(g, [[a, b - 8.5], [a, b - 26]], '#d9a84a', 1.1);
+      g.beginPath(); g.moveTo(a - 11, b - 41); g.lineTo(a + 11, b - 41); g.lineTo(a + 11, b - 29); g.quadraticCurveTo(a + 3.5, b - 28, a, b - 24); g.quadraticCurveTo(a - 3.5, b - 28, a - 11, b - 29); g.closePath(); g.fillStyle = radial(g, a - 3, b - 35, 11, '#e9b84c'); fi(g, g.fillStyle, .7);
+      g.beginPath(); g.moveTo(a - 11, b - 4); g.lineTo(a - 11, b - 6.5); g.quadraticCurveTo(a, b - 4.5, a + 11, b - 6.5); g.lineTo(a + 11, b - 4); g.closePath(); fi(g, '#e0b04a', .7);
+      ln(g, [[a, b - 6], [a, b - 25]], '#d9a43e', 1.2);
       [[1.6, -13, .6], [-1.4, -16.5, .5], [1.2, -19.5, .45], [-2.2, -11, .5], [2.4, -29, .55], [-2.6, -27.5, .5]].forEach(([dx, dy, r]) => ball(g, a + dx, b + dy, r, '#c8962e', 0));
       g.restore();
       ln(g, [[a - 6, b - 37], [a - 7.5, b - 31]], 'rgba(255,255,255,.85)', 1.2); ln(g, [[a - 6.8, b - 14.5], [a - 7.2, b - 9]], 'rgba(255,255,255,.75)', 1);
@@ -614,6 +617,7 @@ const ICON_DRAW = {
       const lf = (x, y, rot, s, i) => { g.save(); g.translate(x, y); g.rotate(rot); ell(g, 0, 0, 1.5 * s, 3 * s, lv[i % 4], .7); g.restore(); };
       const vine = (x, y) => { const [a, b] = pt(x, y, 0); inkLn(g, [[a, b - 2], [a - 2.2, b - 12], [a + 2.2, b - 22], [a - 1.8, b - 32], [a + 1.6, b - 42]], '#4a7a32', .9); [[-2.2, 7, -1], [2.4, 15, 1], [-2.4, 24, -1], [2.4, 32, 1], [-2, 40, -1]].forEach(([dx, dy, sd], i) => lf(a + dx + sd * 2, b - dy, sd * 1.1, 1.2, i)); };
       post(g, -.32, -.32, H, Wd); post(g, -.32, .32, H, Wd); post(g, .32, -.32, H, Wd);
+      vine(.32, -.32);
       box(g, 0, -.32, .78, .07, 4, H, Wd, 'wood');
       post(g, .32, .32, H, Wd);
       box(g, 0, .32, .78, .07, 4, H, Wd, 'wood');
@@ -633,7 +637,7 @@ const ICON_DRAW = {
       const [a, b] = pt(0, 0, 22.5);
       g.beginPath(); g.moveTo(a - 8, b - 4.5); g.bezierCurveTo(a - 7.5, b + 1, a - 3, b + 2.2, a, b + 2.2); g.bezierCurveTo(a + 3, b + 2.2, a + 7.5, b + 1, a + 8, b - 4.5); g.closePath(); g.fillStyle = radial(g, a - 3, b - 2, 9, '#a8a092'); fi(g, g.fillStyle, 1);
       ell(g, a, b - 4.5, 8, 3.6, '#b8b0a2', 1); ell(g, a, b - 4.6, 6.4, 2.6, '#5fb0e6', .7);
-      [[1.75, -1.2], [.785, 0], [-.18, 1.2]].forEach(([t, s]) => { const [x0, y0] = pc(t, .165, 26.5), [x1, y1] = pc(t, .29, 9.6); inkLn(g, [[x0, y0], [x0 + s * 1.6, y0 + 3], [x1, y1]], '#c4eaff', 1.1); ell(g, x1, y1, 2.4, 1, '#e8f8ff', .5); });
+      [[1.75], [.785], [-.18]].forEach(([t]) => { const [x0, y0] = pc(t, .165, 26.5), [x1, y1] = pc(t, .3, 9.6); g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x1, y0 - 1.5, x1, y1); g.lineCap = 'round'; g.strokeStyle = '#3f86bf'; g.lineWidth = 2.6; g.stroke(); g.strokeStyle = '#d4f1ff'; g.lineWidth = 1.2; g.stroke(); ell(g, x1, y1, 2.4, 1, '#e8f8ff', .5); });
       g.beginPath(); g.moveTo(a, b - 15); g.quadraticCurveTo(a + 2.2, b - 9, a, b - 5); g.quadraticCurveTo(a - 2.2, b - 9, a, b - 15); g.fillStyle = '#e4f6ff'; g.fill(); g.strokeStyle = '#4f8fbf'; g.lineWidth = .9; g.stroke();
       [[-3.2, -13, .8], [3.4, -12, .7], [-1.8, -17, .6], [2.2, -16.5, .55]].forEach(([dx, dy, r]) => ball(g, a + dx, b + dy, r, '#e4f6ff', .5));
     },
@@ -704,9 +708,11 @@ const ICON_DRAW = {
 
   Object.assign(ICON_DRAW, {
     glow: g => {
+      g.save(); g.scale(.86, .86);
       const rays = (n, r1, r2, off, col) => { const p = []; for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + off + i * Math.PI / n, r = i % 2 ? r2 : r1; p.push([Math.cos(a) * r, Math.sin(a) * r + 1]); } poly(g, p, col, 1.1); };
       rays(12, 19.5, 9, 0, '#f0a032'); rays(12, 14.5, 8.5, Math.PI / 12, '#ffd04a');
       ball(g, 0, 1, 9, '#ffe27a', 1.2); ball(g, -3, -2, 2.6, '#fffbe6', 0);
+      g.restore();
     },
     map: g => {
       const P = [[-17, -12], [-6, -15], [5, -12], [16, -15], [16, 13], [5, 16], [-6, 13], [-17, 16]];
@@ -718,6 +724,7 @@ const ICON_DRAW = {
       ln(g, [[8, 5], [13, 10]], '#b83a33', 2.4); ln(g, [[13, 5], [8, 10]], '#b83a33', 2.4);
     },
     stairs: g => {
+      g.save(); g.scale(.84, .84);
       g.beginPath(); g.moveTo(10, 17); g.lineTo(10, 1); g.arc(15.5, 1, 5.5, Math.PI, 0); g.lineTo(21, 17); g.closePath(); g.fillStyle = '#241820'; fi(g, '#241820', 1.1);
       poly(g, [[-20, -14], [-12, -14], [-12, -7], [-4, -7], [-4, 0], [4, 0], [4, 7], [12, 7], [12, 16], [-20, 16]], '#9a9284', 1.2);
       for (let i = 0; i < 4; i++) {
@@ -726,8 +733,10 @@ const ICON_DRAW = {
         if (i < 3) poly(g, [[x + 8, y], [x + 12, y - 4], [x + 12, y + 3], [x + 8, y + 7]], shade(c, -.38), 1);
       }
       ln(g, [[-18, 2], [-10, 2]], 'rgba(60,45,35,.35)', .9); ln(g, [[-16, 9], [-2, 9]], 'rgba(60,45,35,.35)', .9);
+      g.restore();
     },
     town: g => {
+      g.save(); g.scale(.82, .82);
       ell(g, 0, 14, 20, 4.5, '#8f877b', 1);
       rrect(g, -18, 0, 12, 13, 1, '#efe0c0', 1); poly(g, [[-19.5, 1], [-12, -8], [-4.5, 1]], '#c8413a', 1); rrect(g, -14.5, 5.5, 4, 7.5, 1.5, '#7a4a28', .8);
       rrect(g, 6, 1, 12, 12, 1, '#efe0c0', 1); poly(g, [[4.5, 2], [12, -7], [19.5, 2]], '#4f7fc8', 1); rrect(g, 9.5, 5, 4.5, 4, .8, '#ffd36a', .7);
@@ -736,8 +745,10 @@ const ICON_DRAW = {
       g.beginPath(); g.moveTo(-2.2, -.5); g.quadraticCurveTo(-2, -5, 0, -5); g.quadraticCurveTo(2, -5, 2.2, -.5); g.closePath(); g.fillStyle = radial(g, 0, -3, 3, PAL.gold); fi(g, g.fillStyle, .6);
       poly(g, [[-6.5, -9], [0, -21], [6.5, -9]], '#5a5478', 1.1); ln(g, [[0, -21], [0, -23.5]], INK, 1); ball(g, 0, -24, 1.4, PAL.gold, .6);
       rrect(g, -2, 7, 4, 7, 1.5, '#7a4a28', .8);
+      g.restore();
     },
     expe: g => {
+      g.save(); g.scale(.86, .86);
       inkLn(g, [[-15, 17], [11, -19]], '#9a6a3a', 2.4); ball(g, 11.5, -19.5, 2.6, '#7a4a28', .9);
       rrect(g, -10, -7, 20, 22, 6, '#a8683a', 1.2);
       rrect(g, -10, -7, 20, 9.5, 5, '#8a5228', 1.1);
@@ -747,6 +758,7 @@ const ICON_DRAW = {
       ln(g, [[-8, -13.5], [6, -13.5]], 'rgba(255,230,210,.5)', 1.2);
       ell(g, 13, -11.5, 2.8, 4.5, '#e07a6a', .9); g.beginPath(); g.arc(13, -11.5, 1.5, 0, Math.PI * 1.5); g.strokeStyle = '#8a2a22'; g.lineWidth = .8; g.stroke();
       ln(g, [[-7, -16.5], [-7, -6.5]], '#5a3a20', 1.6); ln(g, [[7, -16.5], [7, -6.5]], '#5a3a20', 1.6);
+      g.restore();
     },
   });
 }

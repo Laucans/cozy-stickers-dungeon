@@ -639,6 +639,26 @@ body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, bod
 <style>
 @media (min-width:901px){ .advisor{bottom:calc(var(--gb) + 252px)} }
 </style>
+<style>
+/* ---------- victoires ---------- */
+.modal.vicm{max-width:980px}
+.vicgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(290px,1fr)); gap:12px; margin-top:10px}
+.vic{background:var(--edge); border:2px solid var(--ink); border-radius:16px; padding:10px 12px; box-shadow:0 3px 0 var(--ink); display:flex; flex-direction:column; gap:6px}
+.vic.won{background:#eef8e2; border-color:#4d7a2f}
+.vic.focus{box-shadow:0 0 0 4px var(--gold), 0 3px 0 var(--ink)}
+.vic .vh{display:flex; gap:10px; align-items:center}
+.vic .vh .emo{font-size:28px}
+.vic .vh b{display:block; font-family:var(--f-display); font-size:19px; line-height:1.05; color:var(--red-2)}
+.vic .vh small{font-size:12px; color:var(--ink-soft)}
+.vic .vp{margin-left:auto; font-family:var(--f-display); font-size:22px; color:var(--ink); white-space:nowrap}
+.vic .sbar{width:100%; height:11px}
+.vst{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; font-size:12.5px}
+.vst li{color:var(--ink-soft)} .vst li.ok{color:#3d6a22; font-weight:700} .vst li.fin{font-weight:700; color:var(--ink)}
+.vrival{font-size:12.5px; margin:2px 0 0; color:var(--ink-soft)} .vrival .sbar{width:90px; height:8px}
+.vwon{font-weight:800; color:#3d6a22; margin:0}
+.vfinale .big{font-family:var(--f-hand); font-size:21px; line-height:1.3}
+.shop.req{background:#fff3c4}
+</style>
 <meta name="description" content="Un petit château maléfique mais douillet : colle des pièces et des meubles comme des stickers, accueille des créatures attachantes, repousse les aventuriers… et rends visite aux autres Maîtres du Val.">
 <meta name="theme-color" content="#0b0910">
 <meta property="og:title" content="Cozy Stickers Dungeon">
@@ -1386,7 +1406,7 @@ function applyRaid(roll) {
     lines.push(['🎒', `Butin : ${costText({ g, s })}, +${tg.hype} 🔥 Notoriété, +${tg.menace} Menace.`, 'good']);
     if (tg.bonus && roll.res !== 'partial') { S.free[tg.bonus] = (S.free[tg.bonus] || 0) + 1; lines.push(['🎁', `Trophée : un sticker ${FURN[tg.bonus].name} gratuit !`, 'good']); }
     if (roll.res === 'crit') { const k = pick(['cristal','tableau','armure','citrouille']); S.free[k] = (S.free[k] || 0) + 1; lines.push(['✨', `Critique ! Butin ×1,5 et un sticker ${FURN[k].name} en prime.`, 'good']); }
-    if (typeof worldAfterRaid === 'function') worldAfterRaid(S.raid.target, roll);
+    if (typeof worldAfterRaid === 'function') worldAfterRaid(S.raid.target, roll, lines);
     if (roll.res === 'partial' && PW('crit') && Math.random() < .5) lines.push(['🍀', 'Le trèfle à quatre feuilles vous évite la complication.', 'good']);
     else if (roll.res === 'partial') {
       const comp = pick(['cal','men','hurt']);
@@ -1549,6 +1569,7 @@ function dawn(report) {
   S.night++;
   S.creatures.forEach(c => { c.pet = 0; c.treat = 0; });
   updateRep();
+  if (typeof victoryDawn === 'function') victoryDawn(report);
   return arrived;
 }
 
@@ -2082,8 +2103,9 @@ const ICON_DRAW = {
     const p = []; for (let i = 0; i < 7; i++) { const a = (i + hash(seed, i) * .5) / 7 * TAU, s = .8 + hash(i, seed) * .28; p.push([x + Math.cos(a) * r * s, y + Math.sin(a) * r * s * k]); }
     poly(g, p, col, .9); poly(g, [p[4], p[5], p[6], [x + r * .15, y - r * .05 * k]], shade(col, .22), 0);
   };
-  // tache d'eau sombre aux bords moussus
+  // contour organique (tache) projeté au sol
   const blob = (g, r, seed, z = .3, n = 14) => { const P = []; for (let i = 0; i < n; i++) P.push(pc(i / n * TAU, r * (1 + (hash(i, seed) - .5) * .2), z)); const M = i => [(P[i % n][0] + P[(i + 1) % n][0]) / 2, (P[i % n][1] + P[(i + 1) % n][1]) / 2]; g.beginPath(); g.moveTo(...M(0)); for (let i = 1; i <= n; i++) g.quadraticCurveTo(...P[i % n], ...M(i)); g.closePath(); };
+  // eau sombre aux bords moussus
   const pond = (g, r, seed) => {
     blob(g, r, seed, 0); g.fillStyle = radial(g, 0, 0, r * 45, '#46663a'); fi(g, g.fillStyle, 1);
     blob(g, r * .87, seed, .3); const gr = g.createRadialGradient(-5, -3, 1, 0, 0, r * 40); gr.addColorStop(0, '#2f6b7a'); gr.addColorStop(1, '#122f3a'); g.fillStyle = gr; g.fill(); g.strokeStyle = '#0c1f26'; g.lineWidth = .9; g.stroke();
@@ -2097,18 +2119,20 @@ const ICON_DRAW = {
       cyl(g, 0, 0, Ro, top, 0, '#8d8579');
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + .15; ln(g, [pc(a, Ri + .005, top), pc(a, Ro - .01, top)], 'rgba(48,34,26,.5)', .8); }
       g.save(); g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.clip();
-      let gr = g.createLinearGradient(0, hy - ry, 0, hy + ry); gr.addColorStop(0, '#5a5048'); gr.addColorStop(.55, '#211814'); gr.addColorStop(1, '#070403');
+      let gr = g.createLinearGradient(0, hy - ry, 0, hy + ry); gr.addColorStop(0, '#3b322c'); gr.addColorStop(.5, '#171010'); gr.addColorStop(1, '#050303');
       g.fillStyle = gr; g.fillRect(hx - rx - 2, hy - ry - 2, rx * 2 + 4, ry * 2 + 4);
-      for (let d = 4; d < 22; d += 4.5) { g.beginPath(); g.ellipse(hx, hy + d, rx, ry, 0, Math.PI, TAU); g.strokeStyle = `rgba(160,140,118,${Math.max(0, .3 - d * .013)})`; g.lineWidth = .8; g.stroke(); }
+      for (let d = 4; d < 22; d += 4.5) { g.beginPath(); g.ellipse(hx, hy + d, rx, ry, 0, Math.PI, TAU); g.strokeStyle = `rgba(150,128,108,${Math.max(0, .26 - d * .011)})`; g.lineWidth = .8; g.stroke(); }
       // marches : de la gauche (au ras du sol) vers le fond puis la droite, en s'enfonçant dans le noir
-      const N = 8, D = .5, h = 2.6, r0 = .05, r1 = Ri + .04, A = 2.5;
+      const N = 10, D = .4, h = 2.5, r0 = .19, r1 = Ri + .04, A = 3.25;
       const S = [...Array(N).keys()].map(k => ({ k, s: A + k * D, e: A + (k + 1) * D, z: top - (k + 1) * h })), front = st => Math.sin((st.s + st.e) / 2 + Q) > 0;
+      const arc = (u, v, r, z) => { const p = []; for (let i = 0; i <= 6; i++) p.push(pc(u + (v - u) * i / 6, r, z)); return p; };
       const step = ({ k, s, e, z }) => {
-        const col = mixc('#d6ccb9', '#140e0b', Math.min(1, k / (N - 2.5)));
+        const col = mixc('#e6dcc6', '#2a201a', Math.min(1, k / (N - .5))), m = (s + e) / 2;
         if (Math.sin(s) - Math.cos(s) > 0) poly(g, [pc(s, r0, z), pc(s, r1, z), pc(s, r1, z - h), pc(s, r0, z - h)], shade(col, -.5), .6);
         if (Math.cos(e) - Math.sin(e) > 0) poly(g, [pc(e, r0, z), pc(e, r1, z), pc(e, r1, z - h), pc(e, r0, z - h)], shade(col, -.4), .6);
-        const p = []; for (let i = 0; i <= 6; i++) p.push(pc(s + D * i / 6, r1, z)); p.push(pc(e, r0, z), pc(s, r0, z)); poly(g, p, col, .7);
-        ln(g, [pc(e, r0 + .02, z), pc(e, r1 - .02, z)], `rgba(255,244,222,${.65 * (1 - k / N)})`, .9);
+        if (Math.cos(m) + Math.sin(m) < 0) poly(g, [...arc(s, e, r0, z), ...arc(e, s, r0, z - h)], shade(col, -.3), .6);
+        poly(g, [...arc(s, e, r1, z), ...arc(e, s, r0, z)], col, .7);
+        ln(g, [pc(e, r0 + .01, z), pc(e, r1 - .02, z)], `rgba(255,244,222,${.65 * (1 - k / N)})`, .9);
       };
       S.filter(st => !front(st)).reverse().forEach(step);
       gr = g.createLinearGradient(hx - 2.4, 0, hx + 2.4, 0); gr.addColorStop(0, '#5f574f'); gr.addColorStop(.4, '#b0a698'); gr.addColorStop(1, '#3f3833');
@@ -2116,10 +2140,10 @@ const ICON_DRAW = {
       S.filter(front).reverse().forEach(step);
       g.restore();
       g.beginPath(); g.ellipse(hx, hy, rx, ry, 0, 0, TAU); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
-      const rr = (Ri + Ro) / 2, rz = top + 10, posts = [3.45, 4.2, 4.95, 5.7, 6.45];
-      posts.slice().sort((p, q) => Math.sin(p + Q) - Math.sin(q + Q)).forEach(a => box(g, Math.cos(a) * rr, Math.sin(a) * rr, .035, .035, rz - top, top, PAL.wood2));
+      const rr = (Ri + Ro) / 2, rz = top + 8.5, posts = [3.95, 4.62, 5.29, 5.96, 6.63];
+      posts.slice().sort((p, q) => Math.sin(p + Q) - Math.sin(q + Q)).forEach(a => box(g, Math.cos(a) * rr, Math.sin(a) * rr, .03, .03, rz - top, top, PAL.wood2));
       const [cx, cy] = pt(0, 0, rz);
-      g.beginPath(); g.ellipse(cx, cy, rr * 45, rr * 22.5, 0, posts[0] + Q, posts[4] + Q); g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3.4; g.stroke(); g.strokeStyle = PAL.wood; g.lineWidth = 1.8; g.stroke();
+      g.beginPath(); g.ellipse(cx, cy, rr * 45, rr * 22.5, 0, posts[0] + Q, posts[4] + Q); g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3; g.stroke(); g.strokeStyle = PAL.wood; g.lineWidth = 1.5; g.stroke();
       cyl(g, 0, 0, .058, 1.5, top - .5, '#b0a698');
     },
     montee: g => {
@@ -2149,10 +2173,10 @@ const ICON_DRAW = {
       poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y1, zt), pt(x0, y1, zt)], '#ffcf6a', .9);
       const gr = g.createLinearGradient(...pt(x0, y0, zt), ...pt(x1, y1, zt)); gr.addColorStop(0, '#fff6cf'); gr.addColorStop(1, '#ffad42');
       path(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y1, zt), pt(x0, y1, zt)]); g.fillStyle = gr; g.fill();
-      poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y0 - .02, zt + 19), pt(x0, y0 - .02, zt + 19)], '#9c6436', 1);
-      [x0 + .07, x0 + .15].forEach(x => ln(g, [pt(x, y0, zt + 1), pt(x, y0 - .02, zt + 18)], 'rgba(45,22,8,.4)', .8));
+      poly(g, [pt(x0, y0, zt), pt(x1, y0, zt), pt(x1, y0 - .02, zt + 15), pt(x0, y0 - .02, zt + 15)], '#9c6436', 1);
+      [x0 + .07, x0 + .15].forEach(x => ln(g, [pt(x, y0, zt + 1), pt(x, y0 - .02, zt + 14)], 'rgba(45,22,8,.4)', .8));
       ln(g, [pt(x0 + .02, y0, zt + 5), pt(x1 - .02, y0, zt + 5)], '#4a4850', 1.4);
-      ball(g, ...pt((x0 + x1) / 2, y0, zt + 12), 1.5, '#8a8f99', .6);
+      ball(g, ...pt((x0 + x1) / 2, y0, zt + 9.5), 1.5, '#8a8f99', .6);
     },
 
     /* ----- mine ----- */
@@ -2461,9 +2485,9 @@ const ICON_DRAW = {
       const bulb = () => { g.beginPath(); g.moveTo(a - 8, b - 40); g.bezierCurveTo(a - 11, b - 33, a - 3, b - 26, a - 1.4, b - 22.5); g.bezierCurveTo(a - 3, b - 19, a - 11, b - 12, a - 8, b - 5); g.lineTo(a + 8, b - 5); g.bezierCurveTo(a + 11, b - 12, a + 3, b - 19, a + 1.4, b - 22.5); g.bezierCurveTo(a + 3, b - 26, a + 11, b - 33, a + 8, b - 40); g.closePath(); };
       bulb(); let gr = g.createLinearGradient(a - 9, 0, a + 9, 0); gr.addColorStop(0, '#f2f9fd'); gr.addColorStop(.5, '#d4e8f4'); gr.addColorStop(1, '#a9c4d8'); g.fillStyle = gr; g.fill(); g.strokeStyle = '#5a7088'; g.lineWidth = .9; g.stroke();
       g.save(); bulb(); g.clip();
-      g.beginPath(); g.moveTo(a - 11, b - 41); g.lineTo(a + 11, b - 41); g.lineTo(a + 11, b - 32); g.quadraticCurveTo(a + 4, b - 31, a, b - 25.5); g.quadraticCurveTo(a - 4, b - 31, a - 11, b - 32); g.closePath(); g.fillStyle = radial(g, a - 3, b - 36, 10, '#e8c46a'); fi(g, g.fillStyle, .7);
-      g.beginPath(); g.moveTo(a - 11, b - 4); g.lineTo(a - 11, b - 7); g.quadraticCurveTo(a, b - 9.5, a + 11, b - 7); g.lineTo(a + 11, b - 4); g.closePath(); fi(g, '#e0b85a', .7);
-      ln(g, [[a, b - 8.5], [a, b - 26]], '#d9a84a', 1.1);
+      g.beginPath(); g.moveTo(a - 11, b - 41); g.lineTo(a + 11, b - 41); g.lineTo(a + 11, b - 29); g.quadraticCurveTo(a + 3.5, b - 28, a, b - 24); g.quadraticCurveTo(a - 3.5, b - 28, a - 11, b - 29); g.closePath(); g.fillStyle = radial(g, a - 3, b - 35, 11, '#e9b84c'); fi(g, g.fillStyle, .7);
+      g.beginPath(); g.moveTo(a - 11, b - 4); g.lineTo(a - 11, b - 6.5); g.quadraticCurveTo(a, b - 4.5, a + 11, b - 6.5); g.lineTo(a + 11, b - 4); g.closePath(); fi(g, '#e0b04a', .7);
+      ln(g, [[a, b - 6], [a, b - 25]], '#d9a43e', 1.2);
       [[1.6, -13, .6], [-1.4, -16.5, .5], [1.2, -19.5, .45], [-2.2, -11, .5], [2.4, -29, .55], [-2.6, -27.5, .5]].forEach(([dx, dy, r]) => ball(g, a + dx, b + dy, r, '#c8962e', 0));
       g.restore();
       ln(g, [[a - 6, b - 37], [a - 7.5, b - 31]], 'rgba(255,255,255,.85)', 1.2); ln(g, [[a - 6.8, b - 14.5], [a - 7.2, b - 9]], 'rgba(255,255,255,.75)', 1);
@@ -2493,6 +2517,7 @@ const ICON_DRAW = {
       const lf = (x, y, rot, s, i) => { g.save(); g.translate(x, y); g.rotate(rot); ell(g, 0, 0, 1.5 * s, 3 * s, lv[i % 4], .7); g.restore(); };
       const vine = (x, y) => { const [a, b] = pt(x, y, 0); inkLn(g, [[a, b - 2], [a - 2.2, b - 12], [a + 2.2, b - 22], [a - 1.8, b - 32], [a + 1.6, b - 42]], '#4a7a32', .9); [[-2.2, 7, -1], [2.4, 15, 1], [-2.4, 24, -1], [2.4, 32, 1], [-2, 40, -1]].forEach(([dx, dy, sd], i) => lf(a + dx + sd * 2, b - dy, sd * 1.1, 1.2, i)); };
       post(g, -.32, -.32, H, Wd); post(g, -.32, .32, H, Wd); post(g, .32, -.32, H, Wd);
+      vine(.32, -.32);
       box(g, 0, -.32, .78, .07, 4, H, Wd, 'wood');
       post(g, .32, .32, H, Wd);
       box(g, 0, .32, .78, .07, 4, H, Wd, 'wood');
@@ -2512,7 +2537,7 @@ const ICON_DRAW = {
       const [a, b] = pt(0, 0, 22.5);
       g.beginPath(); g.moveTo(a - 8, b - 4.5); g.bezierCurveTo(a - 7.5, b + 1, a - 3, b + 2.2, a, b + 2.2); g.bezierCurveTo(a + 3, b + 2.2, a + 7.5, b + 1, a + 8, b - 4.5); g.closePath(); g.fillStyle = radial(g, a - 3, b - 2, 9, '#a8a092'); fi(g, g.fillStyle, 1);
       ell(g, a, b - 4.5, 8, 3.6, '#b8b0a2', 1); ell(g, a, b - 4.6, 6.4, 2.6, '#5fb0e6', .7);
-      [[1.75, -1.2], [.785, 0], [-.18, 1.2]].forEach(([t, s]) => { const [x0, y0] = pc(t, .165, 26.5), [x1, y1] = pc(t, .29, 9.6); inkLn(g, [[x0, y0], [x0 + s * 1.6, y0 + 3], [x1, y1]], '#c4eaff', 1.1); ell(g, x1, y1, 2.4, 1, '#e8f8ff', .5); });
+      [[1.75], [.785], [-.18]].forEach(([t]) => { const [x0, y0] = pc(t, .165, 26.5), [x1, y1] = pc(t, .3, 9.6); g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x1, y0 - 1.5, x1, y1); g.lineCap = 'round'; g.strokeStyle = '#3f86bf'; g.lineWidth = 2.6; g.stroke(); g.strokeStyle = '#d4f1ff'; g.lineWidth = 1.2; g.stroke(); ell(g, x1, y1, 2.4, 1, '#e8f8ff', .5); });
       g.beginPath(); g.moveTo(a, b - 15); g.quadraticCurveTo(a + 2.2, b - 9, a, b - 5); g.quadraticCurveTo(a - 2.2, b - 9, a, b - 15); g.fillStyle = '#e4f6ff'; g.fill(); g.strokeStyle = '#4f8fbf'; g.lineWidth = .9; g.stroke();
       [[-3.2, -13, .8], [3.4, -12, .7], [-1.8, -17, .6], [2.2, -16.5, .55]].forEach(([dx, dy, r]) => ball(g, a + dx, b + dy, r, '#e4f6ff', .5));
     },
@@ -2583,9 +2608,11 @@ const ICON_DRAW = {
 
   Object.assign(ICON_DRAW, {
     glow: g => {
+      g.save(); g.scale(.86, .86);
       const rays = (n, r1, r2, off, col) => { const p = []; for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + off + i * Math.PI / n, r = i % 2 ? r2 : r1; p.push([Math.cos(a) * r, Math.sin(a) * r + 1]); } poly(g, p, col, 1.1); };
       rays(12, 19.5, 9, 0, '#f0a032'); rays(12, 14.5, 8.5, Math.PI / 12, '#ffd04a');
       ball(g, 0, 1, 9, '#ffe27a', 1.2); ball(g, -3, -2, 2.6, '#fffbe6', 0);
+      g.restore();
     },
     map: g => {
       const P = [[-17, -12], [-6, -15], [5, -12], [16, -15], [16, 13], [5, 16], [-6, 13], [-17, 16]];
@@ -2597,6 +2624,7 @@ const ICON_DRAW = {
       ln(g, [[8, 5], [13, 10]], '#b83a33', 2.4); ln(g, [[13, 5], [8, 10]], '#b83a33', 2.4);
     },
     stairs: g => {
+      g.save(); g.scale(.84, .84);
       g.beginPath(); g.moveTo(10, 17); g.lineTo(10, 1); g.arc(15.5, 1, 5.5, Math.PI, 0); g.lineTo(21, 17); g.closePath(); g.fillStyle = '#241820'; fi(g, '#241820', 1.1);
       poly(g, [[-20, -14], [-12, -14], [-12, -7], [-4, -7], [-4, 0], [4, 0], [4, 7], [12, 7], [12, 16], [-20, 16]], '#9a9284', 1.2);
       for (let i = 0; i < 4; i++) {
@@ -2605,8 +2633,10 @@ const ICON_DRAW = {
         if (i < 3) poly(g, [[x + 8, y], [x + 12, y - 4], [x + 12, y + 3], [x + 8, y + 7]], shade(c, -.38), 1);
       }
       ln(g, [[-18, 2], [-10, 2]], 'rgba(60,45,35,.35)', .9); ln(g, [[-16, 9], [-2, 9]], 'rgba(60,45,35,.35)', .9);
+      g.restore();
     },
     town: g => {
+      g.save(); g.scale(.82, .82);
       ell(g, 0, 14, 20, 4.5, '#8f877b', 1);
       rrect(g, -18, 0, 12, 13, 1, '#efe0c0', 1); poly(g, [[-19.5, 1], [-12, -8], [-4.5, 1]], '#c8413a', 1); rrect(g, -14.5, 5.5, 4, 7.5, 1.5, '#7a4a28', .8);
       rrect(g, 6, 1, 12, 12, 1, '#efe0c0', 1); poly(g, [[4.5, 2], [12, -7], [19.5, 2]], '#4f7fc8', 1); rrect(g, 9.5, 5, 4.5, 4, .8, '#ffd36a', .7);
@@ -2615,8 +2645,10 @@ const ICON_DRAW = {
       g.beginPath(); g.moveTo(-2.2, -.5); g.quadraticCurveTo(-2, -5, 0, -5); g.quadraticCurveTo(2, -5, 2.2, -.5); g.closePath(); g.fillStyle = radial(g, 0, -3, 3, PAL.gold); fi(g, g.fillStyle, .6);
       poly(g, [[-6.5, -9], [0, -21], [6.5, -9]], '#5a5478', 1.1); ln(g, [[0, -21], [0, -23.5]], INK, 1); ball(g, 0, -24, 1.4, PAL.gold, .6);
       rrect(g, -2, 7, 4, 7, 1.5, '#7a4a28', .8);
+      g.restore();
     },
     expe: g => {
+      g.save(); g.scale(.86, .86);
       inkLn(g, [[-15, 17], [11, -19]], '#9a6a3a', 2.4); ball(g, 11.5, -19.5, 2.6, '#7a4a28', .9);
       rrect(g, -10, -7, 20, 22, 6, '#a8683a', 1.2);
       rrect(g, -10, -7, 20, 9.5, 5, '#8a5228', 1.1);
@@ -2626,6 +2658,7 @@ const ICON_DRAW = {
       ln(g, [[-8, -13.5], [6, -13.5]], 'rgba(255,230,210,.5)', 1.2);
       ell(g, 13, -11.5, 2.8, 4.5, '#e07a6a', .9); g.beginPath(); g.arc(13, -11.5, 1.5, 0, Math.PI * 1.5); g.strokeStyle = '#8a2a22'; g.lineWidth = .8; g.stroke();
       ln(g, [[-7, -16.5], [-7, -6.5]], '#5a3a20', 1.6); ln(g, [[7, -16.5], [7, -6.5]], '#5a3a20', 1.6);
+      g.restore();
     },
   });
 }
@@ -3494,7 +3527,8 @@ function renderHUD() {
   $('#clocks').innerHTML =
     `<div class="dial" title="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
     `<div class="dial" title="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
-  $('#turn').innerHTML = `<b>Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}</small>`;
+  const lau = S.vic ? Object.keys(S.vic.won).length : 0;
+  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').title = 'Les victoires du Val (et la nuit en cours)';
   $('#phases').innerHTML = PHASES.map(([k, l], i) => (i ? '<i>›</i>' : '') + `<span class="${UI.phase === k ? 'on' : ''}">${l}</span>`).join('');
 }
 
@@ -3570,6 +3604,7 @@ function notifList() {
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
   const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
   if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  if (typeof victoryNotifs === 'function') victoryNotifs(add);
   const dis = S.ndis || {};
   return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
 }
@@ -3978,7 +4013,8 @@ async function endNight() {
   checkGoals().forEach(g => toast(`✦ Envie comblée : ${g.text}`));
   setPhase('roder'); UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false;
   renderAll(); save(); coopNightDone(); valAfterNight();
-  if (S.tier >= 3 && !S.won) { S.won = true; save(); openModal(`<h2>👑 Château légendaire !</h2><p>${esc(S.name)} est désormais le château le plus douillet et le plus redouté du Val Douillet. Les bardes en font des berceuses.</p><p>Tu peux continuer à meubler et accueillir des créatures autant que tu veux.</p><div class="mfoot"><button class="sbtn pri" data-close type="button">Continuer</button></div>`); }
+  if (S.tier >= 3 && !S.won) { S.won = true; save(); toast('👑 Palier 3 : ton château est légendaire… mais le Val n’a pas encore de Grand Maître. Vise une victoire (🏛️ en haut à droite).'); }
+  if (typeof victoryAfterNight === 'function') victoryAfterNight();
 }
 function chronicle(n, report) {
   coopCast('chron', { n, report });
@@ -4123,7 +4159,7 @@ function bindEvents() {
   $('#btnBuild').addEventListener('click', () => { if (!UI.busy) toggleBuild(); });
   $('#btnBuildClose').addEventListener('click', () => { dropSticker(); closeBuild(); });
   $('#btnCrit').addEventListener('click', () => { toggleLeft(); sfx('tick'); });
-  $('#turn').addEventListener('click', () => openGrimoire('nuit'));
+  $('#turn').addEventListener('click', () => { if (!UI.busy) openVictories(); });
   $('#notifs').addEventListener('click', e => {
     const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; } save(); renderGoals(); return; }
     const b = e.target.closest('[data-n]'); if (!b || UI.busy) return; const f = UI.nacts && UI.nacts[b.dataset.n]; if (f) { sfx('tick'); f(); }
@@ -4413,7 +4449,7 @@ const ART_OPTS = {
   mouth: [['grin', 'sourire'], ['teeth', 'dents'], ['tusks', 'défenses'], ['fangs', 'crocs'], ['smug', 'moue'], ['o', 'bouche bée']],
   hat: [['', 'aucun'], ['wizard', 'mage'], ['witch', 'sorcière'], ['helmet', 'casque'], ['horned', 'casque à cornes'], ['bucket', 'heaume'], ['hood', 'capuche'], ['straw', 'paille'], ['feather', 'plume'], ['bandana', 'bandana']],
   hairStyle: [['', 'aucune'], ['spiky', 'en pétard'], ['slick', 'plaquée'], ['long', 'longue'], ['wild', 'sauvage']],
-  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche']],
+  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche'], ['wand', 'baguette'], ['scarfstaff', 'bâton et écharpe']],
 };
 const COLOR_FIELDS = [['skin', 'Peau', 0], ['body', 'Corps', 0], ['belly', 'Ventre', 1], ['legs', 'Jambes', 1], ['iris', 'Iris', 1], ['hair', 'Cheveux', 1], ['beard', 'Barbe', 1], ['hatc', 'Chapeau', 1], ['cape', 'Cape', 1], ['wings', 'Ailes', 1], ['tail', 'Queue', 1], ['horns', 'Cornes', 1]];
 const STAT_FIELDS = [['guard', 'Garde'], ['dice', 'Dés de raid'], ['eats', 'Mange (rations)'], ['build', 'Travaux / nuit'], ['gold', 'Or / nuit'], ['mat', 'Matériaux / nuit'], ['hype', 'Notoriété / nuit'], ['cal', 'Calamité −'], ['amb', 'Ambiance'], ['trap', 'Bonus pièges']];
@@ -4735,7 +4771,7 @@ Object.assign(ACTIONS, {
    Articles de mécaniques écrits à la main + fiches générées depuis
    les données vivantes (elles suivent les réglages de l'Atelier)
    ========================================================= */
-const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Le Val : carte et voisins'],
+const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Le Val : carte et voisins'], ['vic', 'Victoires'],
   ['room', 'Pièces'], ['furn', 'Meubles'], ['decor', 'Déco'], ['def', 'Pièges'], ['sp', 'Bestiaire'], ['hero', 'Aventuriers'], ['raid', 'Cibles de raid']];
 const WIKI = {
   accueil: { cat: 'bases', t: 'Bienvenue dans le Grimoire', x: () => `<p>Ce grimoire explique tout le jeu. Chaque mot souligné mène à un autre article.</p>
@@ -4814,7 +4850,7 @@ function wikiText(s) {
   return s.replace(/\{(\w+):(\w+)(?:\|([^}]+))?\}/g, (m, kind, key, label) => kind === 'cat' ? `<a href="#" data-wikicat="${key}">${esc(label || key)}</a>` : `<a href="#" data-wiki="${wikiKey(kind, key)}">${esc(label || wikiTitle(wikiKey(kind, key)))}</a>`);
 }
 function wikiList(cat) {
-  if (WIKI_CAT.slice(0, 7).some(([k]) => k === cat)) return Object.keys(WIKI).filter(k => WIKI[k].cat === cat).map(k => [k, WIKI[k].t]);
+  if (WIKI_CAT.slice(0, 8).some(([k]) => k === cat)) return Object.keys(WIKI).filter(k => WIKI[k].cat === cat).map(k => [k, WIKI[k].t]);
   if (cat === 'room') return Object.keys(ROOMS).filter(k => !(ROOMS[k].theme && ROOMS[k].theme !== S.theme)).map(k => ['room:' + k, ROOMS[k].name]);
   if (cat === 'furn') return FURN_ORDER.map(k => ['furn:' + k, FURN[k].name]);
   if (cat === 'decor') return DECOR_ORDER.map(k => ['furn:' + k, FURN[k].name]);
@@ -5123,7 +5159,9 @@ const RIVALS = [
 function rivalRep(r, sp) {
   const fav = r.likes.includes(sp), grow = Math.min(30, S.night * .75), wob = Math.round(Math.sin(S.night * .7 + (seedOf(r.id + sp) % 628) / 100) * 7);
   const hit = S.world && S.world.hit && S.world.hit[r.id] > S.night ? 15 : 0;
-  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob - hit), 0, 90);
+  if (S.vic && S.vic.vassals[r.id] >= 3) return 10;   // un vassal ne te dispute plus tes créatures
+  const master = S.vic && S.vic.master === r.id ? 8 : 0;
+  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob - hit + master), 0, 92);
 }
 // le rival le plus attirant pour une espèce : châteaux du jeu + châteaux des autres joueurs (Val des Maîtres)
 function bestRival(sp) {
@@ -5649,7 +5687,7 @@ function bindVal() {
 function defenseScore() { try { return planInvasion().steps.reduce((a, s) => a + s.dmg, 0); } catch (e) { return 0; } }
 function valSummary() {
   return { v: 1, master: NET.name || 'Maître anonyme', name: S.name, theme: S.theme, tier: S.tier, night: S.night, title: castleTitle(), amb: ambiance(), hype: S.hype,
-    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(),
+    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(), wins: S.vic ? Object.keys(S.vic.won) : [],
     rep: Object.fromEntries(SPECIES_ORDER.map(sp => [sp, repOf(sp)])), pvp: !!S.val.pvp, season: seasonId(),
     top: [...S.creatures].sort((a, b) => (b.lvl || 1) - (a.lvl || 1) || b.loy - a.loy).slice(0, 3).map(c => [c.sp, c.name, c.lvl || 1]) };
 }
@@ -5677,7 +5715,7 @@ function cleanSummary(o, ev) {
   if (o.rep && typeof o.rep === 'object') Object.keys(o.rep).slice(0, 60).forEach(k => { if (SPECIES[k]) rep[k] = num(o.rep[k], 0, 100); });
   return { pk: ev.pubkey, at: ev.created_at, master: cleanName(o.master, 24) || 'Maître anonyme', name: cleanName(o.name, 40) || 'Château sans nom', theme: THEMES[o.theme] ? o.theme : 'forge',
     tier: num(o.tier, 0, 3), night: num(o.night, 1, 99999), title: cleanName(o.title, 48), amb: num(o.amb, 0, 9999), hype: num(o.hype, 0, 99999), crit: num(o.crit, 0, 999), sp: num(o.sp, 0, 99),
-    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
+    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), wins: (Array.isArray(o.wins) ? o.wins : []).filter(k => typeof VIC_BY !== 'undefined' && VIC_BY[k]).slice(0, 5), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
     top: (Array.isArray(o.top) ? o.top : []).slice(0, 3).filter(t => Array.isArray(t) && SPECIES[t[0]]).map(t => [t[0], cleanName(t[1], 24), num(t[2], 1, 5)]), me: ev.pubkey === NET.pk };
 }
 function valIngest(ev) {
@@ -5938,7 +5976,7 @@ function askMasterName(then) {
 function renderVal() {
   const box = $('#valBody'); if (!box) return;
   const up = relaysUp(NET_STORE), n = valRivals().length, mail = VAL.mail.length;
-  const tabs = [['chateaux', '🏰 Châteaux'], ['palmares', '🏆 Palmarès'], ['courrier', `📬 Courrier${mail ? ' (' + mail + ')' : ''}`], ['partage', '🤝 Château partagé']];
+  const tabs = [['chateaux', '🏰 Châteaux'], ['palmares', '🏆 Palmarès'], ['pantheon', '🏛️ Panthéon'], ['courrier', `📬 Courrier${mail ? ' (' + mail + ')' : ''}`], ['partage', '🤝 Château partagé']];
   box.innerHTML = `<h2>🌐 Le Val des Maîtres</h2>
     <p class="hint">Tu es <b>${esc(NET.name)}</b> <button class="link2" type="button" data-act="rename">changer</button> · ${up ? `${up} relais connecté${up > 1 ? 's' : ''}` : 'connexion aux relais…'} · ${n} château${n > 1 ? 'x' : ''} voisin${n > 1 ? 's' : ''} · saison de ${SEASON_NAME(seasonId())}</p>
     <div class="vtabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${VAL.tab === k}">${l}</button>`).join('')}</div>
@@ -5953,13 +5991,14 @@ function renderVal() {
     VAL.unread = 0;
     t.innerHTML = `<div class="btnrow"><button class="sbtn" type="button" data-act="mygb">✍️ Mon livre d’or</button><button class="sbtn" type="button" data-act="pub">📣 Publier mon château maintenant</button></div>
       <ul class="chron">${VAL.mail.map(x => `<li class="ev"><span class="emo">${agoText(x.at)}</span><span>${esc(x.text)}</span></li>`).join('') || '<li><span class="hint">Rien pour l’instant. Les cadeaux, les mots du livre d’or, les escarmouches et les créatures qui viennent te rejoindre arrivent ici.</span></li>'}</ul>`;
-  } else t.innerHTML = coopPanelHTML();
+  } else if (VAL.tab === 'pantheon') { t.innerHTML = '<p class="hint">On interroge les relais…</p>'; pantheonLoad(t); }
+  else t.innerHTML = coopPanelHTML();
 }
 function castleCard(c) {
   const on = nowS() - c.at < ONLINE_S;
   return `<div class="vcard ${c.me ? 'me' : ''}"><div class="vtop">${c.top.map(([sp]) => `<img class="th" alt="" src="${thumb('char', sp)}">`).join('')}</div>
     <div class="vtxt"><b>${esc(c.name)}</b><span>${esc(c.master)} · <i class="dot ${on ? 'on' : ''}"></i>${agoText(c.at)}</span>
-    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
+    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0}${c.wins && c.wins.length ? ' · 🏛️ ' + c.wins.map(k => VIC_BY[k].ico).join('') : ''} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
     <div class="vbtn">${c.me ? '<span class="tag2">C’est toi !</span>' : `<button class="sbtn pri" type="button" data-visit="${c.pk}">Visiter</button>`}</div></div>`;
 }
 function renderValList() {
@@ -5998,6 +6037,19 @@ async function valRetire() {
   const gone = ['csd1:castle', 'csd1:map'].map(d => netPublish(NET_STORE, sign(30078, [['d', d], ['t', d === 'csd1:castle' ? 'csd1-val' : 'csd1-map']], JSON.stringify({ v: 1, gone: 1 }))));
   const del = netPublish(NET_STORE, sign(5, [['a', a('csd1:castle')], ['a', a('csd1:map')], ['k', '30078']], 'Château retiré du Val'));
   const r = await Promise.all([...gone, del]); VAL.castles.delete(NET.pk); return r;
+}
+
+/* ---------- le Panthéon du Val : les victoires de tous les Maîtres ---------- */
+function pantheonPublish(id) {
+  if (!NET.ok || VISIT || COOP.role === 'guest') return;
+  const ev = sign(30078, [['d', 'csd1:victoire:' + id], ['t', 'csd1-pantheon'], ['alt', 'Victoire au jeu Cozy Stickers Dungeon']], JSON.stringify({ v: id, night: S.night, era: S.vic.era, m: NET.name || 'Maître anonyme', from: S.name, season: seasonId() }));
+  netPublish(NET_STORE, ev).catch(() => {});
+}
+async function pantheonLoad(box) {
+  const evs = await netQuery(NET_STORE, [{ kinds: [30078], '#t': ['csd1-pantheon'], limit: 150 }], 6000);
+  if (!box.isConnected) return;
+  const rows = evs.filter(safeVerify).map(ev => { let o = {}; try { o = JSON.parse(ev.content); } catch (e) {} return { ev, o }; }).filter(x => VIC_BY[x.o.v]).sort((a, b) => b.ev.created_at - a.ev.created_at).slice(0, 60);
+  box.innerHTML = `<p class="hint">Les Maîtres qui ont remporté une victoire, du plus récent au plus ancien.</p><ol class="board">${rows.map(({ ev, o }) => `<li class="${ev.pubkey === NET.pk ? 'me' : ''}"><span class="rk">${VIC_BY[o.v].ico}</span><span class="who"><b>${esc(VIC_BY[o.v].name)}</b><small>${esc(cleanName(o.from, 40) || '?')}, de ${esc(cleanName(o.m, 24) || 'Maître anonyme')} · nuit ${clamp(+o.night || 0, 0, 99999)} · ${agoText(ev.created_at)}</small></span></li>`).join('') || '<li class="hint">Personne n’est encore entré au Panthéon. À toi l’honneur !</li>'}</ol>`;
 }
 
 /* =========================================================
@@ -6431,13 +6483,17 @@ function discover(idx, why) {
 const discAround = (q, r, n) => world().list.filter(c => hdist(c.q, c.r, q, r) <= n).map(c => c.i);
 const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 // cibles de raid connues (il faut avoir découvert l'endroit sur la carte)
-function raidKnown(k) { const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
+function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
 RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 7, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon de ${rv.master}. Réussi, ce raid ternit sa réputation pendant six nuits.` }; });
 
 /* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */
 function heroOrigin() {
   if (!S || !S.started) return null;
-  const w = world(), reach = glowRadius() + 1, cands = w.sites.filter(s => s.rank && hdist(s.q, s.r) <= reach);
+  const w = world(), reach = glowRadius() + 1, vc = S.vic;
+  // la croisade de Mirebrume (victoire de Légende) : ce sont ses héros qui viennent
+  if (vc && vc.croisade && vc.croisade.done < 3 && !vc.won.legende) { const c = w.sites.find(s => s.kind === 'cite'); if (c) return { id: c.id, name: c.name, rank: 3, q: c.q, r: c.r, crusade: true }; }
+  // les villages qui t'aiment bien (bonne volonté 70 ou plus) n'envoient plus d'aventuriers
+  const cands = w.sites.filter(s => s.rank && hdist(s.q, s.r) <= reach && !(typeof gwOf === 'function' && gwOf(s) >= 70));
   if (!cands.length) { const v = w.sites.filter(s => s.rank === 1).sort((a, b) => hdist(a.q, a.r) - hdist(b.q, b.r))[0]; return v ? { id: v.id, name: v.name, rank: 1, q: v.q, r: v.r } : { rank: 1, name: 'un hameau voisin' }; }
   let s = S.world.next && cands.find(x => x.id === S.world.next);
   if (!s) { const top = Math.max(...cands.map(x => x.rank)); s = Math.random() < .55 ? pick(cands.filter(x => x.rank === top)) : pick(cands); S.world.next = s.id; }
@@ -6458,11 +6514,13 @@ function worldAfterInvasion(plan, outcome, lines) {
     const ground = PW('collec') ? [] : S.furn.filter(f => FURN[f.t] && FURN[f.t].artefact && zOf(f) === 0);
     if (ground.length) { const f = pick(ground); S.furn = S.furn.filter(x => x !== f); (S.world.stolen = S.world.stolen || []).push(f.t); lines.push(['🏺', `Ils emportent aussi ${FURN[f.t].name} ! On le reverra peut-être chez un brocanteur… Les artefacts gardés aux étages ne craignent rien.`, 'bad']); }
   }
+  if (typeof victoryAfterInvasion === 'function') victoryAfterInvasion(plan, outcome, lines);
   S.world.next = null; S.world.decoy = false;
 }
 // un raid réussi contre un donjon rival ternit sa réputation
-function worldAfterRaid(target, roll) {
+function worldAfterRaid(target, roll, lines) {
   const tg = RAIDS[target]; if (!tg) return;
+  if (typeof victoryAfterRaid === 'function') victoryAfterRaid(target, roll, lines || []);
   if (tg.rival && roll.res !== 'fail') S.world.hit[tg.rival] = S.night + 6;
   const s = world().sites.find(x => x.raid === target || (tg.rival && x.rival === tg.rival)); if (s) discover(discAround(s.q, s.r, 1), 'raid');
 }
@@ -6489,6 +6547,7 @@ function worldDawn(report) {
   groups.forEach(team => {
     const e = team[0].expe, w = world();
     team.forEach(c => { c.away = 0; c.awayUntil = 0; c.raid = false; c.back = true; delete c.expe; });
+    if (e.req) { if (typeof reqDawn === 'function') reqDawn(team, e, out); return; }
     if (!e.site) {   // éclaireur
       const c = w.list[e.hex], d = c ? discover(discAround(c.q, c.r, 2), 'éclaireur') : { n: 0, found: [] }, g = Math.random() < .3 ? 2 + rnd(3) : 0; S.gold += g;
       team.forEach(x => { gainXP(x, 1, out); addLoy(x, 2); });
@@ -6756,12 +6815,12 @@ function renderMapPanel() {
   } else if (K.rank) {
     const reach = d <= glowRadius() + 1;
     h += `<p>${esc(K.desc)}</p><p>${reach ? `✨ Ta renommée est arrivée jusqu’ici : ${HERO_RANK[sel.rank].label.toLowerCase()} pourraient venir tenter leur chance.` : `Ils n’ont pas encore entendu parler de toi (il faudrait rayonner jusqu’à ${d - 1} lieues).`}</p>
-      <div class="btnrow"><button class="sbtn pri" type="button" data-m="town">${sel.kind === 'village' ? '🏪 Aller à l’épicerie-buvette' : sel.kind === 'ville' ? '🏙️ Entrer en ville' : '🏰 Entrer dans la cité'}</button></div>`;
+      <div class="btnrow"><button class="sbtn pri" type="button" data-m="town">${sel.kind === 'village' ? '🏪 Aller à l’épicerie-buvette' : sel.kind === 'ville' ? '🏙️ Entrer en ville' : '🏰 Entrer dans la cité'}</button></div>${settleHTML(sel)}${sel.kind === 'cite' ? citeHTML() : ''}`;
   } else if (sel.kind === 'raid' || sel.kind === 'rival') {
     const key = sel.raid || 'r_' + sel.rival, tg = RAIDS[key];
-    if (sel.kind === 'rival') { const rv = RIVALS.find(r => r.id === sel.rival); h += `<p>Le donjon de ${esc(rv.master)}. Sa réputation : ${rv.likes.filter(s => SPECIES[s]).map(s => `${SPECIES[s].name} <b>${rivalRep(rv, s)}</b> <span class="hint">(toi : ${repOf(s)})</span>`).join(' · ')}.${S.world.hit[rv.id] ? ` <b>Il a perdu de sa superbe</b> jusqu’à la nuit ${S.world.hit[rv.id]}.` : ''} Tes créatures peu loyales pourraient être tentées d’y partir.</p>`; }
+    if (sel.kind === 'rival') { const rv = RIVALS.find(r => r.id === sel.rival); h += `<p>Le donjon de ${esc(rv.master)}. Sa réputation : ${rv.likes.filter(s => SPECIES[s]).map(s => `${SPECIES[s].name} <b>${rivalRep(rv, s)}</b> <span class="hint">(toi : ${repOf(s)})</span>`).join(' · ')}.${S.world.hit[rv.id] ? ` <b>Il a perdu de sa superbe</b> jusqu’à la nuit ${S.world.hit[rv.id]}.` : ''}${isVassal(rv.id) ? '' : ' Tes créatures peu loyales pourraient être tentées d’y partir.'}</p>${rivalHTML(rv)}`; }
     h += `<p>${esc(tg.desc)}</p><p class="hint">Butin ${costText(tg.reward)} · +${tg.hype} 🔥 · +${tg.menace} Menace · ${TAGS[tg.tag]}${tg.risk ? ` · bien gardé (−${tg.risk} dé)` : ''}${tg.tier > S.tier ? ` · 🔒 Palier ${tg.tier}` : ''}</p>
-      <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
+      <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier || (sel.rival && isVassal(sel.rival)) ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
   } else if (sel.kind === 'joueur') {
     h += `<p>Le château de <b>${esc(sel.master)}</b>, un autre Maître du Val. Rayonnement ${sel.glow || 0}, palier ${sel.tier || 0}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-m="visit">🏰 Lui rendre visite</button></div>`;
   } else if (K.expe) {
@@ -6772,18 +6831,21 @@ function renderMapPanel() {
   }
   p.innerHTML = h;
 }
-function teamPicker(max) {
-  const crew = S.creatures.filter(c => !isOut(c)); MAPV.team = (MAPV.team || []).filter(id => crew.some(c => c.id === id)).slice(0, max); MAPV.max = max;
+function teamPicker(max, list) {
+  const crew = list || S.creatures.filter(c => !isOut(c)); MAPV.team = (MAPV.team || []).filter(id => crew.some(c => c.id === id)).slice(0, max); MAPV.max = max;
   return `<div class="wteam">${crew.map(c => `<button type="button" class="wmate" data-mate="${c.id}" aria-pressed="${MAPV.team.includes(c.id)}" title="${esc(c.name)} · ${esc(SPECIES[c.sp].name)} · ${diceOf(c)} 🎲"><img alt="" src="${thumb('char', c.sp)}"><span>${esc(c.name)}</span></button>`).join('') || '<p class="hint">Personne de disponible.</p>'}</div>`;
 }
 function mapPanelClick(e) {
   const mt = e.target.closest('[data-mate]');
   if (mt) { const id = mt.dataset.mate, t = MAPV.team || []; if (t.includes(id)) MAPV.team = t.filter(x => x !== id); else { t.push(id); MAPV.team = t.slice(-MAPV.max); } sfx('tick'); renderMapPanel(); return; }
+  const rq = e.target.closest('[data-rq]');
+  if (rq && !rq.disabled) { if (!run('request', { id: rq.dataset.rq, team: MAPV.team || [] })) return; sfx('chime'); toast('🤝 C’est noté ! Le village s’en souviendra.'); MAPV.team = []; afterChange(); renderMapPanel(); return; }
   const b = e.target.closest('[data-m]'); if (!b || b.disabled) return;
   const k = b.dataset.m, sel = MAPV.sel;
   if (k === 'glow') openRadiance();
   else if (k === 'town') openTown(sel.id);
   else if (k === 'raid') { closeWorld(); openRaid(sel.raid || 'r_' + sel.rival); }
+  else if (k === 'siege') { closeWorld(); openRaid('mirebrume'); }
   else if (k === 'visit') { closeWorld(); valVisit(sel.pk); }
   else if (k === 'expe' || k === 'scout') {
     if (!(MAPV.team || []).length) { toast('Choisis qui part.', true); sfx('bad'); return; }
@@ -6831,6 +6893,7 @@ addEventListener('resize', () => requestAnimationFrame(() => { MM_SIG = ''; rend
    bureau de placement pour monstres
    ========================================================= */
 const SHOP = {
+  don: { name: 'Don pour la fête', ico: '🎪', price: 6, per: 1, desc: 'Une belle obole pour la prochaine fête : bonne volonté +10.' },
   rumeur: { name: 'Rumeurs de comptoir', ico: '🍺', price: 3, per: 1, desc: 'Contre une pinte, on te raconte où se trouve un endroit que tu ne connais pas encore.' },
   humeur: { name: 'Potion de bonne humeur', ico: '🧪', price: 6, per: 1, desc: 'Toutes tes créatures gagnent 1 ❤️. Goût framboise-soufre.' },
   fidelite: { name: 'Élixir de fidélité', ico: '💞', price: 8, per: 1, desc: '+12 loyauté pour toutes tes créatures. Ne surtout pas en boire soi-même.' },
@@ -6850,11 +6913,11 @@ const SHOP = {
   vendre: { name: 'Vendre un artefact', ico: '💰', per: 0 },
 };
 const SHOPS = {
-  village: [{ id: 'epicerie', title: 'L’épicerie-buvette de la mère Pichenette', keeper: ['« On a de tout, sauf ce que vous cherchez. »', '« Une pinte et une rumeur ? C’est la formule du jour. »', '« Vous avez une drôle de moustache, vous. Elle tient avec quoi ? »'], items: ['rumeur', 'humeur', 'oubli'] }],
+  village: [{ id: 'epicerie', title: 'L’épicerie-buvette de la mère Pichenette', keeper: ['« On a de tout, sauf ce que vous cherchez. »', '« Une pinte et une rumeur ? C’est la formule du jour. »', '« Vous avez une drôle de moustache, vous. Elle tient avec quoi ? »'], items: ['rumeur', 'humeur', 'oubli', 'don'] }],
   ville: [
     { id: 'bazar', title: 'Le Bazar de Maître Bricabrac', keeper: ['« Tout est authentique, sauf ce qui ne l’est pas. »', '« Garantie trois jours, ou jusqu’à ce que ça casse. »', '« Celle-là, elle a appartenu à un roi. Ou à son cousin. Ou à son chien. »'], items: ['deco', 'artefact', 'rachat', 'vendre'] },
     { id: 'apo', title: 'L’Apothicairerie de Dame Fiolette', keeper: ['« Ne touchez pas au flacon vert. Ni au violet. Ni à rien, en fait. »', '« Effets secondaires : aucun. Enfin, presque aucun. »'], items: ['humeur', 'fidelite', 'tisane', 'oubli'] },
-    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco'] },
+    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco', 'don'] },
     { id: 'guilde', title: 'La Guilde des Aventuriers Patentés', keeper: ['« Ticket numéro 4 312. Le guichet ferme dans cinq minutes. »', '« Formulaire B-52 en triple exemplaire, tamponné par le Grand Tamponneur. »'], items: ['tableau', 'dossier', 'avis'] },
     { id: 'carto', title: 'Le Cartographe Myope', keeper: ['« Le nord ? C’est par là. Ou par là. Passez-moi mes lunettes. »'], items: ['carte', 'tresor'] },
     { id: 'placement', title: 'Le Bureau de placement de Mme Grifouille', keeper: ['« Monstres sérieux, logés, nourris. Références exigées, mais personne n’en a. »'], items: ['recrue'] },
@@ -6902,6 +6965,7 @@ function shopBuy(a) {
   else if (item === 'oubli') S.menace = Math.max(0, S.menace - 2);
   else if (item === 'dossier') S.menace = Math.max(0, S.menace - 3);
   else if (item === 'tournee') S.hype += 2;
+  else if (item === 'don') addGw(site, 10);
   else if (item === 'merco') S.world.merc = S.night + 3;
   else if (item === 'avis') S.world.decoy = true;
   else if (item === 'rumeur' || item === 'tresor') {
@@ -6918,6 +6982,7 @@ function shopBuy(a) {
   else if (item === 'vendre') { S.free[arg]--; addLog(`${FURN[arg].name} vendu au brocanteur.`); }
   else if (item === 'recrue') { const c = addCreature(arg); c.isNew = true; c.loy = 45; addLog(`${c.name} (${SPECIES[arg].name}) recruté·e au bureau de placement.`, 'good'); }
   if (price) S.gold -= price;
+  if (item !== 'don' && item !== 'vendre' && price > 0) addGw(site, 2);
   if (SHOP[item].per) (S.world.shop = S.world.shop || {})[item] = S.night;
   return null;
 }
@@ -6941,10 +7006,12 @@ function openTown(siteId) {
     return row(item, btn(item));
   };
   const m = openModal(`<div class="town ${site.kind}"><h2>${site.kind === 'village' ? '🏪' : site.kind === 'ville' ? '🏙️' : '🏰'} ${esc(site.name)}</h2>
-    <p class="hint">${esc(pick(TOWN_INTRO[site.kind]))}${mk2.spotted ? ' <b>Malheureusement, ton château rayonne tellement qu’on te reconnaît malgré la moustache : les prix grimpent de 20 %.</b>' : ''} Tu as ${S.gold} 💰.</p>
+    <p class="hint">Bonne volonté ${gwOf(site)}/100 · ${esc(pick(TOWN_INTRO[site.kind]))}${mk2.spotted ? ' <b>Malheureusement, ton château rayonne tellement qu’on te reconnaît malgré la moustache : les prix grimpent de 20 %.</b>' : ''} Tu as ${S.gold} 💰.</p>
+    ${(() => { const q = reqAt(site.id); if (!q) return ''; const R = REQ[q.req]; return `<section class="shop req"><h3>📜 Une requête de ${esc(site.name)}</h3><p class="keeper">« ${esc(R.text)} »</p>${R.kind === 'pay' ? `<div class="btnrow"><button class="sbtn pri" type="button" data-rqt="${q.id}" ${canAfford(R.cost) ? '' : 'disabled'}>🤝 Payer ${costText(R.cost)} · bonne volonté +${R.gw}</button></div>` : `<p class="hint">${R.kind === 'repel' ? 'Elle sera accomplie à la prochaine invasion repoussée.' : 'Envoie une de tes créatures depuis la carte du Val.'}</p>`}</section>`; })()}
     ${shops.map(sh => { const body = sh.items.map(itemHTML).join(''); return `<section class="shop"><h3>${esc(sh.title)}</h3><p class="keeper">${esc(pick(sh.keeper))}</p>${body}</section>`; }).join('')}
     <div class="mfoot"><button class="sbtn" type="button" data-close>↩ Repartir</button></div></div>`, { wide: true, cls: 'townm', label: site.name });
   m.addEventListener('click', e => {
+    const rq = e.target.closest('[data-rqt]'); if (rq && !rq.disabled) { if (!run('request', { id: rq.dataset.rqt })) return; sfx('chime'); toast('🤝 Requête accomplie !'); afterChange(); if (MAPV.open) renderMapPanel(); openTown(siteId); return; }
     const b = e.target.closest('[data-buy]'); if (!b || b.disabled) return;
     const item = b.dataset.buy, arg = b.dataset.arg;
     if (item === 'tableau') { sfx('tick'); toast(pp.origin ? `📋 Sur le tableau : « Château maléfique à visiter. Récompense honnête. » Départ prévu de ${pp.origin.name}.` : '📋 Rien au tableau pour ton château.'); return; }
@@ -6992,6 +7059,302 @@ TIPS.push(
   { id: 'arte1', when: () => ARTEFACTS.some(k => (S.free[k] || 0) > 0), t: 'Un artefact !', x: 'Pose-le depuis l’onglet Trésors de la barre : il fera rayonner ton château. Au Reliquaire (sous terre), il brille moitié plus et ne craint pas les voleurs.', wiki: 'artefacts' },
   { id: 'rare1', when: () => S.world && Object.keys(S.world.met || {}).length > 0, t: 'Une rencontre rare', x: 'Ton expédition a croisé une créature rare. Elle viendra s’installer si ton château rayonne assez et lui offre sa pièce, meublée (voir le Grimoire).', wiki: 'rares' },
 );
+
+/* =========================================================
+   Victoires, comme dans Civilization : cinq chemins pour devenir
+   le Grand Maître du Val. Les donjons rivaux (et le Baron) font
+   la course ; si l'un d'eux gagne avant toi, une nouvelle ère
+   commence, et tu gardes tout ce que tu as bâti.
+   ========================================================= */
+const VICTORIES = [
+  { id: 'legende', ico: '✨', name: 'Victoire de Légende', short: 'Ton château devient un mythe.', rival: 'ombrelune' },
+  { id: 'terreur', ico: '⚔️', name: 'Victoire de Terreur', short: 'Le Val tremble, mais personne ne meurt.', rival: 'septbieres' },
+  { id: 'voisinage', ico: '🗳️', name: 'Victoire de Bon Voisinage', short: 'Le Conseil du Val te nomme Protecteur.', rival: 'baron' },
+  { id: 'menagerie', ico: '🐾', name: 'Victoire de la Grande Ménagerie', short: 'Le bestiaire le plus complet du Val.', rival: 'moussues' },
+  { id: 'secrets', ico: '🗝️', name: 'Victoire des Secrets', short: 'Tu perces le mystère du Val.', rival: 'morgrave' },
+];
+const VIC_BY = Object.fromEntries(VICTORIES.map(v => [v.id, v]));
+const MENAGERIE_SP = SPECIES_ORDER.slice();
+const BARON = { id: 'baron', name: 'Le Baron Pâlichon', emo: '🎩' };
+const racer = id => id === 'baron' ? BARON : RIVALS.find(r => r.id === id);
+const raceGoal = id => (VICTORIES.find(v => v.rival === id) || {}).id;
+function vicState() {
+  if (!S.vic) S.vic = { won: {}, era: 1, master: null, race: { ombrelune: 0, septbieres: 0, moussues: 0, morgrave: 0, baron: 0 }, vassals: {}, siege: 0, votes: 0, gw: {}, requests: [], happy: 0, croisade: null, proj: null, seen: {}, councils: 0 };
+  return S.vic;
+}
+const isVassal = id => !!(S.vic && S.vic.vassals[id] >= 3);
+const allVassals = () => RIVALS.every(r => isVassal(r.id));
+
+/* ---------- bonne volonté des villages, villes et cité ---------- */
+const GW0 = { village: 30, ville: 20, cite: 10 };
+const VOICES = { village: 1, ville: 2, cite: 3 };
+const gwOf = s => { const v = vicState(); return v.gw[s.id] != null ? v.gw[s.id] : GW0[s.kind] || 20; };
+function addGw(s, n) { const v = vicState(); v.gw[s.id] = clamp(Math.round(gwOf(s) + n), 0, 100); }
+const settlements = () => world().sites.filter(s => SITE_KINDS[s.kind].rank);
+// le lieu habité le plus proche d'une cible de raid : c'est lui qui t'en veut
+function nearestSettlement(site) { return settlements().slice().sort((a, b) => hdist(a.q, a.r, site.q, site.r) - hdist(b.q, b.r, site.q, site.r))[0]; }
+
+/* ---------- requêtes des villages ---------- */
+const REQ = {
+  percepteur: { text: 'Le percepteur du bailli nous saigne. Envoie une créature lui faire une belle frayeur.', kind: 'send', nights: 1, tag: 'ruse', gw: 20, rw: { g: 3 } },
+  vache: { text: 'La vache de la mère Pichenette s’est sauvée dans les bois. Tu nous la ramènes ?', kind: 'send', nights: 1, gw: 18, rw: { s: 2 } },
+  fete: { text: 'C’est la fête et il nous manque un musicien. Un Ménestrel ou une Harpie ferait l’affaire.', kind: 'send', nights: 1, need: ['menestrel', 'harpie'], gw: 25, rw: { h: 2 } },
+  moutons: { text: 'Des loups rôdent autour des moutons. Prête-nous un bon gardien (garde 2 ou plus) pendant deux nuits.', kind: 'send', nights: 2, guard: 2, gw: 25, rw: { g: 2 } },
+  fantome: { text: 'Un fantôme hante le moulin et fait pleurer les enfants. Un des tiens pourrait lui parler ?', kind: 'send', nights: 1, need: ['fantome', 'vampire', 'liche', 'sorciere', 'squelette'], gw: 22, rw: { h: 1 } },
+  pont: { text: 'Le pont s’est effondré. Quatre matériaux, et on le rebâtit en ton honneur.', kind: 'pay', cost: { s: 4 }, gw: 15 },
+  grain: { text: 'Le grenier est vide avant l’hiver. Cinq pièces d’or nous sauveraient.', kind: 'pay', cost: { g: 5 }, gw: 15 },
+  heros: { text: 'Des apprentis héros parlent de « libérer » ton château. Donne-leur une bonne leçon : repousse une invasion.', kind: 'repel', gw: 20 },
+};
+const openReqs = () => vicState().requests.filter(q => q.st !== 'done');
+const reqAt = siteId => openReqs().find(q => q.site === siteId);
+function reqCandidates(q) { const R = REQ[q.req]; return S.creatures.filter(c => !isOut(c) && (!R.need || R.need.includes(c.sp)) && (!R.guard || guardOf(c) >= R.guard)); }
+function newRequest(out) {
+  const v = vicState(); if (openReqs().length >= 2) return;
+  const free = settlements().filter(s => siteKnown(s) && gwOf(s) < 100 && !reqAt(s.id)); if (!free.length) return;
+  const s = pick(free), keys = Object.keys(REQ).filter(k => !REQ[k].need || S.creatures.some(c => REQ[k].need.includes(c.sp))), k = pick(keys);
+  v.requests.push({ id: 'q' + S.seq++, req: k, site: s.id, n: S.night, until: S.night + (REQ[k].kind === 'repel' ? 10 : 6), st: 'open' });
+  if (v.requests.length > 12) v.requests = v.requests.slice(-12);
+  out.push(['📜', `${s.name} t’adresse une requête : « ${REQ[k].text} » (voir la carte)`, 'ev']);
+}
+function reqReward(q, s, out, k = 1) {
+  const R = REQ[q.req], rw = R.rw || {}; addGw(s, Math.round(R.gw * k)); q.st = 'done';
+  if (rw.g) S.gold += rw.g; if (rw.s) S.mat += rw.s; if (rw.h) S.hype += rw.h;
+  const t = `Requête accomplie pour ${s.name} : bonne volonté +${Math.round(R.gw * k)}${rw.g ? `, +${rw.g} 💰` : ''}${rw.s ? `, +${rw.s} 🪵` : ''}${rw.h ? `, +${rw.h} 🔥` : ''}.`;
+  addLog(t, 'good'); if (out) out.push(['🤝', t, 'good']); return t;
+}
+CMD.request = a => {
+  const q = openReqs().find(x => x.id === a.id); if (!q) return 'Cette requête n’est plus d’actualité';
+  const R = REQ[q.req], s = siteById(q.site); if (!s) return 'Lieu inconnu';
+  if (R.kind === 'pay') { if (!canAfford(R.cost)) return `Il te faut ${costText(R.cost)}`; pay(R.cost); reqReward(q, s); return null; }
+  if (R.kind !== 'send' || q.st !== 'open') return 'Rien à envoyer';
+  const c = critter((a.team || [])[0]); if (!c || isOut(c)) return 'Choisis qui part';
+  if (!reqCandidates(q).includes(c)) return R.need ? `Il faut : ${R.need.map(k => SPECIES[k] ? SPECIES[k].name : k).join(' ou ')}` : 'Il faut un gardien plus solide';
+  if (S.raid) S.raid.team = S.raid.team.filter(id => id !== c.id);
+  c.raid = true; c.away = R.nights; c.awayUntil = S.night + R.nights; c.post = null; c.expe = { gid: 'x' + S.seq++, site: null, req: q.id, n: S.night }; critterLeave(c.id);
+  q.st = 'sent'; addLog(`${c.name} part aider ${s.name}.`, 'ev'); return null;
+};
+// retour d'une créature partie aider un village (appelé par worldDawn)
+function reqDawn(team, e, out) {
+  const q = vicState().requests.find(x => x.id === e.req), c = team[0]; if (!q) return;
+  const s = siteById(q.site), R = REQ[q.req], pool = Math.max(1, diceOf(c) + ((SPECIES[c.sp] || {}).tag === R.tag ? 1 : 0) + (R.guard && guardOf(c) >= R.guard ? 1 : 0) + (R.need ? 1 : 0)), roll = rollPool(pool);
+  if (roll.res !== 'fail') { const t = reqReward(q, s, null, roll.res === 'partial' ? .7 : 1); gainXP(c, 1, out); addLoy(c, 3); out.push(['🤝', `${c.name} revient de ${s.name} (dés : ${roll.dice.join(', ')}). ${t}`, 'good']); }
+  else { addGw(s, 5); q.st = 'done'; c.mood = clamp(c.mood - 1, 0, 5); out.push(['💨', `${c.name} n’a pas réussi à aider ${s.name} (dés : ${roll.dice.join(', ')}). Ils apprécient quand même l’effort : bonne volonté +5.`, 'bad']); }
+}
+
+/* ---------- les étapes de chaque victoire ---------- */
+const st = (text, done, finale) => ({ text, done: !!done, finale: !!finale });
+function mapPct() { const w = world(); return Math.round(visibleSet().size / w.list.length * 100); }
+const artFound = () => Object.keys((S.world && S.world.found) || {}).length;
+const artPlaced = () => new Set(S.furn.filter(f => FURN[f.t] && FURN[f.t].artefact).map(f => f.t)).size;
+const legendsHome = () => S.creatures.filter(c => c.legend).length;
+const albumN = () => MENAGERIE_SP.filter(k => S.album[k]).length;
+function vicStages(id) {
+  const v = vicState();
+  if (id === 'legende') { const g = radiance(); return [st(`Rayonnement Illustre (${Math.min(g, 80)}/80 ✨)`, g >= 80 || v.croisade), st(`Rayonnement Légendaire (${Math.min(g, 130)}/130 ✨)`, g >= 130 || v.croisade), st(`Rayonnement Mythique (${Math.min(g, 200)}/200 ✨)`, g >= 200 || v.croisade),
+    st(`Finale : repousser la Croisade des héros de Mirebrume (${v.croisade ? Math.min(3, v.croisade.done) : 0}/3)`, v.croisade && v.croisade.done >= 3, true)]; }
+  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 raids réussis)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
+  if (id === 'voisinage') return [5, 10, 15].map(n => st(`${n} voix au Conseil du Val (${Math.min(v.votes, n)}/${n})`, v.votes >= n)).concat([st(`Finale : 20 voix, et le Conseil te nomme Protecteur du Val (${Math.min(v.votes, 20)}/20)`, v.votes >= 20, true)]);
+  if (id === 'menagerie') { const p = v.proj && v.proj.id === 'parade' ? v.proj : null; return [st(`Album complet (${albumN()}/${MENAGERIE_SP.length} espèces, rares comprises)`, albumN() >= MENAGERIE_SP.length || p), st(`5 légendes au château (${Math.min(5, legendsHome())}/5)`, legendsHome() >= 5 || p),
+    st(`Toutes tes créatures épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
+  if (id === 'secrets') { const p = v.proj && v.proj.id === 'rituel' ? v.proj : null, m = mapPct(); return [st(`Dévoiler la carte (${Math.min(m, 90)}/90 %)`, m >= 90 || p), st(`Trouver les 12 artefacts (${Math.min(12, artFound())}/12)`, artFound() >= 12 || p),
+    st(`Les exposer tous, avec un Reliquaire (${artPlaced()}/12${builtCount('reliquaire') ? '' : ', pas de Reliquaire'})`, (artPlaced() >= 12 && builtCount('reliquaire') > 0) || p), st(`Finale : le Rituel des Douze, 3 nuits sans perdre un artefact (${v.won.secrets ? 3 : p ? p.prog : 0}/3)`, !!v.won.secrets, true)]; }
+  return [];
+}
+function vicPct(id) {
+  const v = vicState(); if (v.won[id]) return 100;
+  if (id === 'legende') return Math.round(Math.min(1, radiance() / 200) * 75 + (v.croisade ? Math.min(3, v.croisade.done) / 3 * 25 : 0));
+  if (id === 'terreur') return Math.round(RIVALS.reduce((a, r) => a + Math.min(3, v.vassals[r.id] || 0), 0) / 12 * 75 + Math.min(3, v.siege) / 3 * 25);
+  if (id === 'voisinage') return Math.round(Math.min(20, v.votes) / 20 * 100);
+  const s = vicStages(id), p = v.proj && v.proj.id === (id === 'menagerie' ? 'parade' : 'rituel') ? v.proj : null;
+  return Math.round(s.slice(0, 3).filter(x => x.done).length / 3 * 75 + (p ? p.prog / p.need * 25 : 0));
+}
+// une grande finale qu'on lance soi-même : la Parade (ménagerie) ou le Rituel (secrets)
+const PROJ = { parade: { vic: 'menagerie', name: 'la Grande Parade', need: 4, cost: { g: 20, s: 10 } }, rituel: { vic: 'secrets', name: 'le Rituel des Douze', need: 3, cost: { g: 15, s: 5 } } };
+const projReady = k => !vicState().proj && !vicState().won[PROJ[k].vic] && vicStages(PROJ[k].vic).slice(0, 3).every(x => x.done);
+CMD.project = a => {
+  const P = PROJ[a.id]; if (!P) return 'Projet inconnu'; if (vicState().proj) return 'Un grand projet est déjà en cours';
+  if (!projReady(a.id)) return 'Toutes les étapes ne sont pas encore franchies'; if (!canAfford(P.cost)) return `Il te faut ${costText(P.cost)}`;
+  pay(P.cost); vicState().proj = { id: a.id, prog: 0, need: P.need, ids: S.creatures.map(c => c.id), n: S.night };
+  addLog(`Début de ${P.name} !`, 'ev'); return null;
+};
+
+/* ---------- gagner, perdre une ère ---------- */
+function winVictory(id, out) {
+  const v = vicState(); if (v.won[id]) return;
+  v.won[id] = S.night; v.justWon = id; S.stats.victories = (S.stats.victories || 0) + 1;
+  const t = `${VIC_BY[id].name} ! ${S.name} entre au Panthéon du Val.`; addLog(t, 'ev'); if (out) out.push(['🏛️', t, 'good']);
+  if (typeof pantheonPublish === 'function') pantheonPublish(id);
+}
+function newEra(champ, out) {
+  const v = vicState(), r = racer(champ), goal = VIC_BY[raceGoal(champ)];
+  v.era++; v.master = champ; v.eraNews = champ;
+  Object.keys(v.race).forEach(k => { if (!isVassal(k)) v.race[k] = Math.round(Math.random() * 8); });
+  const t = `Nouveau Grand Maître du Val : ${r.name}, par la ${goal.name.replace('Victoire', 'victoire')}. Une nouvelle ère commence (ère ${v.era}) ; tes progrès, eux, restent intacts.`;
+  addLog(t, 'bad'); out.push(['👑', t, 'bad']);
+}
+function raceTick(out) {
+  const v = vicState();
+  RIVALS.forEach(r => {
+    if (isVassal(r.id)) return;
+    const before = v.race[r.id] || 0, slow = S.world && S.world.hit && S.world.hit[r.id] > S.night ? .4 : 1;
+    v.race[r.id] = Math.min(100, before + (.8 + Math.random() * .6) * slow);
+    [50, 75, 90].forEach(m => { if (before < m && v.race[r.id] >= m) out.push(['⚠️', `Course à la victoire : ${r.name} en est à ${m} % de la ${VIC_BY[raceGoal(r.id)].name.replace('Victoire', 'victoire')}.`, 'bad']); });
+  });
+  const champ = Object.keys(v.race).find(k => v.race[k] >= 100); if (champ) newEra(champ, out);
+}
+function council(out) {
+  const v = vicState(), setts = settlements(); let mine = 0; const yes = [];
+  setts.forEach(s => { if (gwOf(s) >= 60) { mine += VOICES[s.kind]; yes.push(s.name); } });
+  const total = setts.reduce((a, s) => a + VOICES[s.kind], 0), before = v.votes; v.votes += mine; v.councils++;
+  v.race.baron = Math.min(100, (v.race.baron || 0) + (total - mine) / 20 * 100 * .35);
+  out.push(['🗳️', `Conseil du Val : ${mine} voix pour toi${yes.length ? ` (${yes.join(', ')})` : ''}, ${total - mine} pour le Baron Pâlichon. Tes voix : ${Math.min(v.votes, 20)}/20.`, mine ? 'good' : '']);
+  if (before < 20 && v.votes >= 20) winVictory('voisinage', out);
+}
+
+/* ---------- chaque aube ---------- */
+function victoryDawn(report) {
+  if (!S.started) return;
+  const v = vicState(), out = [];
+  // vassaux : tribut
+  const vas = RIVALS.filter(r => isVassal(r.id)); if (vas.length) { S.gold += vas.length * 2; S.mat += vas.length; out.push(['🪙', `Tes vassaux versent leur tribut : +${vas.length * 2} 💰, +${vas.length} 🪵.`, 'good']); }
+  // la bonne volonté retombe doucement ; les requêtes vieillissent ; parfois une nouvelle
+  Object.keys(v.gw).forEach(k => { if (v.gw[k] > 40) v.gw[k]--; });
+  v.requests.forEach(q => { if (q.st === 'open' && S.night > q.until) { q.st = 'done'; const s = siteById(q.site); if (s) { addGw(s, -5); out.push(['⌛', `${s.name} a attendu en vain : bonne volonté −5.`, 'bad']); } } });
+  if (S.night >= 4 && Math.random() < .35) newRequest(out);
+  if (S.night % 10 === 0) council(out);
+  // ménagerie : tout le monde épanoui ?
+  v.happy = S.creatures.length >= 8 && S.creatures.every(c => (c.epa == null ? 50 : c.epa) >= 70) ? v.happy + 1 : 0;
+  // légende : à Mythique, la cité lève une croisade
+  if (!v.croisade && !v.won.legende && radiance() >= 200) { v.croisade = { done: 0, n: S.night }; out.push(['📯', 'Mythique ! La cité de Mirebrume lève une croisade de héros légendaires contre ton château. Repousse-la trois fois pour entrer dans la légende.', 'ev']); }
+  if (v.croisade && v.croisade.done < 3 && !v.won.legende) S.menace += 1;
+  // grands projets
+  const p = v.proj;
+  if (p) {
+    const P = PROJ[p.id]; let fail = '';
+    if (p.id === 'parade') { const gone = p.ids.filter(id => !critter(id)); if (gone.length) fail = 'une créature a quitté le château'; else if (S.creatures.some(c => c.mood <= 1)) fail = 'une créature boude'; }
+    else if (artPlaced() < 12) fail = 'un artefact a disparu des expositions';
+    if (fail) { v.proj = null; out.push(['💔', `${P.name[0].toUpperCase() + P.name.slice(1)} est interrompu${p.id === 'parade' ? 'e' : ''} : ${fail}. Tu pourras recommencer.`, 'bad']); }
+    else { p.prog++; out.push(['🎉', `${P.name[0].toUpperCase() + P.name.slice(1)} : nuit ${p.prog}/${p.need}.`, 'good']); if (p.prog >= p.need) { v.proj = null; winVictory(P.vic, out); } }
+  }
+  raceTick(out);
+  // étapes franchies
+  VICTORIES.forEach(V0 => !v.won[V0.id] && vicStages(V0.id).forEach((s, i) => { const k = V0.id + i; if (s.done && !v.seen[k] && !s.finale) { v.seen[k] = S.night; out.push([V0.ico, `${V0.name} : étape franchie, « ${s.text.replace(/ \(.*\)$/, '')} ».`, 'ev']); } }));
+  if (out.length) { report.push(['sec', 'Victoires']); out.forEach(l => report.push(l)); }
+}
+
+/* ---------- branchements : raids, invasions, origine des héros ---------- */
+function victoryAfterRaid(target, roll, lines) {
+  const v = vicState(), tg = RAIDS[target], ok = roll.res !== 'fail';
+  if (tg.rival && ok && !isVassal(tg.rival)) {
+    v.vassals[tg.rival] = (v.vassals[tg.rival] || 0) + 1; v.race[tg.rival] = Math.max(0, (v.race[tg.rival] || 0) - 6);
+    const r = racer(tg.rival);
+    if (isVassal(tg.rival)) { lines.push(['🏳️', `Reddition ! ${r.name} : te voilà suzerain. Un tribut chaque nuit, et plus personne là-bas pour te disputer tes créatures.`, 'good']); addLog(`Vassal : ${r.name}.`, 'ev'); }
+    else lines.push(['🏴', `Coup dur pour ${r.name} : ${v.vassals[tg.rival]}/3 vers la vassalité, et un recul dans la course.`, 'good']);
+  }
+  if (tg.siege && ok) { v.siege++; lines.push(['🏰', `Assaut réussi contre Mirebrume (${Math.min(3, v.siege)}/3) !`, 'good']); if (v.siege >= 3) winVictory('terreur', lines); }
+  if (!tg.rival && !tg.siege) { const site = world().sites.find(x => x.raid === target), s = site && nearestSettlement(site); if (s) { addGw(s, ok ? -12 : -6); lines.push(['😠', `${s.name} n’apprécie pas : bonne volonté ${ok ? '−12' : '−6'}.`, 'bad']); } }
+}
+function victoryAfterInvasion(plan, outcome, lines) {
+  const v = vicState();
+  if (outcome === 'robbed') return;
+  openReqs().filter(q => REQ[q.req].kind === 'repel').forEach(q => { const s = siteById(q.site); if (s) lines.push(['🤝', reqReward(q, s), 'good']); });
+  if (plan.origin && plan.origin.crusade && v.croisade && !v.won.legende) { v.croisade.done++; lines.push(['📯', `La croisade de Mirebrume est repoussée (${Math.min(3, v.croisade.done)}/3) !`, 'good']); if (v.croisade.done >= 3) winVictory('legende', lines); }
+}
+RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 3, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, desc: 'La grande cité. Trois assauts réussis et elle te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+
+/* ---------- pastilles (notifications) ---------- */
+function victoryNotifs(add) {
+  if (!S.started) return; const v = vicState();
+  openReqs().forEach(q => { const s = siteById(q.site); if (s && q.st === 'open') add('rq' + q.id, '📜', `${s.name} a une requête`, () => openWorld(s.id), 2); });
+  Object.keys(PROJ).forEach(k => { if (projReady(k)) add('pj' + k, '🏛️', `${PROJ[k].name[0].toUpperCase() + PROJ[k].name.slice(1)} peut commencer`, openVictories, 4); });
+  if (v.proj) add('pjrun', '🎉', `${PROJ[v.proj.id].name[0].toUpperCase() + PROJ[v.proj.id].name.slice(1)} : nuit ${v.proj.prog}/${v.proj.need}`, openVictories, 3);
+  if (v.croisade && v.croisade.done < 3 && !v.won.legende) add('crois', '📯', `Croisade de Mirebrume : ${v.croisade.done}/3 repoussées`, openVictories, 4, 'bad');
+  if (S.night % 10 >= 8) add('cons', '🗳️', `Conseil du Val dans ${10 - S.night % 10} nuit${10 - S.night % 10 > 1 ? 's' : ''}`, () => openVictories('voisinage'), 1);
+  const hot = Object.keys(v.race).filter(k => !isVassal(k) && v.race[k] >= 75).sort((a, b) => v.race[b] - v.race[a])[0];
+  if (hot) add('race', '⚠️', `Course : ${racer(hot).name} à ${Math.floor(v.race[hot])} % de la victoire`, openVictories, 5, 'bad');
+}
+
+/* ---------- l'écran des victoires (le « classement » de Civilization) ---------- */
+function openVictories(focus) {
+  const v = vicState(), m = v.master ? racer(v.master) : null, laurels = Object.keys(v.won);
+  const card = V0 => {
+    const pct = vicPct(V0.id), stages = vicStages(V0.id), r = racer(V0.rival), rp = Math.floor(v.race[V0.rival] || 0), won = v.won[V0.id];
+    const pk = V0.id === 'menagerie' ? 'parade' : V0.id === 'secrets' ? 'rituel' : null;
+    return `<section class="vic ${won ? 'won' : ''} ${focus === V0.id ? 'focus' : ''}"><div class="vh"><span class="emo">${V0.ico}</span><span><b>${esc(V0.name)}</b><small>${esc(V0.short)}</small></span><span class="vp num">${pct} %</span></div>
+      ${bar(pct, won ? '#7fbf5a' : '#e9b949', 'Progression')}
+      <ul class="vst">${stages.map(s => { const ok = s.done || won; return `<li class="${ok ? 'ok' : ''} ${s.finale ? 'fin' : ''}">${ok ? '✅' : s.finale ? '🏁' : '⬜'} ${esc(s.text)}</li>`; }).join('')}</ul>
+      ${won ? `<p class="vwon">🏛️ Remportée à la nuit ${won}.</p>` : pk && projReady(pk) ? `<div class="btnrow"><button class="sbtn pri" type="button" data-proj="${pk}">🎉 Lancer ${esc(PROJ[pk].name)} · ${costText(PROJ[pk].cost)}</button></div>` : ''}
+      <p class="vrival">${isVassal(V0.rival) ? `${r.emo} Vassal : ${esc(r.name)}, hors course.` : `${r.emo} Rival : ${esc(r.name)} ${bar(rp, '#d9542f', 'Rival')} <b class="num">${rp} %</b>`}</p>
+      <button class="link2" type="button" data-wiki-open="v_${V0.id}">📖 Comment l’emporter</button></section>`;
+  };
+  const md = openModal(`<h2>🏛️ Les victoires du Val</h2>
+    <p class="hint">Ère ${v.era} · ${m ? `Grand Maître actuel : ${m.emo} ${esc(m.name)}` : 'Le Val attend encore son Grand Maître'} · ${laurels.length ? `Tes lauriers : ${laurels.map(k => VIC_BY[k].ico).join(' ')}` : 'Pas encore de laurier'}</p>
+    <p>Cinq chemins mènent au titre de Grand Maître. Les donjons rivaux et le Baron font la course : si l’un d’eux gagne avant toi, une nouvelle ère commence, mais tu gardes tout ce que tu as bâti. Pille-les pour les ralentir.</p>
+    <div class="vicgrid">${VICTORIES.map(card).join('')}</div>`, { wide: true, cls: 'vicm', label: 'Victoires' });
+  md.addEventListener('click', e => { const b = e.target.closest('[data-proj]'); if (!b) return; if (!run('project', { id: b.dataset.proj })) return; sfx('chime'); banner('🎉 Le grand projet commence !', esc(PROJ[b.dataset.proj].name), 1800); afterChange(); openVictories(); });
+  if (focus) setTimeout(() => { const f = md.querySelector('.vic.focus'); if (f) f.scrollIntoView({ block: 'center' }); }, 50);
+}
+function openVictoryFinale(id) {
+  const V0 = VIC_BY[id], text = { legende: 'Les bardes de tout le Val chantent ton nom. Même les héros de Mirebrume racontent, à voix basse, la nuit où ils ont fui ton château.',
+    terreur: 'Les quatre donjons rivaux te versent tribut, et Mirebrume t’a remis ses clés. Personne n’est mort : c’est ça, la vraie terreur douillette.',
+    voisinage: 'Le Conseil du Val t’a nommé Protecteur. Les villageois t’apportent des tartes. Tu ne sais pas trop quoi en faire, mais c’est gentil.',
+    menagerie: 'La Grande Parade a traversé le Val sous les vivats : gobelins, liches, fées et golems, tous fiers et épanouis. Aucun bestiaire n’égale le tien.',
+    secrets: 'Les douze artefacts ont chanté ensemble. Le Val n’a plus de secret pour toi… ou presque.' }[id];
+  openModal(`<div class="vfinale"><h2>🏛️ ${esc(V0.name)} !</h2><p class="big">${esc(text)}</p>
+    <p>${esc(S.name)} devient le château du Grand Maître du Val, à la nuit ${S.night}, ère ${vicState().era}. ${netUsable() ? 'Ton nom est gravé au Panthéon du Val.' : ''}</p>
+    <ul class="chron"><li><span class="emo">✨</span><span>Rayonnement ${radiance()}</span></li><li><span class="emo">🐾</span><span>${S.creatures.length} créatures, ${legendsHome()} légendes, album ${albumN()}/${MENAGERIE_SP.length}</span></li><li><span class="emo">🏆</span><span>${Object.keys(S.ach || {}).length} hauts faits · ${artPlaced()} artefacts exposés</span></li></ul>
+    <p class="hint">Les autres victoires restent à prendre, pour la gloire.</p>
+    <div class="mfoot"><button class="sbtn" type="button" id="vfAll">🏛️ Voir les victoires</button><button class="sbtn pri" type="button" data-close>🌙 Encore une nuit</button></div></div>`, { wide: true, label: V0.name });
+  $('#vfAll').addEventListener('click', () => openVictories(id));
+}
+// à la fin de la nuit : une victoire, ou un nouveau Grand Maître ?
+function victoryAfterNight() {
+  const v = S.vic; if (!v) return;
+  if (v.justWon) { const id = v.justWon; v.justWon = null; save(); sfx('chime'); openVictoryFinale(id); return; }
+  if (v.eraNews) { const r = racer(v.eraNews); v.eraNews = null; save(); banner(`👑 ${esc(r.name)}`, `devient Grand Maître du Val. Une nouvelle ère commence !`, 2600); }
+}
+
+/* ---------- la carte et la ville : bonne volonté, requêtes, vassaux, siège ---------- */
+function settleHTML(s) {
+  const gw = gwOf(s), q = reqAt(s.id), R = q && REQ[q.req];
+  let h = `<h4>Bonne volonté ${bar(gw, gw >= 70 ? '#7fbf5a' : gw >= 60 ? '#e9b949' : '#c9a07a', 'Bonne volonté')} <span class="num">${gw}</span></h4>
+    <p class="hint">À 60, ${esc(s.name)} vote pour toi au Conseil du Val (${VOICES[s.kind]} voix${VOICES[s.kind] > 1 ? '' : ''}). À 70, ses aventuriers te laissent tranquille. Piller les environs la fait baisser ; requêtes, dons et achats la font monter.</p>`;
+  if (!q) return h + '<p class="hint">Pas de requête en ce moment.</p>';
+  const rw = R.rw || {}, gains = [`bonne volonté +${R.gw}`, rw.g && `+${rw.g} 💰`, rw.s && `+${rw.s} 🪵`, rw.h && `+${rw.h} 🔥`].filter(Boolean).join(', ');
+  h += `<h4>📜 Requête</h4><p>« ${esc(R.text)} »</p><p class="hint">Jusqu’à la nuit ${q.until} · ${gains}</p>`;
+  if (R.kind === 'pay') h += `<div class="btnrow"><button class="sbtn pri" type="button" data-rq="${q.id}" ${canAfford(R.cost) ? '' : 'disabled'}>🤝 Payer ${costText(R.cost)}</button></div>`;
+  else if (R.kind === 'send' && q.st === 'open') { const cands = reqCandidates(q); h += cands.length ? `<p class="hint">Qui y va ? (${R.nights} nuit${R.nights > 1 ? 's' : ''})</p>${teamPicker(1, cands)}<div class="btnrow"><button class="sbtn pri" type="button" data-rq="${q.id}">🤝 Envoyer</button></div>` : `<p class="no">Personne ne convient : ${R.need ? 'il faut ' + R.need.filter(k => SPECIES[k]).map(k => SPECIES[k].name).join(' ou ') : 'il faut une garde de 2 ou plus'}.</p>`; }
+  else if (q.st === 'sent') h += '<p class="hint">Une de tes créatures est en route.</p>';
+  else if (R.kind === 'repel') h += '<p class="hint">Elle sera accomplie à la prochaine invasion repoussée.</p>';
+  return h;
+}
+function rivalHTML(rv) {
+  if (isVassal(rv.id)) return '<p><b>🏳️ Ton vassal.</b> Tribut de 2 💰 et 1 🪵 chaque nuit ; hors de la course à la victoire ; ne te dispute plus tes créatures.</p>';
+  const v = vicState(), goal = VIC_BY[raceGoal(rv.id)];
+  return `<p class="hint">Dans la course à la ${goal.name.replace('Victoire', 'victoire')} : ${Math.floor(v.race[rv.id] || 0)} %. Raids réussis contre ce donjon : ${v.vassals[rv.id] || 0}/3 pour en faire ton vassal (chaque raid le fait aussi reculer).</p>`;
+}
+function citeHTML() {
+  const v = vicState();
+  if (allVassals()) return `<p><b>⚔️ Le Siège de Mirebrume est possible</b> (${Math.min(3, v.siege)}/3 assauts réussis).</p><div class="btnrow"><button class="sbtn" type="button" data-m="siege" ${S.tier >= 2 ? '' : 'disabled'}>🏰 Préparer un assaut${S.tier >= 2 ? '' : ' (Palier 2)'}</button></div>`;
+  return '<p class="hint">Quand les quatre donjons rivaux seront tes vassaux, tu pourras assiéger la cité (victoire de Terreur).</p>';
+}
+
+/* ---------- Grimoire et conseil ---------- */
+Object.assign(WIKI, {
+  victoires: { cat: 'vic', t: 'Les victoires du Val', x: () => `<p>Comme dans Civilization, plusieurs chemins mènent au titre de <b>Grand Maître du Val</b>. Ouvre l’écran des victoires en touchant la nuit en cours (🏛️, en haut à droite).</p>
+    <ul>${VICTORIES.map(v => `<li>{c:v_${v.id}|${v.name}} : ${esc(v.short)}</li>`).join('')}</ul>
+    <p>Chaque victoire a des étapes, puis une finale qui dure plusieurs nuits. Tu peux toutes les remporter, une à une, pour la gloire. Voir aussi {c:eres}.</p>` },
+  eres: { cat: 'vic', t: 'La course des rivaux et les ères', x: () => `<p>Tu n’es pas seul à viser le titre. Chaque donjon rival poursuit une victoire : ${RIVALS.map(r => `${r.name} (${VIC_BY[raceGoal(r.id)].name.replace('Victoire ', '')})`).join(', ')}. Le Baron Pâlichon, lui, brigue les voix du Conseil du Val.</p>
+    <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
+    <li>Si un rival gagne avant toi, il devient Grand Maître et <b>une nouvelle ère commence</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti. Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
+  v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
+  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Réussis <b>trois raids</b> contre chacun des quatre donjons rivaux (sur la carte) : chacun devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis et la cité te remet ses clés.</p><p class="hint">Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
+  v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
+    <ul><li>À 60, le lieu vote pour toi au <b>Conseil du Val</b>, qui se réunit toutes les 10 nuits : 1 voix par village, 2 pour la ville, 3 pour la cité.</li><li>À 70, ses aventuriers ne viennent plus t’attaquer.</li></ul><p><b>Victoire :</b> 20 voix cumulées. Les voix que tu n’as pas vont au Baron Pâlichon, qui brigue le même titre.</p>` },
+  v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et toutes tes créatures <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },
+  v_secrets: { cat: 'vic', t: 'Victoire des Secrets', x: () => `<p>Perce le mystère du Val : dévoile <b>90 % de la carte</b>, trouve les <b>12 artefacts</b>, puis expose-les tous, avec au moins un {room:reliquaire}.</p><p><b>Finale :</b> le Rituel des Douze (${costText(PROJ.rituel.cost)}), trois nuits pendant lesquelles aucun artefact ne doit disparaître. Garde-les aux étages : les héros qui pillent le Cœur en volent.</p>` },
+});
+TIPS.push({ id: 'vic0', when: () => S.night >= 6 && !(S.tuto && S.tuto.on), t: 'Cinq chemins vers la victoire', x: 'Comme dans Civilization, tu peux devenir le Grand Maître du Val de cinq façons : Légende, Terreur, Bon Voisinage, Grande Ménagerie ou Secrets. Les donjons rivaux font la course. Touche la nuit en cours (🏛️, en haut à droite) pour voir où tu en es.', wiki: 'victoires' });
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}

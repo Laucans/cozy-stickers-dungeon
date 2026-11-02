@@ -4,7 +4,7 @@
    Articles de mécaniques écrits à la main + fiches générées depuis
    les données vivantes (elles suivent les réglages de l'Atelier)
    ========================================================= */
-const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Le Val : carte et voisins'],
+const WIKI_CAT = [['bases', 'Les bases'], ['build', 'Construire'], ['eco', 'Économie'], ['crea', 'Créatures'], ['danger', 'Dangers et raids'], ['ames', 'Âmes du château'], ['val', 'Le Val : carte et voisins'], ['vic', 'Victoires'],
   ['room', 'Pièces'], ['furn', 'Meubles'], ['decor', 'Déco'], ['def', 'Pièges'], ['sp', 'Bestiaire'], ['hero', 'Aventuriers'], ['raid', 'Cibles de raid']];
 const WIKI = {
   accueil: { cat: 'bases', t: 'Bienvenue dans le Grimoire', x: () => `<p>Ce grimoire explique tout le jeu. Chaque mot souligné mène à un autre article.</p>
@@ -83,7 +83,7 @@ function wikiText(s) {
   return s.replace(/\{(\w+):(\w+)(?:\|([^}]+))?\}/g, (m, kind, key, label) => kind === 'cat' ? `<a href="#" data-wikicat="${key}">${esc(label || key)}</a>` : `<a href="#" data-wiki="${wikiKey(kind, key)}">${esc(label || wikiTitle(wikiKey(kind, key)))}</a>`);
 }
 function wikiList(cat) {
-  if (WIKI_CAT.slice(0, 7).some(([k]) => k === cat)) return Object.keys(WIKI).filter(k => WIKI[k].cat === cat).map(k => [k, WIKI[k].t]);
+  if (WIKI_CAT.slice(0, 8).some(([k]) => k === cat)) return Object.keys(WIKI).filter(k => WIKI[k].cat === cat).map(k => [k, WIKI[k].t]);
   if (cat === 'room') return Object.keys(ROOMS).filter(k => !(ROOMS[k].theme && ROOMS[k].theme !== S.theme)).map(k => ['room:' + k, ROOMS[k].name]);
   if (cat === 'furn') return FURN_ORDER.map(k => ['furn:' + k, FURN[k].name]);
   if (cat === 'decor') return DECOR_ORDER.map(k => ['furn:' + k, FURN[k].name]);

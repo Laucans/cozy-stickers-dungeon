@@ -162,7 +162,8 @@ async function endNight() {
   checkGoals().forEach(g => toast(`✦ Envie comblée : ${g.text}`));
   setPhase('roder'); UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false;
   renderAll(); save(); coopNightDone(); valAfterNight();
-  if (S.tier >= 3 && !S.won) { S.won = true; save(); openModal(`<h2>👑 Château légendaire !</h2><p>${esc(S.name)} est désormais le château le plus douillet et le plus redouté du Val Douillet. Les bardes en font des berceuses.</p><p>Tu peux continuer à meubler et accueillir des créatures autant que tu veux.</p><div class="mfoot"><button class="sbtn pri" data-close type="button">Continuer</button></div>`); }
+  if (S.tier >= 3 && !S.won) { S.won = true; save(); toast('👑 Palier 3 : ton château est légendaire… mais le Val n’a pas encore de Grand Maître. Vise une victoire (🏛️ en haut à droite).'); }
+  if (typeof victoryAfterNight === 'function') victoryAfterNight();
 }
 function chronicle(n, report) {
   coopCast('chron', { n, report });
@@ -307,7 +308,7 @@ function bindEvents() {
   $('#btnBuild').addEventListener('click', () => { if (!UI.busy) toggleBuild(); });
   $('#btnBuildClose').addEventListener('click', () => { dropSticker(); closeBuild(); });
   $('#btnCrit').addEventListener('click', () => { toggleLeft(); sfx('tick'); });
-  $('#turn').addEventListener('click', () => openGrimoire('nuit'));
+  $('#turn').addEventListener('click', () => { if (!UI.busy) openVictories(); });
   $('#notifs').addEventListener('click', e => {
     const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; } save(); renderGoals(); return; }
     const b = e.target.closest('[data-n]'); if (!b || UI.busy) return; const f = UI.nacts && UI.nacts[b.dataset.n]; if (f) { sfx('tick'); f(); }

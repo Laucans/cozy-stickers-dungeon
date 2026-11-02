@@ -127,7 +127,9 @@ const RIVALS = [
 function rivalRep(r, sp) {
   const fav = r.likes.includes(sp), grow = Math.min(30, S.night * .75), wob = Math.round(Math.sin(S.night * .7 + (seedOf(r.id + sp) % 628) / 100) * 7);
   const hit = S.world && S.world.hit && S.world.hit[r.id] > S.night ? 15 : 0;
-  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob - hit), 0, 90);
+  if (S.vic && S.vic.vassals[r.id] >= 3) return 10;   // un vassal ne te dispute plus tes créatures
+  const master = S.vic && S.vic.master === r.id ? 8 : 0;
+  return clamp(Math.round((fav ? r.base + 8 : r.base - 18) + grow + wob - hit + master), 0, 92);
 }
 // le rival le plus attirant pour une espèce : châteaux du jeu + châteaux des autres joueurs (Val des Maîtres)
 function bestRival(sp) {

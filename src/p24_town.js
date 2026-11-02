@@ -6,6 +6,7 @@
    bureau de placement pour monstres
    ========================================================= */
 const SHOP = {
+  don: { name: 'Don pour la fête', ico: '🎪', price: 6, per: 1, desc: 'Une belle obole pour la prochaine fête : bonne volonté +10.' },
   rumeur: { name: 'Rumeurs de comptoir', ico: '🍺', price: 3, per: 1, desc: 'Contre une pinte, on te raconte où se trouve un endroit que tu ne connais pas encore.' },
   humeur: { name: 'Potion de bonne humeur', ico: '🧪', price: 6, per: 1, desc: 'Toutes tes créatures gagnent 1 ❤️. Goût framboise-soufre.' },
   fidelite: { name: 'Élixir de fidélité', ico: '💞', price: 8, per: 1, desc: '+12 loyauté pour toutes tes créatures. Ne surtout pas en boire soi-même.' },
@@ -25,11 +26,11 @@ const SHOP = {
   vendre: { name: 'Vendre un artefact', ico: '💰', per: 0 },
 };
 const SHOPS = {
-  village: [{ id: 'epicerie', title: 'L’épicerie-buvette de la mère Pichenette', keeper: ['« On a de tout, sauf ce que vous cherchez. »', '« Une pinte et une rumeur ? C’est la formule du jour. »', '« Vous avez une drôle de moustache, vous. Elle tient avec quoi ? »'], items: ['rumeur', 'humeur', 'oubli'] }],
+  village: [{ id: 'epicerie', title: 'L’épicerie-buvette de la mère Pichenette', keeper: ['« On a de tout, sauf ce que vous cherchez. »', '« Une pinte et une rumeur ? C’est la formule du jour. »', '« Vous avez une drôle de moustache, vous. Elle tient avec quoi ? »'], items: ['rumeur', 'humeur', 'oubli', 'don'] }],
   ville: [
     { id: 'bazar', title: 'Le Bazar de Maître Bricabrac', keeper: ['« Tout est authentique, sauf ce qui ne l’est pas. »', '« Garantie trois jours, ou jusqu’à ce que ça casse. »', '« Celle-là, elle a appartenu à un roi. Ou à son cousin. Ou à son chien. »'], items: ['deco', 'artefact', 'rachat', 'vendre'] },
     { id: 'apo', title: 'L’Apothicairerie de Dame Fiolette', keeper: ['« Ne touchez pas au flacon vert. Ni au violet. Ni à rien, en fait. »', '« Effets secondaires : aucun. Enfin, presque aucun. »'], items: ['humeur', 'fidelite', 'tisane', 'oubli'] },
-    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco'] },
+    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco', 'don'] },
     { id: 'guilde', title: 'La Guilde des Aventuriers Patentés', keeper: ['« Ticket numéro 4 312. Le guichet ferme dans cinq minutes. »', '« Formulaire B-52 en triple exemplaire, tamponné par le Grand Tamponneur. »'], items: ['tableau', 'dossier', 'avis'] },
     { id: 'carto', title: 'Le Cartographe Myope', keeper: ['« Le nord ? C’est par là. Ou par là. Passez-moi mes lunettes. »'], items: ['carte', 'tresor'] },
     { id: 'placement', title: 'Le Bureau de placement de Mme Grifouille', keeper: ['« Monstres sérieux, logés, nourris. Références exigées, mais personne n’en a. »'], items: ['recrue'] },
@@ -77,6 +78,7 @@ function shopBuy(a) {
   else if (item === 'oubli') S.menace = Math.max(0, S.menace - 2);
   else if (item === 'dossier') S.menace = Math.max(0, S.menace - 3);
   else if (item === 'tournee') S.hype += 2;
+  else if (item === 'don') addGw(site, 10);
   else if (item === 'merco') S.world.merc = S.night + 3;
   else if (item === 'avis') S.world.decoy = true;
   else if (item === 'rumeur' || item === 'tresor') {
@@ -93,6 +95,7 @@ function shopBuy(a) {
   else if (item === 'vendre') { S.free[arg]--; addLog(`${FURN[arg].name} vendu au brocanteur.`); }
   else if (item === 'recrue') { const c = addCreature(arg); c.isNew = true; c.loy = 45; addLog(`${c.name} (${SPECIES[arg].name}) recruté·e au bureau de placement.`, 'good'); }
   if (price) S.gold -= price;
+  if (item !== 'don' && item !== 'vendre' && price > 0) addGw(site, 2);
   if (SHOP[item].per) (S.world.shop = S.world.shop || {})[item] = S.night;
   return null;
 }
@@ -116,10 +119,12 @@ function openTown(siteId) {
     return row(item, btn(item));
   };
   const m = openModal(`<div class="town ${site.kind}"><h2>${site.kind === 'village' ? '🏪' : site.kind === 'ville' ? '🏙️' : '🏰'} ${esc(site.name)}</h2>
-    <p class="hint">${esc(pick(TOWN_INTRO[site.kind]))}${mk2.spotted ? ' <b>Malheureusement, ton château rayonne tellement qu’on te reconnaît malgré la moustache : les prix grimpent de 20 %.</b>' : ''} Tu as ${S.gold} 💰.</p>
+    <p class="hint">Bonne volonté ${gwOf(site)}/100 · ${esc(pick(TOWN_INTRO[site.kind]))}${mk2.spotted ? ' <b>Malheureusement, ton château rayonne tellement qu’on te reconnaît malgré la moustache : les prix grimpent de 20 %.</b>' : ''} Tu as ${S.gold} 💰.</p>
+    ${(() => { const q = reqAt(site.id); if (!q) return ''; const R = REQ[q.req]; return `<section class="shop req"><h3>📜 Une requête de ${esc(site.name)}</h3><p class="keeper">« ${esc(R.text)} »</p>${R.kind === 'pay' ? `<div class="btnrow"><button class="sbtn pri" type="button" data-rqt="${q.id}" ${canAfford(R.cost) ? '' : 'disabled'}>🤝 Payer ${costText(R.cost)} · bonne volonté +${R.gw}</button></div>` : `<p class="hint">${R.kind === 'repel' ? 'Elle sera accomplie à la prochaine invasion repoussée.' : 'Envoie une de tes créatures depuis la carte du Val.'}</p>`}</section>`; })()}
     ${shops.map(sh => { const body = sh.items.map(itemHTML).join(''); return `<section class="shop"><h3>${esc(sh.title)}</h3><p class="keeper">${esc(pick(sh.keeper))}</p>${body}</section>`; }).join('')}
     <div class="mfoot"><button class="sbtn" type="button" data-close>↩ Repartir</button></div></div>`, { wide: true, cls: 'townm', label: site.name });
   m.addEventListener('click', e => {
+    const rq = e.target.closest('[data-rqt]'); if (rq && !rq.disabled) { if (!run('request', { id: rq.dataset.rqt })) return; sfx('chime'); toast('🤝 Requête accomplie !'); afterChange(); if (MAPV.open) renderMapPanel(); openTown(siteId); return; }
     const b = e.target.closest('[data-buy]'); if (!b || b.disabled) return;
     const item = b.dataset.buy, arg = b.dataset.arg;
     if (item === 'tableau') { sfx('tick'); toast(pp.origin ? `📋 Sur le tableau : « Château maléfique à visiter. Récompense honnête. » Départ prévu de ${pp.origin.name}.` : '📋 Rien au tableau pour ton château.'); return; }
