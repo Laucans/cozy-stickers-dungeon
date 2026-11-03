@@ -195,7 +195,7 @@ function mapDom() {
   let box = $('#world'); if (box) return box;
   box = el('div', 'world'); box.id = 'world'; box.hidden = true;
   box.innerHTML = `<canvas id="wcv" aria-label="Carte du Val"></canvas>
-    <div class="wtop panel"><b>🗺️ La carte du Val</b><span id="wglow"></span><span class="wbtns"><button class="pill" type="button" data-w="center">⌂ Mon château</button><button class="pill" type="button" data-w="in">+</button><button class="pill" type="button" data-w="out">−</button><button class="pill" type="button" data-w="help">📖</button><button class="pill on" type="button" data-w="close">↩ Retour au château</button></span></div>
+    <div class="wtop panel"><b>🗺️ La carte du Val</b><span id="wglow"></span><span class="wbtns"><button class="pill" type="button" data-w="center">⌂ Mon château</button><button class="pill" type="button" data-w="in" aria-label="Zoomer sur la carte">+</button><button class="pill" type="button" data-w="out" aria-label="Dézoomer la carte">−</button><button class="pill" type="button" data-w="help" aria-label="Le Grimoire : comment lire la carte du Val">📖</button><button class="pill on" type="button" data-w="close">↩ Retour au château</button></span></div>
     <aside class="wpanel panel" id="wpanel"></aside>`;
   $('#game').appendChild(box);
   const wcv = box.querySelector('#wcv');

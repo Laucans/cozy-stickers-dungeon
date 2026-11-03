@@ -471,10 +471,10 @@ Object.assign(WIKI, {
     <p>Un trait comblé donne <b>+6 d’épanouissement</b> ; certains manques coûtent un peu (−3). Les rivaux se chamaillent quand ils se croisent, les diablotins filent aux chantiers, les costauds surveillent le chemin des héros, et une créature tentée de partir va regarder la route. Ce qu’elle fait en ce moment s’affiche sur sa fiche.</p>` },
   jardins: { cat: 'build', t: 'Les Jardins (dehors)', x: () => `<p>Derrière les remparts, un coin d’herbe t’appartient : les <b>Jardins</b>. Va les voir avec le bouton <b>🌳 Dehors</b> (à côté des étages) ou la touche <b>J</b>. Tes créatures y sortent par le portillon quand l’envie les prend.</p>
     <p>On y bâtit des enclos, sans couloir ni mur : {room:poulailler} (la {sp:cocatrice}), {room:simples} (la {sp:mandragore}), {room:mare} (la {sp:nixe}) et {room:cimetiere} (la {sp:goule}). Bancs, puits et nains de jardin se posent directement sur l’herbe.</p>
-    <p>Au début, l’espace est limité à quatre rangées. Le reste, c’est la <b>forêt du Baron</b> : clique dessus pour en racheter une parcelle de deux rangées (de plus en plus chère, avec du bois en prime). Agrandir les remparts élargit aussi les Jardins.</p>
+    <p>Au début, l’espace est limité à quatre rangées. Le reste, c’est la <b>forêt du Baron</b> : touche-la pour en racheter une parcelle de deux rangées (de plus en plus chère, avec du bois en prime). Agrandir les remparts élargit aussi les Jardins.</p>
     <p>Les héros n’y viennent jamais, et les Jardins ne comptent pas comme un étage.</p>` },
 });
 TIPS.push(
-  { id: 'jardins0', when: () => S.night >= 4 && !S.rooms.some(r => zOf(r) === EXT) && !(S.tuto && S.tuto.on), t: 'Les Jardins', x: 'Derrière les remparts, un coin d’herbe t’attend : bouton « 🌳 Dehors » (ou touche J). Poulailler, mare, jardin des simples et cimetière y attirent d’autres créatures, et la forêt se rachète pour agrandir.', wiki: 'jardins' },
+  { id: 'jardins0', when: () => S.night >= 4 && !S.rooms.some(r => zOf(r) === EXT) && !(S.tuto && S.tuto.on), t: 'Les Jardins', x: 'Derrière les remparts, un coin d’herbe t’attend : bouton « 🌳 Dehors » (ou J au clavier). Poulailler, mare, jardin des simples et cimetière y attirent d’autres créatures, et la forêt se rachète pour agrandir.', wiki: 'jardins' },
   { id: 'caractere0', when: () => S.creatures.length >= 4 && !(S.tuto && S.tuto.on), t: 'Chacun son caractère', x: 'Ouvre la fiche d’une créature : ses traits de caractère disent ce qu’elle aime faire, et ce qui l’épanouit. Observe-les : elles se servent de tes meubles.', wiki: 'caracteres' },
 );

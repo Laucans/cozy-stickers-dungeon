@@ -1220,6 +1220,29 @@ body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, bod
 @media (max-width:420px){ .fint small{display:none} .fints{max-width:100%} .fint{max-width:100%; overflow:hidden} }
 /* la main de cartes tient dans la largeur d'un téléphone (elles se chevauchent un peu plus) */
 @media (max-width:420px){ .hand{padding-left:24px; padding-right:24px} .hand .kcard{margin:0 -21px} .hand:has(> .kcard:nth-child(8)) .kcard{margin:0 -26px} .hand .kcard.sel{z-index:3} }
+/* poser au doigt : le bandeau du sticker en bas, compact, et le tiroir des cartes s'efface le temps de poser */
+body.touchy .handbar{top:auto; bottom:calc(var(--gb) + 78px); left:var(--gl); right:var(--gr); transform:none; max-width:none; justify-content:center}
+body.touchy .handbar .msg{flex:1 1 100%; text-align:center; font-size:13px} body.touchy .handbar > img.th{display:none} body.touchy .handbar .pill{padding:5px 10px}
+body.touchy.placing #hudBottom{display:none !important}
+.handbar .put{font-weight:800} .handbar .put.ok{background:linear-gradient(180deg,#f2c75a,#c99a3a); color:var(--ink); border-color:#f6d98a} .handbar .put:disabled{opacity:.45}
+/* au doigt : des étiquettes sous les boutons, les notifications importantes lisibles, l'appui long, le rappel des gestes */
+.albl{display:none}
+@media (pointer:coarse){ .albl{display:block} }
+body.touchy .albl{display:block}
+.albl{position:absolute; left:50%; top:100%; transform:translateX(-50%); margin-top:1px; font:800 9px/1.1 var(--f-body); color:var(--cream); text-shadow:0 1px 2px #000, 0 0 4px #000; white-space:nowrap; pointer-events:none; letter-spacing:.01em}
+.act, .mini{position:relative}
+@media (pointer:coarse){ .acts{row-gap:17px; column-gap:12px; padding-bottom:14px} .leftpanel .minis{row-gap:15px} }
+body.touchy .acts{row-gap:17px; column-gap:12px; padding-bottom:14px} body.touchy .leftpanel .minis{row-gap:15px}
+@media (max-width:480px){ body.touchy .acts{max-width:128px} }
+@media (max-width:480px) and (pointer:coarse){ .acts{max-width:128px} }
+body.touchy .notif:nth-child(-n+3) .nl{opacity:1; transform:none; max-width:min(160px, 45vw); overflow:hidden; text-overflow:ellipsis; font-size:11.5px; padding:4px 8px; background:rgba(22,15,11,.86); pointer-events:none}
+button, .card, .notif, .res, .dial, .pt, .mini, .act{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none}
+body.touchy #crawlPage [data-a="auto"], body.touchy #crawlPage [data-a="flee"]{flex-direction:column; gap:1px; line-height:1}
+body.touchy #crawlPage [data-a="auto"]::after, body.touchy #crawlPage [data-a="flee"]::after{content:attr(aria-label); font:800 9px/1 var(--f-body); white-space:nowrap}
+.lptip{position:fixed; z-index:95; padding:8px 11px; border-radius:12px; background:var(--parch); color:var(--ink); border:2.5px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 10px 24px rgba(0,0,0,.55); font-size:13.5px; line-height:1.3; pointer-events:none; animation:mpop .2s ease-out}
+.touchhelp{position:fixed; z-index:96; left:50%; transform:translateX(-50%); bottom:calc(var(--gb, 0px) + 190px); width:min(340px, calc(100vw - 32px)); padding:10px 14px; border-radius:16px; background:var(--parch); color:var(--ink); border:3px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 14px 30px rgba(0,0,0,.6); font-size:13.5px; animation:mpop .3s ease-out}
+.touchhelp ul{margin:6px 0 8px; padding-left:18px} .touchhelp li{margin:3px 0} .touchhelp b{font-family:var(--f-display); font-size:18px; color:var(--red-2)}
+.touchhelp.out{opacity:0; transition:opacity .3s}
 /* au doigt : des cases et des petits boutons assez grands pour être touchés */
 @media (pointer:coarse){
   input[type=checkbox], input[type=radio]{width:22px; height:22px}

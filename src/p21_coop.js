@@ -98,7 +98,7 @@ function coopNightGate() {
   }
   if (COOP.role === 'host') {
     const wait = [...COOP.peers.values()].filter(p => !p.ready);
-    if (wait.length && Date.now() - COOP.armed > 5000) { COOP.armed = Date.now(); toast(`${wait.map(p => p.name).join(', ')} : pas encore prêt·e${wait.length > 1 ? 's' : ''}. Clique encore pour lancer la nuit quand même.`); return false; }
+    if (wait.length && Date.now() - COOP.armed > 5000) { COOP.armed = Date.now(); toast(`${wait.map(p => p.name).join(', ')} : pas encore prêt·e${wait.length > 1 ? 's' : ''}. Appuie encore pour lancer la nuit quand même.`); return false; }
     COOP.armed = 0; clearTimeout(COOP.snapTimer); coopSend({ t: 'snap', s: S, rev: ++COOP.rev }); coopSend({ t: 'busy', on: true });
   }
   return true;

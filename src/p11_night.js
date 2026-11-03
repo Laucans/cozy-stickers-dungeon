@@ -216,7 +216,7 @@ function openTier() {
 function openHelp() {
   openModal(`<div class="help"><h2>Le manuel du Maître</h2>
     <p>Tu règnes sur un petit château maléfique (mais douillet). Colle des pièces, meuble-les, attire des créatures et décourage les aventuriers.</p>
-    <h3>Se déplacer</h3><ul><li>Fais glisser le château pour te déplacer, zoome à la molette, au pincement ou avec les boutons + et −.</li><li>Sur téléphone, pour coller un sticker : touche une première fois pour viser, une seconde fois au même endroit pour coller.</li></ul>
+    <h3>Se déplacer</h3><ul><li>Fais glisser le château pour te déplacer, zoome à la molette, au pincement ou avec les boutons + et −.</li><li>Au doigt, pour coller un sticker : fais-le glisser du doigt, puis touche « Poser ici ». Un appui long sur un bouton dit ce qu’il fait.</li></ul>
     <h3>Une nuit, quatre temps</h3>
     <ul><li><b>Rôder</b> : ton tour. Colle des pièces, des meubles, de la déco et des pièges, donne des postes à tes créatures, prépare un raid.</li>
     <li><b>Calamité</b> : la faim, la mauvaise humeur, un château lugubre et la promiscuité font avancer l’horloge. Pleine (8), une catastrophe arrive.</li>
