@@ -261,6 +261,8 @@ async function runCrawl(report) {
   page.addEventListener('pointerdown', e => { ui.touch = e.pointerType !== 'mouse'; });
   page.addEventListener('click', e => {
     const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+    const now = performance.now(), quick = now - (ui.lastTap || 0) < 400; ui.lastTap = now;
+    if (quick && (b.closest('.cp-foot') || b.dataset.a === 'retreat')) return;   // un double toucher ne vaut pas deux choix (le 2e tombait sur « Rentrer au château » de l'écran suivant)
     if (b.dataset.a === 'secret') { if (ui.pending) send({ a: 'secret', v: b.dataset.v, p: 0 }); else if (ui.phase === 'players') ui.secretReq = { p: 0, v: b.dataset.v }; return; }
     if (b.dataset.a === 'auto' && !ui.pending) { ui.auto = !ui.auto; sfx('tick'); b.innerHTML = ui.auto ? '⏸️<span class="lbl"> Reprendre la main</span>' : '🤖<span class="lbl"> Combat auto</span>'; return; }
     send({ a: b.dataset.a, v: b.dataset.v, p: 0, btn: b });

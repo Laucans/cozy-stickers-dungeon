@@ -135,7 +135,7 @@ async function runInvasion(report) {
 async function endNight() {
   if (UI.busy) return;
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
-  dropSticker(); closeModal(true); if (UI.build) closeBuild(); setFloor(0);
+  dropSticker(); closeModal(true); if (UI.build) closeBuild(); if (typeof GM !== 'undefined' && GM.on) guardMode(false); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
   const n = S.night, report = [], snap = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
   try {
@@ -311,7 +311,7 @@ function bindEvents() {
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     PTR.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (PTR.size === 1) drag = { x: e.clientX, y: e.clientY, cx: CAM.x, cy: CAM.y, moved: false };
-    else if (PTR.size === 2) { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: dist(a, b), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
+    else if (PTR.size === 2) { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: Math.max(1, dist(a, b)), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
   });
   cv.addEventListener('pointermove', e => {
     const r = cv.getBoundingClientRect(); UI.lastPt = { x: e.clientX, y: e.clientY, mouse: e.pointerType === 'mouse' };
@@ -326,7 +326,7 @@ function bindEvents() {
   });
   const up = e => {
     PTR.delete(e.pointerId); const d = drag;
-    if (PTR.size === 0) drag = null; else { const [p] = [...PTR.values()]; drag = { x: p.x, y: p.y, cx: CAM.x, cy: CAM.y, moved: true }; }
+    if (PTR.size === 0) drag = null; else if (PTR.size === 1) { const [p] = [...PTR.values()]; drag = { x: p.x, y: p.y, cx: CAM.x, cy: CAM.y, moved: true }; } else { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: Math.max(1, dist(a, b)), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
     cv.style.cursor = '';
     if (!d || d.moved || d.pinch || e.type === 'pointercancel') return;
     tap(e);
@@ -348,7 +348,7 @@ function bindEvents() {
   $('#btnCrit').addEventListener('click', () => { toggleLeft(); sfx('tick'); });
   $('#turn').addEventListener('click', () => { if (!UI.busy) openVictories(); });
   $('#notifs').addEventListener('click', e => {
-    const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; } save(); renderGoals(); return; }
+    const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = x.dataset.nx === 'goal' ? 'g:' + ((GOALS.find(g => !S.goals[g.id]) || {}).id) : S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; S.tipN = S.night; } save(); renderGoals(); return; }
     const b = e.target.closest('[data-n]'); if (!b || UI.busy) return; const f = UI.nacts && UI.nacts[b.dataset.n]; if (f) { sfx('tick'); f(); }
   });
   $('#zfit').addEventListener('click', () => { CAM.user = false; fitCamera(); });

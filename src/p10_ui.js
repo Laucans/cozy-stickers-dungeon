@@ -92,7 +92,7 @@ function tipHTML(kind, t) {
     const f = DEFS[t];
     html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · ${f.str} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
     if (f.kind === 'piège') li.push('🎯 Blesse un héros au hasard. La voleuse désamorce le premier piège de la route.');
-    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.');
+    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.'); if (f.post) li.push('🛡️ Seul moyen de garder un couloir : 2 gardes au plus, ils arrêtent la bande ici.');
     if (f.lost) li.push(`🌀 ${Math.round(f.lost * 100)} % de chances que la bande renonce et rentre.`);
     if (f.sticky) li.push('🍌 La rencontre suivante frappe +1.'); if (f.alarm) li.push('🔔 Les défenseurs de leur cible frappent +1.'); if (f.block) li.push('🧱 Ferme le couloir : la bande fait un détour (montré en bleu quand tu la tiens).');
     li.push('📍 Se pose dans un couloir, sur le chemin des héros (à tous les étages qu’ils traversent pour atteindre le Cœur).');
@@ -114,7 +114,7 @@ function showTip(card) {
   const tip = $('#tip'); if (!card) { tip.hidden = true; return; }
   tip.innerHTML = tipHTML(card.dataset.kind, card.dataset.t); tip.hidden = false;
   const r = card.getBoundingClientRect(), tw = tip.offsetWidth;
-  tip.style.left = clamp(r.left + r.width / 2 - tw / 2, 8, innerWidth - tw - 8) + 'px'; tip.style.top = (r.top - tip.offsetHeight - 10) + 'px';
+  tip.style.left = clamp(r.left + r.width / 2 - tw / 2, 8, innerWidth - tw - 8) + 'px'; tip.style.top = (r.top - tip.offsetHeight - 10 >= 8 ? r.top - tip.offsetHeight - 10 : Math.min(r.bottom + 10, innerHeight - tip.offsetHeight - 8)) + 'px';
 }
 
 /* ---------- portraits, envies ---------- */
@@ -139,7 +139,7 @@ function notifList() {
   });
   { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
   if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
-  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${guardCap()})`, () => guardMode(true), 5, 'bad'); }
+  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1, typeof routeGuardCap === 'function' ? routeGuardCap() : 99); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${cap})`, () => guardMode(true), 5, 'bad'); }
   if (typeof RECIPES !== 'undefined' && hasKitchen() && Object.keys(RECIPES).some(canCook) && Object.values(pantry()).reduce((a, b) => a + b, 0) >= 10) add('cook', '🍲', 'Le garde-manger déborde : cuisine !', () => cookModal(), 1);
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
@@ -150,22 +150,24 @@ function notifList() {
   { const fr = Object.keys(S.free || {}).filter(k => S.free[k] > 0 && FURN[k] && !FURN[k].artefact && FURN[k].room !== 'any' && !TREASURES.includes(k)), r = fr.length && roomForFurn(t => fr.includes(t));
     if (r) add('freefurn', '🎁', `${fr.length > 1 ? `${fr.length} meubles offerts` : `${itemName(fr[0])} offert·e`} : touche ${ROOMS[r.t].name}`, () => openRoom(r.id), 2); }
   const arts = TREASURES.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
-  if (S.raid) add('raid', '🗺️', `Raid prévu : ${RAIDS[S.raid.target].name}`, () => openRaid(), 1);
+  if (S.raid) add('raid', '🗺️', `Raid prévu : ${(RAIDS[S.raid.target] || {}).name || 'une cible lointaine'}`, () => openRaid(), 1);
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
-  const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
-  if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  const g = GOALS.find(x => !S.goals[x.id]); if (g && (S.ndis || {}).goal !== 'g:' + g.id) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
+  const guest = typeof COOP !== 'undefined' && COOP.role === 'guest';
+  if (TUTO.pending && !guest) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  if (!guest && S.tuto && S.tuto.on && S.tuto.hid && TUTO_STEPS[S.tuto.i]) add('tuto', '🎓', `Tutoriel : ${TUTO_STEPS[S.tuto.i].t}`, () => { delete S.tuto.hid; TUTO.shown = null; save(); tutoTick(); }, 1, 'hint');
   if (typeof victoryNotifs === 'function') victoryNotifs(add);
   if (typeof rivalNotifs === 'function') rivalNotifs(add);
   if (typeof sagaNotifs === 'function') sagaNotifs(add);
   if (typeof valNotifs === 'function') valNotifs(add);
   if (typeof designNotifs === 'function') designNotifs(add);
   const dis = S.ndis || {};
-  return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
+  return n.filter(x => x.k === 'goal' || dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
 }
 function renderGoals() {
   const box = $('#notifs'); if (!box) return;
   const list = notifList(); UI.nacts = {};
-  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${iconize(esc(x.text))}</span><span class="ni emo">${iconize(x.ico)}</span><span class="nx" data-nx="${x.k}" title="Masquer jusqu’à la prochaine nuit" aria-label="Masquer">✕</span></button>`; }).join('');
+  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${iconize(esc(x.text))}</span><span class="ni emo">${iconize(x.ico)}</span><span class="nx" data-nx="${x.k}" title="${x.k === 'goal' ? 'Ranger cette Envie (la liste des Envies la garde)' : 'Masquer jusqu’à la prochaine nuit'}" aria-label="Masquer">✕</span></button>`; }).join('');
 }
 function renderQuests() {}
 // tiroir de construction (bouton Construire) et panneau des créatures, repliés par défaut

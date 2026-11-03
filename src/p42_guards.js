@@ -8,17 +8,18 @@
    ========================================================= */
 const guardCap = (s = S) => 3 + 2 * (s.tier || 0) + 2 * (s.rooms || []).filter(r => r.built && r.t === 'garde').length + ((s.craftRank && s.craftRank.guet) >= 2 ? 1 : 0) + ((s.craftRank && s.craftRank.guet) >= 3 ? 1 : 0);   // + le chemin de ronde et les meurtrières des sentinelles
 const roomGuardCap = r => isHall(r) ? (S.craftRank && S.craftRank.guet >= 3 ? 3 : 2) : 1 + 2 * groupSize(r);   // un barrage de couloir : 2 ; une pièce : les places au premier rang d'un combat
-const guardRoomOf = c => c && c.guard ? S.rooms.find(r => r.id === c.guard && r.built) || null : null;
+const guardRoomOf = c => { const r = c && c.guard ? S.rooms.find(o => o.id === c.guard && o.built) : null; return r && guardable(r) ? r : null; };   // un couloir dont on a retiré le poste ne compte plus
 const guardsOfRoom = r => { const ids = new Set(groupOf(r).rooms.map(o => o.id)); return S.creatures.filter(c => !isOut(c) && c.guard && ids.has(c.guard)); };
 const guardCount = () => S.creatures.filter(c => !isOut(c) && guardRoomOf(c)).length;
-const guardable = r => !!r && r.built && r.t !== 'coeur' && !(ROOMS[r.t] || {}).out && !(ROOMS[r.t] || {}).stairs;   // une pièce, ou un couloir (un barrage)
+const hallPost = r => !!r && (S.defs || []).some(d => d.x === r.x && d.y === r.y && zOf(d) === zOf(r) && (DEFS[d.t] || {}).post);
+const guardable = r => !!r && r.built && r.t !== 'coeur' && !(ROOMS[r.t] || {}).out && !(ROOMS[r.t] || {}).stairs && (r.t !== 'couloir' || hallPost(r));   // une pièce, le porche, ou un couloir équipé d'un Poste de garde (un barrage)
 Object.assign(CMD, {
   guard(a) {
     const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
     const r = S.rooms.find(x => x.id === a.room); if (!r || !r.built) return 'Pièce indisponible';
     if (r.t === 'coeur') return 'Le Cœur est défendu par toutes les créatures libres';
-    if (!guardable(r)) return 'Cette pièce ne se garde pas';
+    if (!guardable(r)) return r.t === 'couloir' ? 'Un couloir ne se garde qu’avec un Poste de garde (Construire, onglet Pièges)' : 'Cette pièce ne se garde pas';
     if (c.guard !== r.id && !groupOf(r).rooms.some(o => o.id === c.guard)) {
       if (!guardRoomOf(c) && guardCount() >= guardCap()) return `Plus de poste de garde libre (${guardCap()} au plus) : retire d’abord un garde`;
       if (guardsOfRoom(r).length >= roomGuardCap(r)) return `${ROOMS[r.t].name} : ${roomGuardCap(r)} garde${roomGuardCap(r) > 1 ? 's' : ''} au plus`;
@@ -43,8 +44,24 @@ upgradeState = function (s) {
   }
   return s;
 };
+// une autre partie (chargée, nouvelle, visitée) : le mode Gardes ne reste pas ouvert par-dessus
+const renderAllGuards = renderAll;
+renderAll = function (...a) { if (GM.on && (GM.of !== S || (typeof VISIT !== 'undefined' && VISIT))) guardMode(false); return renderAllGuards(...a); };
+// les places de garde sur le chemin des héros (une pièce : son premier rang ; un Poste de garde : 2)
+const routeGuardCap = () => { const seen = new Set(); let n = 0; (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (!guardable(r)) return; const k = groupOf(r).rooms[0].id; if (seen.has(k)) return; seen.add(k); n += roomGuardCap(r); }); return n; };
 const newStateGuards = newState;
-newState = function (...a) { const r = newStateGuards(...a); if (S) S.guardsV = 1; return r; };
+newState = function (...a) { const r = newStateGuards(...a); if (S) { S.guardsV = 1; S.guardsV2 = 1; } return r; };
+// les gardes postés dans un couloir sans Poste de garde rentrent défendre le Cœur (règle d'avant : tout couloir se gardait)
+const upgradeStateHalls = upgradeState;
+upgradeState = function (s) {
+  s = upgradeStateHalls(s);
+  if (s && s.creatures && !s.guardsV2) {
+    s.guardsV2 = 1; let n = 0;
+    s.creatures.forEach(c => { const r = c.guard && (s.rooms || []).find(o => o.id === c.guard); if (r && r.t === 'couloir' && !(s.defs || []).some(d => d.x === r.x && d.y === r.y && zOf(d) === zOf(r) && (DEFS[d.t] || {}).post)) { c.guard = null; n++; } });
+    if (n && Array.isArray(s.log)) s.log.unshift({ n: s.night || 1, text: `🛡️ ${n} garde${n > 1 ? 's' : ''} posté${n > 1 ? 's' : ''} dans des couloirs rentre${n > 1 ? 'nt' : ''} au Cœur : un couloir ne se garde plus qu’avec un Poste de garde (onglet Pièges).`, tone: '' });
+  }
+  return s;
+};
 
 /* ---------- le mode « Gardes » ---------- */
 const GM = { on: false, sel: null, drag: null, hover: null };
@@ -54,10 +71,10 @@ function guardHud() {
   if (!h) { h = el('div', 'guardhud panel', ''); h.id = 'guardHud'; $('#game').appendChild(h); h.addEventListener('click', e => { if (e.target.closest('[data-gm="close"]')) guardMode(false); if (e.target.closest('[data-gm="clear"]')) { S.creatures.forEach(c => { c.guard = null; }); afterChange(); sfx('peel'); guardHud(); } }); }
   const n = guardCount(), cap = guardCap(), sel = GM.sel && critter(GM.sel);
   h.innerHTML = `<div class="gh-top"><b>${gi('shield')} Les gardes <span class="gh-n${n >= cap ? ' full' : ''}">${n}/${cap}</span></b><button type="button" class="sbtn" data-gm="clear">Tout retirer</button><button type="button" class="sbtn pri" data-gm="close">Terminé</button></div>
-    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce ou un couloir du château pour l’y poster (ou sa vignette pour la libérer).` : 'Glisse une créature de la liste sur une pièce ou un couloir <b>du chemin des héros</b> (en doré) : elle y arrêtera la bande. Dans un couloir, c’est un barrage de 2 gardes au plus. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur.'}</p>`;
+    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce du château (ou un Poste de garde) pour l’y poster, ou sa vignette pour la libérer.` : 'Glisse une créature de la liste sur une pièce <b>du chemin des héros</b> (en doré) : elle y arrêtera la bande. Un couloir ne se garde qu’avec un <b>Poste de garde</b> (Construire, onglet Pièges) : un barrage de 2 gardes au plus. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur.'}</p>`;
 }
 function guardMode(on) {
-  GM.on = !!on; GM.sel = null; GM.drag = null; GM.hover = null;
+  GM.on = !!on; GM.of = on ? S : null; GM.sel = null; GM.drag = null; GM.hover = null;
   document.body.classList.toggle('guarding', GM.on);
   const b = $('#btnGuards'); if (b) { b.classList.toggle('on', GM.on); b.setAttribute('aria-pressed', GM.on); }
   if (GM.on) { if (UI.build) closeBuild(); dropSticker(); V.guardPath = true; sfx('tick'); } else V.guardPath = false;
@@ -96,15 +113,15 @@ function bindGuards() {
   box.addEventListener('pointerdown', e => {
     if (!GM.on) return; const b = e.target.closest('.pt'); if (!b) return;
     const c = critter(b.dataset.crit); if (!c || isOut(c)) return;
-    e.preventDefault(); GM.drag = { id: c.id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null };
+    e.preventDefault(); GM.drag = { id: c.id, pid: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, ghost: null };   // le doigt qui a pris le portrait, et lui seul
   });
   addEventListener('pointermove', e => {
-    const d = GM.drag; if (!d) return;
+    const d = GM.drag; if (!d || e.pointerId !== d.pid) return;
     if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 7) { d.moved = true; const c = critter(d.id); d.ghost = el('div', 'gghost', `<img alt="" src="${portrait(c.sp)}">`); document.body.appendChild(d.ghost); }
     if (d.ghost) { d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px'; const t = document.elementFromPoint(e.clientX, e.clientY); GM.hover = t === cv ? roomAtScreen(e.clientX, e.clientY) : null; d.ghost.classList.toggle('ok', !!(GM.hover && !CMDcheck(d.id, GM.hover))); }
   });
   addEventListener('pointerup', e => {
-    const d = GM.drag; if (!d) return; GM.drag = null; if (d.ghost) d.ghost.remove(); GM.hover = null;
+    const d = GM.drag; if (!d || e.pointerId !== d.pid) return; GM.drag = null; if (d.ghost) d.ghost.remove(); GM.hover = null;
     if (!d.moved) { GM.sel = GM.sel === d.id ? null : d.id; sfx('tick'); guardHud(); renderPortraits(); return; }
     const t = document.elementFromPoint(e.clientX, e.clientY);
     if (t === cv) guardDrop(d.id, roomAtScreen(e.clientX, e.clientY));
@@ -112,7 +129,7 @@ function bindGuards() {
   });
   box.addEventListener('click', e => { if (GM.on) { e.stopPropagation(); e.preventDefault(); } }, true);
   box.addEventListener('dragstart', e => { if (GM.on) e.preventDefault(); });   // pas de glisser-déposer natif de l'image : c'est nous qui gérons
-  addEventListener('pointercancel', () => { const d = GM.drag; if (d && d.ghost) d.ghost.remove(); GM.drag = null; GM.hover = null; });
+  addEventListener('pointercancel', e => { const d = GM.drag; if (!d || e.pointerId !== d.pid) return; if (d.ghost) d.ghost.remove(); GM.drag = null; GM.hover = null; });
   // une créature choisie, puis une pièce touchée
   cv.addEventListener('click', e => {
     if (!GM.on) return; e.stopPropagation(); e.preventDefault();

@@ -202,25 +202,38 @@ function mapDom() {
   box.querySelector('.wtop').addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; const k = b.dataset.w;
     if (k === 'close') closeWorld(); else if (k === 'center') { MAPV.sel = siteById('home'); mapCenter(0, 0); renderMapPanel(); } else if (k === 'in') mapZoom(1.25); else if (k === 'out') mapZoom(.8); else if (k === 'help') openGrimoire('carte'); });
   box.querySelector('#wpanel').addEventListener('click', mapPanelClick);
-  wcv.addEventListener('pointerdown', e => { try { wcv.setPointerCapture(e.pointerId); } catch (x) {} MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (MAPV.ptr.size === 1) MAPV.drag = { x: e.clientX, y: e.clientY, cx: MAPV.cam.x, cy: MAPV.cam.y, moved: false }; else if (MAPV.ptr.size === 2) { const [a, b] = [...MAPV.ptr.values()]; MAPV.drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), s: MAPV.cam.s, moved: true }; } });
+  // reprend le geste avec les doigts encore posés : un doigt déplace, deux pincent (sans ça, relever un doigt après un pincement cassait la vue)
+  const grip = moved => { const p = [...MAPV.ptr.values()]; if (!p.length) MAPV.drag = null; else if (p.length === 1) MAPV.drag = { x: p[0].x, y: p[0].y, cx: MAPV.cam.x, cy: MAPV.cam.y, moved }; else MAPV.drag = { pinch: Math.max(1, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), s: MAPV.cam.s, moved: true }; };
+  wcv.addEventListener('pointerdown', e => { try { wcv.setPointerCapture(e.pointerId); } catch (x) {} MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); grip(MAPV.ptr.size > 1); });
   wcv.addEventListener('pointermove', e => {
     if (MAPV.ptr.has(e.pointerId)) MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const d = MAPV.drag; if (!d) return;
     if (d.pinch && MAPV.ptr.size >= 2) { const [a, b] = [...MAPV.ptr.values()]; mapZoomTo(d.s * Math.hypot(a.x - b.x, a.y - b.y) / d.pinch, (a.x + b.x) / 2, (a.y + b.y) / 2); return; }
-    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 6 : 14)) d.moved = true; if (d.moved) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; }
+    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 6 : 14)) d.moved = true; if (d.moved && !d.pinch) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; mapClampCam(); d.cx = MAPV.cam.x - dx; d.cy = MAPV.cam.y - dy; }   // au bord, le retour du doigt repart aussitôt
   });
-  const up = e => { MAPV.ptr.delete(e.pointerId); const d = MAPV.drag; if (MAPV.ptr.size === 0) MAPV.drag = null; if (d && !d.moved && !d.pinch && e.type === 'pointerup') mapClick(e); };
+  const up = e => { if (!MAPV.ptr.has(e.pointerId)) return; MAPV.ptr.delete(e.pointerId); const d = MAPV.drag; grip(true); if (d && !d.moved && !d.pinch && !MAPV.ptr.size && e.type === 'pointerup') mapClick(e); };
   wcv.addEventListener('pointerup', up); wcv.addEventListener('pointercancel', up);
   wcv.addEventListener('wheel', e => { e.preventDefault(); mapZoomTo(MAPV.cam.s * Math.exp(-e.deltaY * .0016), e.clientX, e.clientY); }, { passive: false });
+  // le panneau de droite se cale sous la barre du haut, même quand elle passe sur deux lignes (téléphone couché)
+  const wtop = box.querySelector('.wtop'), fitPanel = () => { const b = wtop.getBoundingClientRect().bottom; if (b > 0) box.style.setProperty('--wtopB', Math.round(b) + 'px'); };
+  MAPV.fit = fitPanel; try { new ResizeObserver(fitPanel).observe(wtop); } catch (x) {} addEventListener('resize', fitPanel);
   document.addEventListener('keydown', e => { if (MAPV.open && e.key === 'Escape' && !$('#modalRoot').children.length) closeWorld(); });
   return box;
 }
-function mapZoomTo(ns, px, py) { const r = $('#wcv').getBoundingClientRect(), s0 = MAPV.cam.s; ns = clamp(ns, .45, 2.6); const wx = (px - r.left - MAPV.cam.x) / s0, wy = (py - r.top - MAPV.cam.y) / s0; MAPV.cam.s = ns; MAPV.cam.x = px - r.left - wx * ns; MAPV.cam.y = py - r.top - wy * ns; }
+function mapZoomTo(ns, px, py) { const r = $('#wcv').getBoundingClientRect(), s0 = MAPV.cam.s; ns = clamp(ns, .45, 2.6); const wx = (px - r.left - MAPV.cam.x) / s0, wy = (py - r.top - MAPV.cam.y) / s0; MAPV.cam.s = ns; MAPV.cam.x = px - r.left - wx * ns; MAPV.cam.y = py - r.top - wy * ns; mapClampCam(); }
 function mapZoom(f) { const r = $('#wcv').getBoundingClientRect(); mapZoomTo(MAPV.cam.s * f, r.left + r.width / 2, r.top + r.height / 2); }
 function mapCenter(q, r) { const cvw = $('#wcv'), [x, y] = hexXY(q, r, HS), wide = innerWidth > 760; MAPV.cam.x = cvw.clientWidth / 2 - x * MAPV.cam.s - (wide ? 160 : 0); MAPV.cam.y = cvw.clientHeight * (wide ? .5 : .3) - y * MAPV.cam.s; }
+// la vue ne quitte jamais la carte : le centre de l'écran reste sur le Val (et une caméra cassée revient au château)
+function mapClampCam(w, h) {
+  const cvw = $('#wcv'); if (w == null) { if (!cvw) return; w = cvw.clientWidth; h = cvw.clientHeight; }
+  const c = MAPV.cam; if (!isFinite(c.s) || c.s <= 0) c.s = 1;
+  if (!isFinite(c.x) || !isFinite(c.y)) { MAPV.drag = null; MAPV.ptr.clear(); mapCenter(0, 0); }
+  const rx = HS * SQ3 * (MAP_R + .6), ry = HS * 1.5 * (MAP_R + .6);
+  c.x = w / 2 - clamp((w / 2 - c.x) / c.s, -rx, rx) * c.s; c.y = h / 2 - clamp((h / 2 - c.y) / c.s, -ry, ry) * c.s;
+}
 function openWorld(focusId) {
   if (VISIT) { toast('La carte, c’est chez toi : rentre d’abord de ta visite.', true); return; }
-  world(); const box = mapDom(); box.hidden = false; MAPV.open = true; MAPV.dirty = true; closeModal(true); dropSticker();
+  world(); const box = mapDom(); box.hidden = false; if (MAPV.fit) MAPV.fit(); MAPV.open = true; MAPV.dirty = true; MAPV.ptr.clear(); MAPV.drag = null; closeModal(true); dropSticker();
   const cvw = $('#wcv'), vr = Math.max(4, visionRadius());
   MAPV.cam.s = clamp(Math.min(cvw.clientWidth / (SQ3 * HS * (2 * vr + 3)), cvw.clientHeight / (1.5 * HS * (2 * vr + 3))), .5, 1.6);
   const f = focusId && allSites().find(s => s.id === focusId); MAPV.sel = f || siteById('home'); mapCenter(MAPV.sel.q, MAPV.sel.r);
@@ -228,11 +241,12 @@ function openWorld(focusId) {
   cancelAnimationFrame(MAPV.raf); const loop = t => { if (!MAPV.open) return; MAPV.raf = requestAnimationFrame(loop); drawMap(t); }; MAPV.raf = requestAnimationFrame(loop);
   if (typeof tutoTip === 'function') {}
 }
-function closeWorld() { MAPV.open = false; cancelAnimationFrame(MAPV.raf); const b = $('#world'); if (b) b.hidden = true; sfx('tick'); }
+function closeWorld() { MAPV.open = false; MAPV.ptr.clear(); MAPV.drag = null; cancelAnimationFrame(MAPV.raf); const b = $('#world'); if (b) b.hidden = true; sfx('tick'); }
 function drawMap(t) {
   const cvw = $('#wcv'); if (!cvw) return;
   const dpr = Math.min(2, devicePixelRatio || 1), w = cvw.clientWidth, h = cvw.clientHeight;
   if (cvw.width !== Math.round(w * dpr) || cvw.height !== Math.round(h * dpr)) { cvw.width = Math.round(w * dpr); cvw.height = Math.round(h * dpr); }
+  mapClampCam(w, h);
   const L = MAPV.dirty || !MAPV.layer ? mapLayer() : MAPV.layer, g = cvw.getContext('2d'), k = MAPV.cam.s / MAP_K;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d0a12'; g.fillRect(0, 0, cvw.width, cvw.height);
   g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (MAPV.cam.x - L.ox * k), dpr * (MAPV.cam.y - L.oy * k));

@@ -54,6 +54,8 @@ function fitCamera() {
   CAM.x = I.l + (aw - (b.r - b.l) * CAM.s) / 2 - b.l * CAM.s; CAM.y = I.t + (ah - (b.b - b.t) * CAM.s) / 2 - b.t * CAM.s;
 }
 function clampCam() {
+  if (!isFinite(CAM.s) || CAM.s <= 0) CAM.s = clamp(1, CAM.min, CAM.max);
+  if (!isFinite(CAM.x) || !isFinite(CAM.y)) { CAM.x = V.w * .5; CAM.y = V.h * .5; }   // une caméra cassée revient au milieu
   const b = BOUNDS(), s = CAM.s;
   CAM.x = clamp(CAM.x, V.w * .5 - (b.r + 200) * s, V.w * .5 - (b.l - 200) * s); CAM.y = clamp(CAM.y, V.h * .5 - (b.b + 160) * s, V.h * .5 - (b.t - 160) * s);
 }

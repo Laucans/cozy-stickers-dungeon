@@ -176,6 +176,15 @@ const DDRAW = {
     ln(g, [[a + 9, b - 29], [a + 17, b - 41]], INK, 4.2); ln(g, [[a + 9, b - 29], [a + 17, b - 41]], '#8f96a3', 2.4); rrect(g, a + 12, b - 49, 13, 8, 2, '#6a4a32', 1);
     ln(g, [[a - 10, b - 25], [a - 17, b - 27]], INK, 2); ell(g, a - 19.5, b - 27.5, 3, 4.5, PAL.gold, .8);
   },
+  poste: g => {
+    box(g, 0, 0, .46, .38, 32, 0, PAL.wood, 'wood');
+    const [da, db] = pt(.04, .19, 0); rrect(g, da - 6, db - 25, 12, 23, 5, '#1e120c', .8);
+    const top = pt(0, 0, 54), A = pt(-.28, .24, 31), B = pt(.28, .24, 31), C = pt(.28, -.24, 31), D = pt(-.28, -.24, 31);
+    poly(g, [D, A, top], '#a24a34', 1); poly(g, [B, C, top], '#6e2c20', 1); poly(g, [A, B, top], '#8a3a2a', 1); ball(g, ...top, 2.4, PAL.gold, .6);
+    post(g, -.38, .14, 44); const [a, b] = pt(-.38, .14, 44);
+    g.beginPath(); g.moveTo(a - 7, b + 2); g.lineTo(a + 7, b + 2); g.lineTo(a + 7, b + 9); g.quadraticCurveTo(a + 6, b + 16, a, b + 19); g.quadraticCurveTo(a - 6, b + 16, a - 7, b + 9); g.closePath(); g.fillStyle = radial(g, a, b + 8, 10, '#4a78c0'); fi(g, g.fillStyle, 1);
+    ln(g, [[a, b + 4], [a, b + 16]], PAL.gold, 1.6); ln(g, [[a - 5, b + 8], [a + 5, b + 8]], PAL.gold, 1.6);
+  },
   cloche: g => { post(g, -.26, 0, 46); post(g, .26, 0, 46); box(g, 0, 0, .6, .06, 4, 44, PAL.wood2); const [a, b] = pt(0, 0, 44); g.beginPath(); g.moveTo(a - 9, b + 20); g.quadraticCurveTo(a - 8, b + 4, a, b + 4); g.quadraticCurveTo(a + 8, b + 4, a + 9, b + 20); g.closePath(); g.fillStyle = radial(g, a, b + 12, 11, PAL.gold); fi(g, g.fillStyle, 1); ball(g, a, b + 21, 2.4, '#9a7420'); },
 };
 // tourné d'un quart (dans un couloir qui va dans l'autre sens) : en isométrique, c'est l'image retournée… sauf les écriteaux

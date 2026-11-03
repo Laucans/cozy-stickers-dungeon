@@ -130,7 +130,7 @@ function encounters(path, target) {
   (path || []).forEach(([x, y, z], i) => {
     if (i === 0) return;
     const r = roomAt(x, y, z || 0), d = withZ(z || 0, () => defAt(x, y));
-    if (d && DEFS[d.t]) { const f = DEFS[d.t]; out.push(f.block ? { i, k: 'smash', defId: d.id, label: f.name } : { i, k: 'def', defId: d.id, t: d.t, label: f.name, dmg: defStr(d) }); return; }
+    if (d && DEFS[d.t] && !DEFS[d.t].post) { const f = DEFS[d.t]; out.push(f.block ? { i, k: 'smash', defId: d.id, label: f.name } : { i, k: 'def', defId: d.id, t: d.t, label: f.name, dmg: defStr(d) }); return; }
     if (r && isHall(r) && r.t !== 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Barrage', entry: 0 }); return; }
     if (r && r.t === 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Le porche', entry: 0 }); return; }
     if (r && !isHall(r) && !seen.has(r.id)) {
@@ -430,6 +430,7 @@ function* battleGen(plan, R) {
     if (d && DEFS[d.t] && !trapsDone.has(d.id)) {
       trapsDone.add(d.id); const D = DEFS[d.t], label = D.name;
       if (D.block) { R.ev.push({ k: 'smash', i, defId: d.id }); R.smashed = d.id; R.lines.push(['🪓', `Aucun autre chemin : ${who} défonce ta ${label}.`, 'bad']); }
+      else if (D.post) { /* un Poste de garde : le barrage (s'il y a des gardes) se joue juste après */ }
       else if (D.alarm) { alarm = true; R.ev.push({ k: 'alarm', i, defId: d.id }); R.lines.push(['🔔', 'La Cloche d’alarme sonne : les défenseurs de leur cible frappent plus fort (+1).', 'good']); }
       else {
         const thief = D.kind === 'piège' && disarm > 0 ? alive().find(h => h.F.disarm) : null;
@@ -452,7 +453,7 @@ function* battleGen(plan, R) {
     }
     // une pièce
     const r = roomAt(pos[0], pos[1]);
-    // un barrage : des gardes postés dans un couloir (ou au porche) arrêtent la bande au passage
+    // un barrage : des gardes postés à un Poste de garde de couloir (ou au porche) arrêtent la bande au passage
     if (r && isHall(r) && !tgSet.has(r.id) && tactic !== 'cible' && !seenRooms.has(r.id)) {
       const gs = guardsIn({ rooms: [r.id] });
       if (gs.length) { seenRooms.add(r.id); const res = yield* runFight({ i, k: 'room', rooms: [r.id], label: r.t === 'porche' ? 'Le porche' : 'Barrage', entry: 0 }, gs, {}); if (res === 'flee') return end('repelled', i); }

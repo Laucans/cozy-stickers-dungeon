@@ -1,6 +1,6 @@
 <!doctype html><html lang="fr"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cozy Stickers Dungeon</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +19,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
+/* au doigt, le navigateur ne zoome ni ne fait glisser la page (le château et la carte du Val ont leur propre zoom) */
+html, body{touch-action:pan-x pan-y; overscroll-behavior:none} html{overflow:hidden}
 body{margin:0; background:var(--night); color:var(--cream); font-family:var(--f-body); font-size:14px; line-height:1.35; overflow:hidden; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0}
 button{font:inherit; color:inherit; cursor:pointer}
 button:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
@@ -1000,7 +1002,7 @@ body.visiting .hud-bottom, body.visiting .hud-actions, body.visiting .tracker, b
 .wtop b{font-family:var(--f-display); font-size:22px; color:var(--gold)}
 .wtop #wglow{font-size:13px; color:var(--cream-2)}
 .wtop .wbtns{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
-.wpanel{position:absolute; right:var(--gr); top:calc(var(--gt) + 64px); width:330px; max-height:calc(100% - var(--gt) - var(--gb) - 80px); overflow:auto; padding:10px 14px 14px; color:var(--cream)}
+.wpanel{position:absolute; right:var(--gr); top:calc(var(--wtopB, calc(var(--gt) + 56px)) + 8px); width:330px; max-height:calc(100% - var(--wtopB, calc(var(--gt) + 56px)) - var(--gb) - 16px); overflow:auto; padding:10px 14px 14px; color:var(--cream)}
 .wpanel:empty{display:none}
 .wpanel h3{font-family:var(--f-display); font-size:23px; color:var(--gold); margin:2px 0 4px; line-height:1.05}
 .wpanel h4{font-family:var(--f-display); font-size:17px; margin:10px 0 4px; color:var(--cream)}
@@ -1216,11 +1218,24 @@ body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, bod
   body.building .hud-bottom{left:var(--gl); right:var(--gr); bottom:calc(var(--gb) + 78px)}
 }
 @media (max-width:640px){ .modal{padding:16px 14px} .modal h2{font-size:26px} .modal h3{font-size:18px} }
-@media (max-width:640px){ .guardhud{left:72px; right:8px; padding:8px 10px} .guardhud p{font-size:12.5px; margin:4px 0} }
+@media (max-width:640px){ .guardhud{left:100px; right:8px; padding:8px 10px} .guardhud p{font-size:12.5px; margin:4px 0} }
 /* expédition sur téléphone : les intentions des ennemis restent au-dessus d'eux (la cible se lit en touchant l'ennemi) */
 @media (max-width:420px){ .fint small{display:none} .fints{max-width:100%} .fint{max-width:100%; overflow:hidden} }
 /* la main de cartes tient dans la largeur d'un téléphone (elles se chevauchent un peu plus) */
-@media (max-width:420px){ .hand{padding-left:24px; padding-right:24px} .hand .kcard{margin:0 -21px} .hand:has(> .kcard:nth-child(8)) .kcard{margin:0 -26px} .hand .kcard.sel{z-index:3} }
+@media (max-height:500px) and (min-width:761px){   /* téléphone couché : l'arène et la main de cartes tiennent ensemble à l'écran, sans défiler */
+  .arena{padding:30px 20px 26px; min-height:140px} .finfo{height:56px}
+  .fig{width:74px; padding:2px 0} .fspr{width:56px; height:56px} .cemo{font-size:40px} .fhp{width:66px; height:12px} .fhp em{font-size:9px; line-height:12px} .ffear{width:50px} .fnm{font-size:11px} .fst{min-height:13px; font-size:10.5px}
+  .fig.elite .fspr{width:66px; height:66px} .fig.elite .cemo{font-size:46px} .fig.boss{width:96px} .fig.boss .fspr{width:84px; height:84px} .fig.boss .cemo{font-size:60px} .fig.boss .fhp{width:88px}
+  .fint{font-size:10.5px; padding:1px 5px} .fpow{font-size:9px; padding:0 4px} .eb{font-size:9px; padding:0 2px}
+  .handzone{gap:6px; padding-bottom:max(6px, env(safe-area-inset-bottom))} .energy{width:46px; height:46px; font-size:19px} .hz-btns{flex-direction:row; flex-wrap:wrap; justify-content:flex-end; max-width:210px; padding:0} .hz-btns .sbtn{padding:7px 10px; font-size:13px} .hz-btns .lbl{display:none}
+  .hand{min-height:134px; padding:6px 12px 0}
+  .kcard{width:84px; height:128px; margin:0 -4px} .kcard::before{inset:4px} .kname{margin:7px 5px 0; font-size:11.5px; padding:2px} .kart{margin:3px 6px 0; height:38px} .kimg{height:36px} .kimg.sp{height:40px; margin-top:4px} .kbig{font-size:24px} .kmini, .kbadge{width:18px; height:18px; font-size:10px}
+  .ktype{margin:2px 6px 0; font-size:8px} .ktext{margin:1px 6px 0; font-size:9.2px; -webkit-line-clamp:3} .kwho{display:none}
+  .kcard:hover, .kcard:focus-visible{transform:translateY(-8px) scale(1.04)} .kcard.sel{transform:translateY(-10px) scale(1.05)}
+  .cp-top h2{font-size:18px} .cturn{font-size:20px; padding:8px 16px}
+}
+@media (max-width:760px){ .finfo{align-self:stretch; min-width:0} .fnm{flex:none; white-space:normal; line-height:1.1; text-align:center; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere} .arena{padding-left:20px; padding-right:12px} }   /* arène au téléphone : le nom reste sous sa créature (sur deux lignes au besoin) et la parade des alliés n'est plus coupée au bord */
+@media (max-width:420px){ .hand{padding-left:14px; padding-right:14px; scroll-snap-type:x proximity} .hand .kcard{margin:0 -7px; scroll-snap-align:center} .hand .kcard.sel{z-index:3} }   /* main au doigt : les cartes se chevauchent peu (nom et texte lisibles), la main défile si elle déborde */
 /* poser au doigt : le bandeau du sticker en bas, compact, et le tiroir des cartes s'efface le temps de poser */
 body.touchy .handbar{top:auto; bottom:calc(var(--gb) + 78px); left:var(--gl); right:var(--gr); transform:none; max-width:none; justify-content:center}
 body.touchy .handbar .msg{flex:1 1 100%; text-align:center; font-size:13px} body.touchy .handbar > img.th{display:none} body.touchy .handbar .pill{padding:5px 10px}
@@ -1236,7 +1251,22 @@ body.touchy .albl{display:block}
 body.touchy .acts{row-gap:17px; column-gap:12px; padding-bottom:14px} body.touchy .leftpanel .minis{row-gap:15px}
 @media (max-width:480px){ body.touchy .acts{max-width:128px} }
 @media (max-width:480px) and (pointer:coarse){ .acts{max-width:128px} }
-body.touchy .notif:nth-child(-n+3) .nl{opacity:1; transform:none; max-width:min(160px, 45vw); overflow:hidden; text-overflow:ellipsis; font-size:11.5px; padding:4px 8px; background:rgba(22,15,11,.86); pointer-events:none}
+body.touchy .notif.fresh:not(.hint) .nl{opacity:1; transform:none; max-width:min(160px, 45vw); overflow:hidden; text-overflow:ellipsis; font-size:11.5px; padding:4px 8px; background:rgba(22,15,11,.86); pointer-events:none}
+@media (max-width:900px){ body.building .advisor{bottom:var(--sheetUp, calc(var(--gb) + 282px))} }
+body.touchy.placing .advisor{display:none !important}
+body.touchy .notif .nx{display:flex; width:24px; height:24px; font-size:11px; top:-9px; left:-9px}   /* au doigt, pas de survol : chaque pastille garde sa croix (masquer jusqu'à la nuit suivante ; une Envie, pour de bon) */
+body.touchy .floors button{min-height:36px} body.touchy .handbar .pill{min-height:38px}   /* cibles au doigt : étages, Poser ici, Tourner, Ranger */   /* au doigt, pendant la pose : rien ne cache les cases où coller le sticker */   /* feuille de construction ouverte : le conseiller au-dessus des cartes */
+@media (max-width:900px), (max-height:600px){ .cpage .cmap > .cp-foot{position:sticky; bottom:0; z-index:4; margin:6px -8px 0; padding:10px 8px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(rgba(12,9,14,0), rgba(12,9,14,.94) 35%)} }   /* exploration au téléphone : le bouton pour continuer reste sous le pouce, même au bout d'une longue liste de cartes */
+@media (max-width:900px), (max-height:700px){ .modal .x{position:sticky; top:0; float:right; margin:-8px -8px 4px 10px; z-index:6; box-shadow:0 2px 8px rgba(0,0,0,.25)} }   /* la croix suit le défilement d'une longue fiche (au doigt, pas d'Échap) */
+@media (orientation:landscape) and (max-height:500px){   /* téléphone couché : la mini-carte et la colonne des étages mangeaient toute la hauteur, les pastilles et les créatures disparaissaient */
+  .minimap{width:120px; height:58px; border-radius:11px} .minimap span{font-size:10px; left:6px; bottom:2px}
+  .advisor{left:max(110px, calc(50% - 230px)); right:auto; width:min(460px, calc(100vw - 230px)); bottom:calc(var(--gb) + 74px)} .advisor .adv-box{max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 90px); overflow:auto} .adv-pic{width:52px; height:52px}   /* Gribouille entier à l'écran, entre les colonnes */
+  .powbar{bottom:calc(var(--gb, 0px) + 70px); max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 84px); overflow:auto} .powbar .pw small{display:none}   /* les jetons du Cœur pendant une invasion : en entier */   /* plus petite, mais toujours là : c'est l'entrée de la carte du Val */
+  .hud-build{flex-direction:row; align-items:flex-end}
+  .hud-build .floors{flex-direction:row; align-items:center}
+  .hud-build .floors .flab{display:none}
+  .hud-build .floors button{padding:3px 8px}
+}
 button, .card, .notif, .res, .dial, .pt, .mini, .act{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none}
 body.touchy #crawlPage [data-a="auto"], body.touchy #crawlPage [data-a="flee"]{flex-direction:column; gap:1px; line-height:1}
 body.touchy #crawlPage [data-a="auto"]::after, body.touchy #crawlPage [data-a="flee"]::after{content:attr(aria-label); font:800 9px/1 var(--f-body); white-space:nowrap}
@@ -1593,6 +1623,7 @@ const DEFS = {
   ressort:  { name: 'Plancher à ressort', kind: 'ruse', str: 2, lost: 0.35, rank: 2, needs: 'atelier', cost: { g: 3, s: 3 }, lostLine: 'Boing ! Le Plancher à ressort les catapulte dans les douves : ils rentrent se sécher chez eux.', desc: 'Ruse mécanique (rang 2) : 2 dégâts, et 35 % de chances que la bande, catapultée dans les douves, rentre se sécher chez elle. Plans : un·e compagnon·ne mécanicien·ne.' },
   automate: { name: 'Chevalier mécanique', kind: 'piège', str: 6, rank: 3, needs: 'atelier', cost: { g: 6, s: 5 }, desc: 'Piège mécanique (rang 3) : une armure à ressorts qui cogne 6 dégâts. Plans : un·e maître·sse mécanicien·ne.' },
   grandpiege: { name: 'Le Grand Piège', kind: 'piège', str: 6, sticky: true, unique: true, saga: true, cost: { g: 2, s: 2 }, desc: 'Inventé par un kobold de génie au bout d’une longue intrigue : −6 PV, et la victime reste sonnée (+1 à la rencontre suivante). Unique.' },
+  poste:     { name: 'Poste de garde', kind: 'poste', str: 0, post: true, cost: { g: 2, s: 2 }, desc: 'Une guérite plantée dans un couloir : c’est le seul moyen de garder un couloir. Tu peux y poster 2 gardes (un barrage) qui arrêtent la bande au passage. Sans poste, les gardes se postent dans les pièces : fais passer le chemin des héros par elles.' },
   barricade: { name: 'Barricade', kind: 'mur', str: 0, block: true, cost: { g: 1, s: 3 }, desc: 'Mur : les héros ne passent pas par ce couloir. Force-les à faire un détour par tes pièges et tes gardes (il faut toujours leur laisser un chemin jusqu’au Cœur).' },
 };
 const DEF_ORDER = Object.keys(DEFS);
@@ -3012,6 +3043,15 @@ const DDRAW = {
     ball(g, a, b - 39, 8, '#aeb5c2', 1.1); rrect(g, a - 5.5, b - 41, 11, 3, 1, '#2a2430', 0); ball(g, a - 2.5, b - 39.6, 1, '#f0902a', 0); ball(g, a + 2.5, b - 39.6, 1, '#f0902a', 0);
     ln(g, [[a + 9, b - 29], [a + 17, b - 41]], INK, 4.2); ln(g, [[a + 9, b - 29], [a + 17, b - 41]], '#8f96a3', 2.4); rrect(g, a + 12, b - 49, 13, 8, 2, '#6a4a32', 1);
     ln(g, [[a - 10, b - 25], [a - 17, b - 27]], INK, 2); ell(g, a - 19.5, b - 27.5, 3, 4.5, PAL.gold, .8);
+  },
+  poste: g => {
+    box(g, 0, 0, .46, .38, 32, 0, PAL.wood, 'wood');
+    const [da, db] = pt(.04, .19, 0); rrect(g, da - 6, db - 25, 12, 23, 5, '#1e120c', .8);
+    const top = pt(0, 0, 54), A = pt(-.28, .24, 31), B = pt(.28, .24, 31), C = pt(.28, -.24, 31), D = pt(-.28, -.24, 31);
+    poly(g, [D, A, top], '#a24a34', 1); poly(g, [B, C, top], '#6e2c20', 1); poly(g, [A, B, top], '#8a3a2a', 1); ball(g, ...top, 2.4, PAL.gold, .6);
+    post(g, -.38, .14, 44); const [a, b] = pt(-.38, .14, 44);
+    g.beginPath(); g.moveTo(a - 7, b + 2); g.lineTo(a + 7, b + 2); g.lineTo(a + 7, b + 9); g.quadraticCurveTo(a + 6, b + 16, a, b + 19); g.quadraticCurveTo(a - 6, b + 16, a - 7, b + 9); g.closePath(); g.fillStyle = radial(g, a, b + 8, 10, '#4a78c0'); fi(g, g.fillStyle, 1);
+    ln(g, [[a, b + 4], [a, b + 16]], PAL.gold, 1.6); ln(g, [[a - 5, b + 8], [a + 5, b + 8]], PAL.gold, 1.6);
   },
   cloche: g => { post(g, -.26, 0, 46); post(g, .26, 0, 46); box(g, 0, 0, .6, .06, 4, 44, PAL.wood2); const [a, b] = pt(0, 0, 44); g.beginPath(); g.moveTo(a - 9, b + 20); g.quadraticCurveTo(a - 8, b + 4, a, b + 4); g.quadraticCurveTo(a + 8, b + 4, a + 9, b + 20); g.closePath(); g.fillStyle = radial(g, a, b + 12, 11, PAL.gold); fi(g, g.fillStyle, 1); ball(g, a, b + 21, 2.4, '#9a7420'); },
 };
@@ -5646,6 +5686,8 @@ function fitCamera() {
   CAM.x = I.l + (aw - (b.r - b.l) * CAM.s) / 2 - b.l * CAM.s; CAM.y = I.t + (ah - (b.b - b.t) * CAM.s) / 2 - b.t * CAM.s;
 }
 function clampCam() {
+  if (!isFinite(CAM.s) || CAM.s <= 0) CAM.s = clamp(1, CAM.min, CAM.max);
+  if (!isFinite(CAM.x) || !isFinite(CAM.y)) { CAM.x = V.w * .5; CAM.y = V.h * .5; }   // une caméra cassée revient au milieu
   const b = BOUNDS(), s = CAM.s;
   CAM.x = clamp(CAM.x, V.w * .5 - (b.r + 200) * s, V.w * .5 - (b.l - 200) * s); CAM.y = clamp(CAM.y, V.h * .5 - (b.b + 160) * s, V.h * .5 - (b.t - 160) * s);
 }
@@ -6318,7 +6360,7 @@ function tipHTML(kind, t) {
     const f = DEFS[t];
     html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · ${f.str} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
     if (f.kind === 'piège') li.push('🎯 Blesse un héros au hasard. La voleuse désamorce le premier piège de la route.');
-    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.');
+    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.'); if (f.post) li.push('🛡️ Seul moyen de garder un couloir : 2 gardes au plus, ils arrêtent la bande ici.');
     if (f.lost) li.push(`🌀 ${Math.round(f.lost * 100)} % de chances que la bande renonce et rentre.`);
     if (f.sticky) li.push('🍌 La rencontre suivante frappe +1.'); if (f.alarm) li.push('🔔 Les défenseurs de leur cible frappent +1.'); if (f.block) li.push('🧱 Ferme le couloir : la bande fait un détour (montré en bleu quand tu la tiens).');
     li.push('📍 Se pose dans un couloir, sur le chemin des héros (à tous les étages qu’ils traversent pour atteindre le Cœur).');
@@ -6340,7 +6382,7 @@ function showTip(card) {
   const tip = $('#tip'); if (!card) { tip.hidden = true; return; }
   tip.innerHTML = tipHTML(card.dataset.kind, card.dataset.t); tip.hidden = false;
   const r = card.getBoundingClientRect(), tw = tip.offsetWidth;
-  tip.style.left = clamp(r.left + r.width / 2 - tw / 2, 8, innerWidth - tw - 8) + 'px'; tip.style.top = (r.top - tip.offsetHeight - 10) + 'px';
+  tip.style.left = clamp(r.left + r.width / 2 - tw / 2, 8, innerWidth - tw - 8) + 'px'; tip.style.top = (r.top - tip.offsetHeight - 10 >= 8 ? r.top - tip.offsetHeight - 10 : Math.min(r.bottom + 10, innerHeight - tip.offsetHeight - 8)) + 'px';
 }
 
 /* ---------- portraits, envies ---------- */
@@ -6365,7 +6407,7 @@ function notifList() {
   });
   { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
   if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
-  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${guardCap()})`, () => guardMode(true), 5, 'bad'); }
+  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1, typeof routeGuardCap === 'function' ? routeGuardCap() : 99); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${cap})`, () => guardMode(true), 5, 'bad'); }
   if (typeof RECIPES !== 'undefined' && hasKitchen() && Object.keys(RECIPES).some(canCook) && Object.values(pantry()).reduce((a, b) => a + b, 0) >= 10) add('cook', '🍲', 'Le garde-manger déborde : cuisine !', () => cookModal(), 1);
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
@@ -6376,22 +6418,24 @@ function notifList() {
   { const fr = Object.keys(S.free || {}).filter(k => S.free[k] > 0 && FURN[k] && !FURN[k].artefact && FURN[k].room !== 'any' && !TREASURES.includes(k)), r = fr.length && roomForFurn(t => fr.includes(t));
     if (r) add('freefurn', '🎁', `${fr.length > 1 ? `${fr.length} meubles offerts` : `${itemName(fr[0])} offert·e`} : touche ${ROOMS[r.t].name}`, () => openRoom(r.id), 2); }
   const arts = TREASURES.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
-  if (S.raid) add('raid', '🗺️', `Raid prévu : ${RAIDS[S.raid.target].name}`, () => openRaid(), 1);
+  if (S.raid) add('raid', '🗺️', `Raid prévu : ${(RAIDS[S.raid.target] || {}).name || 'une cible lointaine'}`, () => openRaid(), 1);
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
-  const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
-  if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  const g = GOALS.find(x => !S.goals[x.id]); if (g && (S.ndis || {}).goal !== 'g:' + g.id) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
+  const guest = typeof COOP !== 'undefined' && COOP.role === 'guest';
+  if (TUTO.pending && !guest) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
+  if (!guest && S.tuto && S.tuto.on && S.tuto.hid && TUTO_STEPS[S.tuto.i]) add('tuto', '🎓', `Tutoriel : ${TUTO_STEPS[S.tuto.i].t}`, () => { delete S.tuto.hid; TUTO.shown = null; save(); tutoTick(); }, 1, 'hint');
   if (typeof victoryNotifs === 'function') victoryNotifs(add);
   if (typeof rivalNotifs === 'function') rivalNotifs(add);
   if (typeof sagaNotifs === 'function') sagaNotifs(add);
   if (typeof valNotifs === 'function') valNotifs(add);
   if (typeof designNotifs === 'function') designNotifs(add);
   const dis = S.ndis || {};
-  return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
+  return n.filter(x => x.k === 'goal' || dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
 }
 function renderGoals() {
   const box = $('#notifs'); if (!box) return;
   const list = notifList(); UI.nacts = {};
-  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${iconize(esc(x.text))}</span><span class="ni emo">${iconize(x.ico)}</span><span class="nx" data-nx="${x.k}" title="Masquer jusqu’à la prochaine nuit" aria-label="Masquer">✕</span></button>`; }).join('');
+  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${iconize(esc(x.text))}</span><span class="ni emo">${iconize(x.ico)}</span><span class="nx" data-nx="${x.k}" title="${x.k === 'goal' ? 'Ranger cette Envie (la liste des Envies la garde)' : 'Masquer jusqu’à la prochaine nuit'}" aria-label="Masquer">✕</span></button>`; }).join('');
 }
 function renderQuests() {}
 // tiroir de construction (bouton Construire) et panneau des créatures, repliés par défaut
@@ -6789,7 +6833,7 @@ async function runInvasion(report) {
 async function endNight() {
   if (UI.busy) return;
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
-  dropSticker(); closeModal(true); if (UI.build) closeBuild(); setFloor(0);
+  dropSticker(); closeModal(true); if (UI.build) closeBuild(); if (typeof GM !== 'undefined' && GM.on) guardMode(false); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
   const n = S.night, report = [], snap = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
   try {
@@ -6965,7 +7009,7 @@ function bindEvents() {
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     PTR.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (PTR.size === 1) drag = { x: e.clientX, y: e.clientY, cx: CAM.x, cy: CAM.y, moved: false };
-    else if (PTR.size === 2) { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: dist(a, b), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
+    else if (PTR.size === 2) { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: Math.max(1, dist(a, b)), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
   });
   cv.addEventListener('pointermove', e => {
     const r = cv.getBoundingClientRect(); UI.lastPt = { x: e.clientX, y: e.clientY, mouse: e.pointerType === 'mouse' };
@@ -6980,7 +7024,7 @@ function bindEvents() {
   });
   const up = e => {
     PTR.delete(e.pointerId); const d = drag;
-    if (PTR.size === 0) drag = null; else { const [p] = [...PTR.values()]; drag = { x: p.x, y: p.y, cx: CAM.x, cy: CAM.y, moved: true }; }
+    if (PTR.size === 0) drag = null; else if (PTR.size === 1) { const [p] = [...PTR.values()]; drag = { x: p.x, y: p.y, cx: CAM.x, cy: CAM.y, moved: true }; } else { const [a, b] = [...PTR.values()], r = cv.getBoundingClientRect(); drag = { pinch: true, d: Math.max(1, dist(a, b)), s: CAM.s, m: mid(a, b), cx: CAM.x, cy: CAM.y, r, moved: true }; }
     cv.style.cursor = '';
     if (!d || d.moved || d.pinch || e.type === 'pointercancel') return;
     tap(e);
@@ -7002,7 +7046,7 @@ function bindEvents() {
   $('#btnCrit').addEventListener('click', () => { toggleLeft(); sfx('tick'); });
   $('#turn').addEventListener('click', () => { if (!UI.busy) openVictories(); });
   $('#notifs').addEventListener('click', e => {
-    const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; } save(); renderGoals(); return; }
+    const x = e.target.closest('[data-nx]'); if (x) { e.stopPropagation(); (S.ndis = S.ndis || {})[x.dataset.nx] = x.dataset.nx === 'goal' ? 'g:' + ((GOALS.find(g => !S.goals[g.id]) || {}).id) : S.night; if (x.dataset.nx === 'tip' && TUTO.pending) { (S.tips = S.tips || {})[TUTO.pending.id] = true; TUTO.pending = null; S.tipN = S.night; } save(); renderGoals(); return; }
     const b = e.target.closest('[data-n]'); if (!b || UI.busy) return; const f = UI.nacts && UI.nacts[b.dataset.n]; if (f) { sfx('tick'); f(); }
   });
   $('#zfit').addEventListener('click', () => { CAM.user = false; fitCamera(); });
@@ -7662,8 +7706,8 @@ const WIKI = {
     <ul><li>Base 2 ; +1 si sa déco préférée est dans le château ; +1 si l’{c:ambiance|Ambiance} suffit ; +1 si elle est {c:postes|postée} dans sa pièce préférée ;</li><li>−2 si elle a faim ; −1 si une espèce rivale vit au château.</li></ul>
     <ul><li><b>Ravie (4-5)</b> : sa compétence compte double. <b>Boudeuse (0-1)</b> : compétence éteinte et un dé de moins en raid.</li><li>Une envie comblée ou un rêve réalisé font plaisir tout de suite ; la potion de bonne humeur (en ville) et le Grand festin donnent +1 à tout le monde.</li><li>À 0 deux nuits de suite, elle quitte le château (les diablotins restent). Les créatures furieuses font monter la {c:calamite|Calamité}.</li></ul>` },
   postes: { cat: 'crea', t: 'Postes et gardes', x: () => `<p>Depuis la fiche d’une créature, choisis son <b>poste</b> : la pièce où elle vit et travaille. Dans sa pièce préférée (★), elle gagne +1 d’humeur visée.</p>
-    <p>La <b>garde</b>, c’est autre chose : une créature postée en garde sur une pièce ou un couloir <b>du chemin des héros</b> les y arrête et se bat ({c:combat|combat}). Le plus simple : le bouton <b>bouclier</b> (en bas à droite) ouvre le <b>mode Gardes</b>, où l’on glisse les vignettes des créatures sur le château. Le chemin des héros brille en doré, et chaque pièce montre ses gardes.</p>
-    <ul><li><b>Un nombre limité de gardes</b> : 3, +2 par palier, +2 par {room:garde}. Une pièce en tient autant que de places au premier rang (1 + 2 par pièce fusionnée) ; un couloir, 2 (un barrage).</li><li>Garder la pièce où elle vit donne +1 au combat.</li>
+    <p>La <b>garde</b>, c’est autre chose : une créature postée en garde sur une pièce <b>du chemin des héros</b> (ou dans un couloir équipé d’un {def:poste}) les y arrête et se bat ({c:combat|combat}). Le plus simple : le bouton <b>bouclier</b> (en bas à droite) ouvre le <b>mode Gardes</b>, où l’on glisse les vignettes des créatures sur le château. Le chemin des héros brille en doré, et chaque pièce montre ses gardes.</p>
+    <ul><li><b>Un nombre limité de gardes</b> : 3, +2 par palier, +2 par {room:garde}. Une pièce en tient autant que de places au premier rang (1 + 2 par pièce fusionnée) ; un couloir ne se garde qu’avec un {def:poste} : 2 gardes (un barrage). Sans poste, fais passer le chemin des héros par tes pièces, par exemple avec une {def:barricade}.</li><li>Garder la pièce où elle vit donne +1 au combat.</li>
     <li>Les créatures <b>libres</b> (sans garde) défendent toutes le Cœur en dernier rempart. Une créature en raid, en mission ou sonnée ne défend rien cette nuit-là.</li></ul>` },
   calamite: { cat: 'danger', t: 'Calamité', x: () => `<p>Une horloge de ${CAL_MAX} segments (cadran rouge) qui mesure le désordre du château. À chaque nuit :</p>
     <ul><li><b>+1</b> si quelqu’un a faim ; <b>+1</b> par créature furieuse (2 au plus) ; <b>+1</b> si le château est lugubre ; <b>+1</b> par tranche de 5 créatures (promiscuité).</li><li><b>−1</b> par point d’apaisement : {room:labo}, {furn:alambic}, {sp:sorciere|sorcières}, {sp:crapaud|crapauds}… et le thème Abbaye maudite.</li>
@@ -7675,7 +7719,7 @@ const WIKI = {
     <li><b>Ils errent</b>, comme dans le Donjon de Naheulbeuk : ils ouvrent les portes, se trompent de couloir, et fouillent les pièces qu’ils traversent (sieste au Dortoir, tournée générale à la Taverne, potions douteuses au Labo, grimoire maudit, trésor à chaparder…). Si le jour se lève avant qu’ils arrivent, ils rentrent. S’ils fuient, ils lâchent la moitié de ce qu’ils ont chapardé.</li>
     <li><b>Ta tactique</b> : <b>tenir les postes</b> (chaque garde se bat chez lui, +1), <b>défendre leur cible</b> (tout le monde y accourt, les plus lointains essoufflés), <b>harceler</b> (la moitié des libres tend des embuscades en chemin), ou <b>acheter leur départ</b>.</li>
     <li><b>Les jetons du Cœur</b> (2, +1 aux paliers 2 et plus, +1 avec le pont-levis) : chaque geste en coûte un. <b>À tout moment</b>, pendant que la bande marche (la barre en bas de l’écran) : 👛 Semer de l’or (souvent, un paysan ou une voleuse ramasse la bourse et rentre chez lui) et 🚪 Claquer les portes (la bande se perd et perd du temps avant l’aube). <b>Avant chaque combat</b> (la bataille s’arrête) : 🚪 Porte claquée, 🪨 Éboulement, 💚 Sève du Cœur, 😱 Cri du Cœur, 🔔 Sonner la cloche (deux renforts accourent) ; et, si tes alchimistes en ont le savoir ({c:artisanat|les métiers}), 🌫️ Brume soporifique et ⚗️ Élixir de bravoure. Chaque geste ne sert qu’une fois par invasion.</li>
-    <li><b>Les gardes</b> postés sur leur chemin les arrêtent dans les pièces et les couloirs ({c:postes}). Un {c:nemesis|héros némésis} finit par revenir à chaque invasion.</li>
+    <li><b>Les gardes</b> postés sur leur chemin les arrêtent dans les pièces et aux Postes de garde des couloirs ({c:postes}). Un {c:nemesis|héros némésis} finit par revenir à chaque invasion.</li>
     <li><b>La moitié d’entre eux K.O.</b> (les deux tiers pour des héros de légende) : ils fuient. Butin, notoriété, humeur, et les K.O. finissent aux {room:oubliettes} s’il y a de la place.</li>
     <li><b>But atteint</b> : selon le but, ils emportent un bon tiers de ton or, emmènent une créature ou cassent des meubles ; +1 ou +2 Calamité.</li>
     <li><b>Le Cœur peut déménager</b> à un autre étage (depuis sa fiche, contre de l’or) : la bande doit alors prendre les escaliers et traverser un étage de plus, avec ses pièges et ses gardes.</li></ul>` },
@@ -7798,17 +7842,17 @@ const cellsOfType = t => { const r = S.rooms.find(x => x.t === t); return r ? ce
 const hasFood = () => S.furn.some(f => FURN[f.t] && FURN[f.t].food && FURN[f.t].room !== 'any');
 const TUTO_STEPS = [
   { id: 'intro', t: 'Bienvenue, Maître !', x: 'Je suis Gribouille, ton vieux conseiller. Je vais t’apprendre à transformer ce vieux château en repaire douillet et redouté. Tu peux passer le tutoriel quand tu veux.', btn: 'next' },
-  { id: 'camera', t: 'Regarde autour de toi', x: 'Fais glisser le château pour te déplacer, zoome avec la molette ou en pinçant l’écran. Le bouton ⤢, en bas à droite, recadre tout le château.', target: '#zfit', until: () => CAM.user, btn: 'next' },
+  { id: 'camera', t: 'Regarde autour de toi', x: 'Fais glisser le château pour te déplacer, zoome avec la molette ou en pinçant l’écran. Le bouton ⤢, en bas à droite, recadre tout le château.', target: '#zfit', enter: () => { TUTO.flags.cam = false; TUTO.cam0 = { x: CAM.x, y: CAM.y, s: CAM.s }; }, until: () => { const c = TUTO.cam0; return !!TUTO.flags.cam || !!(c && (Math.abs(CAM.x - c.x) > 30 || Math.abs(CAM.y - c.y) > 30 || Math.abs(CAM.s - c.s) > .05)); }, btn: 'next' },
   { id: 'dortoir', t: 'Ta première pièce', x: 'Tes créatures ont besoin de lits. Le bouton Construire (en bas à gauche) ouvre tes stickers : onglet Pièces, prends le {room:dortoir} et colle-le sur les cases qui brillent, contre le couloir.', target: '.card[data-kind="room"][data-t="dortoir"]', enter: () => setTab('room'), cells: () => suggestRoom('dortoir'), until: () => S.rooms.some(r => r.t === 'dortoir') },
   { id: 'chantier', t: 'Un chantier', x: 'La pièce démarre en chantier : l’horloge rouge au-dessus se remplit pendant la nuit. Tes ouvriers posent quelques segments par nuit, plus encore avec des diablotins. On ne meuble une pièce qu’une fois terminée : il faut laisser passer la nuit. Voir {c:construire}.', btn: 'next' },
-  { id: 'nuit', t: 'Finis la nuit', x: 'Ton tour est fini ? Appuie sur Finir la nuit : tes ouvriers bâtissent le Dortoir, les pièces produisent, et de nouvelles créatures arrivent à l’aube. Voir {c:nuit}.', target: '#btnNight', enter: () => { TUTO.night0 = S.night; }, until: () => S.night > (TUTO.night0 || S.night) && !UI.busy },
+  { id: 'nuit', t: 'Finis la nuit', x: 'Ton tour est fini ? Appuie sur Finir la nuit : tes ouvriers bâtissent le Dortoir, les pièces produisent, et de nouvelles créatures arrivent à l’aube. Voir {c:nuit}.', target: '#btnNight', enter: () => { if (S.tuto.n0 == null) S.tuto.n0 = S.night; }, until: () => { if (S.tuto.n0 == null) S.tuto.n0 = S.night; return S.night > S.tuto.n0 && !UI.busy; } },
   { id: 'fiche', t: 'Ouvre ta pièce', get x() { return S.rooms.some(r => r.t === 'dortoir' && r.built) ? 'Le Dortoir est terminé ! Une pièce vide ne sert à rien. Touche-le (les cases qui brillent) : sa fiche s’ouvre, avec tout ce qu’on peut y coller.' : 'Le Dortoir n’est pas encore fini : finis une nuit de plus, puis touche-le pour ouvrir sa fiche.'; }, enter: () => { TUTO.flags.room = null; if (UI.build) closeBuild(); }, cells: () => cellsOfType('dortoir'), until: () => (TUTO.flags.room === 'dortoir' && S.rooms.some(r => r.t === 'dortoir' && r.built)) || S.furn.some(f => FURN[f.t] && FURN[f.t].beds && roomAt(f.x, f.y) && roomAt(f.x, f.y).t === 'dortoir') },
   { id: 'meuble', t: 'Meuble-la', x: 'Dans la fiche, la liste « Ajouter » montre chaque meuble avec ses effets (grisé s’il ne se pose pas encore). Prends la {furn:paillasse} offerte (« Coller ici »), puis colle-la sur une case du Dortoir. Chaque lit accueille une créature de plus, et un Dortoir meublé attire les gobelins dès l’aube suivante. (Fiche fermée ? Touche le Dortoir.)', target: '[data-take="paillasse"]', cells: () => cellsOfType('dortoir'), until: () => S.furn.some(f => FURN[f.t] && FURN[f.t].beds && roomAt(f.x, f.y) && roomAt(f.x, f.y).t === 'dortoir') },
   { id: 'repas', t: 'Pense aux repas', x: 'En haut, le bol 🍲 compare les bouches à nourrir et les repas produits. Le Cœur nourrit 3 créatures ; ensuite il te faut un {room:potager} ou une {room:cuisine} meublés. Voir {c:lits_repas}.', target: '#res [data-k="food"]', until: hasFood, btn: 'later' },
   { id: 'creature', t: 'Fais connaissance', x: 'Touche une créature dans le château, ou ouvre la liste de tes créatures (🐾, en haut à gauche), pour voir sa fiche : caractère, envies, humeur, poste.', target: '#btnCrit', until: () => TUTO.flags.creature },
   { id: 'caresse', t: 'Ses envies', x: 'Chaque créature déclare une envie (✦) : son sticker préféré, un poste dans sa pièce, un·e ami·e… Comble-la et la récompense tombe toute seule : loyauté, expérience, cadeaux. Elle cache aussi un rêve secret (💭) : elle te le confiera quand elle te fera confiance, à moins qu’un ragot de taverne ne le trahisse. Voir {c:missions}.', target: '#mEnvie', btn: 'next' },
   { id: 'piege', t: 'Prépare l’accueil des héros', x: 'Les aventuriers viendront par le plus court chemin jusqu’au Cœur. Touche le bouton des empreintes (en bas à droite) pour le voir, puis colle un piège (Construire, onglet Pièges) dans un couloir sur ce chemin. Voir {c:pieges}.', target: '#btnPath', enter: () => setTab('def'), until: () => S.defs.length > 0, btn: 'later' },
-  { id: 'gardes', t: 'Poste des gardes', x: 'Le bouton bouclier (en bas à droite) ouvre le mode Gardes : glisse une créature de la liste de gauche sur une pièce ou un couloir du chemin des héros (en doré). Elle y arrêtera la bande. Le nombre de gardes est limité ; les autres défendent le Cœur. Voir {c:postes}.', target: '#btnGuards', until: () => typeof guardCount === 'function' && guardCount() > 0, btn: 'later' },
+  { id: 'gardes', t: 'Poste des gardes', x: 'Le bouton bouclier (en bas à droite) ouvre le mode Gardes : glisse une créature de la liste de gauche sur une pièce du chemin des héros (en doré). Elle y arrêtera la bande. Le nombre de gardes est limité ; les autres défendent le Cœur. Voir {c:postes}.', target: '#btnGuards', until: () => typeof guardCount === 'function' && guardCount() > 0, btn: 'later' },
   { id: 'jetons', t: 'Pendant l’invasion', x: 'Quand des héros attaquent, ne reste pas les bras croisés : tes jetons du Cœur servent à semer de l’or, claquer les portes, sonner la cloche ou provoquer un éboulement. Si tu laisses faire, la bande arrive presque toujours à ses fins ! Voir {c:invasion}.', btn: 'next' },
   { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid (la carte au trésor, en bas à droite) envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
   { id: 'horloges', t: 'Surveille tes horloges', x: 'En haut : la {c:calamite|Calamité} (rouge) monte quand le château va mal, la {c:menace|Menace} (bleue) quand le village s’agace. Pleine, la Menace amène des aventuriers. Et tous les 5 nuits, c’est jour de paie : garde de l’or pour tes créatures.', target: '#clocks', btn: 'next' },
@@ -7833,26 +7877,31 @@ function advisorShow(o) {
   a.innerHTML = `<div class="adv-pic"><img alt="" src="${portrait('diablotin')}"></div><div class="adv-box"><div class="adv-head"><b>${esc(o.title)}</b>${o.step ? `<small>${o.step}/${o.total}</small>` : ''}</div>
     <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
 }
-function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.tip = null; }
+function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.tip = null; TUTO.tipObj = null; }
 function showStep(st) {
   const i = TUTO_STEPS.indexOf(st), btns = [];
   if (st.btn === 'next') btns.push({ id: 'next', label: 'Suivant', pri: true });
   if (st.btn === 'later') btns.push({ id: 'next', label: 'Plus tard' });
   if (st.btn === 'end') btns.push({ id: 'end', label: 'Terminer', pri: true }, { id: 'grim', label: '📖 Ouvrir le Grimoire' });
+  if (!st.btn) btns.push({ id: 'hide', label: 'Plus tard' });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
   advisorShow({ title: st.t, text: st.x, step: i + 1, total: TUTO_STEPS.length, buttons: btns, skip: st.btn !== 'end', cls: 'tuto' });
 }
-function nextStep() { if (!S.tuto) return; S.tuto.i++; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
+function nextStep() { if (!S.tuto) return; const hid = !!S.tuto.hid; S.tuto.i++; delete S.tuto.hid; delete S.tuto.n0; if (hid && TUTO_STEPS[S.tuto.i]) S.tuto.hid = TUTO_STEPS[S.tuto.i].id; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
 function startTutorial() { S.tuto = { on: true, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; save(); tutoTick(); }
 function tutoTick() {
   document.querySelectorAll('.tuto-glow').forEach(e => e.classList.remove('tuto-glow'));
   V.tutoCells = null;
-  if (!S || !S.started || UI.busy || ADMIN.open || VISIT || COOP.role === 'guest') { const a = $('#advisor'); if (a) a.hidden = true; return; }
+  const wv = document.getElementById('world');
+  if (!S || !S.started || UI.busy || ADMIN.open || VISIT || COOP.role === 'guest' || (wv && !wv.hidden) || document.body.classList.contains('crawling')) { const a = $('#advisor'); if (a) a.hidden = true; return; }
+  if (TUTO.of !== S) { TUTO.of = S; TUTO.pending = null; TUTO.shown = null; TUTO.flags = {}; TUTO.tip = null; TUTO.tipObj = null; TUTO.cam0 = null; }
   const T = S.tuto;
   if (T && T.on) {
+    if (TUTO.pending) { TUTO.pending = null; renderGoals(); }   // pas de conseil 💡 pendant le tutoriel
     const st = TUTO_STEPS[T.i];
     if (!st) { T.on = false; T.done = true; save(); advisorHide(); return; }
     if ($('#modalRoot').children.length && !(st.target && document.querySelector('#modalRoot ' + st.target))) { $('#advisor').hidden = true; if (st.until) { let ok = false; try { ok = !!st.until(); } catch (e) {} if (ok) nextStep(); } return; }
-    if (TUTO.shown !== st.id) { TUTO.shown = st.id; if (st.enter) st.enter(); TUTO.cells = st.cells ? st.cells() : null; showStep(st); }
+    if (T.hid === st.id) { $('#advisor').hidden = true; let ok = false; try { ok = !!(st.until && st.until()); } catch (e) {} if (ok) nextStep(); return; }   // rangée par le joueur : elle attend sans s'afficher
+    if (TUTO.shown !== st.id) { TUTO.shown = st.id; if (st.enter) st.enter(); if (st.target && UI.build && innerWidth <= 640 && !document.querySelector('#hudBottom ' + st.target)) closeBuild(); TUTO.cells = st.cells ? st.cells() : null; showStep(st); }
     else if ($('#advisor').hidden) showStep(st);
     if (st.target) { const el = document.querySelector(st.target); if (el) { el.classList.add('tuto-glow'); const bd = el.closest('.backdrop'); if (bd) { bd.classList.add('tuto-side'); if (TUTO.scrolled !== st.id) { TUTO.scrolled = st.id; el.scrollIntoView({ block: 'end', behavior: 'smooth' }); } } } }   // dans une fiche : on amène l'élément sous les yeux, en bas, hors du conseiller
     V.tutoCells = TUTO.cells;
@@ -7863,8 +7912,13 @@ function tutoTick() {
   if (!T) { S.tuto = { on: false, i: 0, asked: true }; save(); if (S.night > 1) advisorShow({ title: 'Du nouveau au château !', text: 'Le Grimoire (📖) explique désormais toutes les mécaniques, et je peux te faire un tutoriel pas à pas. On y va ?', buttons: [{ id: 'start', label: 'Lancer le tutoriel', pri: true }, { id: 'ok', label: 'Non merci' }] }); return; }
   // les conseils ne s'imposent plus : ils attendent dans une pastille 💡, à droite
   if (S.tipsOff) { if (TUTO.pending) { TUTO.pending = null; renderGoals(); } return; }
-  if (TUTO.pending) return;
-  const tip = TIPS.find(t => { if (S.tips && S.tips[t.id]) return false; try { return t.when(); } catch (e) { return false; } });
+  if (TUTO.pending) { const p = TUTO.pending; let ok = false; try { ok = !(S.tips && S.tips[p.id]) && p.when(); } catch (e) {} if (ok) return; TUTO.pending = null; renderGoals(); }
+  // 12. une bulle de conseil cachée par la nuit, la carte ou une expédition revient ensuite
+  if (TUTO.tip && TUTO.tipObj && $('#advisor').hidden) { const t = TUTO.tipObj; advisorShow({ title: t.t, text: t.x, buttons: [{ id: 'ok', label: 'Compris', pri: true }], wiki: t.wiki, cls: 'tip' }); TUTO.tip = t.id; return; }
+  // 9. un nouveau conseil par nuit au plus, et pas celui qu'une pastille dit déjà
+  if (S.tipN === S.night) return;
+  const DUP = { faim: 'food', lits: 'beds', palier: 'tier', renommee: 'fame' };
+  const tip = TIPS.find(t => { if (S.tips && S.tips[t.id]) return false; if (DUP[t.id] && document.querySelector(`#notifs [data-n="${DUP[t.id]}"]`)) return false; try { return t.when(); } catch (e) { return false; } });
   if (tip) { TUTO.pending = tip; renderGoals(); }
 }
 function bindTutorial() {
@@ -7873,22 +7927,24 @@ function bindTutorial() {
     const b = e.target.closest('[data-adv]'); if (!b) return;
     const act = b.dataset.adv;
     if (act === 'next') nextStep();
-    else if (act === 'skip') { S.tuto.on = false; S.tuto.skipped = true; save(); advisorHide(); toast('Tutoriel passé. Tu peux le relancer depuis le menu ⚙️.'); }
+    else if (act === 'skip') { S.tuto.on = false; S.tuto.skipped = true; save(); advisorHide(); toast('Tutoriel passé. Tu peux le relancer depuis le menu ☰.'); }
     else if (act === 'end') { S.tuto.on = false; S.tuto.done = true; save(); advisorHide(); }
     else if (act === 'grim') { S.tuto.on = false; S.tuto.done = true; save(); advisorHide(); openGrimoire(); }
     else if (act === 'ok') advisorHide();
+    else if (act === 'hide') { const st = S.tuto && TUTO_STEPS[S.tuto.i]; if (st) { S.tuto.hid = st.id; save(); } advisorHide(); if (typeof renderGoals === 'function') renderGoals(); toast('Gribouille attend : la pastille 🎓, à droite, rouvre le tutoriel.'); }
     else if (act === 'wiki') { advisorHide(); openGrimoire(b.dataset.wid); }
     else if (act === 'start') startTutorial();
   });
   $('#res').addEventListener('click', e => { const c = e.target.closest('[data-k]'); if (c && c.dataset.k === 'glow') { if (!UI.busy) openRadiance(); return; } if (c && CHIP_WIKI[c.dataset.k]) openGrimoire(CHIP_WIKI[c.dataset.k]); });
   $('#clocks').addEventListener('click', e => { const d = e.target.closest('.dial'); if (d) openGrimoire(d === $('#clocks').firstElementChild ? 'calamite' : 'menace'); });
-  $('#sheet').addEventListener('contextmenu', e => { const c = e.target.closest('.card'); if (!c) return; e.preventDefault(); openGrimoire(`${c.dataset.kind}:${c.dataset.t}`); });
+  $('#sheet').addEventListener('contextmenu', e => { const c = e.target.closest('.card'); if (!c) return; e.preventDefault(); if (typeof TOUCHUI !== 'undefined' && TOUCHUI.on) return; openGrimoire(`${c.dataset.kind}:${c.dataset.t}`); });
   $('#modalRoot').addEventListener('click', e => { const b = e.target.closest('[data-wiki-open]'); if (b) openGrimoire(b.dataset.wikiOpen); });
+  $('#zfit').addEventListener('click', () => { TUTO.flags.cam = true; });
   setInterval(tutoTick, 700);
 }
 function showPendingTip() {
   const tip = TUTO.pending; if (!tip) return;
-  TUTO.pending = null; (S.tips = S.tips || {})[tip.id] = true; save(); TUTO.tip = tip.id;
+  TUTO.pending = null; (S.tips = S.tips || {})[tip.id] = true; S.tipN = S.night; save(); TUTO.tip = tip.id; TUTO.tipObj = tip;
   advisorShow({ title: tip.t, text: tip.x, buttons: [{ id: 'ok', label: 'Compris', pri: true }], wiki: tip.wiki, cls: 'tip' }); renderGoals();
 }
 
@@ -7977,7 +8033,7 @@ function announceAch(list) {
   list.forEach((a, i) => setTimeout(() => { toast(`🏆 Haut fait : ${a.name} → ${a.pw}`); sfx('chime'); }, i * 900));
 }
 TIPS.push(
-  { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 à gauche. Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
+  { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 dans la colonne de gauche (le bouton 🐾 la déplie si elle est rangée). Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
   { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'active'), t: 'Des envies', x: 'Chaque créature déclare une envie (✦ sur sa fiche, liste 📜 à gauche). Comble-la : la récompense tombe toute seule (loyauté, expérience, cadeaux). Elle cache aussi un rêve secret : à toi de le découvrir.', wiki: 'missions' },
   { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Comble son envie ou réalise son rêve secret pour la retenir… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
   { id: 'haut1', when: () => Object.keys(S.ach || {}).length >= 1, t: 'Premier haut fait !', x: 'Chaque haut fait débloque un pouvoir permanent pour ton château. Retrouve-les tous dans 🏆 Hauts faits.', wiki: 'hautsfaits' },
@@ -9686,25 +9742,38 @@ function mapDom() {
   box.querySelector('.wtop').addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; const k = b.dataset.w;
     if (k === 'close') closeWorld(); else if (k === 'center') { MAPV.sel = siteById('home'); mapCenter(0, 0); renderMapPanel(); } else if (k === 'in') mapZoom(1.25); else if (k === 'out') mapZoom(.8); else if (k === 'help') openGrimoire('carte'); });
   box.querySelector('#wpanel').addEventListener('click', mapPanelClick);
-  wcv.addEventListener('pointerdown', e => { try { wcv.setPointerCapture(e.pointerId); } catch (x) {} MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (MAPV.ptr.size === 1) MAPV.drag = { x: e.clientX, y: e.clientY, cx: MAPV.cam.x, cy: MAPV.cam.y, moved: false }; else if (MAPV.ptr.size === 2) { const [a, b] = [...MAPV.ptr.values()]; MAPV.drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), s: MAPV.cam.s, moved: true }; } });
+  // reprend le geste avec les doigts encore posés : un doigt déplace, deux pincent (sans ça, relever un doigt après un pincement cassait la vue)
+  const grip = moved => { const p = [...MAPV.ptr.values()]; if (!p.length) MAPV.drag = null; else if (p.length === 1) MAPV.drag = { x: p[0].x, y: p[0].y, cx: MAPV.cam.x, cy: MAPV.cam.y, moved }; else MAPV.drag = { pinch: Math.max(1, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), s: MAPV.cam.s, moved: true }; };
+  wcv.addEventListener('pointerdown', e => { try { wcv.setPointerCapture(e.pointerId); } catch (x) {} MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); grip(MAPV.ptr.size > 1); });
   wcv.addEventListener('pointermove', e => {
     if (MAPV.ptr.has(e.pointerId)) MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const d = MAPV.drag; if (!d) return;
     if (d.pinch && MAPV.ptr.size >= 2) { const [a, b] = [...MAPV.ptr.values()]; mapZoomTo(d.s * Math.hypot(a.x - b.x, a.y - b.y) / d.pinch, (a.x + b.x) / 2, (a.y + b.y) / 2); return; }
-    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 6 : 14)) d.moved = true; if (d.moved) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; }
+    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 6 : 14)) d.moved = true; if (d.moved && !d.pinch) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; mapClampCam(); d.cx = MAPV.cam.x - dx; d.cy = MAPV.cam.y - dy; }   // au bord, le retour du doigt repart aussitôt
   });
-  const up = e => { MAPV.ptr.delete(e.pointerId); const d = MAPV.drag; if (MAPV.ptr.size === 0) MAPV.drag = null; if (d && !d.moved && !d.pinch && e.type === 'pointerup') mapClick(e); };
+  const up = e => { if (!MAPV.ptr.has(e.pointerId)) return; MAPV.ptr.delete(e.pointerId); const d = MAPV.drag; grip(true); if (d && !d.moved && !d.pinch && !MAPV.ptr.size && e.type === 'pointerup') mapClick(e); };
   wcv.addEventListener('pointerup', up); wcv.addEventListener('pointercancel', up);
   wcv.addEventListener('wheel', e => { e.preventDefault(); mapZoomTo(MAPV.cam.s * Math.exp(-e.deltaY * .0016), e.clientX, e.clientY); }, { passive: false });
+  // le panneau de droite se cale sous la barre du haut, même quand elle passe sur deux lignes (téléphone couché)
+  const wtop = box.querySelector('.wtop'), fitPanel = () => { const b = wtop.getBoundingClientRect().bottom; if (b > 0) box.style.setProperty('--wtopB', Math.round(b) + 'px'); };
+  MAPV.fit = fitPanel; try { new ResizeObserver(fitPanel).observe(wtop); } catch (x) {} addEventListener('resize', fitPanel);
   document.addEventListener('keydown', e => { if (MAPV.open && e.key === 'Escape' && !$('#modalRoot').children.length) closeWorld(); });
   return box;
 }
-function mapZoomTo(ns, px, py) { const r = $('#wcv').getBoundingClientRect(), s0 = MAPV.cam.s; ns = clamp(ns, .45, 2.6); const wx = (px - r.left - MAPV.cam.x) / s0, wy = (py - r.top - MAPV.cam.y) / s0; MAPV.cam.s = ns; MAPV.cam.x = px - r.left - wx * ns; MAPV.cam.y = py - r.top - wy * ns; }
+function mapZoomTo(ns, px, py) { const r = $('#wcv').getBoundingClientRect(), s0 = MAPV.cam.s; ns = clamp(ns, .45, 2.6); const wx = (px - r.left - MAPV.cam.x) / s0, wy = (py - r.top - MAPV.cam.y) / s0; MAPV.cam.s = ns; MAPV.cam.x = px - r.left - wx * ns; MAPV.cam.y = py - r.top - wy * ns; mapClampCam(); }
 function mapZoom(f) { const r = $('#wcv').getBoundingClientRect(); mapZoomTo(MAPV.cam.s * f, r.left + r.width / 2, r.top + r.height / 2); }
 function mapCenter(q, r) { const cvw = $('#wcv'), [x, y] = hexXY(q, r, HS), wide = innerWidth > 760; MAPV.cam.x = cvw.clientWidth / 2 - x * MAPV.cam.s - (wide ? 160 : 0); MAPV.cam.y = cvw.clientHeight * (wide ? .5 : .3) - y * MAPV.cam.s; }
+// la vue ne quitte jamais la carte : le centre de l'écran reste sur le Val (et une caméra cassée revient au château)
+function mapClampCam(w, h) {
+  const cvw = $('#wcv'); if (w == null) { if (!cvw) return; w = cvw.clientWidth; h = cvw.clientHeight; }
+  const c = MAPV.cam; if (!isFinite(c.s) || c.s <= 0) c.s = 1;
+  if (!isFinite(c.x) || !isFinite(c.y)) { MAPV.drag = null; MAPV.ptr.clear(); mapCenter(0, 0); }
+  const rx = HS * SQ3 * (MAP_R + .6), ry = HS * 1.5 * (MAP_R + .6);
+  c.x = w / 2 - clamp((w / 2 - c.x) / c.s, -rx, rx) * c.s; c.y = h / 2 - clamp((h / 2 - c.y) / c.s, -ry, ry) * c.s;
+}
 function openWorld(focusId) {
   if (VISIT) { toast('La carte, c’est chez toi : rentre d’abord de ta visite.', true); return; }
-  world(); const box = mapDom(); box.hidden = false; MAPV.open = true; MAPV.dirty = true; closeModal(true); dropSticker();
+  world(); const box = mapDom(); box.hidden = false; if (MAPV.fit) MAPV.fit(); MAPV.open = true; MAPV.dirty = true; MAPV.ptr.clear(); MAPV.drag = null; closeModal(true); dropSticker();
   const cvw = $('#wcv'), vr = Math.max(4, visionRadius());
   MAPV.cam.s = clamp(Math.min(cvw.clientWidth / (SQ3 * HS * (2 * vr + 3)), cvw.clientHeight / (1.5 * HS * (2 * vr + 3))), .5, 1.6);
   const f = focusId && allSites().find(s => s.id === focusId); MAPV.sel = f || siteById('home'); mapCenter(MAPV.sel.q, MAPV.sel.r);
@@ -9712,11 +9781,12 @@ function openWorld(focusId) {
   cancelAnimationFrame(MAPV.raf); const loop = t => { if (!MAPV.open) return; MAPV.raf = requestAnimationFrame(loop); drawMap(t); }; MAPV.raf = requestAnimationFrame(loop);
   if (typeof tutoTip === 'function') {}
 }
-function closeWorld() { MAPV.open = false; cancelAnimationFrame(MAPV.raf); const b = $('#world'); if (b) b.hidden = true; sfx('tick'); }
+function closeWorld() { MAPV.open = false; MAPV.ptr.clear(); MAPV.drag = null; cancelAnimationFrame(MAPV.raf); const b = $('#world'); if (b) b.hidden = true; sfx('tick'); }
 function drawMap(t) {
   const cvw = $('#wcv'); if (!cvw) return;
   const dpr = Math.min(2, devicePixelRatio || 1), w = cvw.clientWidth, h = cvw.clientHeight;
   if (cvw.width !== Math.round(w * dpr) || cvw.height !== Math.round(h * dpr)) { cvw.width = Math.round(w * dpr); cvw.height = Math.round(h * dpr); }
+  mapClampCam(w, h);
   const L = MAPV.dirty || !MAPV.layer ? mapLayer() : MAPV.layer, g = cvw.getContext('2d'), k = MAPV.cam.s / MAP_K;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d0a12'; g.fillRect(0, 0, cvw.width, cvw.height);
   g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (MAPV.cam.x - L.ox * k), dpr * (MAPV.cam.y - L.oy * k));
@@ -11061,7 +11131,7 @@ function encounters(path, target) {
   (path || []).forEach(([x, y, z], i) => {
     if (i === 0) return;
     const r = roomAt(x, y, z || 0), d = withZ(z || 0, () => defAt(x, y));
-    if (d && DEFS[d.t]) { const f = DEFS[d.t]; out.push(f.block ? { i, k: 'smash', defId: d.id, label: f.name } : { i, k: 'def', defId: d.id, t: d.t, label: f.name, dmg: defStr(d) }); return; }
+    if (d && DEFS[d.t] && !DEFS[d.t].post) { const f = DEFS[d.t]; out.push(f.block ? { i, k: 'smash', defId: d.id, label: f.name } : { i, k: 'def', defId: d.id, t: d.t, label: f.name, dmg: defStr(d) }); return; }
     if (r && isHall(r) && r.t !== 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Barrage', entry: 0 }); return; }
     if (r && r.t === 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Le porche', entry: 0 }); return; }
     if (r && !isHall(r) && !seen.has(r.id)) {
@@ -11361,6 +11431,7 @@ function* battleGen(plan, R) {
     if (d && DEFS[d.t] && !trapsDone.has(d.id)) {
       trapsDone.add(d.id); const D = DEFS[d.t], label = D.name;
       if (D.block) { R.ev.push({ k: 'smash', i, defId: d.id }); R.smashed = d.id; R.lines.push(['🪓', `Aucun autre chemin : ${who} défonce ta ${label}.`, 'bad']); }
+      else if (D.post) { /* un Poste de garde : le barrage (s'il y a des gardes) se joue juste après */ }
       else if (D.alarm) { alarm = true; R.ev.push({ k: 'alarm', i, defId: d.id }); R.lines.push(['🔔', 'La Cloche d’alarme sonne : les défenseurs de leur cible frappent plus fort (+1).', 'good']); }
       else {
         const thief = D.kind === 'piège' && disarm > 0 ? alive().find(h => h.F.disarm) : null;
@@ -11383,7 +11454,7 @@ function* battleGen(plan, R) {
     }
     // une pièce
     const r = roomAt(pos[0], pos[1]);
-    // un barrage : des gardes postés dans un couloir (ou au porche) arrêtent la bande au passage
+    // un barrage : des gardes postés à un Poste de garde de couloir (ou au porche) arrêtent la bande au passage
     if (r && isHall(r) && !tgSet.has(r.id) && tactic !== 'cible' && !seenRooms.has(r.id)) {
       const gs = guardsIn({ rooms: [r.id] });
       if (gs.length) { seenRooms.add(r.id); const res = yield* runFight({ i, k: 'room', rooms: [r.id], label: r.t === 'porche' ? 'Le porche' : 'Barrage', entry: 0 }, gs, {}); if (res === 'flee') return end('repelled', i); }
@@ -12146,7 +12217,7 @@ const sagaChap = st => SAGAS[st.id] && SAGAS[st.id].ch[st.i];
 const sagaAction = ch => !!ch && !!(ch.pay || ch.choice);
 // le petit sticker 📖 : une intrigue proposée, un nouveau chapitre pas encore lu, ou un choix qui t'attend
 function sagaReady(c) { const o = sagaOf(c); if (!o) return false; return o.offer || !o.st.seen || sagaAction(sagaChap(o.st)); }
-const trapsOnPath = () => { const p = heroRoute() || []; return p.filter(([x, y, z]) => { const d = withZ(z, () => defAt(x, y)); return d && DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm; }).length; };
+const trapsOnPath = () => { const p = heroRoute() || []; return p.filter(([x, y, z]) => { const d = withZ(z, () => defAt(x, y)); return d && DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm && !DEFS[d.t].post; }).length; };
 function sagaNeedMet(c, need, st) {
   if (need.room) return builtCount(need.room) > 0;
   if (need.big) return maxGroup(need.big) >= 2;
@@ -13870,6 +13941,8 @@ async function runCrawl(report) {
   page.addEventListener('pointerdown', e => { ui.touch = e.pointerType !== 'mouse'; });
   page.addEventListener('click', e => {
     const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+    const now = performance.now(), quick = now - (ui.lastTap || 0) < 400; ui.lastTap = now;
+    if (quick && (b.closest('.cp-foot') || b.dataset.a === 'retreat')) return;   // un double toucher ne vaut pas deux choix (le 2e tombait sur « Rentrer au château » de l'écran suivant)
     if (b.dataset.a === 'secret') { if (ui.pending) send({ a: 'secret', v: b.dataset.v, p: 0 }); else if (ui.phase === 'players') ui.secretReq = { p: 0, v: b.dataset.v }; return; }
     if (b.dataset.a === 'auto' && !ui.pending) { ui.auto = !ui.auto; sfx('tick'); b.innerHTML = ui.auto ? '⏸️<span class="lbl"> Reprendre la main</span>' : '🤖<span class="lbl"> Combat auto</span>'; return; }
     send({ a: b.dataset.a, v: b.dataset.v, p: 0, btn: b });
@@ -15051,17 +15124,18 @@ function drawValPreview(cv, w) {
    ========================================================= */
 const guardCap = (s = S) => 3 + 2 * (s.tier || 0) + 2 * (s.rooms || []).filter(r => r.built && r.t === 'garde').length + ((s.craftRank && s.craftRank.guet) >= 2 ? 1 : 0) + ((s.craftRank && s.craftRank.guet) >= 3 ? 1 : 0);   // + le chemin de ronde et les meurtrières des sentinelles
 const roomGuardCap = r => isHall(r) ? (S.craftRank && S.craftRank.guet >= 3 ? 3 : 2) : 1 + 2 * groupSize(r);   // un barrage de couloir : 2 ; une pièce : les places au premier rang d'un combat
-const guardRoomOf = c => c && c.guard ? S.rooms.find(r => r.id === c.guard && r.built) || null : null;
+const guardRoomOf = c => { const r = c && c.guard ? S.rooms.find(o => o.id === c.guard && o.built) : null; return r && guardable(r) ? r : null; };   // un couloir dont on a retiré le poste ne compte plus
 const guardsOfRoom = r => { const ids = new Set(groupOf(r).rooms.map(o => o.id)); return S.creatures.filter(c => !isOut(c) && c.guard && ids.has(c.guard)); };
 const guardCount = () => S.creatures.filter(c => !isOut(c) && guardRoomOf(c)).length;
-const guardable = r => !!r && r.built && r.t !== 'coeur' && !(ROOMS[r.t] || {}).out && !(ROOMS[r.t] || {}).stairs;   // une pièce, ou un couloir (un barrage)
+const hallPost = r => !!r && (S.defs || []).some(d => d.x === r.x && d.y === r.y && zOf(d) === zOf(r) && (DEFS[d.t] || {}).post);
+const guardable = r => !!r && r.built && r.t !== 'coeur' && !(ROOMS[r.t] || {}).out && !(ROOMS[r.t] || {}).stairs && (r.t !== 'couloir' || hallPost(r));   // une pièce, le porche, ou un couloir équipé d'un Poste de garde (un barrage)
 Object.assign(CMD, {
   guard(a) {
     const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
     const r = S.rooms.find(x => x.id === a.room); if (!r || !r.built) return 'Pièce indisponible';
     if (r.t === 'coeur') return 'Le Cœur est défendu par toutes les créatures libres';
-    if (!guardable(r)) return 'Cette pièce ne se garde pas';
+    if (!guardable(r)) return r.t === 'couloir' ? 'Un couloir ne se garde qu’avec un Poste de garde (Construire, onglet Pièges)' : 'Cette pièce ne se garde pas';
     if (c.guard !== r.id && !groupOf(r).rooms.some(o => o.id === c.guard)) {
       if (!guardRoomOf(c) && guardCount() >= guardCap()) return `Plus de poste de garde libre (${guardCap()} au plus) : retire d’abord un garde`;
       if (guardsOfRoom(r).length >= roomGuardCap(r)) return `${ROOMS[r.t].name} : ${roomGuardCap(r)} garde${roomGuardCap(r) > 1 ? 's' : ''} au plus`;
@@ -15086,8 +15160,24 @@ upgradeState = function (s) {
   }
   return s;
 };
+// une autre partie (chargée, nouvelle, visitée) : le mode Gardes ne reste pas ouvert par-dessus
+const renderAllGuards = renderAll;
+renderAll = function (...a) { if (GM.on && (GM.of !== S || (typeof VISIT !== 'undefined' && VISIT))) guardMode(false); return renderAllGuards(...a); };
+// les places de garde sur le chemin des héros (une pièce : son premier rang ; un Poste de garde : 2)
+const routeGuardCap = () => { const seen = new Set(); let n = 0; (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (!guardable(r)) return; const k = groupOf(r).rooms[0].id; if (seen.has(k)) return; seen.add(k); n += roomGuardCap(r); }); return n; };
 const newStateGuards = newState;
-newState = function (...a) { const r = newStateGuards(...a); if (S) S.guardsV = 1; return r; };
+newState = function (...a) { const r = newStateGuards(...a); if (S) { S.guardsV = 1; S.guardsV2 = 1; } return r; };
+// les gardes postés dans un couloir sans Poste de garde rentrent défendre le Cœur (règle d'avant : tout couloir se gardait)
+const upgradeStateHalls = upgradeState;
+upgradeState = function (s) {
+  s = upgradeStateHalls(s);
+  if (s && s.creatures && !s.guardsV2) {
+    s.guardsV2 = 1; let n = 0;
+    s.creatures.forEach(c => { const r = c.guard && (s.rooms || []).find(o => o.id === c.guard); if (r && r.t === 'couloir' && !(s.defs || []).some(d => d.x === r.x && d.y === r.y && zOf(d) === zOf(r) && (DEFS[d.t] || {}).post)) { c.guard = null; n++; } });
+    if (n && Array.isArray(s.log)) s.log.unshift({ n: s.night || 1, text: `🛡️ ${n} garde${n > 1 ? 's' : ''} posté${n > 1 ? 's' : ''} dans des couloirs rentre${n > 1 ? 'nt' : ''} au Cœur : un couloir ne se garde plus qu’avec un Poste de garde (onglet Pièges).`, tone: '' });
+  }
+  return s;
+};
 
 /* ---------- le mode « Gardes » ---------- */
 const GM = { on: false, sel: null, drag: null, hover: null };
@@ -15097,10 +15187,10 @@ function guardHud() {
   if (!h) { h = el('div', 'guardhud panel', ''); h.id = 'guardHud'; $('#game').appendChild(h); h.addEventListener('click', e => { if (e.target.closest('[data-gm="close"]')) guardMode(false); if (e.target.closest('[data-gm="clear"]')) { S.creatures.forEach(c => { c.guard = null; }); afterChange(); sfx('peel'); guardHud(); } }); }
   const n = guardCount(), cap = guardCap(), sel = GM.sel && critter(GM.sel);
   h.innerHTML = `<div class="gh-top"><b>${gi('shield')} Les gardes <span class="gh-n${n >= cap ? ' full' : ''}">${n}/${cap}</span></b><button type="button" class="sbtn" data-gm="clear">Tout retirer</button><button type="button" class="sbtn pri" data-gm="close">Terminé</button></div>
-    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce ou un couloir du château pour l’y poster (ou sa vignette pour la libérer).` : 'Glisse une créature de la liste sur une pièce ou un couloir <b>du chemin des héros</b> (en doré) : elle y arrêtera la bande. Dans un couloir, c’est un barrage de 2 gardes au plus. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur.'}</p>`;
+    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce du château (ou un Poste de garde) pour l’y poster, ou sa vignette pour la libérer.` : 'Glisse une créature de la liste sur une pièce <b>du chemin des héros</b> (en doré) : elle y arrêtera la bande. Un couloir ne se garde qu’avec un <b>Poste de garde</b> (Construire, onglet Pièges) : un barrage de 2 gardes au plus. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur.'}</p>`;
 }
 function guardMode(on) {
-  GM.on = !!on; GM.sel = null; GM.drag = null; GM.hover = null;
+  GM.on = !!on; GM.of = on ? S : null; GM.sel = null; GM.drag = null; GM.hover = null;
   document.body.classList.toggle('guarding', GM.on);
   const b = $('#btnGuards'); if (b) { b.classList.toggle('on', GM.on); b.setAttribute('aria-pressed', GM.on); }
   if (GM.on) { if (UI.build) closeBuild(); dropSticker(); V.guardPath = true; sfx('tick'); } else V.guardPath = false;
@@ -15139,15 +15229,15 @@ function bindGuards() {
   box.addEventListener('pointerdown', e => {
     if (!GM.on) return; const b = e.target.closest('.pt'); if (!b) return;
     const c = critter(b.dataset.crit); if (!c || isOut(c)) return;
-    e.preventDefault(); GM.drag = { id: c.id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null };
+    e.preventDefault(); GM.drag = { id: c.id, pid: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, ghost: null };   // le doigt qui a pris le portrait, et lui seul
   });
   addEventListener('pointermove', e => {
-    const d = GM.drag; if (!d) return;
+    const d = GM.drag; if (!d || e.pointerId !== d.pid) return;
     if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 7) { d.moved = true; const c = critter(d.id); d.ghost = el('div', 'gghost', `<img alt="" src="${portrait(c.sp)}">`); document.body.appendChild(d.ghost); }
     if (d.ghost) { d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px'; const t = document.elementFromPoint(e.clientX, e.clientY); GM.hover = t === cv ? roomAtScreen(e.clientX, e.clientY) : null; d.ghost.classList.toggle('ok', !!(GM.hover && !CMDcheck(d.id, GM.hover))); }
   });
   addEventListener('pointerup', e => {
-    const d = GM.drag; if (!d) return; GM.drag = null; if (d.ghost) d.ghost.remove(); GM.hover = null;
+    const d = GM.drag; if (!d || e.pointerId !== d.pid) return; GM.drag = null; if (d.ghost) d.ghost.remove(); GM.hover = null;
     if (!d.moved) { GM.sel = GM.sel === d.id ? null : d.id; sfx('tick'); guardHud(); renderPortraits(); return; }
     const t = document.elementFromPoint(e.clientX, e.clientY);
     if (t === cv) guardDrop(d.id, roomAtScreen(e.clientX, e.clientY));
@@ -15155,7 +15245,7 @@ function bindGuards() {
   });
   box.addEventListener('click', e => { if (GM.on) { e.stopPropagation(); e.preventDefault(); } }, true);
   box.addEventListener('dragstart', e => { if (GM.on) e.preventDefault(); });   // pas de glisser-déposer natif de l'image : c'est nous qui gérons
-  addEventListener('pointercancel', () => { const d = GM.drag; if (d && d.ghost) d.ghost.remove(); GM.drag = null; GM.hover = null; });
+  addEventListener('pointercancel', e => { const d = GM.drag; if (!d || e.pointerId !== d.pid) return; if (d.ghost) d.ghost.remove(); GM.drag = null; GM.hover = null; });
   // une créature choisie, puis une pièce touchée
   cv.addEventListener('click', e => {
     if (!GM.on) return; e.stopPropagation(); e.preventDefault();
@@ -15881,7 +15971,7 @@ openDef = function (id) {
   const desc = m.querySelector('.mbody > p, .modal > p'); if (parts.length && desc) desc.after(el('p', 'hint', `${gi('hammer')} ${parts.join(' ; ')}.`));
 };
 
-TUTO_STEPS.push({ id: 'artisans', when: () => S.creatures.some(c => Object.keys(WORKSHOPS).some(w => craftAff(c, w) > 1 && (WORKSHOPS[w].guard || builtCount(WORKSHOPS[w].room) > 0))), t: 'Les métiers', x: 'Certaines créatures apprennent un métier là où on les poste (depuis leur fiche) : un {sp:nainsombre} à la {room:forge}, une {sp:sorciere} à la {room:bibli} ou au {room:labo}, un {sp:troll} à la {room:cuisine}, un {sp:menestrel} à la {room:taverne}… et une {sp:gargouille} en montant la garde. Nuit après nuit, elles progressent : leur métier agit tant qu’elles travaillent, et chaque grade de compagnon ou de maître débloque un savoir pour toujours. Un raid, une expédition ou un combat loin de son poste fait perdre un peu la main.', wiki: 'artisanat' });
+TIPS.push({ id: 'artisans', when: () => S.creatures.some(c => Object.keys(WORKSHOPS).some(w => craftAff(c, w) > 1 && (WORKSHOPS[w].guard || builtCount(WORKSHOPS[w].room) > 0))), t: 'Les métiers', x: 'Certaines créatures apprennent un métier là où on les poste (depuis leur fiche) : un {sp:nainsombre} à la {room:forge}, une {sp:sorciere} à la {room:bibli} ou au {room:labo}, un {sp:troll} à la {room:cuisine}, un {sp:menestrel} à la {room:taverne}… et une {sp:gargouille} en montant la garde. Nuit après nuit, elles progressent : leur métier agit tant qu’elles travaillent, et chaque grade de compagnon ou de maître débloque un savoir pour toujours. Un raid, une expédition ou un combat loin de son poste fait perdre un peu la main.', wiki: 'artisanat' });
 
 WIKI.artisanat = { cat: 'crea', t: 'Les métiers (artisanat)', x: () => `<p>Certaines créatures apprennent un métier là où on les poste (dans leur fiche, « Poste »), ou en montant la garde (mode Gardes). Chaque nuit passée à travailler (sans bouder) fait progresser : <b>apprenti·e</b> (${CRAFT_LVLS[1].n} points), <b>compagnon·ne</b> (${CRAFT_LVLS[2].n}), <b>maître·sse</b> (${CRAFT_LVLS[3].n}). Les créatures nées pour un métier apprennent deux fois plus vite. Une nuit ailleurs (raid, expédition, combat loin de son poste, ou sonnée) fait perdre un point, mais jamais un grade acquis ; une sentinelle qui se bat à son poste, elle, apprend encore plus.</p>
   <p>Tant qu’ils travaillent, les gens d’un métier comptent 1 (apprenti·e), 2 (compagnon·ne) ou 3 points (maître·sse) chacun. Un·e compagnon·ne débloque le savoir de rang 2, un·e maître·sse celui de rang 3 : ils restent à toi pour toujours.</p>
@@ -15955,7 +16045,7 @@ bindSouls = function () {
   try { $('#res').addEventListener('click', e => { if (e.target.closest('[data-k="beds"]')) { e.stopPropagation(); if (!UI.busy) openFame(); } }, true); } catch (e) { console.error(e); }
 };
 
-TUTO_STEPS.push({ id: 'renommee', when: () => S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds(), t: 'Ta renommée a ses limites', x: 'Des lits ne suffisent plus : ton château n’est pas assez connu pour attirer de nouvelles créatures. Touche le compteur de créatures, en haut, pour voir les hauts faits qui ajoutent des places : notoriété, paliers, artefacts, grands chantiers, invasions repoussées…', wiki: 'renommee' });
+TIPS.push({ id: 'renommee', when: () => S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds(), t: 'Ta renommée a ses limites', x: 'Des lits ne suffisent plus : ton château n’est pas assez connu pour attirer de nouvelles créatures. Touche le compteur de créatures, en haut, pour voir les hauts faits qui ajoutent des places : notoriété, paliers, artefacts, grands chantiers, invasions repoussées…', wiki: 'renommee' });
 
 WIKI.renommee = { cat: 'crea', t: 'La renommée (places au château)', x: () => `<p>Une nouvelle créature ne s’installe que s’il reste <b>un lit libre</b> et si ton château est <b>assez renommé</b> pour l’attirer. Au départ, ta renommée attire ${FAME_BASE} créatures ; chaque haut fait ajoute des places, pour toujours :</p>
   <ul>${[...new Set(FAME.map(f => f.fam))].map(k => { const l = FAME.filter(f => f.fam === k); return `<li>${l.map(f => `<b>${esc(f.t)}</b> (${esc(f.need)}) : +${f.n}`).join(' ; ')}</li>`; }).join('')}</ul>
@@ -16223,9 +16313,11 @@ function questProd(w) {
   }, 0);
 }
 // les cibles de raid des quêtes : là tant que l'étape les demande
+var QSYNC_OF = null;   // l'état dont les cibles de quête sont dans RAIDS
 function questSync() {
+  if (typeof VISIT !== 'undefined' && VISIT) return;   // chez un voisin : on ne touche pas aux cibles de chez soi
   Object.keys(RAIDS).forEach(k => { if (RAIDS[k] && RAIDS[k].quest) delete RAIDS[k]; });
-  if (typeof S === 'undefined' || !S || !S.quests) return;
+  if (typeof S === 'undefined' || !S) return; QSYNC_OF = S; if (!S.quests) return;
   S.quests.cur.forEach(q => { const st = qStep(q); if (st && st.target && st.raid) RAIDS[st.target] = { ...st.raid, quest: true }; });
 }
 
@@ -16464,8 +16556,18 @@ bindSouls = function () {
 // une partie chargée : les cibles de raid des quêtes reviennent
 const upgradeStateQuest = upgradeState;
 upgradeState = function (s) { const r = upgradeStateQuest(s); setTimeout(questSync, 0); return r; };
+// l'état a changé (partie chargée, retour de visite, fin de coop) : les cibles suivent avant tout affichage (sinon la pastille du raid plantait le démarrage)
+const renderAllQuest = renderAll;
+renderAll = function (...a) { try { if (typeof S !== 'undefined' && S && S !== QSYNC_OF) questSync(); } catch (e) {} return renderAllQuest(...a); };
+// la nuit : une cible de quête introuvable (quête finie, échouée…) annule le raid au lieu de faire trébucher l'aube
+const runRaidQuest = runRaid;
+runRaid = async function (report) {
+  if (S.raid && !RAIDS[S.raid.target]) { questSync(); if (typeof ensureCrawlSites === 'function') ensureCrawlSites(); }
+  if (S.raid && !RAIDS[S.raid.target]) { S.raid = null; report.push(['🗺️', 'Le raid prévu n’a plus de cible : l’équipe est restée au château.', '']); return; }
+  return runRaidQuest(report);
+};
 
-TUTO_STEPS.push({ id: 'quetes', when: () => !!(S.quests && (S.quests.offers.length || S.quests.cur.length)), t: 'Le journal des quêtes', x: 'Une quête t’attend ! Touche le parchemin (colonne de gauche) pour ouvrir le journal. Chaque quête raconte une petite histoire, étape par étape, et elles changent à chaque partie : des choses à fabriquer (poste des créatures dans la bonne pièce), des plats à cuisiner, des livraisons, des choix, des bandes à repousser, des chasses… et, plus tard, une grande quête et son boss unique.', wiki: 'quetes' });
+TIPS.push({ id: 'quetes', when: () => !!(S.quests && (S.quests.offers.length || S.quests.cur.length)), t: 'Le journal des quêtes', x: 'Une quête t’attend ! Touche le parchemin 📜 de la colonne de gauche (le bouton 🐾 la déplie si elle est rangée) pour ouvrir le journal. Chaque quête raconte une petite histoire, étape par étape, et elles changent à chaque partie : des choses à fabriquer (poste des créatures dans la bonne pièce), des plats à cuisiner, des livraisons, des choix, des bandes à repousser, des chasses… et, plus tard, une grande quête et son boss unique.', wiki: 'quetes' });
 
 WIKI.quetes = { cat: 'bases', t: 'Les quêtes', x: () => `<p>Le <b>journal des quêtes</b> (le parchemin, dans la colonne de gauche) rassemble les grandes histoires du château. Les quêtes sont <b>tirées au sort à chaque partie</b> : des quêtes arrivent au <b>tableau</b> de temps en temps (${QUEST_MAX} en cours au plus), avec leurs donneurs, leurs lieux, leurs objets et leurs bêtes. Une quête se déroule étape par étape ; les étapes suivantes restent cachées jusqu’au bout.</p>
   <ul><li><b>Fabriquer une liste</b> : chaque nuit, les créatures postées dans la bonne pièce (Forge, Atelier, Bibliothèque, Laboratoire, Cuisine, Taverne) y travaillent : 1 point chacune, plus son grade pour les gens de ce {c:artisanat|métier}. ${QUEST_UNIT} points font une pièce.</li>
@@ -16717,6 +16819,9 @@ function hudLayout() {
   // la colonne des créatures s'arrête au-dessus des étages (et de « Construire »)
   if (lp && hb && !lp.hidden) { const lt = lp.getBoundingClientRect().top, bt = hb.getBoundingClientRect().top; if (bt > lt) lp.style.maxHeight = Math.max(120, Math.round(bt - lt - 12)) + 'px'; }
   // les notifications s'arrêtent au-dessus de la mini-carte
+  // feuille de construction ouverte : le conseiller se pose juste au-dessus (sinon il cache les onglets et les cartes qu'il demande de prendre)
+  const sh = document.getElementById('hudBottom'), adv = document.getElementById('advisor');
+  if (sh && !sh.hidden && sh.offsetParent) { const gh = sh.offsetParent.clientHeight, up = gh - sh.offsetTop, ah = adv && !adv.hidden ? adv.offsetHeight : 220; document.documentElement.style.setProperty('--sheetUp', Math.round(Math.max(0, Math.min(up + 10, gh - tb - ah - 8))) + 'px'); }
   if (nt && ha) { const lim = ha.getBoundingClientRect().top - 8; [...nt.children].forEach(n => { n.style.display = ''; }); [...nt.children].forEach(n => { if (n.getBoundingClientRect().bottom > lim) n.style.display = 'none'; }); }   // celles qui ne tiennent pas attendent leur tour (les plus urgentes sont en haut)
 }
 if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
@@ -16724,7 +16829,7 @@ if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
   addEventListener('load', () => requestAnimationFrame(hudLayout));
   try { document.fonts && document.fonts.ready.then(() => requestAnimationFrame(hudLayout)); } catch (e) {}
   setInterval(() => { if (!document.hidden) hudLayout(); }, 2000);   // les compteurs qui grandissent peuvent faire passer la barre du haut sur deux lignes
-  try { const ro = new ResizeObserver(() => requestAnimationFrame(hudLayout)); setTimeout(() => ['hudTop', 'hudBuild', 'hudActions', 'leftPanel'].forEach(id => { const e = document.getElementById(id); if (e) ro.observe(e); }), 0); } catch (e) {}
+  try { const ro = new ResizeObserver(() => requestAnimationFrame(hudLayout)); setTimeout(() => ['hudTop', 'hudBuild', 'hudActions', 'leftPanel', 'hudBottom', 'advisor'].forEach(id => { const e = document.getElementById(id); if (e) ro.observe(e); }), 0); } catch (e) {}
 }
 const renderAllMobile = renderAll;
 renderAll = function (...a) { const r = renderAllMobile(...a); try { hudLayout(); } catch (e) {} return r; };
@@ -16780,13 +16885,16 @@ takeSticker = function (kind, t) {
 };
 const dropStickerTouch = dropSticker;
 dropSticker = function () { dropStickerTouch(); try { document.body.classList.remove('placing'); } catch (e) {} UI.gpt = null; };
-function putHere() { const g = V.ghost; if (!UI.hand || !g || !g.ok) { sfx('bad'); return; } tryPlace({ inside: true, x: g.ax, y: g.ay }, false); if (UI.hand && UI.gpt) { UI.ghostKey = null; updateGhost(UI.gpt); renderHand(); } }
+function putHere() { const g = V.ghost; if (!UI.hand || !g || !g.ok) { sfx('bad'); return; } const pt = ghostPtAt(g.ax, g.ay); tryPlace({ inside: true, x: g.ax, y: g.ay }, false); if (UI.hand) { UI.gpt = UI.lastPt = pt; UI.ghostKey = null; updateGhost(pt); renderHand(); } }
+const rotateHandTouch = rotateHand;
+rotateHand = function () { if (TOUCHUI.on && UI.hand && V.ghost) { const pt = ghostPtAt(V.ghost.ax, V.ghost.ay); UI.gpt = UI.lastPt = pt; } return rotateHandTouch(); };
 const renderHandTouch = renderHand;
 renderHand = function (msg, tone) {
   renderHandTouch(msg, tone);
   if (!UI.hand || !TOUCHUI.on) return;
   const hb = document.getElementById('handbar'); if (!hb) return;
-  if (!msg) { const m = hb.querySelector('.msg'); if (m) m.innerHTML = `<b>${esc(itemName(UI.hand.t))}</b> (${costText(costOf(UI.hand.kind, UI.hand.t))}) : fais-le glisser du doigt, puis « Poser ici ».`; }
+  if (UI.hand.move && !UI.gpt) { document.body.classList.add('placing'); const sp = findSpot(null); UI.gpt = UI.lastPt = sp ? ghostPtAt(sp[0], sp[1]) : (() => { const r = cv.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * .45, mouse: false }; })(); UI.ghostKey = null; updateGhost(UI.gpt); return renderHand(msg, tone); }
+  if (!msg && !UI.hand.move) { const m = hb.querySelector('.msg'); if (m) m.innerHTML = `<b>${esc(itemName(UI.hand.t))}</b> (${costText(costOf(UI.hand.kind, UI.hand.t))}) : fais-le glisser du doigt, puis « Poser ici ».`; }
   const ok = !!(V.ghost && V.ghost.ok), b = el('button', 'pill put' + (ok ? ' ok' : ''), `${gi('check')} Poser ici`); b.id = 'btnPut'; b.type = 'button'; b.disabled = !ok; b.onclick = putHere;
   const drop = hb.querySelector('#btnDrop'); drop ? hb.insertBefore(b, drop) : hb.appendChild(b);
 };
@@ -16833,7 +16941,7 @@ function labelActs() { Object.entries(ACT_LABELS).forEach(([id, t]) => { const b
 const LP_HELP = {
   zfit: 'Recadrer : remet tout le château à l’écran.',
   btnPath: 'Chemin des héros : montre par où passeront les aventuriers, pour y poser tes pièges et tes gardes.',
-  btnGuards: 'Gardes : poste tes créatures sur le chemin des héros (fais glisser leur portrait sur une pièce ou un couloir).',
+  btnGuards: 'Gardes : poste tes créatures sur le chemin des héros (fais glisser leur portrait sur une pièce, ou sur un Poste de garde dans un couloir).',
   btnRaid: 'Raid : envoie une équipe piller les environs, ou partir en expédition dans un donjon. Ça se joue à la fin de la nuit.',
   btnTier: 'Cœur du donjon : monter de palier, ouvrir des étages, agrandir les remparts, lancer un grand chantier.',
   btnVal: 'Le Val des Maîtres : les châteaux des autres joueurs, en ligne.',
@@ -16873,17 +16981,17 @@ function lpShow(el) {
 function lpHide() { if (LP.bubble) LP.bubble.hidden = true; if (LP.card && typeof showTip === 'function') { showTip(null); LP.card = false; } }
 if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
   addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse') return; lpHide();
+    if (e.pointerType === 'mouse') return; lpHide(); LP.fired = false;   // un nouveau geste : le click à venir est le sien
     const el = e.target && e.target.closest && e.target.closest('.card, .notif, button, [role=button], .res, .dial, [title], [aria-label]');
     if (!el || el === cv || el.tagName === 'CANVAS' || (typeof GM !== 'undefined' && GM.on && el.closest('#portraits'))) return;
     clearTimeout(LP.t); LP.x = e.clientX; LP.y = e.clientY;
-    LP.t = setTimeout(() => { LP.t = null; if (!lpText(el) && !el.classList.contains('card')) return; lpShow(el); LP.suppress = performance.now() + 1500; }, 480);
+    LP.t = setTimeout(() => { LP.t = null; if (!lpText(el) && !el.classList.contains('card')) return; lpShow(el); LP.fired = true; }, 480);
   }, true);
   addEventListener('pointermove', e => { if (LP.t && Math.hypot(e.clientX - LP.x, e.clientY - LP.y) > 10) { clearTimeout(LP.t); LP.t = null; } }, true);
   const lpEnd = () => { if (LP.t) { clearTimeout(LP.t); LP.t = null; } if ((LP.bubble && !LP.bubble.hidden) || LP.card) { clearTimeout(LP.hideT); LP.hideT = setTimeout(lpHide, 2200); } };
   addEventListener('pointerup', lpEnd, true); addEventListener('pointercancel', lpEnd, true);
   // après un appui long, le relâchement ne déclenche pas l'action
-  addEventListener('click', e => { if (performance.now() < LP.suppress) { LP.suppress = 0; e.stopPropagation(); e.preventDefault(); } }, true);
+  addEventListener('click', e => { if (LP.fired) { LP.fired = false; e.stopPropagation(); e.preventDefault(); } }, true);   // seulement le click de ce geste-là, même gardé longtemps ; le toucher suivant passe
   addEventListener('contextmenu', e => { if (e.target && e.target.closest && e.target.closest('#game, #modalRoot')) e.preventDefault(); }, true);
   setTimeout(labelActs, 0);
 }
@@ -16891,6 +16999,7 @@ if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
 const TOUCH_HELP = '<b>Au doigt</b><ul><li>Touche une pièce, un meuble ou une créature pour ouvrir sa fiche.</li><li>Un doigt déplace la vue, deux doigts zooment.</li><li>Appui long sur un bouton : ce qu’il fait.</li><li>Pour construire : choisis une carte, fais glisser le sticker du doigt, puis « Poser ici ».</li></ul>';
 function touchHelp(force) {
   if (!force && (typeof uiPrefs !== 'function' || uiPrefs().touchHelp)) return;
+  const adv = document.getElementById('advisor'); if (!force && adv && !adv.hidden) return;   // pas par-dessus Gribouille : il reviendra au prochain toucher
   if (typeof uiPrefs === 'function') uiPrefs({ touchHelp: 1 });
   const d = document.createElement('div'); d.className = 'touchhelp'; d.innerHTML = `${TOUCH_HELP}<button type="button" class="sbtn pri small">C’est noté</button>`;
   document.body.appendChild(d); const bye = () => { d.classList.add('out'); setTimeout(() => d.remove(), 300); };
@@ -16899,7 +17008,34 @@ function touchHelp(force) {
 if (typeof cv !== 'undefined' && cv && cv.addEventListener) cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && S && S.started && !document.querySelector('#modalRoot .modal')) touchHelp(); }, true);
 // au doigt, pas de raccourci clavier dans les boutons
 const renderHandKbd = renderHand;
-renderHand = function (msg, tone) { renderHandKbd(msg, tone); if (TOUCHUI.on) { const r = document.getElementById('btnRot'); if (r) r.textContent = '⟳ Tourner'; } };
+renderHand = function (msg, tone) { if (TOUCHUI.on && UI.handInfo == null) UI.handInfo = false;   // au doigt, le détail des effets reste replié (il cachait la moitié du château) : le bouton « Effets » l'ouvre
+  renderHandKbd(msg, tone); if (TOUCHUI.on) { const r = document.getElementById('btnRot'); if (r) r.textContent = '⟳ Tourner'; } };
+// iPhone : pas de zoom de la page au pincement (Safari ignore parfois user-scalable=no)
+if (typeof document !== 'undefined' && document.addEventListener) ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => { try { e.preventDefault(); } catch (err) {} }, { passive: false }));
+// au doigt, l'étiquette d'une pastille s'affiche quelques secondes quand elle apparaît, puis seule l'icône reste (appui long pour la relire)
+const NFRESH = new Map();
+function notifFresh() {
+  if (!TOUCHUI.on) return; const now = Date.now(), live = new Set();
+  let shown = 0;   // trois étiquettes au plus à la fois (au chargement d'une grosse partie, sept étiquettes couvraient le château)
+  document.querySelectorAll('#notifs .notif').forEach(n => { const k = n.dataset.n + '|' + (n.getAttribute('aria-label') || ''); live.add(k); if (!NFRESH.has(k)) NFRESH.set(k, now); const f = now - NFRESH.get(k) < 7000 && shown < 3 && n.style.display !== 'none'; if (f) shown++; n.classList.toggle('fresh', f); });
+  [...NFRESH.keys()].forEach(k => { if (!live.has(k)) NFRESH.delete(k); });
+}
+const renderGoalsMobile = renderGoals;
+renderGoals = function (...a) { const r = renderGoalsMobile(...a); try { notifFresh(); } catch (e) {} return r; };
+if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => { if (!document.hidden) try { notifFresh(); } catch (e) {} }, 1000);
+// mode Gardes sur petit écran : l'explication se replie à partir de la troisième ouverture (le bouton « ? » la rouvre)
+const guardModeMobile = guardMode;
+guardMode = function (on) { if (on && !GM.on && typeof uiPrefs === 'function') uiPrefs({ ghN: (uiPrefs().ghN || 0) + 1 }); GM.help = false; return guardModeMobile(on); };
+const guardHudMobile = guardHud;
+guardHud = function () {
+  guardHudMobile();
+  const h = typeof document !== 'undefined' && document.getElementById && document.getElementById('guardHud'); if (!h || !GM.on || GM.sel) return;
+  if (!(TOUCHUI.on || innerWidth <= 640) || typeof uiPrefs !== 'function' || (uiPrefs().ghN || 0) <= 2) return;
+  const p = h.querySelector('p'), top = h.querySelector('.gh-top'); if (!p || !top) return;
+  p.hidden = !GM.help;
+  const q = document.createElement('button'); q.type = 'button'; q.className = 'sbtn'; q.textContent = GM.help ? '✕ Aide' : '? Aide'; q.setAttribute('aria-expanded', String(!!GM.help));
+  q.addEventListener('click', () => { GM.help = !GM.help; guardHud(); }); top.insertBefore(q, top.querySelector('[data-gm="clear"]'));
+};
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}

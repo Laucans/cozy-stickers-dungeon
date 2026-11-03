@@ -67,7 +67,7 @@ bindSouls = function () {
   try { $('#res').addEventListener('click', e => { if (e.target.closest('[data-k="beds"]')) { e.stopPropagation(); if (!UI.busy) openFame(); } }, true); } catch (e) { console.error(e); }
 };
 
-TUTO_STEPS.push({ id: 'renommee', when: () => S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds(), t: 'Ta renommée a ses limites', x: 'Des lits ne suffisent plus : ton château n’est pas assez connu pour attirer de nouvelles créatures. Touche le compteur de créatures, en haut, pour voir les hauts faits qui ajoutent des places : notoriété, paliers, artefacts, grands chantiers, invasions repoussées…', wiki: 'renommee' });
+TIPS.push({ id: 'renommee', when: () => S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds(), t: 'Ta renommée a ses limites', x: 'Des lits ne suffisent plus : ton château n’est pas assez connu pour attirer de nouvelles créatures. Touche le compteur de créatures, en haut, pour voir les hauts faits qui ajoutent des places : notoriété, paliers, artefacts, grands chantiers, invasions repoussées…', wiki: 'renommee' });
 
 WIKI.renommee = { cat: 'crea', t: 'La renommée (places au château)', x: () => `<p>Une nouvelle créature ne s’installe que s’il reste <b>un lit libre</b> et si ton château est <b>assez renommé</b> pour l’attirer. Au départ, ta renommée attire ${FAME_BASE} créatures ; chaque haut fait ajoute des places, pour toujours :</p>
   <ul>${[...new Set(FAME.map(f => f.fam))].map(k => { const l = FAME.filter(f => f.fam === k); return `<li>${l.map(f => `<b>${esc(f.t)}</b> (${esc(f.need)}) : +${f.n}`).join(' ; ')}</li>`; }).join('')}</ul>

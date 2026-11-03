@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cozy Stickers Dungeon</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +18,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
+/* au doigt, le navigateur ne zoome ni ne fait glisser la page (le château et la carte du Val ont leur propre zoom) */
+html, body{touch-action:pan-x pan-y; overscroll-behavior:none} html{overflow:hidden}
 body{margin:0; background:var(--night); color:var(--cream); font-family:var(--f-body); font-size:14px; line-height:1.35; overflow:hidden; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0}
 button{font:inherit; color:inherit; cursor:pointer}
 button:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
@@ -999,7 +1001,7 @@ body.visiting .hud-bottom, body.visiting .hud-actions, body.visiting .tracker, b
 .wtop b{font-family:var(--f-display); font-size:22px; color:var(--gold)}
 .wtop #wglow{font-size:13px; color:var(--cream-2)}
 .wtop .wbtns{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
-.wpanel{position:absolute; right:var(--gr); top:calc(var(--gt) + 64px); width:330px; max-height:calc(100% - var(--gt) - var(--gb) - 80px); overflow:auto; padding:10px 14px 14px; color:var(--cream)}
+.wpanel{position:absolute; right:var(--gr); top:calc(var(--wtopB, calc(var(--gt) + 56px)) + 8px); width:330px; max-height:calc(100% - var(--wtopB, calc(var(--gt) + 56px)) - var(--gb) - 16px); overflow:auto; padding:10px 14px 14px; color:var(--cream)}
 .wpanel:empty{display:none}
 .wpanel h3{font-family:var(--f-display); font-size:23px; color:var(--gold); margin:2px 0 4px; line-height:1.05}
 .wpanel h4{font-family:var(--f-display); font-size:17px; margin:10px 0 4px; color:var(--cream)}
@@ -1215,11 +1217,24 @@ body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, bod
   body.building .hud-bottom{left:var(--gl); right:var(--gr); bottom:calc(var(--gb) + 78px)}
 }
 @media (max-width:640px){ .modal{padding:16px 14px} .modal h2{font-size:26px} .modal h3{font-size:18px} }
-@media (max-width:640px){ .guardhud{left:72px; right:8px; padding:8px 10px} .guardhud p{font-size:12.5px; margin:4px 0} }
+@media (max-width:640px){ .guardhud{left:100px; right:8px; padding:8px 10px} .guardhud p{font-size:12.5px; margin:4px 0} }
 /* expédition sur téléphone : les intentions des ennemis restent au-dessus d'eux (la cible se lit en touchant l'ennemi) */
 @media (max-width:420px){ .fint small{display:none} .fints{max-width:100%} .fint{max-width:100%; overflow:hidden} }
 /* la main de cartes tient dans la largeur d'un téléphone (elles se chevauchent un peu plus) */
-@media (max-width:420px){ .hand{padding-left:24px; padding-right:24px} .hand .kcard{margin:0 -21px} .hand:has(> .kcard:nth-child(8)) .kcard{margin:0 -26px} .hand .kcard.sel{z-index:3} }
+@media (max-height:500px) and (min-width:761px){   /* téléphone couché : l'arène et la main de cartes tiennent ensemble à l'écran, sans défiler */
+  .arena{padding:30px 20px 26px; min-height:140px} .finfo{height:56px}
+  .fig{width:74px; padding:2px 0} .fspr{width:56px; height:56px} .cemo{font-size:40px} .fhp{width:66px; height:12px} .fhp em{font-size:9px; line-height:12px} .ffear{width:50px} .fnm{font-size:11px} .fst{min-height:13px; font-size:10.5px}
+  .fig.elite .fspr{width:66px; height:66px} .fig.elite .cemo{font-size:46px} .fig.boss{width:96px} .fig.boss .fspr{width:84px; height:84px} .fig.boss .cemo{font-size:60px} .fig.boss .fhp{width:88px}
+  .fint{font-size:10.5px; padding:1px 5px} .fpow{font-size:9px; padding:0 4px} .eb{font-size:9px; padding:0 2px}
+  .handzone{gap:6px; padding-bottom:max(6px, env(safe-area-inset-bottom))} .energy{width:46px; height:46px; font-size:19px} .hz-btns{flex-direction:row; flex-wrap:wrap; justify-content:flex-end; max-width:210px; padding:0} .hz-btns .sbtn{padding:7px 10px; font-size:13px} .hz-btns .lbl{display:none}
+  .hand{min-height:134px; padding:6px 12px 0}
+  .kcard{width:84px; height:128px; margin:0 -4px} .kcard::before{inset:4px} .kname{margin:7px 5px 0; font-size:11.5px; padding:2px} .kart{margin:3px 6px 0; height:38px} .kimg{height:36px} .kimg.sp{height:40px; margin-top:4px} .kbig{font-size:24px} .kmini, .kbadge{width:18px; height:18px; font-size:10px}
+  .ktype{margin:2px 6px 0; font-size:8px} .ktext{margin:1px 6px 0; font-size:9.2px; -webkit-line-clamp:3} .kwho{display:none}
+  .kcard:hover, .kcard:focus-visible{transform:translateY(-8px) scale(1.04)} .kcard.sel{transform:translateY(-10px) scale(1.05)}
+  .cp-top h2{font-size:18px} .cturn{font-size:20px; padding:8px 16px}
+}
+@media (max-width:760px){ .finfo{align-self:stretch; min-width:0} .fnm{flex:none; white-space:normal; line-height:1.1; text-align:center; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere} .arena{padding-left:20px; padding-right:12px} }   /* arène au téléphone : le nom reste sous sa créature (sur deux lignes au besoin) et la parade des alliés n'est plus coupée au bord */
+@media (max-width:420px){ .hand{padding-left:14px; padding-right:14px; scroll-snap-type:x proximity} .hand .kcard{margin:0 -7px; scroll-snap-align:center} .hand .kcard.sel{z-index:3} }   /* main au doigt : les cartes se chevauchent peu (nom et texte lisibles), la main défile si elle déborde */
 /* poser au doigt : le bandeau du sticker en bas, compact, et le tiroir des cartes s'efface le temps de poser */
 body.touchy .handbar{top:auto; bottom:calc(var(--gb) + 78px); left:var(--gl); right:var(--gr); transform:none; max-width:none; justify-content:center}
 body.touchy .handbar .msg{flex:1 1 100%; text-align:center; font-size:13px} body.touchy .handbar > img.th{display:none} body.touchy .handbar .pill{padding:5px 10px}
@@ -1235,7 +1250,22 @@ body.touchy .albl{display:block}
 body.touchy .acts{row-gap:17px; column-gap:12px; padding-bottom:14px} body.touchy .leftpanel .minis{row-gap:15px}
 @media (max-width:480px){ body.touchy .acts{max-width:128px} }
 @media (max-width:480px) and (pointer:coarse){ .acts{max-width:128px} }
-body.touchy .notif:nth-child(-n+3) .nl{opacity:1; transform:none; max-width:min(160px, 45vw); overflow:hidden; text-overflow:ellipsis; font-size:11.5px; padding:4px 8px; background:rgba(22,15,11,.86); pointer-events:none}
+body.touchy .notif.fresh:not(.hint) .nl{opacity:1; transform:none; max-width:min(160px, 45vw); overflow:hidden; text-overflow:ellipsis; font-size:11.5px; padding:4px 8px; background:rgba(22,15,11,.86); pointer-events:none}
+@media (max-width:900px){ body.building .advisor{bottom:var(--sheetUp, calc(var(--gb) + 282px))} }
+body.touchy.placing .advisor{display:none !important}
+body.touchy .notif .nx{display:flex; width:24px; height:24px; font-size:11px; top:-9px; left:-9px}   /* au doigt, pas de survol : chaque pastille garde sa croix (masquer jusqu'à la nuit suivante ; une Envie, pour de bon) */
+body.touchy .floors button{min-height:36px} body.touchy .handbar .pill{min-height:38px}   /* cibles au doigt : étages, Poser ici, Tourner, Ranger */   /* au doigt, pendant la pose : rien ne cache les cases où coller le sticker */   /* feuille de construction ouverte : le conseiller au-dessus des cartes */
+@media (max-width:900px), (max-height:600px){ .cpage .cmap > .cp-foot{position:sticky; bottom:0; z-index:4; margin:6px -8px 0; padding:10px 8px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(rgba(12,9,14,0), rgba(12,9,14,.94) 35%)} }   /* exploration au téléphone : le bouton pour continuer reste sous le pouce, même au bout d'une longue liste de cartes */
+@media (max-width:900px), (max-height:700px){ .modal .x{position:sticky; top:0; float:right; margin:-8px -8px 4px 10px; z-index:6; box-shadow:0 2px 8px rgba(0,0,0,.25)} }   /* la croix suit le défilement d'une longue fiche (au doigt, pas d'Échap) */
+@media (orientation:landscape) and (max-height:500px){   /* téléphone couché : la mini-carte et la colonne des étages mangeaient toute la hauteur, les pastilles et les créatures disparaissaient */
+  .minimap{width:120px; height:58px; border-radius:11px} .minimap span{font-size:10px; left:6px; bottom:2px}
+  .advisor{left:max(110px, calc(50% - 230px)); right:auto; width:min(460px, calc(100vw - 230px)); bottom:calc(var(--gb) + 74px)} .advisor .adv-box{max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 90px); overflow:auto} .adv-pic{width:52px; height:52px}   /* Gribouille entier à l'écran, entre les colonnes */
+  .powbar{bottom:calc(var(--gb, 0px) + 70px); max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 84px); overflow:auto} .powbar .pw small{display:none}   /* les jetons du Cœur pendant une invasion : en entier */   /* plus petite, mais toujours là : c'est l'entrée de la carte du Val */
+  .hud-build{flex-direction:row; align-items:flex-end}
+  .hud-build .floors{flex-direction:row; align-items:center}
+  .hud-build .floors .flab{display:none}
+  .hud-build .floors button{padding:3px 8px}
+}
 button, .card, .notif, .res, .dial, .pt, .mini, .act{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none}
 body.touchy #crawlPage [data-a="auto"], body.touchy #crawlPage [data-a="flee"]{flex-direction:column; gap:1px; line-height:1}
 body.touchy #crawlPage [data-a="auto"]::after, body.touchy #crawlPage [data-a="flee"]::after{content:attr(aria-label); font:800 9px/1 var(--f-body); white-space:nowrap}

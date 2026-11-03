@@ -261,9 +261,11 @@ function questProd(w) {
   }, 0);
 }
 // les cibles de raid des quêtes : là tant que l'étape les demande
+var QSYNC_OF = null;   // l'état dont les cibles de quête sont dans RAIDS
 function questSync() {
+  if (typeof VISIT !== 'undefined' && VISIT) return;   // chez un voisin : on ne touche pas aux cibles de chez soi
   Object.keys(RAIDS).forEach(k => { if (RAIDS[k] && RAIDS[k].quest) delete RAIDS[k]; });
-  if (typeof S === 'undefined' || !S || !S.quests) return;
+  if (typeof S === 'undefined' || !S) return; QSYNC_OF = S; if (!S.quests) return;
   S.quests.cur.forEach(q => { const st = qStep(q); if (st && st.target && st.raid) RAIDS[st.target] = { ...st.raid, quest: true }; });
 }
 
@@ -502,8 +504,18 @@ bindSouls = function () {
 // une partie chargée : les cibles de raid des quêtes reviennent
 const upgradeStateQuest = upgradeState;
 upgradeState = function (s) { const r = upgradeStateQuest(s); setTimeout(questSync, 0); return r; };
+// l'état a changé (partie chargée, retour de visite, fin de coop) : les cibles suivent avant tout affichage (sinon la pastille du raid plantait le démarrage)
+const renderAllQuest = renderAll;
+renderAll = function (...a) { try { if (typeof S !== 'undefined' && S && S !== QSYNC_OF) questSync(); } catch (e) {} return renderAllQuest(...a); };
+// la nuit : une cible de quête introuvable (quête finie, échouée…) annule le raid au lieu de faire trébucher l'aube
+const runRaidQuest = runRaid;
+runRaid = async function (report) {
+  if (S.raid && !RAIDS[S.raid.target]) { questSync(); if (typeof ensureCrawlSites === 'function') ensureCrawlSites(); }
+  if (S.raid && !RAIDS[S.raid.target]) { S.raid = null; report.push(['🗺️', 'Le raid prévu n’a plus de cible : l’équipe est restée au château.', '']); return; }
+  return runRaidQuest(report);
+};
 
-TUTO_STEPS.push({ id: 'quetes', when: () => !!(S.quests && (S.quests.offers.length || S.quests.cur.length)), t: 'Le journal des quêtes', x: 'Une quête t’attend ! Touche le parchemin (colonne de gauche) pour ouvrir le journal. Chaque quête raconte une petite histoire, étape par étape, et elles changent à chaque partie : des choses à fabriquer (poste des créatures dans la bonne pièce), des plats à cuisiner, des livraisons, des choix, des bandes à repousser, des chasses… et, plus tard, une grande quête et son boss unique.', wiki: 'quetes' });
+TIPS.push({ id: 'quetes', when: () => !!(S.quests && (S.quests.offers.length || S.quests.cur.length)), t: 'Le journal des quêtes', x: 'Une quête t’attend ! Touche le parchemin 📜 de la colonne de gauche (le bouton 🐾 la déplie si elle est rangée) pour ouvrir le journal. Chaque quête raconte une petite histoire, étape par étape, et elles changent à chaque partie : des choses à fabriquer (poste des créatures dans la bonne pièce), des plats à cuisiner, des livraisons, des choix, des bandes à repousser, des chasses… et, plus tard, une grande quête et son boss unique.', wiki: 'quetes' });
 
 WIKI.quetes = { cat: 'bases', t: 'Les quêtes', x: () => `<p>Le <b>journal des quêtes</b> (le parchemin, dans la colonne de gauche) rassemble les grandes histoires du château. Les quêtes sont <b>tirées au sort à chaque partie</b> : des quêtes arrivent au <b>tableau</b> de temps en temps (${QUEST_MAX} en cours au plus), avec leurs donneurs, leurs lieux, leurs objets et leurs bêtes. Une quête se déroule étape par étape ; les étapes suivantes restent cachées jusqu’au bout.</p>
   <ul><li><b>Fabriquer une liste</b> : chaque nuit, les créatures postées dans la bonne pièce (Forge, Atelier, Bibliothèque, Laboratoire, Cuisine, Taverne) y travaillent : 1 point chacune, plus son grade pour les gens de ce {c:artisanat|métier}. ${QUEST_UNIT} points font une pièce.</li>

@@ -35,6 +35,9 @@ function hudLayout() {
   // la colonne des créatures s'arrête au-dessus des étages (et de « Construire »)
   if (lp && hb && !lp.hidden) { const lt = lp.getBoundingClientRect().top, bt = hb.getBoundingClientRect().top; if (bt > lt) lp.style.maxHeight = Math.max(120, Math.round(bt - lt - 12)) + 'px'; }
   // les notifications s'arrêtent au-dessus de la mini-carte
+  // feuille de construction ouverte : le conseiller se pose juste au-dessus (sinon il cache les onglets et les cartes qu'il demande de prendre)
+  const sh = document.getElementById('hudBottom'), adv = document.getElementById('advisor');
+  if (sh && !sh.hidden && sh.offsetParent) { const gh = sh.offsetParent.clientHeight, up = gh - sh.offsetTop, ah = adv && !adv.hidden ? adv.offsetHeight : 220; document.documentElement.style.setProperty('--sheetUp', Math.round(Math.max(0, Math.min(up + 10, gh - tb - ah - 8))) + 'px'); }
   if (nt && ha) { const lim = ha.getBoundingClientRect().top - 8; [...nt.children].forEach(n => { n.style.display = ''; }); [...nt.children].forEach(n => { if (n.getBoundingClientRect().bottom > lim) n.style.display = 'none'; }); }   // celles qui ne tiennent pas attendent leur tour (les plus urgentes sont en haut)
 }
 if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
@@ -42,7 +45,7 @@ if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
   addEventListener('load', () => requestAnimationFrame(hudLayout));
   try { document.fonts && document.fonts.ready.then(() => requestAnimationFrame(hudLayout)); } catch (e) {}
   setInterval(() => { if (!document.hidden) hudLayout(); }, 2000);   // les compteurs qui grandissent peuvent faire passer la barre du haut sur deux lignes
-  try { const ro = new ResizeObserver(() => requestAnimationFrame(hudLayout)); setTimeout(() => ['hudTop', 'hudBuild', 'hudActions', 'leftPanel'].forEach(id => { const e = document.getElementById(id); if (e) ro.observe(e); }), 0); } catch (e) {}
+  try { const ro = new ResizeObserver(() => requestAnimationFrame(hudLayout)); setTimeout(() => ['hudTop', 'hudBuild', 'hudActions', 'leftPanel', 'hudBottom', 'advisor'].forEach(id => { const e = document.getElementById(id); if (e) ro.observe(e); }), 0); } catch (e) {}
 }
 const renderAllMobile = renderAll;
 renderAll = function (...a) { const r = renderAllMobile(...a); try { hudLayout(); } catch (e) {} return r; };
@@ -98,13 +101,16 @@ takeSticker = function (kind, t) {
 };
 const dropStickerTouch = dropSticker;
 dropSticker = function () { dropStickerTouch(); try { document.body.classList.remove('placing'); } catch (e) {} UI.gpt = null; };
-function putHere() { const g = V.ghost; if (!UI.hand || !g || !g.ok) { sfx('bad'); return; } tryPlace({ inside: true, x: g.ax, y: g.ay }, false); if (UI.hand && UI.gpt) { UI.ghostKey = null; updateGhost(UI.gpt); renderHand(); } }
+function putHere() { const g = V.ghost; if (!UI.hand || !g || !g.ok) { sfx('bad'); return; } const pt = ghostPtAt(g.ax, g.ay); tryPlace({ inside: true, x: g.ax, y: g.ay }, false); if (UI.hand) { UI.gpt = UI.lastPt = pt; UI.ghostKey = null; updateGhost(pt); renderHand(); } }
+const rotateHandTouch = rotateHand;
+rotateHand = function () { if (TOUCHUI.on && UI.hand && V.ghost) { const pt = ghostPtAt(V.ghost.ax, V.ghost.ay); UI.gpt = UI.lastPt = pt; } return rotateHandTouch(); };
 const renderHandTouch = renderHand;
 renderHand = function (msg, tone) {
   renderHandTouch(msg, tone);
   if (!UI.hand || !TOUCHUI.on) return;
   const hb = document.getElementById('handbar'); if (!hb) return;
-  if (!msg) { const m = hb.querySelector('.msg'); if (m) m.innerHTML = `<b>${esc(itemName(UI.hand.t))}</b> (${costText(costOf(UI.hand.kind, UI.hand.t))}) : fais-le glisser du doigt, puis « Poser ici ».`; }
+  if (UI.hand.move && !UI.gpt) { document.body.classList.add('placing'); const sp = findSpot(null); UI.gpt = UI.lastPt = sp ? ghostPtAt(sp[0], sp[1]) : (() => { const r = cv.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * .45, mouse: false }; })(); UI.ghostKey = null; updateGhost(UI.gpt); return renderHand(msg, tone); }
+  if (!msg && !UI.hand.move) { const m = hb.querySelector('.msg'); if (m) m.innerHTML = `<b>${esc(itemName(UI.hand.t))}</b> (${costText(costOf(UI.hand.kind, UI.hand.t))}) : fais-le glisser du doigt, puis « Poser ici ».`; }
   const ok = !!(V.ghost && V.ghost.ok), b = el('button', 'pill put' + (ok ? ' ok' : ''), `${gi('check')} Poser ici`); b.id = 'btnPut'; b.type = 'button'; b.disabled = !ok; b.onclick = putHere;
   const drop = hb.querySelector('#btnDrop'); drop ? hb.insertBefore(b, drop) : hb.appendChild(b);
 };
@@ -151,7 +157,7 @@ function labelActs() { Object.entries(ACT_LABELS).forEach(([id, t]) => { const b
 const LP_HELP = {
   zfit: 'Recadrer : remet tout le château à l’écran.',
   btnPath: 'Chemin des héros : montre par où passeront les aventuriers, pour y poser tes pièges et tes gardes.',
-  btnGuards: 'Gardes : poste tes créatures sur le chemin des héros (fais glisser leur portrait sur une pièce ou un couloir).',
+  btnGuards: 'Gardes : poste tes créatures sur le chemin des héros (fais glisser leur portrait sur une pièce, ou sur un Poste de garde dans un couloir).',
   btnRaid: 'Raid : envoie une équipe piller les environs, ou partir en expédition dans un donjon. Ça se joue à la fin de la nuit.',
   btnTier: 'Cœur du donjon : monter de palier, ouvrir des étages, agrandir les remparts, lancer un grand chantier.',
   btnVal: 'Le Val des Maîtres : les châteaux des autres joueurs, en ligne.',
@@ -191,17 +197,17 @@ function lpShow(el) {
 function lpHide() { if (LP.bubble) LP.bubble.hidden = true; if (LP.card && typeof showTip === 'function') { showTip(null); LP.card = false; } }
 if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
   addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse') return; lpHide();
+    if (e.pointerType === 'mouse') return; lpHide(); LP.fired = false;   // un nouveau geste : le click à venir est le sien
     const el = e.target && e.target.closest && e.target.closest('.card, .notif, button, [role=button], .res, .dial, [title], [aria-label]');
     if (!el || el === cv || el.tagName === 'CANVAS' || (typeof GM !== 'undefined' && GM.on && el.closest('#portraits'))) return;
     clearTimeout(LP.t); LP.x = e.clientX; LP.y = e.clientY;
-    LP.t = setTimeout(() => { LP.t = null; if (!lpText(el) && !el.classList.contains('card')) return; lpShow(el); LP.suppress = performance.now() + 1500; }, 480);
+    LP.t = setTimeout(() => { LP.t = null; if (!lpText(el) && !el.classList.contains('card')) return; lpShow(el); LP.fired = true; }, 480);
   }, true);
   addEventListener('pointermove', e => { if (LP.t && Math.hypot(e.clientX - LP.x, e.clientY - LP.y) > 10) { clearTimeout(LP.t); LP.t = null; } }, true);
   const lpEnd = () => { if (LP.t) { clearTimeout(LP.t); LP.t = null; } if ((LP.bubble && !LP.bubble.hidden) || LP.card) { clearTimeout(LP.hideT); LP.hideT = setTimeout(lpHide, 2200); } };
   addEventListener('pointerup', lpEnd, true); addEventListener('pointercancel', lpEnd, true);
   // après un appui long, le relâchement ne déclenche pas l'action
-  addEventListener('click', e => { if (performance.now() < LP.suppress) { LP.suppress = 0; e.stopPropagation(); e.preventDefault(); } }, true);
+  addEventListener('click', e => { if (LP.fired) { LP.fired = false; e.stopPropagation(); e.preventDefault(); } }, true);   // seulement le click de ce geste-là, même gardé longtemps ; le toucher suivant passe
   addEventListener('contextmenu', e => { if (e.target && e.target.closest && e.target.closest('#game, #modalRoot')) e.preventDefault(); }, true);
   setTimeout(labelActs, 0);
 }
@@ -209,6 +215,7 @@ if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
 const TOUCH_HELP = '<b>Au doigt</b><ul><li>Touche une pièce, un meuble ou une créature pour ouvrir sa fiche.</li><li>Un doigt déplace la vue, deux doigts zooment.</li><li>Appui long sur un bouton : ce qu’il fait.</li><li>Pour construire : choisis une carte, fais glisser le sticker du doigt, puis « Poser ici ».</li></ul>';
 function touchHelp(force) {
   if (!force && (typeof uiPrefs !== 'function' || uiPrefs().touchHelp)) return;
+  const adv = document.getElementById('advisor'); if (!force && adv && !adv.hidden) return;   // pas par-dessus Gribouille : il reviendra au prochain toucher
   if (typeof uiPrefs === 'function') uiPrefs({ touchHelp: 1 });
   const d = document.createElement('div'); d.className = 'touchhelp'; d.innerHTML = `${TOUCH_HELP}<button type="button" class="sbtn pri small">C’est noté</button>`;
   document.body.appendChild(d); const bye = () => { d.classList.add('out'); setTimeout(() => d.remove(), 300); };
@@ -217,4 +224,31 @@ function touchHelp(force) {
 if (typeof cv !== 'undefined' && cv && cv.addEventListener) cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && S && S.started && !document.querySelector('#modalRoot .modal')) touchHelp(); }, true);
 // au doigt, pas de raccourci clavier dans les boutons
 const renderHandKbd = renderHand;
-renderHand = function (msg, tone) { renderHandKbd(msg, tone); if (TOUCHUI.on) { const r = document.getElementById('btnRot'); if (r) r.textContent = '⟳ Tourner'; } };
+renderHand = function (msg, tone) { if (TOUCHUI.on && UI.handInfo == null) UI.handInfo = false;   // au doigt, le détail des effets reste replié (il cachait la moitié du château) : le bouton « Effets » l'ouvre
+  renderHandKbd(msg, tone); if (TOUCHUI.on) { const r = document.getElementById('btnRot'); if (r) r.textContent = '⟳ Tourner'; } };
+// iPhone : pas de zoom de la page au pincement (Safari ignore parfois user-scalable=no)
+if (typeof document !== 'undefined' && document.addEventListener) ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => { try { e.preventDefault(); } catch (err) {} }, { passive: false }));
+// au doigt, l'étiquette d'une pastille s'affiche quelques secondes quand elle apparaît, puis seule l'icône reste (appui long pour la relire)
+const NFRESH = new Map();
+function notifFresh() {
+  if (!TOUCHUI.on) return; const now = Date.now(), live = new Set();
+  let shown = 0;   // trois étiquettes au plus à la fois (au chargement d'une grosse partie, sept étiquettes couvraient le château)
+  document.querySelectorAll('#notifs .notif').forEach(n => { const k = n.dataset.n + '|' + (n.getAttribute('aria-label') || ''); live.add(k); if (!NFRESH.has(k)) NFRESH.set(k, now); const f = now - NFRESH.get(k) < 7000 && shown < 3 && n.style.display !== 'none'; if (f) shown++; n.classList.toggle('fresh', f); });
+  [...NFRESH.keys()].forEach(k => { if (!live.has(k)) NFRESH.delete(k); });
+}
+const renderGoalsMobile = renderGoals;
+renderGoals = function (...a) { const r = renderGoalsMobile(...a); try { notifFresh(); } catch (e) {} return r; };
+if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => { if (!document.hidden) try { notifFresh(); } catch (e) {} }, 1000);
+// mode Gardes sur petit écran : l'explication se replie à partir de la troisième ouverture (le bouton « ? » la rouvre)
+const guardModeMobile = guardMode;
+guardMode = function (on) { if (on && !GM.on && typeof uiPrefs === 'function') uiPrefs({ ghN: (uiPrefs().ghN || 0) + 1 }); GM.help = false; return guardModeMobile(on); };
+const guardHudMobile = guardHud;
+guardHud = function () {
+  guardHudMobile();
+  const h = typeof document !== 'undefined' && document.getElementById && document.getElementById('guardHud'); if (!h || !GM.on || GM.sel) return;
+  if (!(TOUCHUI.on || innerWidth <= 640) || typeof uiPrefs !== 'function' || (uiPrefs().ghN || 0) <= 2) return;
+  const p = h.querySelector('p'), top = h.querySelector('.gh-top'); if (!p || !top) return;
+  p.hidden = !GM.help;
+  const q = document.createElement('button'); q.type = 'button'; q.className = 'sbtn'; q.textContent = GM.help ? '✕ Aide' : '? Aide'; q.setAttribute('aria-expanded', String(!!GM.help));
+  q.addEventListener('click', () => { GM.help = !GM.help; guardHud(); }); top.insertBefore(q, top.querySelector('[data-gm="clear"]'));
+};
