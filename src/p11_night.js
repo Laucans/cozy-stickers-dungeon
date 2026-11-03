@@ -317,7 +317,7 @@ function bindEvents() {
     const r = cv.getBoundingClientRect(); UI.lastPt = { x: e.clientX, y: e.clientY, mouse: e.pointerType === 'mouse' };
     if (PTR.has(e.pointerId)) PTR.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (drag && drag.pinch && PTR.size >= 2) { const [a, b] = [...PTR.values()], m = mid(a, b), ns = clamp(drag.s * dist(a, b) / drag.d, CAM.min, CAM.max), wx = (drag.m.x - r.left - drag.cx) / drag.s, wy = (drag.m.y - r.top - drag.cy) / drag.s; CAM.s = ns; CAM.x = m.x - r.left - wx * ns; CAM.y = m.y - r.top - wy * ns; clampCam(); return; }
-    if (drag && PTR.size === 1) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) > 7) drag.moved = true; if (drag.moved) { CAM.user = true; CAM.x = drag.cx + dx; CAM.y = drag.cy + dy; clampCam(); cv.style.cursor = 'grabbing'; } return; }
+    if (drag && PTR.size === 1) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 7 : 14)) drag.moved = true; if (drag.moved) { CAM.user = true; CAM.x = drag.cx + dx; CAM.y = drag.cy + dy; clampCam(); cv.style.cursor = 'grabbing'; } return; }
     if (UI.hand) { if (e.pointerType === 'mouse') updateGhost(UI.lastPt); return; }
     const sx = e.clientX - r.left, sy = e.clientY - r.top, act = pickActor(sx, sy), [gx, gy] = tileAtScreen(sx, sy), tx = Math.floor(gx), ty = Math.floor(gy);
     V.hoverActor = act ? act.id : null; V.hover = !act && roomAt(tx, ty) ? [tx, ty] : null;

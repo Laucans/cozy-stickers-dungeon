@@ -489,7 +489,7 @@ textarea.code{margin-top:8px; font-family:ui-monospace,Menlo,monospace; font-siz
 .guardhud .gh-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap} .guardhud .gh-top b{flex:1; font-family:var(--f-display); font-size:20px; color:var(--red-2)} .guardhud .gh-top .gi{width:26px; height:26px; vertical-align:-6px}
 .guardhud .gh-n{display:inline-block; margin-left:6px; padding:0 9px; border-radius:999px; background:#e9b949; color:var(--ink); font-size:16px} .guardhud .gh-n.full{background:var(--red-2); color:#fff}
 .guardhud p{margin:6px 0 0; font-size:13.5px}
-body.guarding #portraits .pt{cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none} body.guarding #portraits .pt img{-webkit-user-drag:none; user-drag:none; pointer-events:none} body.guarding #portraits .pt.gsel .ring{box-shadow:0 0 0 3px #7ee08a, 0 0 14px #7ee08a}
+body.guarding #portraits .pt{cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none} body.guarding #portraits .pt img{-webkit-user-drag:none; user-drag:none; pointer-events:none} body.guarding #portraits .pt.gsel .ring{box-shadow:0 0 0 3px #7ee08a, 0 0 14px #7ee08a}
 body.guarding #portraits{outline:3px dashed rgba(233,185,73,.7); outline-offset:3px; border-radius:16px}
 #portraits .pt .gbadge{position:absolute; left:-4px; bottom:-2px; width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:#fffdf5; box-shadow:0 0 0 2px var(--ink)} #portraits .pt .gbadge .gi{width:16px; height:16px}
 .gghost{position:fixed; z-index:200; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%; background:#3a2a24; box-shadow:0 0 0 4px #fffdf5, 0 8px 18px rgba(0,0,0,.5); overflow:hidden; pointer-events:none; transform:rotate(-6deg); opacity:.92} .gghost img{width:100%; height:100%; object-fit:cover} .gghost.ok{box-shadow:0 0 0 4px #7ee08a, 0 8px 18px rgba(0,0,0,.5)}
@@ -541,6 +541,10 @@ body.guarding #portraits{outline:3px dashed rgba(233,185,73,.7); outline-offset:
 .qdone li > .gi{width:26px; height:26px; flex:none} .qdone li.off{opacity:.55} .qdone p{margin:3px 0 0; font-size:13.5px}
 .mini{position:relative} .qbadge{position:absolute; top:-5px; right:-5px; min-width:18px; height:18px; padding:0 4px; border-radius:999px; background:#c8413a; color:#fff; font:800 11px/18px Andika, sans-serif; border:2px solid #fffdf5; text-align:center; pointer-events:none}
 .sbtn.small{padding:4px 10px; font-size:12px}
+/* le téléphone : pas de zoom au double toucher sur les boutons, pas de flash gris, et la barre du bas ne bloque le château qu'à ses boutons */
+button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touch-action:manipulation; -webkit-tap-highlight-color:transparent}
+#cv, #wcv{-webkit-tap-highlight-color:transparent; -webkit-touch-callout:none}
+.hud-actions, .hud-actions .acts{pointer-events:none} .hud-actions > *, .hud-actions .acts > *{pointer-events:auto}
 /* le rêve secret d'une créature (sa fiche) */
 .modal p.secret{margin:8px 0; padding:8px 11px; border-radius:12px; background:rgba(122,75,209,.08); border:1.5px dashed #7a4bd1}
 .actbar{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(var(--gb, 0px) + 96px); z-index:44; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; padding:8px 12px; border-radius:22px; background:var(--parch); color:var(--ink); border:3px solid var(--ink); box-shadow:0 6px 18px rgba(0,0,0,.45); width:max-content; max-width:calc(100% - 24px)}
@@ -1188,6 +1192,41 @@ body.visiting .hud-build, body.visiting .hud-actions, body.visiting .notifs, bod
 .vwon{font-weight:800; color:#3d6a22; margin:0}
 .vfinale .big{font-family:var(--f-hand); font-size:21px; line-height:1.3}
 .shop.req{background:#fff3c4}
+/* téléphone : tout tient à l'écran, sans chevauchement (les hauteurs viennent du script : --hudTopB, bas de la barre du haut) */
+.hud-left, .notifs{top:calc(var(--hudTopB, 66px) + 8px)}
+@media (max-width:640px){
+  .tres{flex-wrap:wrap; overflow:visible; row-gap:3px; justify-content:space-between}
+  .tres .res{padding:1px 3px; gap:3px}
+  .hud-left, .notifs{top:calc(var(--hudTopB, 130px) + 8px)}
+}
+@media (max-width:480px){
+  .acts{flex-wrap:wrap; justify-content:flex-end; max-width:118px; row-gap:6px}
+}
+@media (max-width:640px){ .advisor{bottom:calc(var(--gb) + 192px)} .adv-text{font-size:13.5px} }   /* le conseiller juste au-dessus des boutons du bas : le château reste visible */
+/* les fiches ne débordent jamais sur le côté (texte long, listes, barres) */
+.kv{grid-template-columns:auto minmax(0,1fr)} .kv dd{min-width:0; overflow-wrap:anywhere} .kv dd select.sel{max-width:100%}
+.arhead{flex-wrap:wrap} .arhead b{min-width:0} .arcost{white-space:normal}
+.glowbar{flex-wrap:wrap} .glowbar span{min-width:58px}
+.guardhud{top:calc(var(--hudTopB, 84px) + 8px)}
+.modal > h2:first-of-type, .modal .cardhead{padding-right:42px}
+/* téléphone, en construction : place aux cartes et aux étages (la nuit, la mini-carte, les créatures et les notifications attendent) */
+@media (max-width:640px){
+  body.building .hud-actions, body.building .hud-left, body.building .notifs{display:none}
+  body.building .hud-build .floors{max-width:calc(100vw - var(--gl) - var(--gr) - 70px); overflow-x:auto; flex-wrap:nowrap; scrollbar-width:none}
+  body.building .hud-bottom{left:var(--gl); right:var(--gr); bottom:calc(var(--gb) + 78px)}
+}
+@media (max-width:640px){ .modal{padding:16px 14px} .modal h2{font-size:26px} .modal h3{font-size:18px} }
+@media (max-width:640px){ .guardhud{left:72px; right:8px; padding:8px 10px} .guardhud p{font-size:12.5px; margin:4px 0} }
+/* expédition sur téléphone : les intentions des ennemis restent au-dessus d'eux (la cible se lit en touchant l'ennemi) */
+@media (max-width:420px){ .fint small{display:none} .fints{max-width:100%} .fint{max-width:100%; overflow:hidden} }
+/* la main de cartes tient dans la largeur d'un téléphone (elles se chevauchent un peu plus) */
+@media (max-width:420px){ .hand{padding-left:24px; padding-right:24px} .hand .kcard{margin:0 -21px} .hand:has(> .kcard:nth-child(8)) .kcard{margin:0 -26px} .hand .kcard.sel{z-index:3} }
+/* au doigt : des cases et des petits boutons assez grands pour être touchés */
+@media (pointer:coarse){
+  input[type=checkbox], input[type=radio]{width:22px; height:22px}
+  .sbtn.small, .linkbtn{min-height:32px}
+  .modal .x{width:40px; height:40px}
+}
 </style>
 <meta name="description" content="Un petit château maléfique mais douillet : colle des pièces et des meubles comme des stickers, accueille des créatures attachantes, repousse les aventuriers… et rends visite aux autres Maîtres du Val.">
 <meta name="theme-color" content="#0b0910">
@@ -6909,7 +6948,7 @@ function bindEvents() {
     const r = cv.getBoundingClientRect(); UI.lastPt = { x: e.clientX, y: e.clientY, mouse: e.pointerType === 'mouse' };
     if (PTR.has(e.pointerId)) PTR.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (drag && drag.pinch && PTR.size >= 2) { const [a, b] = [...PTR.values()], m = mid(a, b), ns = clamp(drag.s * dist(a, b) / drag.d, CAM.min, CAM.max), wx = (drag.m.x - r.left - drag.cx) / drag.s, wy = (drag.m.y - r.top - drag.cy) / drag.s; CAM.s = ns; CAM.x = m.x - r.left - wx * ns; CAM.y = m.y - r.top - wy * ns; clampCam(); return; }
-    if (drag && PTR.size === 1) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) > 7) drag.moved = true; if (drag.moved) { CAM.user = true; CAM.x = drag.cx + dx; CAM.y = drag.cy + dy; clampCam(); cv.style.cursor = 'grabbing'; } return; }
+    if (drag && PTR.size === 1) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 7 : 14)) drag.moved = true; if (drag.moved) { CAM.user = true; CAM.x = drag.cx + dx; CAM.y = drag.cy + dy; clampCam(); cv.style.cursor = 'grabbing'; } return; }
     if (UI.hand) { if (e.pointerType === 'mouse') updateGhost(UI.lastPt); return; }
     const sx = e.clientX - r.left, sy = e.clientY - r.top, act = pickActor(sx, sy), [gx, gy] = tileAtScreen(sx, sy), tx = Math.floor(gx), ty = Math.floor(gy);
     V.hoverActor = act ? act.id : null; V.hover = !act && roomAt(tx, ty) ? [tx, ty] : null;
@@ -9629,7 +9668,7 @@ function mapDom() {
     if (MAPV.ptr.has(e.pointerId)) MAPV.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const d = MAPV.drag; if (!d) return;
     if (d.pinch && MAPV.ptr.size >= 2) { const [a, b] = [...MAPV.ptr.values()]; mapZoomTo(d.s * Math.hypot(a.x - b.x, a.y - b.y) / d.pinch, (a.x + b.x) / 2, (a.y + b.y) / 2); return; }
-    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > 6) d.moved = true; if (d.moved) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; }
+    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 6 : 14)) d.moved = true; if (d.moved) { MAPV.cam.x = d.cx + dx; MAPV.cam.y = d.cy + dy; }
   });
   const up = e => { MAPV.ptr.delete(e.pointerId); const d = MAPV.drag; if (MAPV.ptr.size === 0) MAPV.drag = null; if (d && !d.moved && !d.pinch && e.type === 'pointerup') mapClick(e); };
   wcv.addEventListener('pointerup', up); wcv.addEventListener('pointercancel', up);
@@ -16618,6 +16657,54 @@ crawlAnimator = function (body, page) {
 };
 
 WIKI.emotions = { cat: 'crea', t: 'Les émotions des stickers', x: () => `<p>Chaque créature a ses stickers d’émotion, qui remplacent son sticker habituel le temps d’un instant :</p><ul><li><b>Douleur</b> quand elle prend un coup (et de temps en temps quand elle est sonnée) ; <b>K.O.</b> quand elle tombe.</li><li><b>Heureuse</b> quand elle est ravie (4 cœurs et plus), qu’elle danse ou qu’une envie est comblée.</li><li><b>Triste</b> quand elle broie du noir, <b>agacée</b> quand elle est furieuse ou qu’elle se chamaille.</li><li><b>Endormie</b> pendant la sieste, <b>apeurée</b> quand des héros rôdent dans le château.</li></ul><p>Sa vignette, dans la liste, montre son humeur du moment ; en expédition, chaque combattant grimace, sourit ou tombe K.O. au fil des coups.</p>` };
+/* =========================================================
+   Le téléphone : un doigt n'est pas une souris
+   - Le « clic fantôme » : sur le château et sur la carte, un
+     toucher agit dès que le doigt se lève ; le navigateur envoie
+     ensuite un click au même endroit, qui tombait sur le panneau
+     tout juste ouvert (et le refermait, ou touchait un de ses
+     boutons). On l'avale.
+   - En mode Gardes, toucher une pièce y poste la créature choisie
+     au lieu d'ouvrir sa fiche.
+   - La fiche « Nouvelle espèce » se ferme en touchant le château.
+   ========================================================= */
+const GHOST = { t: 0, x: 0, y: 0, el: null };
+if (typeof addEventListener === 'function') {
+  addEventListener('pointerup', e => { if (e.pointerType === 'mouse') return; GHOST.t = performance.now() + 600; GHOST.x = e.clientX; GHOST.y = e.clientY; GHOST.el = e.target; }, true);
+  addEventListener('click', e => {
+    if (performance.now() > GHOST.t || !GHOST.el) return;
+    const born = GHOST.el.tagName === 'CANVAS' || !GHOST.el.isConnected;   // un toucher sur une toile (château, carte), ou un élément qui a disparu entre-temps
+    if (!born || e.target === GHOST.el || Math.hypot(e.clientX - GHOST.x, e.clientY - GHOST.y) > 40) return;
+    GHOST.t = 0; e.stopPropagation(); e.preventDefault();
+  }, true);
+}
+const tapMobile = tap;
+tap = function (e) {
+  if (typeof GM !== 'undefined' && GM.on) return;   // le mode Gardes s'en charge (au click)
+  if (typeof V !== 'undefined' && V.spotOn) { const b = document.querySelector('.spot #spGo'); if (b) b.click(); return; }
+  return tapMobile(e);
+};
+
+/* ---------- la mise en page : les colonnes de gauche et de droite entre la barre du haut et le bas de l'écran ---------- */
+function hudLayout() {
+  if (typeof document === 'undefined' || !document.getElementById) return;
+  const top = document.getElementById('hudTop'), lp = document.getElementById('leftPanel'), hb = document.getElementById('hudBuild'), nt = document.getElementById('notifs'), ha = document.getElementById('hudActions');
+  if (!top) return;
+  const tb = Math.round(top.getBoundingClientRect().bottom); document.documentElement.style.setProperty('--hudTopB', tb + 'px');
+  // la colonne des créatures s'arrête au-dessus des étages (et de « Construire »)
+  if (lp && hb && !lp.hidden) { const lt = lp.getBoundingClientRect().top, bt = hb.getBoundingClientRect().top; if (bt > lt) lp.style.maxHeight = Math.max(120, Math.round(bt - lt - 12)) + 'px'; }
+  // les notifications s'arrêtent au-dessus de la mini-carte
+  if (nt && ha) { const lim = ha.getBoundingClientRect().top - 8; [...nt.children].forEach(n => { n.style.display = ''; }); [...nt.children].forEach(n => { if (n.getBoundingClientRect().bottom > lim) n.style.display = 'none'; }); }   // celles qui ne tiennent pas attendent leur tour (les plus urgentes sont en haut)
+}
+if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
+  addEventListener('resize', () => requestAnimationFrame(hudLayout));
+  addEventListener('load', () => requestAnimationFrame(hudLayout));
+  try { document.fonts && document.fonts.ready.then(() => requestAnimationFrame(hudLayout)); } catch (e) {}
+  setInterval(() => { if (!document.hidden) hudLayout(); }, 2000);   // les compteurs qui grandissent peuvent faire passer la barre du haut sur deux lignes
+  try { const ro = new ResizeObserver(() => requestAnimationFrame(hudLayout)); setTimeout(() => ['hudTop', 'hudBuild', 'hudActions', 'leftPanel'].forEach(id => { const e = document.getElementById(id); if (e) ro.observe(e); }), 0); } catch (e) {}
+}
+const renderAllMobile = renderAll;
+renderAll = function (...a) { const r = renderAllMobile(...a); try { hudLayout(); } catch (e) {} return r; };
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}
