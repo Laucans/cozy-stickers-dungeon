@@ -80,47 +80,107 @@ function siteIcon(g, s, x, y, k) {
 }
 function mLabel(g, text, x, y, size, col = '#f3e3c0') {
   g.font = `800 ${size}px "Grenze Gotisch", Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'top';
-  g.lineWidth = size * .28; g.strokeStyle = 'rgba(20,12,8,.92)'; g.strokeText(text, x, y); g.fillStyle = col; g.fillText(text, x, y);
+  g.lineWidth = size * .28; g.strokeStyle = 'rgba(20,12,8,.92)'; g.fillStyle = col; richText(g, text, x, y, size, true);
 }
 
 /* ---------- calque statique (refait quand la carte se dévoile) ---------- */
+/* ---------- la carte en stickers ----------
+   Les cases sont des tuiles épaisses, comme un plateau de jeu de société ; arbres, montagnes, collines, roseaux,
+   bruyère et lieux sont de petits autocollants (liseré blanc, ombre douce), et les noms des étiquettes en papier. */
+const MSTK = new Map();
+// un sticker dessiné une fois : dessin en unités de plan, origine au milieu du bas
+function mapSticker(key, w, h, draw, border = 3) {
+  let st = MSTK.get(key); if (st) return st;
+  const k = 2, pad = border + 5, c = mk((w + pad * 2) * k, (h + pad * 2) * k), g = c.getContext('2d');
+  g.setTransform(k, 0, 0, k, (pad + w / 2) * k, (pad + h) * k);
+  try { draw(g); } catch (e) { console.error('sticker', key, e); }
+  st = { img: stickerize(c, border * k), ax: (pad + w / 2) * k, ay: (pad + h) * k, k }; MSTK.set(key, st); return st;
+}
+const putSticker = (g, st, x, y, sc) => g.drawImage(st.img, x - st.ax * sc / st.k, y - st.ay * sc / st.k, st.img.width * sc / st.k, st.img.height * sc / st.k);
+const mBlob = (g, P, col) => { P.forEach(([x, y, r]) => ball(g, x, y, r + 1.3, outl(col), 0)); P.forEach(([x, y, r]) => ball(g, x, y, r, col, 0)); };
+const MART = {
+  tree: g => { rrect(g, -2.4, -11, 4.8, 11, 1.4, '#7a4a28', 1); mBlob(g, [[-7, -17, 7.5], [7, -17, 7.5], [0, -25, 9.5], [0, -15, 8]], '#4f9a4a'); ell(g, -3, -28, 3, 2, 'rgba(255,255,255,.35)', 0); },
+  magic: g => { rrect(g, -2.4, -11, 4.8, 11, 1.4, '#5a3a5a', 1); mBlob(g, [[-7, -17, 7.5], [7, -17, 7.5], [0, -25, 9.5], [0, -15, 8]], '#6f7fe0'); [[-6, -24], [5, -18], [1, -30]].forEach(([x, y]) => ball(g, x, y, 1.6, '#e8f4ff', 0)); },
+  pine: g => { rrect(g, -2.2, -8, 4.4, 8, 1.2, '#6a4024', 1); [[13, -6, -15], [10.5, -13, -22], [7.5, -20, -31]].forEach(([w, y0, y1]) => poly(g, [[-w, y0], [w, y0], [0, y1]], '#3c7a46', 1.1)); },
+  mountain: g => {
+    poly(g, [[-25, 0], [-8, -30], [9, 0]], '#8e8880', 1.2); poly(g, [[-9, 0], [9, -40], [27, 0]], '#aaa49b', 1.2);
+    poly(g, [[3.5, -28], [9, -40], [14.5, -28], [11, -30], [8, -26], [6, -30]], '#f6f3ec', .9); poly(g, [[-12, -22], [-8, -30], [-4, -22], [-7, -24]], '#f0ede6', .8);
+    ln(g, [[9, -40], [14, -14], [11, 0]], 'rgba(40,30,25,.25)', 2);
+  },
+  hill: g => { g.beginPath(); g.ellipse(0, 0, 19, 12, 0, Math.PI, 0); g.closePath(); fi(g, radial(g, -4, -6, 18, '#b4a463'), 1.1); [[-8, -6], [3, -9], [10, -4]].forEach(([x, y]) => { ln(g, [[x, y], [x - 1.5, y - 4]], '#6f8a3a', 1.4); ln(g, [[x, y], [x + 1.5, y - 4]], '#6f8a3a', 1.4); }); },
+  reeds: g => { ell(g, 0, -2.5, 16, 5, '#4f7f86', 1); [[-8, -3, -20], [-3, -3, -24], [3, -3, -22], [8, -3, -18]].forEach(([x, y0, y1]) => { inkLn(g, [[x, y0], [x + 1, y1]], '#5d8a3a', 1.6); ell(g, x + 1, y1 + 1, 1.8, 3.6, '#7a4a28', .8); }); },
+  heather: g => { ell(g, 0, -2, 11, 3.5, '#5d7a3a', .9); [[-6, -5, 3.2], [0, -8, 3.6], [6, -5, 3.2], [-2, -3, 2.6], [4, -2, 2.4]].forEach(([x, y, r]) => ball(g, x, y, r, '#b06ac8', .8)); },
+  flower: g => { ln(g, [[0, 0], [0, -6]], '#4f8a3a', 1.6); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; ball(g, Math.cos(a) * 2.6, -8 + Math.sin(a) * 2.6, 2, '#ffffff', .6); } ball(g, 0, -8, 1.8, '#f2c230', .5); },
+  rock: g => { g.beginPath(); g.moveTo(-10, 0); g.quadraticCurveTo(-11, -9, -3, -11); g.quadraticCurveTo(8, -12, 10, -3); g.lineTo(10, 0); g.closePath(); fi(g, radial(g, -3, -6, 11, '#9a968e'), 1.1); },
+};
+function mapArt(k) { return mapSticker('art:' + k, 56, 44, MART[k]); }
+// une tuile épaisse : la tranche sombre dessous, le dessus dégradé, un liseré clair
+function mapTile(g, x, y, s, col, cell) {
+  const base = col ? (typeof seasonTint === 'function' ? seasonTint(col, cell.t) : col) : '#2b2338', v = (vh(cell.q, cell.r, 5) - .5) * .1;
+  hexPath(g, x, y + s * .1, s * .93); g.fillStyle = shade(base, -.45); g.fill();
+  hexPath(g, x, y, s * .93); const gr = g.createLinearGradient(x, y - s, x, y + s); gr.addColorStop(0, shade(base, .14 + v)); gr.addColorStop(1, shade(base, -.1 + v)); g.fillStyle = gr; g.fill();
+  g.lineWidth = Math.max(1, s * .03); g.strokeStyle = col ? 'rgba(255,250,235,.3)' : 'rgba(255,255,255,.05)'; g.stroke();
+}
+// le relief d'une case : quelques stickers (du fond vers l'avant)
+function mapFeatures(cell, x, y, s) {
+  const R = rng(cell.i * 7 + 3), out = [], sc = s / 60, at = (dx, dy, k, art) => out.push({ y: y + dy * s, f: g => putSticker(g, mapArt(art), x + dx * s, y + dy * s, sc * k) });
+  if (cell.t === 'foret' || cell.t === 'foretm') { const P = [[-.34, -.12], [.3, -.18], [-.02, .1], [.36, .3], [-.36, .32]]; P.slice(0, 3 + Math.floor(R() * 2.2)).forEach(([dx, dy]) => at(dx + (R() - .5) * .12, dy + (R() - .5) * .1, .92 + R() * .25, cell.t === 'foretm' ? 'magic' : R() < .45 ? 'pine' : 'tree')); }
+  else if (cell.t === 'montagne') { at(-.05, .38, 1.2, 'mountain'); }
+  else if (cell.t === 'colline') { at(-.22, .1, 1, 'hill'); at(.26, .36, .85, 'hill'); }
+  else if (cell.t === 'marais') { at(-.1, .3, .9, 'reeds'); }
+  else if (cell.t === 'lande') { at(-.28, .05, .85, 'heather'); at(.25, .3, .75, 'heather'); if (R() < .35) at(.05, -.2, .7, 'rock'); }
+  else if (cell.t === 'plaine') { if (R() < .45) at((R() - .5) * .7, (R() - .3) * .5, .8, 'flower'); if (R() < .25) at((R() - .5) * .7, (R() - .2) * .5, .75, 'flower'); }
+  return out;
+}
+const waves = (g, x, y, s, R, n, a) => { g.strokeStyle = `rgba(235,245,255,${a})`; g.lineWidth = Math.max(1.2, s * .035); g.lineCap = 'round'; for (let k = 0; k < n; k++) { const px = x + (R() - .5) * s * 1.05, py = y + (R() - .5) * s * .8, w = s * .14; g.beginPath(); g.moveTo(px - w, py); g.quadraticCurveTo(px - w / 2, py - w * .55, px, py); g.quadraticCurveTo(px + w / 2, py - w * .55, px + w, py); g.stroke(); } };
+// un lieu : son dessin devient un sticker (mis en cache par sorte)
+function siteSticker(st) { const z = HS * MAP_K * .62; return mapSticker('site:' + st.kind + ':' + (st.raid || st.rival || ''), z * 3.6, z * 3.9, g => { g.translate(0, -z * .9); siteIcon(g, st, 0, 0, 1); }, 3.5); }
+// le nom d'un lieu : une étiquette de papier
+function mTag(g, text, x, y, size, gold, placed) {
+  g.font = `800 ${size}px "Grenze Gotisch", Georgia, serif`; const w = g.measureText(text).width + size * 1.1, h = size * 1.4;
+  if (placed) {   // deux lieux voisins : l'étiquette se décale pour ne pas couvrir l'autre
+    const hit = yy => placed.some(r => x - w / 2 < r[2] && x + w / 2 > r[0] && yy < r[3] && yy + h > r[1]);
+    for (const dy of [0, h + 3, -(h + 3), 2 * (h + 3)]) if (!hit(y + dy)) { y += dy; break; }
+    placed.push([x - w / 2, y, x + w / 2, y + h]);
+  }
+  rr(g, x - w / 2 + 2, y + 3, w, h, h * .4); g.fillStyle = 'rgba(10,6,4,.4)'; g.fill();
+  rr(g, x - w / 2, y, w, h, h * .4); g.fillStyle = gold ? '#ffe7a0' : '#fff6e2'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#2a1c16'; g.stroke();
+  g.fillStyle = '#2a1c16'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + h / 2 + 1);
+}
 function mapLayer() {
   const w = world(), vis = mapVisible(), s = HS * MAP_K, pad = s * 2;
   const W2 = Math.ceil(SQ3 * s * (2 * MAP_R + 1) + pad * 2), H2 = Math.ceil(s * (3 * MAP_R + 2) + pad * 2), ox = W2 / 2, oy = H2 / 2;
   const c = mk(W2, H2), g = c.getContext('2d');
   g.fillStyle = '#16121c'; g.fillRect(0, 0, W2, H2);
-  w.list.forEach(cell => {
-    if (!vis.has(cell.i)) return;
-    const [hx, hy] = hexXY(cell.q, cell.r, s), x = ox + hx, y = oy + hy, T = BIOMES[cell.t], v = (vh(cell.q, cell.r, 5) - .5) * .12, R = rng(cell.i * 7 + 3);
-    hexPath(g, x, y, s + .8); const gr = g.createRadialGradient(x - s * .3, y - s * .4, s * .1, x, y, s * 1.1); gr.addColorStop(0, shade(T.col, .14 + v)); gr.addColorStop(1, shade(T.col, -.14 + v)); g.fillStyle = gr; g.fill();
-    if (cell.t === 'foret' || cell.t === 'foretm') { for (let k = 0; k < 4; k++) mTree(g, x + (R() - .5) * s * 1.05, y + (R() - .5) * s * .85, s * (.19 + R() * .07), cell.t === 'foretm'); }
-    else if (cell.t === 'montagne') { mPeak(g, x - s * .28, y + s * .35, s * .62); mPeak(g, x + s * .26, y + s * .45, s * .5); }
-    else if (cell.t === 'colline') { mBump(g, x - s * .3, y + s * .25, s * .36, '#b3a46a'); mBump(g, x + s * .25, y + s * .1, s * .44, '#a89a60'); }
-    else if (cell.t === 'lac') { g.strokeStyle = 'rgba(200,230,255,.4)'; g.lineWidth = 1.6; for (let k = 0; k < 3; k++) { const px = x + (R() - .5) * s, py = y + (R() - .5) * s * .8; g.beginPath(); g.moveTo(px - 8, py); g.quadraticCurveTo(px, py - 4, px + 8, py); g.stroke(); } }
-    else if (cell.t === 'marais') { for (let k = 0; k < 3; k++) { const px = x + (R() - .5) * s, py = y + (R() - .5) * s * .7; g.fillStyle = 'rgba(40,70,60,.6)'; g.beginPath(); g.ellipse(px, py, 7, 3, 0, 0, 7); g.fill(); ln(g, [[px + 6, py], [px + 7, py - 9]], '#3a5a2a', 1.4); ln(g, [[px + 9, py], [px + 11, py - 7]], '#3a5a2a', 1.4); } }
-    else if (cell.t === 'lande') { for (let k = 0; k < 7; k++) { g.fillStyle = R() < .5 ? 'rgba(150,90,150,.7)' : 'rgba(110,90,60,.5)'; g.beginPath(); g.arc(x + (R() - .5) * s * 1.2, y + (R() - .5) * s, 1.8, 0, 7); g.fill(); } }
-    else { for (let k = 0; k < 5; k++) { const px = x + (R() - .5) * s * 1.2, py = y + (R() - .5) * s; ln(g, [[px, py], [px - 2, py - 5]], 'rgba(60,100,40,.6)', 1.2); ln(g, [[px, py], [px + 2, py - 5]], 'rgba(60,100,40,.6)', 1.2); } }
-    hexPath(g, x, y, s); g.strokeStyle = 'rgba(20,14,10,.2)'; g.lineWidth = 1.2; g.stroke();
+  const cells = w.list.slice().sort((a, b) => a.r - b.r || a.q - b.q), XY = cell => { const [hx, hy] = hexXY(cell.q, cell.r, s); return [ox + hx, oy + hy]; };
+  const sites = allSites(), siteAt = new Set(sites.map(st => st.i));
+  // 1. les tuiles (celles du brouillard restent sombres)
+  cells.forEach(cell => { const [x, y] = XY(cell), on = vis.has(cell.i); mapTile(g, x, y, s, on ? BIOMES[cell.t].col : null, cell); if (on && (cell.t === 'lac' || cell.t === 'mer')) waves(g, x, y, s, rng(cell.i * 7 + 3), cell.t === 'mer' ? 3 : 2, cell.t === 'mer' ? .4 : .35); });
+  // 2. rivières (un ruban bordé de blanc) et routes (des points de couture), seulement là où on les voit
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  (w.rivers || []).forEach(p => {
+    const P = p.map(i => { const cl = w.list[i], [x, y] = XY(cl); return [x + (vh(cl.q, cl.r, 8) - .5) * s * .4, y + (vh(cl.q, cl.r, 9) - .5) * s * .35, vis.has(i)]; });
+    for (let k = 0; k < P.length - 1; k++) {
+      if (!P[k][2] || !P[k + 1][2]) continue;
+      const a = k ? [(P[k - 1][0] + P[k][0]) / 2, (P[k - 1][1] + P[k][1]) / 2] : P[0], b = k + 1 < P.length - 1 ? [(P[k][0] + P[k + 1][0]) / 2, (P[k][1] + P[k + 1][1]) / 2] : P[k + 1], wd = s * (.11 + .11 * k / P.length);
+      [['#fffdf5', wd + s * .09], ['#5f9ad6', wd], ['rgba(225,242,255,.55)', wd * .3]].forEach(([col, lw]) => { g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo(P[k][0], P[k][1], (P[k][0] + b[0]) / 2, (P[k][1] + b[1]) / 2); g.lineTo(b[0], b[1]); g.strokeStyle = col; g.lineWidth = lw; g.stroke(); });
+    }
   });
-  // routes (seulement là où on les voit)
-  g.save(); g.setLineDash([10, 7]); g.lineCap = 'round';
-  w.roads.forEach(p => { for (let k = 1; k < p.length; k++) { const a = w.list[p[k - 1]], b = w.list[p[k]]; if (!vis.has(a.i) || !vis.has(b.i)) continue; const [x1, y1] = hexXY(a.q, a.r, s), [x2, y2] = hexXY(b.q, b.r, s);
-    g.strokeStyle = 'rgba(40,26,14,.75)'; g.lineWidth = 7; g.beginPath(); g.moveTo(ox + x1, oy + y1); g.lineTo(ox + x2, oy + y2); g.stroke(); g.strokeStyle = '#d9b77a'; g.lineWidth = 3.4; g.stroke(); } });
+  g.setLineDash([s * .14, s * .12]);
+  w.roads.forEach(p => { for (let k = 1; k < p.length; k++) { const A = w.list[p[k - 1]], B = w.list[p[k]]; if (!vis.has(A.i) || !vis.has(B.i)) continue; const [x1, y1] = XY(A), [x2, y2] = XY(B);
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.strokeStyle = 'rgba(40,26,14,.7)'; g.lineWidth = s * .11; g.stroke(); g.strokeStyle = '#f3dfae'; g.lineWidth = s * .055; g.stroke(); } });
   g.restore();
-  // brouillard de guerre : un parchemin sombre et nuageux
+  // 3. le relief en stickers, du fond vers l'avant
+  const feats = []; cells.forEach(cell => { if (!vis.has(cell.i) || siteAt.has(cell.i)) return; const [x, y] = XY(cell); feats.push(...mapFeatures(cell, x, y, s)); });
+  feats.sort((a, b) => a.y - b.y).forEach(o => o.f(g));
+  // 4. le brouillard : quelques nuages sur les tuiles inconnues, et une lisière adoucie
   const fogR = rng(w.seed + 5);
-  w.list.forEach(cell => {
-    if (vis.has(cell.i)) return;
-    const [hx, hy] = hexXY(cell.q, cell.r, s), x = ox + hx, y = oy + hy;
-    hexPath(g, x, y, s + 1); g.fillStyle = '#231c2e'; g.fill();
-    for (let k = 0; k < 3; k++) { const px = x + (fogR() - .5) * s, py = y + (fogR() - .5) * s, rr2 = s * (.5 + fogR() * .5); const gr = g.createRadialGradient(px, py, 0, px, py, rr2); gr.addColorStop(0, 'rgba(70,60,90,.35)'); gr.addColorStop(1, 'rgba(70,60,90,0)'); g.fillStyle = gr; g.beginPath(); g.arc(px, py, rr2, 0, 7); g.fill(); }
-  });
-  // lisière du brouillard adoucie
-  g.save(); g.globalCompositeOperation = 'source-over';
-  w.list.forEach(cell => { if (!vis.has(cell.i)) return; const [hx, hy] = hexXY(cell.q, cell.r, s); HEX_DIRS.forEach(([dq, dr], k) => { const n = w.cell(cell.q + dq, cell.r + dr); if (n && !vis.has(n.i)) { const [nx, ny] = hexXY(n.q, n.r, s), mx = ox + (hx + nx) / 2, my = oy + (hy + ny) / 2; const gr = g.createRadialGradient(mx, my, 0, mx, my, s * .55); gr.addColorStop(0, 'rgba(35,28,46,.55)'); gr.addColorStop(1, 'rgba(35,28,46,0)'); g.fillStyle = gr; g.beginPath(); g.arc(mx, my, s * .55, 0, 7); g.fill(); } }); });
-  g.restore();
-  // sites visibles et leurs noms
-  allSites().forEach(st => { if (!vis.has(st.i)) return; const [hx, hy] = hexXY(st.q, st.r, s), x = ox + hx, y = oy + hy; siteIcon(g, st, x, y + s * .1, st.kind === 'cite' ? 1.2 : st.kind === 'chateau' ? 1.25 : 1); mLabel(g, st.name, x, y + s * .55, st.kind === 'village' || st.kind === 'raid' ? 15 : 18, st.kind === 'chateau' ? '#ffe7a0' : '#f3e3c0'); });
+  cells.forEach(cell => { if (vis.has(cell.i)) return; const [x, y] = XY(cell); for (let k = 0; k < 2; k++) { const px = x + (fogR() - .5) * s, py = y + (fogR() - .5) * s * .8, rr2 = s * (.45 + fogR() * .4); const gr = g.createRadialGradient(px, py, 0, px, py, rr2); gr.addColorStop(0, 'rgba(90,78,118,.32)'); gr.addColorStop(1, 'rgba(90,78,118,0)'); g.fillStyle = gr; g.beginPath(); g.arc(px, py, rr2, 0, 7); g.fill(); } });
+  cells.forEach(cell => { if (!vis.has(cell.i)) return; const [hx, hy] = XY(cell); HEX_DIRS.forEach(([dq, dr]) => { const n = w.cell(cell.q + dq, cell.r + dr); if (n && !vis.has(n.i)) { const [nx, ny] = XY(n), mx = (hx + nx) / 2, my = (hy + ny) / 2; const gr = g.createRadialGradient(mx, my, 0, mx, my, s * .5); gr.addColorStop(0, 'rgba(30,24,40,.5)'); gr.addColorStop(1, 'rgba(30,24,40,0)'); g.fillStyle = gr; g.beginPath(); g.arc(mx, my, s * .5, 0, 7); g.fill(); } }); });
+  // 5. les lieux en stickers, puis leurs étiquettes
+  const shown = sites.filter(st => vis.has(st.i)).sort((a, b) => XY(a)[1] - XY(b)[1]), z = HS * MAP_K * .62;
+  shown.forEach(st => { const [x, y] = XY(st), k = st.kind === 'cite' ? 1.2 : st.kind === 'chateau' ? 1.25 : 1; putSticker(g, siteSticker(st), x, y + s * .1 + z * .9 * k, k); });
+  const placed = []; shown.forEach(st => { const [x, y] = XY(st); mTag(g, st.name, x, y + s * .52, st.kind === 'village' || st.kind === 'raid' ? 17 : 20, st.kind === 'chateau', placed); });
   // bord du monde
   const edge = g.createRadialGradient(ox, oy, s * MAP_R * 1.2, ox, oy, s * MAP_R * 1.85); edge.addColorStop(0, 'rgba(10,8,14,0)'); edge.addColorStop(1, 'rgba(10,8,14,.95)'); g.fillStyle = edge; g.fillRect(0, 0, W2, H2);
   // contour du champ de rayonnement (bords des cases à portée)
@@ -214,7 +274,7 @@ function renderMapPanel() {
       ${edge ? `<h4>Envoyer un éclaireur</h4><p class="hint">Une créature part une nuit et dévoile les environs (2 lieues autour de ce point).</p>${teamPicker(1)}<div class="btnrow"><button class="sbtn pri" type="button" data-m="scout">🔭 Envoyer en éclaireur</button></div>` : '<p class="hint">Trop loin pour un éclaireur : explore d’abord plus près du bord du brouillard.</p>'}`;
     return;
   }
-  if (!sel.kind) { p.innerHTML = `<h3>${esc(BIOMES[cell.t].name)}</h3>${where}<p>${esc(BIOMES[cell.t].desc)}</p>${w.onRoad.has(sel.i) ? '<p class="hint">Une route passe par ici.</p>' : ''}`; return; }
+  if (!sel.kind) { p.innerHTML = `<h3>${esc(BIOMES[cell.t].name)}</h3>${where}<p>${esc(BIOMES[cell.t].desc)}</p>${cell.river ? '<p class="hint">Une rivière coule ici, des montagnes vers l’eau.</p>' : ''}${w.onRoad.has(sel.i) ? '<p class="hint">Une route passe par ici.</p>' : ''}`; return; }
   const K = SITE_KINDS[sel.kind] || {}; let h = `<h3>${esc(sel.name)}</h3><p><span class="tag2">${esc(K.label || sel.kind)}</span></p>${where}`;
   if (sel.kind === 'chateau') {
     const lv = glowLevel(), nxt = GLOW_LV[lv + 1];
@@ -232,6 +292,10 @@ function renderMapPanel() {
       <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier || (sel.rival && isVassal(sel.rival)) ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
   } else if (sel.kind === 'joueur') {
     h += `<p>Le château de <b>${esc(sel.master)}</b>, un autre Maître du Val. Rayonnement ${sel.glow || 0}, palier ${sel.tier || 0}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-m="visit">🏰 Lui rendre visite</button></div>`;
+  } else if (K.expe && typeof CRAWL_SITES !== 'undefined' && CRAWL_SITES.includes(sel.expe)) {
+    const X = EXPE_SITES[sel.expe], ready = expeReady(sel), D = CRAWL_DG[sel.expe], planned = S.raid && S.raid.target === 'x_' + sel.id;
+    h += `<p>${esc(D.desc)}</p><p class="hint">🃏 Une expédition en cartes, jouée cette nuit : 4 créatures au plus, trois étages, et le boss (${esc(CRAWL_EN[D.boss].name)}). On en rapporte de l’or, des matériaux, parfois un artefact (${X.arts.map(k => FURN[k].name).join(', ')})${X.meet ? `, et au bout, une rencontre : ${SPECIES[X.meet].name}` : ''}. Niveau ${String(crawlLevel()).replace('.', ',')}.${S.raid && !planned ? ' <b>Elle remplace le raid prévu cette nuit.</b>' : ''}</p>
+      ${planned ? '<p class="ok">✅ Expédition prévue cette nuit.</p>' : ready ? `${teamPicker(4)}<div class="btnrow"><button class="sbtn pri" type="button" data-m="expe">🃏 Partir cette nuit</button></div>` : `<p class="no">On y retourne dans ${S.world.cd[sel.id] - S.night} nuit(s).</p>`}`;
   } else if (K.expe) {
     const X = EXPE_SITES[sel.expe], ready = expeReady(sel), meet = X.meet && SPECIES[X.meet];
     h += `<p>${esc({ foret: 'Une forêt où les arbres chuchotent et où les lucioles ont des opinions.', grotte: 'Une grotte qui résonne, pleine de pierres brillantes… et de choses qui préfèrent le noir.', ruines: 'Les restes d’une tour très ancienne. Des trésors, des pièges rouillés, et une liche qui grelotte.', pic: 'Le pic d’un vieux dragon ronchon. Dangereux, mais on y trouve des merveilles.', lac: 'Un lac noyé de brume, calme et mystérieux.' }[sel.expe])}</p>
@@ -259,7 +323,7 @@ function mapPanelClick(e) {
   else if (k === 'expe' || k === 'scout') {
     if (!(MAPV.team || []).length) { toast('Choisis qui part.', true); sfx('bad'); return; }
     if (!run(k, k === 'expe' ? { site: sel.id, team: MAPV.team } : { hex: sel.i, team: MAPV.team })) return;
-    sfx('chime'); toast(k === 'expe' ? `🧭 Expédition en route vers ${sel.name} !` : '🔭 Ton éclaireur s’enfonce dans le brouillard…'); MAPV.team = []; afterChange(); renderMapPanel();
+    sfx('chime'); toast(k === 'expe' ? (typeof CRAWL_SITES !== 'undefined' && CRAWL_SITES.includes(sel.expe) ? `🃏 Expédition prévue cette nuit : ${sel.name}.` : `🧭 Expédition en route vers ${sel.name} !`) : '🔭 Ton éclaireur s’enfonce dans le brouillard…'); MAPV.team = []; afterChange(); renderMapPanel();
   }
 }
 
@@ -286,6 +350,8 @@ function renderMinimap() {
   const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#16121c'; g.fillRect(0, 0, W2, H2);
   const s = Math.min(W2 / (SQ3 * (2 * vr + 1)), H2 / (3 * vr + 2)), ox = W2 / 2, oy = H2 / 2, XY = cc => { const [x, y] = hexXY(cc.q, cc.r, s); return [ox + x, oy + y]; };
   w.list.forEach(cell => { const [x, y] = XY(cell); if (x < -s || x > W2 + s || y < -s || y > H2 + s) return; hexPath(g, x, y, s + .4); g.fillStyle = vis.has(cell.i) ? BIOMES[cell.t].col : '#2a2236'; g.fill(); });
+  g.strokeStyle = '#6aa2d8'; g.lineWidth = 1.4;
+  (w.rivers || []).forEach(p => { for (let k = 1; k < p.length; k++) { if (!vis.has(p[k - 1]) || !vis.has(p[k])) continue; const [x1, y1] = XY(w.list[p[k - 1]]), [x2, y2] = XY(w.list[p[k]]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } });
   g.strokeStyle = 'rgba(217,183,122,.85)'; g.lineWidth = 1;
   w.roads.forEach(p => { for (let k = 1; k < p.length; k++) { if (!vis.has(p[k - 1]) || !vis.has(p[k])) continue; const [x1, y1] = XY(w.list[p[k - 1]]), [x2, y2] = XY(w.list[p[k]]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } });
   g.strokeStyle = 'rgba(255,214,120,.95)'; g.lineWidth = 1.5; g.beginPath();

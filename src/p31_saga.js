@@ -85,7 +85,7 @@ const sagaChap = st => SAGAS[st.id] && SAGAS[st.id].ch[st.i];
 const sagaAction = ch => !!ch && !!(ch.pay || ch.choice);
 // le petit sticker 📖 : une intrigue proposée, un nouveau chapitre pas encore lu, ou un choix qui t'attend
 function sagaReady(c) { const o = sagaOf(c); if (!o) return false; return o.offer || !o.st.seen || sagaAction(sagaChap(o.st)); }
-const trapsOnPath = () => { const p = heroPath() || []; return p.filter(([x, y]) => { const d = withZ(0, () => defAt(x, y)); return d && DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm; }).length; };
+const trapsOnPath = () => { const p = heroRoute() || []; return p.filter(([x, y, z]) => { const d = withZ(z, () => defAt(x, y)); return d && DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm; }).length; };
 function sagaNeedMet(c, need, st) {
   if (need.room) return builtCount(need.room) > 0;
   if (need.big) return maxGroup(need.big) >= 2;

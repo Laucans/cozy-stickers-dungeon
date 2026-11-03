@@ -1,6 +1,6 @@
 
 <div id="game">
-  <canvas id="cv" aria-label="Le château, vu en isométrique"></canvas>
+  <canvas id="cv" aria-label="Le château, vu en isométrique"></canvas><div id="cvvig" aria-hidden="true"></div>
 
   <!-- barre du haut, fine, façon Civilization : ressources à gauche, nuit et menus à droite -->
   <header class="topbar" id="hudTop">
@@ -35,7 +35,6 @@
     <div class="buildbar panel">
       <div class="barhead"><div class="tabs" id="tabs" role="tablist">
         <button type="button" role="tab" data-tab="room" aria-selected="true">Pièces</button>
-        <button type="button" role="tab" data-tab="furn" aria-selected="false">Meubles</button>
         <button type="button" role="tab" data-tab="def" aria-selected="false">Pièges</button>
         <button type="button" role="tab" data-tab="decor" aria-selected="false">Déco</button>
         <button type="button" role="tab" data-tab="arte" aria-selected="false">Trésors</button>
@@ -56,8 +55,9 @@
       <div class="acts">
         <button class="act" id="zfit" type="button" title="Recadrer le château" aria-label="Recadrer le château">⤢</button>
         <button class="act" id="btnPath" type="button" aria-pressed="false" title="Chemin des héros" aria-label="Chemin des héros"><img data-ico="path" alt=""></button>
+        <button class="act" id="btnGuards" type="button" aria-pressed="false" title="Placer les gardes" aria-label="Placer les gardes"><img data-ico="shield" alt=""></button>
         <button class="act" id="btnRaid" type="button" title="Raid" aria-label="Raid"><img data-ico="raid" alt=""></button>
-        <button class="act" id="btnTier" type="button" title="Palier, étages et domaine" aria-label="Palier"><img data-ico="tier" alt=""></button>
+        <button class="act" id="btnTier" type="button" title="Cœur du donjon : palier, étages et remparts" aria-label="Cœur du donjon et palier"><img data-ico="tier" alt=""></button>
         <button class="act" id="btnVal" type="button" title="Le Val des Maîtres" aria-label="Le Val des Maîtres"><img data-ico="val" alt=""></button>
       </div>
       <button class="round night" id="btnNight" type="button"><img data-ico="night" alt=""><span>Finir la nuit</span></button>

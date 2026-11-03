@@ -216,16 +216,16 @@ function cropSprite(c, ax, ay) {
 }
 function drawArt(kind, key, g) {
   if (kind === 'furn') (FDRAW[key] || FDRAW[(FURN[key] || {}).sprite] || FDRAW.caisse)(g); else if (kind === 'def') (DDRAW[key] || DDRAW[(DEFS[key] || {}).sprite] || DDRAW.porte)(g); else if (kind === 'x') XDRAW[key](g);
-  else if (kind === 'char') drawChar(g, CHAR[key] || CHAR.gobelin); else if (kind === 'hero') drawChar(g, HERO_ART[key] || HERO_ART.paladin); else if (kind === 'icon') ICON_DRAW[key](g);
+  else if (kind === 'char') drawChar(g, CHAR[key] || CHAR.gobelin); else if (kind === 'hero') drawChar(g, HERO_ART[key] || HERO_ART.paladin); else if (kind === 'foe') drawChar(g, (typeof FOE_ART !== 'undefined' && FOE_ART[key]) || CHAR.gobelin); else if (kind === 'icon') ICON_DRAW[key](g);
 }
 // ppa = pixels réels par unité d'art ; ax/ay = position de l'ancre (pied ou centre de case) dans l'image
 function getSprite(kind, key, ppa = SQ()) {
   const id = kind + ':' + key + '@' + ppa.toFixed(2);
   let s = SPR.get(id); if (s) return s;
-  const bb = kind === 'icon' ? [-22, -24, 22, 22] : (kind === 'char' || kind === 'hero') ? [-42, -104, 42, 14] : kind === 'x' ? [-52, -130, 52, 32] : [-52, -110, 52, 32];
+  const bb = kind === 'icon' ? [-22, -24, 22, 22] : (kind === 'char' || kind === 'hero' || kind === 'foe') ? [-42, -104, 42, 14] : kind === 'x' ? [-52, -130, 52, 32] : [-52, -110, 52, 32];
   const pad = 6, c = mk((bb[2] - bb[0] + pad * 2) * ppa, (bb[3] - bb[1] + pad * 2) * ppa), g = c.getContext('2d');
   g.setTransform(ppa, 0, 0, ppa, (pad - bb[0]) * ppa, (pad - bb[1]) * ppa);
-  const person = kind === 'char' || kind === 'hero';
+  const person = kind === 'char' || kind === 'hero' || kind === 'foe';
   FLAT = person;
   try { drawArt(kind, key, g); } catch (e) { console.error('dessin', kind, key, e); }
   FLAT = false;
@@ -234,21 +234,31 @@ function getSprite(kind, key, ppa = SQ()) {
   SPR.set(id, s); return s;
 }
 const THUMBS = new Map();
+// une vignette s'écrit dans la page par une adresse courte (blob:) plutôt qu'une longue image en base64, quand le
+// navigateur l'accepte : les écrans se reconstruisent bien plus vite, et l'image décodée est gardée
+let THUMB_BLOB = false;
+const pngBlob = d => { const i = d.indexOf(','), b = atob(d.slice(i + 1)), u = new Uint8Array(b.length); for (let k = 0; k < b.length; k++) u[k] = b.charCodeAt(k); return new Blob([u], { type: 'image/png' }); };
+function thumbURL(d) { if (!THUMB_BLOB) return d; try { return URL.createObjectURL(pngBlob(d)); } catch (e) { return d; } }
+function thumbGet(id) { let u = THUMBS.get(id); if (u && THUMB_BLOB && u.startsWith('data:')) { u = thumbURL(u); THUMBS.set(id, u); } return u; }
+(function () {   // une page isolée n'affiche pas toujours les images blob: ; on vérifie avant de s'en servir
+  if (typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL || typeof atob === 'undefined') return;
+  try { const im = new Image(); im.onload = () => { THUMB_BLOB = true; }; im.src = URL.createObjectURL(pngBlob(mk(2, 2).toDataURL())); } catch (e) {}
+})();
 function thumb(kind, key, big) {
   const id = kind + key + (big ? 'B' : '');
-  if (!THUMBS.has(id)) THUMBS.set(id, getSprite(kind, key, big ? 3 : 1.7).img.toDataURL());
-  return THUMBS.get(id);
+  if (!THUMBS.has(id)) THUMBS.set(id, thumbURL(getSprite(kind, key, big ? 3 : 1.7).img.toDataURL()));
+  return thumbGet(id);
 }
 function iconURL(key) { return thumb('icon', key, true); }
 // portrait : tête et épaules seulement
 function portrait(sp) {
-  const id = 'portrait' + sp; if (THUMBS.has(id)) return THUMBS.get(id);
+  const id = 'portrait' + sp; if (THUMBS.has(id)) return thumbGet(id);
   const s = getSprite('char', sp, 3), h = Math.min(s.img.height, Math.round(s.img.width * 1.05));
   const c = mk(s.img.width, h); c.getContext('2d').drawImage(s.img, 0, 0);
-  const url = c.toDataURL(); THUMBS.set(id, url); return url;
+  const url = thumbURL(c.toDataURL()); THUMBS.set(id, url); return url;
 }
 function roomThumb(t) {
-  const id = 'room' + t; if (THUMBS.has(id)) return THUMBS.get(id);
+  const id = 'room' + t; if (THUMBS.has(id)) return thumbGet(id);
   const d = ROOMS[t], [w, h] = d.size, tw = 34, th = 17, wh = d.open ? 4 : 14;
   const cw = (w + h) * tw / 2 + 10, ch = (w + h) * th / 2 + wh + 10, k = 2;
   const c = mk(cw * k, ch * k), g = c.getContext('2d'); g.scale(k, k);
@@ -261,7 +271,7 @@ function roomThumb(t) {
     g.save(); g.transform((L[0] - A[0]) / wt.width, (L[1] - A[1]) / wt.width, 0, wh / wt.height, A[0], A[1] - wh); g.drawImage(wt, 0, 0); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, 0, wt.width, wt.height); g.restore();
   }
   path(g, [P2(0, 0), P2(w, 0), P2(w, h), P2(0, h)]); g.strokeStyle = 'rgba(20,12,8,.8)'; g.lineWidth = 1; g.stroke();
-  const url = c.toDataURL(); THUMBS.set(id, url); return url;
+  const url = thumbURL(c.toDataURL()); THUMBS.set(id, url); return url;
 }
 /* ---------- ajouts : créatures rares (golem, fée, liche, harpie) ---------- */
 Object.assign(ITEMS, {
@@ -382,5 +392,6 @@ Object.assign(CHAR, {
   cocatrice:  { special: 'cockatrice', sc: .95 },
   mandragore: { special: 'mandrake', sc: .8 },
   nixe:       { sc: .96, skin: '#a9dcc6', body: '#3f8a62', legs: '#8ccbb4', hair: '#2b6a6c', hairStyle: 'wild', eyes: 'normal', iris: '#2c8fb0', nose: 'small', mouth: 'smug', item: 'seashell' },
+  nainsombre: { sc: .8, skin: '#9a8fa8', body: '#3b3744', belly: '#6a4a32', beard: '#2a2430', hat: 'helmet', hatc: '#5d5866', ears: 'small', nose: 'big', eyes: 'normal', iris: '#f0902a', brow: true, mouth: 'grin', item: 'hammer' },
   goule:      { sc: 1.02, skin: '#a0b296', body: '#4b4560', legs: '#35303f', ears: 'pointy', hair: '#2a2830', hairStyle: 'slick', eyes: 'normal', iris: '#e3c94a', brow: true, nose: 'long', mouth: 'smug', item: 'cutlery' },
 });

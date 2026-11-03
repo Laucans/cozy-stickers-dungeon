@@ -6,7 +6,7 @@ const BASE_ROOMS = ['dortoir', 'potager', 'cuisine', 'atelier', 'taverne', 'tour
 const themeRoom = () => THEMES[S.theme].room;
 const hasRoom = t => S.rooms.some(r => r.t === t);
 const roomsOf = t => S.rooms.filter(r => r.t === t && r.built);
-const fullRoom = r => cellsOf(r).every(([x, y]) => furnAt(x, y, zOf(r)));
+const fullRoom = r => (typeof furnCap === 'function' && furnCount(r) >= furnCap(r)) || cellsOf(r).every(([x, y]) => furnAt(x, y, zOf(r)));   // une pièce se remplit à moitié
 // l'or de la paie : on le garde de côté la veille (dans les versions sans paie, rien ne change)
 const payReserve = () => typeof payroll === 'function' && nightsToPay() <= 1 ? payroll() : 0;
 function econ(o = {}) {
@@ -38,8 +38,9 @@ function defend(budget) {   // des pièges quand des héros approchent ; plus on
 function common(o = {}) {
   A.care(); A.quests();
   if (typeof sagaBotStep === 'function') sagaBotStep();   // les intrigues : on les suit, on paie, on choisit
+  if (typeof qState === 'function') A.questStep();   // les quêtes du journal : on accepte, on livre, on choisit, on lance raids et expéditions
   if (tierStatus() && tierStatus().ok && S.gold - tierStatus().next.cost.g > (o.tierReserve || 0)) cmd('tierUp');
-  econ(o); defend(o.trap || 10); A.posts();
+  econ(o); defend(o.trap || 10); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60);
   if (roomsOf('trone').length && !hasItem('trone')) A.placeItem('trone');   // palier 3 : le Trône dans sa salle
   const ex = expandStatus(); if (ex && ex.ok && SIM.noRoom && S.night - SIM.noRoom < 3 && S.gold > (ex.cost.g || 0) + 30) { cmd('expand'); SIM.noRoom = 0; }   // à l'étroit : on agrandit les remparts
 }
@@ -81,7 +82,7 @@ const BOTS = {
     if (vicState().croisade && vicState().croisade.done < 3) { A.traps(Math.max(30, Math.floor(S.gold * .5))); if (invasionSoon()) { const t = A.knownTowns().find(x => x.kind !== 'village'); if (t) { A.shop(t.id, 'merco'); A.shop(t.id, 'avis'); } } }
   },
   terreur() {
-    common({ trap: 12 }); grow(['dortoir', 'potager', 'atelier', 'cuisine', 'tour', 'forge', 'labo', 'caveau', 'taverne', 'oubliettes', 'bibli', 'salon', 'tresor', 'trone'], { reserve: 2 });
+    common({ trap: 12 }); A.caravan('pille'); grow(['dortoir', 'potager', 'atelier', 'cuisine', 'tour', 'forge', 'labo', 'caveau', 'taverne', 'oubliettes', 'bibli', 'salon', 'tresor', 'trone'], { reserve: 2 });
     ['forge', 'labo'].forEach(t => roomsOf(t).forEach(r => A.furnish(r, S.gold)));
     const rivals = RIVALS.filter(r => !isVassal(r.id)).map(r => 'r_' + r.id).sort((a, b) => A.raidPool(b) - A.raidPool(a));
     raidFor(['mirebrume', ...rivals], 4); raidFor(['mirebrume', ...rivals, 'chateau', 'auberge', 'ferme', 'moulin'], 3);
@@ -89,7 +90,7 @@ const BOTS = {
     else if (S.night % 5 === 0) A.scout();
   },
   voisinage() {
-    common({ trap: 10 }); grow(BASE_ROOMS, { reserve: 8 });
+    common({ trap: 10 }); A.caravan('escorte'); grow(BASE_ROOMS, { reserve: 8 });
     const setts = settlements().filter(s => siteKnown(s));
     openReqs().filter(q => q.st === 'open').forEach(q => A.request(q));
     const low = setts.filter(s => gwOf(s) < 72).sort((a, b) => VOICES[b.kind] - VOICES[a.kind] || gwOf(a) - gwOf(b))[0];
@@ -105,6 +106,11 @@ const BOTS = {
     expeditions(2, s => { const X = EXPE_SITES[s.expe] || {}; return X.meet && !worldMet(X.meet) ? 5 : ((X.arts || []).some(k => !ownedArtefacts().has(k)) ? 1 : 0); });
     if (S.creatures.filter(c => c.mood <= 2).length > 2 && S.gold > 10) { const t = A.knownTowns().find(s => s.kind !== 'village') || A.knownTowns()[0]; if (t) A.shop(t.id, 'humeur'); }
     Object.entries(SPECIES).filter(([k, d]) => d.fromDecor && !S.album[k]).forEach(([k, d]) => Object.entries(d.fromDecor).forEach(([t, n]) => { for (let i = 0; i < 4 && countItem(t) < n; i++) if (A.placeItem(t)) break; }));
+    // château plein (renommée ou lits) alors qu'une espèce jamais vue pourrait venir : on renvoie un doublon
+    if (typeof homeCap === 'function' && S.creatures.length >= homeCap() && SPECIES_ORDER.some(sp => !S.album[sp] && nestsOf(sp) && rareOK(sp) && !(SPECIES[sp].tier && S.tier < SPECIES[sp].tier))) {
+      const by = {}; S.creatures.forEach(c => { (by[c.sp] = by[c.sp] || []).push(c); });
+      const dup = Object.values(by).filter(l => l.length >= 3).flat().filter(c => !c.legend && !isOut(c) && !questOf(c)).sort((a, b) => (a.lvl || 1) - (b.lvl || 1))[0]; if (dup) cmd('fire', { id: dup.id });
+    }
     if (projReady('parade') && canAfford(PROJ.parade.cost)) cmd('project', { id: 'parade' });
     if (S.night % 5 === 0) A.scout();
   },

@@ -20,6 +20,13 @@ function setFloor(z) {
 // l'escalier (ou le palier) de l'étage z qui mène vers z + dir
 const stairsToward = (z, dir) => S.rooms.find(r => zOf(r) === z && r.built && r.pair && (r.land ? ROOMS[r.t].stairs === -dir : ROOMS[r.t].stairs === dir));
 const footprint = r => [WP(r.x, r.y), WP(r.x + r.w, r.y), WP(r.x + r.w, r.y + r.h), WP(r.x, r.y + r.h)];
+// l'ordre de dessin d'une créature : elle appartient à la case où elle se tient, entre les murs du fond de cette case
+// (x + y + .5) et ceux de devant (x + y + 1.5) ; elle ne passe plus derrière son propre mur dans un coin de pièce,
+// ni devant le muret qui ferme la pièce
+const cellKey = (x, y) => { const cx = Math.floor(x), cy = Math.floor(y), f = (x - cx + y - cy) / 2; return cx + cy + .55 + .9 * Math.min(1, Math.max(0, f)); };
+// arbres et rochers derrière les remparts du fond : ils se dessinent avant les remparts
+const behindWalls = o => o.y < 0 || (o.x < 0 && o.y < H);
+const drawOutside = o => { const [x, y] = WP(o.x, o.y); drawSprite(ctx, getSprite('x', o.key), x, y, 1.2); };
 const worldXf = () => ctx.setTransform(V.dpr * CAM.s, 0, 0, V.dpr * CAM.s, V.dpr * CAM.x, V.dpr * CAM.y);
 const screenXf = () => ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
 
@@ -38,10 +45,11 @@ function extFront(list, t) {
   const [dx] = extDoor();
   for (let x = 0; x < W; x++) if (x !== dx) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW * 1.6, false, 2) });
   list.push({ d: W + H + .2, f: () => tower(ctx, W + .3, H + .3, .42, 80, curStyle().roof, t) });
-  list.push({ d: H - 1, f: () => tower(ctx, -.3, H + .3, .42, 80, curStyle().roof, t) });
+  list.push({ d: H + .65, f: () => tower(ctx, -.3, H + .3, .42, 80, curStyle().roof, t) });
+  list.push({ d: dx + H + .64, f: () => tower(ctx, dx - .02, H + .1, .16, RAMP_LOW * 1.6 + 14, curStyle().roof, t) });
+  list.push({ d: dx + H + 1.12, f: () => tower(ctx, dx + 1.02, H + .1, .16, RAMP_LOW * 1.6 + 14, curStyle().roof, t) });
   list.push({ d: dx + H + .62, f: () => {
     const A = WP(dx, H), B = WP(dx + 1, H), hh = RAMP_LOW * 1.6;
-    tower(ctx, dx - .02, H + .1, .16, hh + 14, curStyle().roof, t); tower(ctx, dx + 1.02, H + .1, .16, hh + 14, curStyle().roof, t);
     const P = (u, z) => { const p = lerp2(A, B, u); return [p[0], p[1] - z]; };
     ctx.beginPath(); ctx.moveTo(...P(.12, 0)); ctx.lineTo(...P(.12, hh * .7)); ctx.quadraticCurveTo(...P(.5, hh * 1.05), ...P(.88, hh * .7)); ctx.lineTo(...P(.88, 0)); ctx.closePath();
     ctx.fillStyle = '#5a3a22'; ctx.fill(); ctx.strokeStyle = '#1e140e'; ctx.lineWidth = 2.4; ctx.stroke();
@@ -55,19 +63,27 @@ function frontItems(list, t) {
   if (Z < 0) return;
   for (let x = 0; x < W; x++) if (x !== GATE.x) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW, false, 2) });
   for (let y = 0; y < H; y++) list.push({ d: W + y + .6, f: () => rampart(ctx, WP(W, y), WP(W, y + 1), RAMP_LOW, true, 2) });
-  list.push({ d: W - 1, f: () => tower(ctx, W + .5, -.5, .56, 175, curStyle().roof, t) });
-  list.push({ d: H - 1, f: () => tower(ctx, -.5, H + .5, .56, 175, curStyle().roof, t) });
+  list.push({ d: W + .65, f: () => tower(ctx, W + .35, -.35, .56, 175, curStyle().roof, t) });
+  list.push({ d: H + .65, f: () => tower(ctx, -.35, H + .35, .56, 175, curStyle().roof, t) });
   list.push({ d: W + H + 1.4, f: () => tower(ctx, W + .45, H + .45, .5, 60, curStyle().roof, t) });
-  list.push({ d: GATE.x + H + .55, f: () => {
-    tower(ctx, GATE.x - .02, H + .12, .22, 104, curStyle().roof, t); tower(ctx, GATE.x + 1.02, H + .12, .22, 104, curStyle().roof, t);
+  list.push({ d: GATE.x + H + .52, f: () => tower(ctx, GATE.x - .02, H + .12, .22, 104, curStyle().roof, t) });
+  list.push({ d: GATE.x + H + 1.14, f: () => tower(ctx, GATE.x + 1.02, H + .12, .22, 104, curStyle().roof, t) });
+  list.push({ d: GATE.x + H + .5, f: () => {
     const A = WP(GATE.x, H), B = WP(GATE.x + 1, H), hh = 78;
     texQuad(ctx, texWall('low', 1), [A[0], A[1] - hh], [B[0], B[1] - hh], 20, 0); capQuad(ctx, [A[0], A[1] - hh - 20], [B[0], B[1] - hh - 20], 0, [7, -3.5], curStyle().cap);
     for (let i = 1; i < 6; i++) { const p = lerp2(A, B, i / 6); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#1e1612', 3); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#5a5560', 1.4); }
     ln(ctx, [[A[0], A[1] - hh * .64], [B[0], B[1] - hh * .64]], '#5a5560', 2.4);
   } });
-  braziers().forEach(([x, y]) => list.push({ d: x + y, f: () => { const [wx, wy] = WP(x, y); drawSprite(ctx, getSprite('x', 'brazier'), wx, wy, 1); drawFlame(ctx, wx, wy - 58, 2.1, t, x); } }));
+  braziers().forEach(([x, y]) => list.push({ d: Math.max(x + y, GATE.x + H + .6), f: () => { const [wx, wy] = WP(x, y); drawSprite(ctx, getSprite('x', 'brazier'), wx, wy, 1); drawFlame(ctx, wx, wy - 58, 2.1, t, x); } }));
 }
 
+// les portes (et tout ce qui se pose en travers : barricade, hache, cloche) se tournent d'elles-mêmes dans le sens du couloir
+const defArt = t => DDRAW[t] ? t : (DEFS[t] || {}).sprite || 'porte';
+function defTurned(t, x, y, z) {
+  if (!DDRAW[defArt(t) + '~']) return false;
+  return withZ(z, () => { const o = (dx, dy) => passable(x, y, x + dx, y + dy) ? 1 : 0; return o(-1, 0) + o(1, 0) > o(0, -1) + o(0, 1); });
+}
+function drawDefAt(t, x, y, z, wx, wy, sc = 1, alpha = 1) { drawSprite(ctx, getSprite('def', defTurned(t, x, y, z) ? defArt(t) + '~' : t), wx, wy, sc, alpha); }
 function drawScene(t) {
   if (!S) return;
   if (V.dirty) rebuild();
@@ -82,7 +98,7 @@ function drawScene(t) {
   else if (Z > 0) { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(0, 0)); ctx.drawImage(roofTexture(), 0, 0); ctx.restore(); }
 
   else { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(-M, -M)); ctx.drawImage(Z < 0 ? caveTexture() : terrainTexture(), 0, 0); ctx.restore(); }
-  const here = o => zOf(o) === Z, actors = [...ACT.values()].filter(a => (a.z || 0) === Z), heros = Z === 0 ? HEROS : [];
+  const here = o => zOf(o) === Z, actors = [...ACT.values()].filter(a => (a.z || 0) === Z), heros = Z === (V.heroZ || 0) ? HEROS : [];
   for (const r of S.rooms) {
     if (!here(r)) continue;
     if (r.built) { ctx.save(); ctx.transform(64 / TEXT, 32 / TEXT, -64 / TEXT, 32 / TEXT, ...WP(r.x, r.y)); ctx.drawImage(roomTexture(r), 0, 0); ctx.restore(); }
@@ -91,17 +107,18 @@ function drawScene(t) {
   S.furn.forEach(f => { if (!here(f) || FURN[f.t].flat) return; const [x, y] = WP(f.x + .5, f.y + .5); shadowEll(ctx, x, y + 3, 36, 18, .34); });
   S.defs.forEach(d => { if (!here(d)) return; const [x, y] = WP(d.x + .5, d.y + .5); shadowEll(ctx, x, y + 3, 32, 16, .3); });
   [...actors, ...heros].forEach(a => { const [x, y] = WP(a.x, a.y); shadowEll(ctx, x, y + 1, 24 * a.sc, 12 * a.sc, .42 * (a.alpha == null ? 1 : a.alpha)); });
+  if (Z === 0) V.outside.filter(behindWalls).sort((a, b) => (a.x + a.y) - (b.x + b.y)).forEach(drawOutside);
   backDraw(t);
   const list = [];
   V.walls.forEach(w => list.push({ d: w.d, f: () => drawWall(ctx, w, t) }));
   S.furn.forEach(f => here(f) && list.push({ d: f.x + f.y + (FURN[f.t].flat ? .6 : 1), f: () => { const [x, y] = WP(f.x + .5, f.y + .5), b = V.born.get(f.id), k = b ? Math.max(1, 1.3 - (t - b) / 800) : 1, r = roomAt(f.x, f.y); drawSprite(ctx, getSprite('furn', f.t), x, y, k, r && r.built ? 1 : .55); } }));
-  S.defs.forEach(d => here(d) && list.push({ d: d.x + d.y + .95, f: () => { const [x, y] = WP(d.x + .5, d.y + .5), hit = V.hit && V.hit.id === d.id && t - V.hit.t < 500, b = V.born.get(d.id); drawSprite(ctx, getSprite('def', d.t), x + (hit ? Math.sin(t / 30) * 4 : 0), y, b ? Math.max(1, 1.3 - (t - b) / 800) : 1); } }));
+  S.defs.forEach(d => here(d) && list.push({ d: d.x + d.y + .95, f: () => { const [x, y] = WP(d.x + .5, d.y + .5), hit = V.hit && V.hit.id === d.id && t - V.hit.t < 500, b = V.born.get(d.id); drawDefAt(d.t, d.x, d.y, zOf(d), x + (hit ? Math.sin(t / 30) * 4 : 0), y, b ? Math.max(1, 1.3 - (t - b) / 800) : 1); } }));
   S.rooms.filter(r => !r.built && here(r)).forEach(r => list.push({ d: r.x + r.y + (r.w + r.h) / 2, f: () => { const [x, y] = WP(r.x + r.w / 2, r.y + r.h / 2); drawSprite(ctx, getSprite('x', 'scaffold'), x, y, Math.min(1.3, (r.w + r.h) / 3)); } }));
-  if (heartRoom() && Z === 0) { const h = heartRoom(); list.push({ d: h.x + h.y + 2, f: () => drawCrystal(ctx, t) }); }
+  if (heartRoom() && Z === zOf(heartRoom())) { const h = heartRoom(); list.push({ d: h.x + h.y + 2, f: () => drawCrystal(ctx, t) }); }
   V.flames.forEach(fl => list.push({ d: fl.d, f: () => drawFlame(ctx, fl.wx, fl.wy, fl.s, t, fl.seed) }));
-  actors.forEach(a => list.push({ d: a.x + a.y, f: () => drawActor(ctx, a, t) }));
-  heros.forEach(a => list.push({ d: a.x + a.y, f: () => drawActor(ctx, a, t) }));
-  if (Z === 0) V.outside.forEach(o => list.push({ d: o.x + o.y, f: () => { const [x, y] = WP(o.x, o.y); drawSprite(ctx, getSprite('x', o.key), x, y, 1.2); } }));
+  actors.forEach(a => list.push({ d: cellKey(a.x, a.y), f: () => drawActor(ctx, a, t) }));
+  heros.forEach(a => list.push({ d: cellKey(a.x, a.y), f: () => drawActor(ctx, a, t) }));
+  if (Z === 0) V.outside.forEach(o => { if (!behindWalls(o)) list.push({ d: o.x + o.y, f: () => drawOutside(o) }); });
   else if (Z === EXT) (V.outsideExt || []).forEach(o => list.push({ d: o.x + o.y, f: () => { const [x, y] = WP(o.x, o.y); drawSprite(ctx, getSprite('x', o.key), x, y, 1.15); } }));
   if (typeof lifeDrawList === 'function') lifeDrawList(list, t);
   frontItems(list, t);
@@ -110,8 +127,8 @@ function drawScene(t) {
   worldXf(); drawParticles(ctx, t); if (typeof drawGlyphs === 'function') drawGlyphs(ctx, t);
   drawOverlays(t);
   screenXf();
-  const vg = ctx.createRadialGradient(V.w / 2, V.h / 2, Math.min(V.w, V.h) * .35, V.w / 2, V.h / 2, Math.max(V.w, V.h) * .75);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${TUNE.vignette})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, V.w, V.h);
+  // le vignettage est un calque de la page posé sur le dessin (rien à repeindre à chaque image)
+  if (V.vigA !== TUNE.vignette) { const o = document.getElementById('cvvig'); if (o) { o.style.setProperty('--vig', TUNE.vignette); V.vigA = TUNE.vignette; } }
   drawDebug(t);
 }
 
@@ -138,7 +155,8 @@ function drawOverlays(t) {
     V.ghost.cells.forEach(([x, y]) => { path(ctx, footprint({ x, y, w: 1, h: 1 })); ctx.fillStyle = V.ghost.ok ? 'rgba(255,150,50,.12)' : 'rgba(255,60,60,.14)'; ctx.fill(); });
     const xs = V.ghost.cells.map(c => c[0]), ys = V.ghost.cells.map(c => c[1]), x0 = Math.min(...xs), y0 = Math.min(...ys);
     glowPath(footprint({ x: x0, y: y0, w: Math.max(...xs) - x0 + 1, h: Math.max(...ys) - y0 + 1 }), col, true, 1.1);
-    if (V.ghost.kind !== 'room') { const [wx, wy] = WP(x0 + .5, y0 + .5); drawSprite(ctx, getSprite(V.ghost.kind, V.ghost.key), wx, wy, 1, .78); }
+    if (V.ghost.kind === 'def') { const [wx, wy] = WP(x0 + .5, y0 + .5); drawDefAt(V.ghost.key, x0, y0, Z, wx, wy, 1, .78); }
+    else if (V.ghost.kind !== 'room') { const [wx, wy] = WP(x0 + .5, y0 + .5); drawSprite(ctx, getSprite(V.ghost.kind, V.ghost.key), wx, wy, 1, .78); }
   }
   const sel = V.selected && ACT.get(V.selected) && (ACT.get(V.selected).z || 0) === Z ? ACT.get(V.selected) : null;
   [sel, V.hoverActor && ACT.get(V.hoverActor)].forEach((a, i) => { if (!a) return; const [x, y] = WP(a.x, a.y); ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -151,15 +169,15 @@ function drawOverlays(t) {
   screenXf();
   if (V.hover && !V.ghost && !V.hoverActor) { const r = roomAt(V.hover[0], V.hover[1]); if (r && !isHall(r)) { const [sx, sy] = toScreen(...WP(r.x + r.w / 2, r.y + r.h / 2)), n = groupSize(r); tag(sx, sy + 10, ROOMS[r.t].name + (n >= 2 ? ' · ' + sizeWord(n) : '')); } }
   if (V.hoverForest && Z === EXT && !V.ghost && !UI.hand) { const c = forestCost(), [sx, sy] = toScreen(...WP(V.hoverForest[0] + .5, V.hoverForest[1] + .5)); tag(sx, sy - 30, c ? `🌲 Acheter la forêt · ${costText(c)}` : '🌲 La forêt'); }
-  [...[...ACT.values()].filter(a => (a.z || 0) === Z), ...(Z === 0 ? HEROS : [])].forEach(a => {
+  [...[...ACT.values()].filter(a => (a.z || 0) === Z), ...(Z === (V.heroZ || 0) ? HEROS : [])].forEach(a => {
     const [sx, sy] = toScreen(...WP(a.x, a.y)), top = sy - 112 * CAM.s * a.sc;
     if (a.hpMax) hpBar(sx, top - 4, a.hp, a.hpMax, a.kind === 'hero' || a.foe);
     if (typeof drawStatus === 'function') drawStatus(a, sx, top, t);
-    else if (a.badge) { ctx.font = `${Math.round(clamp(15 * CAM.s * 1.6, 11, 18))}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(a.badge, sx + 20 * CAM.s, top + 4); }
+    else if (a.badge) { ctx.font = `${Math.round(clamp(15 * CAM.s * 1.6, 11, 18))}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; richText(ctx, a.badge, sx + 20 * CAM.s, top + 4, Math.round(clamp(15 * CAM.s * 1.6, 11, 18))); }
     if (a.bubble && t < a.bubble.until) bubble(sx, top - 6, a.bubble.text);
   });
   V.fx = V.fx.filter(f => t - f.t0 < 1500);
-  V.fx.forEach(f => { const k = (t - f.t0) / 1500, [sx, sy] = toScreen(...WP(f.x, f.y)); ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.font = `800 ${Math.round(clamp(30 * CAM.s, 14, 22))}px "Grenze Gotisch", Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = '#1a100c'; ctx.strokeText(f.text, sx, sy - 70 * CAM.s - k * 40); ctx.fillStyle = f.col || '#fff1d0'; ctx.fillText(f.text, sx, sy - 70 * CAM.s - k * 40); ctx.globalAlpha = 1; });
+  V.fx.forEach(f => { const k = (t - f.t0) / 1500, [sx, sy] = toScreen(...WP(f.x, f.y)); ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.font = `800 ${Math.round(clamp(30 * CAM.s, 14, 22))}px "Grenze Gotisch", Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = '#1a100c'; ctx.fillStyle = f.col || '#fff1d0'; richText(ctx, f.text, sx, sy - 70 * CAM.s - k * 40, Math.round(clamp(30 * CAM.s, 14, 22)), true); ctx.globalAlpha = 1; });
   if (COOP.role) drawPeersScreen(t);
 }
 function drawDebug(t) {
@@ -181,19 +199,19 @@ function clockAt(x, y, r, n, f) {
   ctx.restore();
 }
 function tag(x, y, text, col = '#f2d48a') {
-  ctx.font = '700 15px "Grenze Gotisch", Georgia, serif'; const w = ctx.measureText(text).width + 18, h = 22;
+  ctx.font = '700 15px "Grenze Gotisch", Georgia, serif'; const w = richWidth(ctx, text, 15) + 18, h = 22;
   rr(ctx, x - w / 2, y - h / 2, w, h, 7); ctx.fillStyle = 'rgba(24,16,12,.88)'; ctx.fill(); ctx.strokeStyle = '#b8873c'; ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y + 1);
+  ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; richText(ctx, text, x, y + 1, 15);
 }
 function bubble(sx, sy, text) {
   ctx.font = '17px "Patrick Hand", "Comic Sans MS", cursive';
   const words = text.split(' '), lines = []; let cur = '';
-  words.forEach(wd => { const tt = cur ? cur + ' ' + wd : wd; if (ctx.measureText(tt).width > 190 && cur) { lines.push(cur); cur = wd; } else cur = tt; }); if (cur) lines.push(cur);
-  const lh = 18, bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + 18, bh = lines.length * lh + 10;
+  words.forEach(wd => { const tt = cur ? cur + ' ' + wd : wd; if (richWidth(ctx, tt, 17) > 190 && cur) { lines.push(cur); cur = wd; } else cur = tt; }); if (cur) lines.push(cur);
+  const lh = 18, bw = Math.max(...lines.map(l => richWidth(ctx, l, 17))) + 18, bh = lines.length * lh + 10;
   const bx = clamp(sx - bw / 2, 6, V.w - bw - 6), by = sy - bh - 10;
   ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 10); else ctx.rect(bx, by, bw, bh); ctx.moveTo(sx - 6, by + bh); ctx.lineTo(sx, by + bh + 9); ctx.lineTo(sx + 6, by + bh);
   ctx.fillStyle = '#fbf3e0'; ctx.fill(); ctx.strokeStyle = '#2a1c16'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#2a1c16'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; lines.forEach((l, i) => ctx.fillText(l, bx + 9, by + 5 + i * lh));
+  ctx.fillStyle = '#2a1c16'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; lines.forEach((l, i) => richText(ctx, l, bx + 9, by + 5 + i * lh, 17));
 }
 
 /* ---------- vie des créatures ---------- */
@@ -210,11 +228,11 @@ function wanderOnce(a, force) {
   const z = a.z || 0;
   withZ(z, () => {
     const [cx, cy] = cellOf(a), here = roomAt(cx, cy);
-    if (!here || !here.built) { const root = z === 0 ? heartRoom() : floorRoot(z); if (!root) a.z = 0; const [x, y] = randCell(root || heartRoom()); a.x = x + .5; a.y = y + .5; return; }
+    if (!here || !here.built) { const root = floorHome(z), h = root || heartRoom(); a.z = zOf(h); const [x, y] = randCell(h); a.x = x + .5; a.y = y + .5; return; }
     if (!force && rstat(here, 'beds') && Math.random() < .2) { if (z === Z) floatText(a.x, a.y - .2, 'z', '#cfe0ff'); return; }
     const post = c.post && S.rooms.find(r => r.id === c.post && r.built);
     const rooms = builtRooms().filter(r => !isHall(r) && !ROOMS[r.t].stairs && zOf(r) === z);
-    const room = post || (Math.random() < .45 || !rooms.length ? (z === 0 ? heartRoom() : pick(rooms) || floorRoot(z)) : pick(rooms));
+    const room = post || (Math.random() < .45 || !rooms.length ? (z === zOf(heartRoom() || {}) ? heartRoom() : pick(rooms) || floorHome(z)) : pick(rooms));
     if (zOf(room) !== z) {
       // changer d'étage : on file à l'escalier, on le prend, et la balade continue à l'étage d'à côté
       const dir = zOf(room) > z ? 1 : -1, st = stairsToward(z, dir);
@@ -264,10 +282,10 @@ function pickActor(sx, sy) {
 let lastFrame = 0;
 function loop(now) {
   requestAnimationFrame(loop);
-  if (document.hidden || now - lastFrame < 30) return;
-  lastFrame = now; resize();
+  if (document.hidden || now - lastFrame < 30 || document.body.classList.contains('crawling') || (typeof MAPV !== 'undefined' && MAPV.open)) return;   // en expédition ou sur la carte du Val, le château caché ne se dessine pas
+  renderQuality(now - lastFrame); lastFrame = now; resize();
   try { drawScene(now); } catch (e) { if (!V.err) { V.err = 1; console.error(e); } }
 }
 setInterval(() => { if (!document.hidden && S) ACT.forEach(a => wanderOnce(a)); }, 900);
 // filet de sécurité : si l'animation est suspendue (onglet en arrière-plan, aperçu), on redessine quand même de temps en temps
-setInterval(() => { const now = performance.now(); if (S && !document.hidden && now - lastFrame > 240) { lastFrame = now; resize(); try { drawScene(now); } catch (e) {} } }, 250);
+setInterval(() => { const now = performance.now(); if (S && !document.hidden && now - lastFrame > 240 && !document.body.classList.contains('crawling') && !(typeof MAPV !== 'undefined' && MAPV.open)) { lastFrame = now; resize(); try { drawScene(now); } catch (e) {} } }, 250);

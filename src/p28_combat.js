@@ -42,6 +42,7 @@ const SP_FIGHT = {
   mandragore: { sk: 'Hurlement', sd: 'Au début du combat, tous les héros frappent 1 de moins.', howl: 1 },
   nixe:       { sk: 'Éclaboussure', sd: 'Ses coups éclaboussent un deuxième héros (1 dégât).', splash: 1 },
   goule:      { sk: 'Dévoreuse', sd: 'Récupère 3 PV quand elle met un héros K.O.', devour: 3 },
+  nainsombre: { sk: 'Tête de fer', sd: 'Chaque coup reçu fait 1 dégât de moins (il a gardé son casque de forge).', armor: 1 },
 };
 // les pouvoirs du Cœur : à lancer pendant la bataille, juste avant un combat
 const POWERS = {
@@ -49,11 +50,25 @@ const POWERS = {
   eboulement: { ico: '🪨', name: 'Éboulement', desc: '4 dégâts au héros le plus dangereux.' },
   seve:       { ico: '💚', name: 'Sève du Cœur', desc: 'Tes défenseurs gagnent 3 PV et frappent 1 de plus pendant ce combat.' },
   cri:        { ico: '😱', name: 'Cri du Cœur', desc: 'Pendant ce combat, les héros frappent 1 de moins.' },
+  cloche:     { ico: '🔔', name: 'Sonner la cloche', desc: 'Les deux créatures disponibles les plus solides accourent se joindre à ce combat (elles ne pourront plus se battre ensuite).' },
+  // les savoirs des alchimistes (voir les métiers)
+  brume:      { ico: '🌫️', name: 'Brume soporifique', need: ['labo', 2], desc: 'Toute la bande s’assoupit : chaque héros perd son premier coup, et le plus dangereux ses deux premiers.' },
+  elixir:     { ico: '⚗️', name: 'Élixir de bravoure', need: ['labo', 3], desc: 'Tes défenseurs gagnent 2 PV et frappent 2 de plus pendant ce combat.' },
 };
-const powerCharges = () => Math.min(3, 1 + S.tier);
+// un jeton qu'on a le droit de jouer (ceux des alchimistes demandent leur savoir)
+const powerOK = k => { const p = POWERS[k]; return !!p && (!p.need || (typeof craftRank === 'function' && craftRank(p.need[0]) >= p.need[1])); };
+// les gestes du Maître pendant la balade de la bande, à tout moment (pas seulement avant un combat)
+const STEP_ACTS = {
+  or:     { ico: '👛', name: 'Semer de l’or', desc: 'Une bourse au milieu du couloir : souvent, un paysan ou une voleuse la ramasse et rentre chez lui ; sinon, la bande se la dispute et perd du temps.' },
+  detour: { ico: '🚪', name: 'Claquer les portes', desc: 'Toutes les portes claquent : la bande se perd quelques pas et perd du temps avant l’aube.' },
+};
+const orCost = plan => 4 + 3 * (plan.rank || 1);
+// les jetons du Cœur : chaque geste en coûte un ; sans eux, la bande arrive à ses fins
+function heartTokens() { return Math.min(4, 2 + Math.floor(S.tier / 2)) + (typeof chantierDone === 'function' && chantierDone('pontlevis') ? 1 : 0); }
+const powerCharges = () => heartTokens();
 const TACTICS = {
   postes:   { ico: '🛡️', name: 'Tenir les postes', desc: 'Chaque garde défend sa pièce (+1 : il·elle est chez soi) ; les créatures libres défendent ce que la bande vise.' },
-  cible:    { ico: '🎯', name: 'Défendre leur cible', desc: 'Toutes les créatures, même postées ou à l’étage, accourent là où ils vont (celles qui viennent de loin arrivent essoufflées : −1). Personne sur la route.' },
+  cible:    { ico: '🎯', name: 'Défendre leur cible', desc: 'Toutes les créatures, même postées ou à l’étage, accourent là où ils vont (celles qui viennent de loin arrivent essoufflées : −1). Personne sur la route : ils fouillent toutes les pièces qu’ils traversent, et autour de leur cible il n’y a pas de place pour tout le monde (2 en réserve).' },
   harceler: { ico: '🗡️', name: 'Harceler', desc: 'La moitié des créatures libres leur tend des embuscades en chemin (+1, et elles frappent les premières) ; elles n’arrivent pas à temps pour la défense finale.' },
   rancon:   { ico: '💰', name: 'Acheter leur départ', desc: 'Ils empochent l’or et rentrent chez eux. Ni butin ni gloire.' },
 };
@@ -104,7 +119,7 @@ function pickGoal(o = {}) {
 }
 // le plus court chemin vers une pièce donnée (les barricades le détournent)
 function heroPathTo(room, extra) {
-  if (!room || room === heartRoom()) return heroPath(extra);
+  if (!room || room === heartRoom()) return heroRoute(extra);
   return withZ(0, () => {
     const goal = (x, y) => { const r = roomAt(x, y); return r === room || sameGroup(r, room); }, wall = (x, y) => barred(x, y) || (extra && extra[0] === x && extra[1] === y);
     return bfs([GATE.x, GATE.y], goal, (x1, y1, x2, y2) => passable(x1, y1, x2, y2) && !wall(x2, y2)) || (extra ? null : bfs([GATE.x, GATE.y], goal));
@@ -112,10 +127,12 @@ function heroPathTo(room, extra) {
 }
 function encounters(path, target) {
   const out = [], tg = target || heartRoom(), tgRooms = tg ? groupOf(tg).rooms : [], seen = new Set(tgRooms.map(r => r.id));
-  (path || []).forEach(([x, y], i) => {
+  (path || []).forEach(([x, y, z], i) => {
     if (i === 0) return;
-    const r = roomAt(x, y), d = defAt(x, y);
+    const r = roomAt(x, y, z || 0), d = withZ(z || 0, () => defAt(x, y));
     if (d && DEFS[d.t]) { const f = DEFS[d.t]; out.push(f.block ? { i, k: 'smash', defId: d.id, label: f.name } : { i, k: 'def', defId: d.id, t: d.t, label: f.name, dmg: defStr(d) }); return; }
+    if (r && isHall(r) && r.t !== 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Barrage', entry: 0 }); return; }
+    if (r && r.t === 'porche' && !seen.has(r.id) && typeof guardRoomOf === 'function' && S.creatures.some(c => c.guard === r.id && guardRoomOf(c))) { seen.add(r.id); out.push({ i, k: 'room', rooms: [r.id], label: 'Le porche', entry: 0 }); return; }
     if (r && !isHall(r) && !seen.has(r.id)) {
       const g = groupOf(r); g.rooms.forEach(o => seen.add(o.id));
       out.push({ i, k: 'room', rooms: g.rooms.map(o => o.id), label: ROOMS[r.t].name + (g.rooms.length >= 2 ? ' (' + sizeWord(g.rooms.length) + ')' : ''), entry: g.rooms.reduce((a, o) => a + rstat(o, 'guard'), 0) });
@@ -146,14 +163,16 @@ planInvasion0 = function () {
   assignGoal(p, { kidnap: (p.rank || 1) >= 2 });
   return p;
 };
-const PREP_TARGET = { 1: .1, 2: .16, 3: .22 };
+// la bande se prépare contre tes créatures et tes gardes, et en partie contre tes pièges et tes verrous (comptés à 60 %), sans compter
+// tes jetons du Cœur : si tu laisses faire, elle réussit près de 9 fois sur 10 ; ce sont tes gestes (et tes pièges) qui la font échouer
+const PREP_TARGET = { 1: .95, 2: .96, 3: .96 };
 function prepareParty(p, target) {
   if (!p || !p.party.length) return p;
-  const base = p.party.map(h => ({ hp: h.hp, atk: h.atk })), tgt = target || PREP_TARGET[p.rank || 1] || .25, N = 16;
-  const apply = m => p.party.forEach((h, j) => { h.hp = Math.max(1, Math.round(base[j].hp * m)); h.atk = Math.max(base[j].atk, Math.round(base[j].atk * Math.sqrt(m))); });
-  const fail = m => { apply(m); let f = 0; for (let i = 0; i < N; i++) if (resolveInvasion(p, 'postes').outcome === 'robbed') f++; return f / N; };
+  const base = p.party.map(h => ({ hp: h.hp, atk: h.atk })), tgt = target || PREP_TARGET[p.rank || 1] || .5, N = 16;
+  const apply = m => p.party.forEach((h, j) => { h.hp = Math.max(1, Math.round(base[j].hp * m)); h.atk = Math.max(base[j].atk, Math.round(base[j].atk * Math.pow(m, .75))); });
+  const fail = m => { apply(m); p.bare = 'half'; let f = 0; try { for (let i = 0; i < N; i++) if (resolveInvasion(p, 'postes', noPower).outcome === 'robbed') f++; } finally { p.bare = false; } return f / N; };
   let m = 1;
-  if (fail(1) < tgt) { let lo = 1, hi = 1.6; while (hi < 5 && fail(hi) < tgt) { lo = hi; hi *= 1.6; } for (let k = 0; k < 5; k++) { const mid = (lo + hi) / 2; if (fail(mid) < tgt) lo = mid; else hi = mid; } m = Math.min(5, Math.round((lo + hi) / 2 * 10) / 10); }
+  if (fail(1) < tgt) { let lo = 1, hi = 1.6; while (hi < 16 && fail(hi) < tgt) { lo = hi; hi *= 1.6; } for (let k = 0; k < 5; k++) { const mid = (lo + hi) / 2; if (fail(mid) < tgt) lo = mid; else hi = mid; } m = Math.min(16, Math.round((lo + hi) / 2 * 10) / 10); }
   apply(m); p.prep = m; p.courage = p.party.reduce((a, h) => a + h.hp, 0);
   return p;
 }
@@ -169,7 +188,7 @@ partyPreview = function () {
 /* ---------- la bataille, pas à pas : elle s'arrête avant chaque combat pour les pouvoirs du Cœur ---------- */
 function newBattle(plan, tactic) {
   const party = plan.party.map((h, j) => ({ j, k: h.k, name: h.name, hp: h.hp, max: h.hp, atk: h.atk, F: h.F || HERO_FIGHT[h.k] || HERO_FIGHT.paysan, ko: false, stun: 0 }));
-  return { ev: [], party, outcome: null, stop: 0, fought: [], hurt: [], kos: {}, fallen: [], lines: [], tactic, goal: plan.goal || { k: 'coeur', label: 'le Cœur' }, charges: plan.noPowers ? 0 : powerCharges(), used: [], moments: 0 };
+  return { ev: [], party, outcome: null, stop: 0, fought: [], hurt: [], kos: {}, fallen: [], lines: [], tactic, goal: plan.goal || { k: 'coeur', label: 'le Cœur' }, charges: plan.noPowers ? 0 : heartTokens(), used: [], moments: 0, queue: [], gold: 0 };
 }
 // ce que la bande fait dans les pièces qu'elle traverse (façon Donjon de Naheulbeuk)
 const ROOM_EVENTS = {
@@ -195,7 +214,8 @@ function* battleGen(plan, R) {
   const party = R.party, tactic = R.tactic, n = party.length, need = Math.ceil(n * (plan.rank === 3 ? 2 / 3 : .5));
   const alive = () => party.filter(h => !h.ko), broken = () => n - alive().length >= need, who = plan.foe || 'la bande';
   let sticky = 0, disarm = party.filter(h => h.F.disarm).length, alarm = false;
-  if (!R.walk) R.walk = [[GATE.x, GATE.y]]; R.loot = { g: 0, s: 0, furn: [], freed: 0 };
+  const rank = plan.rank || 1, GREED = { voleuse: 4, paysan: 3, elfe: 2, barbare: 1, mage: 1, paladin: 0 };
+  if (!R.walk) R.walk = [[GATE.x, GATE.y, 0]]; R.z = 0; R.loot = { g: 0, s: 0, furn: [], freed: 0 };
   const end = (out, i) => { R.outcome = out; R.stop = i; R.ev.push({ k: out, i }); };
   const hurtHero = (h, d, hits, by, sk) => {
     if (h.ko || d <= 0) return; h.hp -= d; const ko = h.hp <= 0;
@@ -206,7 +226,7 @@ function* battleGen(plan, R) {
   // un combat : premier rang, relève (bornée), talents des deux camps
   const fight = (e, defs0, opt, pw) => {
     const cap = opt.cap, maxR = opt.maxR, koHere = [];
-    const defs = defs0.sort((a, b) => (b.merc ? 1 : 0) - (a.merc ? 1 : 0) || b.atk - a.atk || b.hp - a.hp).slice(0, cap * 2);   // pas de place pour tout le monde
+    const defs = defs0.sort((a, b) => (b.merc ? 1 : 0) - (a.merc ? 1 : 0) || b.atk - a.atk || b.hp - a.hp).slice(0, opt.keep || cap * 2);   // pas de place pour tout le monde
     defs.forEach((d, k) => { d.in = k < cap; });
     const up = () => defs.filter(d => d.hp > 0 && d.in);
     R.ev.push({ k: 'engage', i: e.i, final: !!opt.final, ambush: !!opt.ambush, heart: !!e.heart, label: e.label, cap, defs: up().map(d => ({ id: d.id, hp: d.hp, max: d.max, merc: !!d.merc })) });
@@ -250,6 +270,8 @@ function* battleGen(plan, R) {
     const open = [];
     if (pw === 'seve') { up().forEach(d => { d.hp += 3; d.max += 3; }); defPlus += 1; open.push({ s: 'pw', p: 'seve' }); }
     if (pw === 'cri') { heroMinus += 1; open.push({ s: 'pw', p: 'cri' }); }
+    if (pw === 'elixir') { up().forEach(d => { d.hp += 2; d.max += 2; }); defPlus += 2; open.push({ s: 'pw', p: 'elixir' }); }
+    if (pw === 'brume') { const top = alive().slice().sort((a, b) => b.atk - a.atk || b.hp - a.hp)[0]; alive().forEach(h => { const v = h === top ? 2 : 1; h.stun = Math.max(h.stun || 0, v); open.push({ s: 'h', j: h.j, stun: v, sk: 'Brume soporifique' }); }); R.moments++; }
     if (pw === 'eboulement') { const h = alive().sort((a, b) => b.atk - a.atk || b.hp - a.hp)[0]; if (h) hurtHero(h, 4, open, 'power', 'Éboulement'); }
     up().forEach(d => {
       const A = d.A || {};
@@ -318,17 +340,22 @@ function* battleGen(plan, R) {
   }
   // leur but, et la distance qui les en sépare (les barricades bloquent ; si elles bloquent tout, ils les enfonceront)
   const tg = S.rooms.find(r => r.id === plan.target) || heartRoom(); if (!tg) return end('lost', 0);
-  const tgSet = new Set(groupOf(tg).rooms.map(r => r.id)), K = (x, y) => y * W + x;
-  const distTo = avoid => { const d = new Map(), q = []; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const r = roomAt(x, y); if (r && tgSet.has(r.id)) { d.set(K(x, y), 0); q.push([x, y]); } }
-    while (q.length) { const [x, y] = q.shift(), v = d.get(K(x, y)); for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, k = K(nx, ny); if (nx < 0 || ny < 0 || nx >= W || ny >= H || d.has(k) || !passable(nx, ny, x, y) || (avoid && barred(nx, ny))) continue; d.set(k, v + 1); q.push([nx, ny]); } }
+  // (le Cœur peut être à un autre étage : la distance passe par les escaliers)
+  const tgSet = new Set(groupOf(tg).rooms.map(r => r.id)), tz = zOf(tg), links = stairLinks(), K = (x, y, z = 0) => ((z + 8) * H + y) * W + x;
+  const distTo = avoid => { const d = new Map(), q = [];
+    withZ(tz, () => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const r = roomAt(x, y); if (r && tgSet.has(r.id)) { d.set(K(x, y, tz), 0); q.push([x, y, tz]); } } });
+    while (q.length) { const [x, y, z] = q.shift(), v = d.get(K(x, y, z));
+      const nb = withZ(z, () => DIRS.map(([dx, dy]) => [x + dx, y + dy, z]).filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < W && ny < H && passable(nx, ny, x, y) && !(avoid && barred(nx, ny, z))));
+      const s = links.get(x + ',' + y + ',' + z); if (s) nb.push(s);
+      for (const c of nb) { const k = K(...c); if (d.has(k)) continue; d.set(k, v + 1); q.push(c); } }
     return d; };
-  let dist = distTo(true), smashOK = false; if (dist.get(K(GATE.x, GATE.y)) == null) { dist = distTo(false); smashOK = true; }
-  const D0 = dist.get(K(GATE.x, GATE.y)); if (D0 == null) { R.lines.push(['🌀', 'Aucun chemin jusqu’à leur but : ils tournent en rond.', 'good']); return end('lost', 0); }
+  let dist = distTo(!plan.bare), smashOK = !!plan.bare; if (dist.get(K(GATE.x, GATE.y, 0)) == null) { dist = distTo(false); smashOK = true; }
+  const D0 = dist.get(K(GATE.x, GATE.y, 0)); if (D0 == null) { R.lines.push(['🌀', 'Aucun chemin jusqu’à leur but : ils tournent en rond.', 'good']); return end('lost', 0); }
   let clock = Math.round(D0 * 2.5) + 12 + 2 * (plan.rank || 1);
   let bias = { 1: .45, 2: .55, 3: .7 }[plan.rank || 1] + (party.some(h => h.k === 'elfe' && !h.minion) ? .1 : 0);
   // qui défend quoi, selon la tactique
   const goalE = { k: 'goal', heart: tg === heartRoom(), rooms: [...tgSet], label: tg === heartRoom() ? 'Le Cœur' : ROOMS[tg.t].name, entry: [...tgSet].reduce((a, id) => a + rstat(S.rooms.find(r => r.id === id), 'guard'), 0) };
-  const free = freeCrew().filter(c => !tgSet.has(c.post)), ambushes = [];
+  const free = freeCrew().filter(c => !tgSet.has(c.guard)), ambushes = [];
   let finalCrew;
   if (tactic === 'cible') finalCrew = S.creatures.filter(fitToFight);
   else if (tactic === 'harceler') {
@@ -337,20 +364,41 @@ function* battleGen(plan, R) {
     for (let k = 0; k < spots; k++) { const grp = pool.splice(0, 3); if (grp.length) ambushes.push({ at: Math.max(2, Math.round(D0 * (k + 1) / (spots + 1))), crew: grp }); }
     finalCrew = [...guardsIn(goalE), ...pool, ...all];
   } else finalCrew = [...guardsIn(goalE), ...free];
-  const tired = new Set(), seenRooms = new Set(), trapsDone = new Set(), visited = new Set([K(GATE.x, GATE.y)]);
-  let pos = [GATE.x, GATE.y];
+  const tired = new Set(), seenRooms = new Set(), trapsDone = new Set(), visited = new Set([K(GATE.x, GATE.y, 0)]);
+  let pos = [GATE.x, GATE.y, 0], lostSteps = 0;
+  // un geste du Maître : la bourse fait fuir le plus cupide, les portes claquées les égarent
+  const doStep = k => {
+    const freeAct = k === 'detour' && !R.used.includes(k) && typeof chantierDone === 'function' && chantierDone('secrete');   // la pièce secrète : les portes claquent gratis
+    if ((R.charges <= 0 && !freeAct) || R.used.includes(k) || !STEP_ACTS[k] || R.outcome) return false;
+    let j = null;
+    if (k === 'or') {
+      const cost = orCost(plan); if (S.gold - R.gold < cost) return false; R.gold += cost;
+      const h = Math.random() < .6 ? alive().filter(x => (GREED[x.k] || 0) >= 3).sort((a, b) => (GREED[b.k] || 0) - (GREED[a.k] || 0) || a.hp - b.hp)[0] : null;
+      if (h) { h.ko = true; h.fled = true; j = h.j; R.lines.push(['👛', `Une bourse de ${cost} or au milieu du couloir : ${h.name} la ramasse et file.`, 'good']); }
+      else { clock -= 3; R.lines.push(['👛', `Une bourse de ${cost} or au milieu du couloir : ${who} se la dispute et perd du temps.`, 'good']); }
+    }
+    else if (k === 'detour') { clock -= 3; lostSteps = 4; R.lines.push(['🚪', `Les portes claquent : ${who} se perd et perd du temps.`, 'good']); }
+    if (!freeAct) R.charges--; R.used.push(k); R.ev.push({ k: 'act', a: k, i: R.walk.length - 1, j }); R.moments++;
+    return true;
+  };
   const runFight = function* (e, crew, opt) {
-    const home = c => e.rooms && e.rooms.includes(c.post) && tactic !== 'cible' ? 1 : 0, far = c => tactic === 'cible' && opt.final && c.post && !e.rooms.includes(c.post) ? -1 : 0;
+    const home = c => e.rooms && e.rooms.includes(c.post) && tactic !== 'cible' ? 1 : 0, far = c => tactic === 'cible' && opt.final && c.guard && !e.rooms.includes(c.guard) ? -1 : 0;
     const defs = crew.filter(c => fitToFight(c) && !tired.has(c.id)).map(c => fighterOf(c, (opt.final && alarm ? 1 : 0) + (opt.ambush ? 1 : home(c) + far(c))));
     if (opt.final && S.world && S.world.merc > S.night) defs.push({ id: 'merc', name: 'les Mercenaires', hp: 10, max: 10, atk: 2, merc: true, A: {} });
+    if (opt.final && typeof nemAlly === 'function') { const al = nemAlly(); if (al) defs.push(al); }   // l'ancien héros némésis, passé de ton côté
     if (!defs.length) return null;
     let pw = null;
     if (R.charges > 0) {
+      while (R.queue.length) doStep(R.queue.shift());   // un geste demandé pendant la balade passe avant le combat
       pw = yield { ask: 'power', e, final: !!opt.final, label: e.label, defs: defs.map(d => ({ name: d.name, hp: d.hp, atk: d.atk })), party: alive().map(h => ({ name: h.name, hp: h.hp, max: h.max, atk: h.atk })) };
-      if (pw && POWERS[pw] && !R.used.includes(pw)) { R.charges--; R.used.push(pw); R.ev.push({ k: 'power', i: e.i, p: pw }); R.lines.push([POWERS[pw].ico, `Pouvoir du Cœur : ${POWERS[pw].name}.`, 'good']); } else pw = null;
+      if (pw && POWERS[pw] && powerOK(pw) && !R.used.includes(pw) && R.charges > 0) { R.charges--; R.used.push(pw); R.ev.push({ k: 'power', i: e.i, p: pw }); R.lines.push([POWERS[pw].ico, `Pouvoir du Cœur : ${POWERS[pw].name}.`, 'good']); } else pw = null;
+    }
+    if (pw === 'cloche') {   // les renforts : les plus solides de celles qui ne se battent pas ici
+      const inFight = new Set(defs.map(d => d.id)), extra = S.creatures.filter(c => fitToFight(c) && !inFight.has(c.id) && !tired.has(c.id) && !R.hurt.includes(c.id)).sort((a, b) => guardOf(b) - guardOf(a)).slice(0, 2);
+      extra.forEach(c => { const d = fighterOf(c, 0); defs.push(d); tired.add(c.id); }); if (extra.length) R.lines.push(['🔔', `La cloche sonne : ${extra.map(c => c.name).join(' et ')} accour${extra.length > 1 ? 'ent' : 't'}.`, 'good']);
     }
     const cap = opt.ambush ? 3 : opt.final ? (e.heart ? 5 : 2 + 2 * e.rooms.length) : 1 + 2 * e.rooms.length;
-    const before = new Set(R.fallen), hurt0 = R.hurt.length, m0 = R.moments, res = fight(e, defs, { cap, maxR: opt.final ? 6 : opt.ambush ? 2 : 3, final: opt.final, ambush: opt.ambush }, pw);
+    const before = new Set(R.fallen), hurt0 = R.hurt.length, m0 = R.moments, res = fight(e, defs, { cap, keep: opt.final && tactic === 'cible' ? cap + 2 : cap * 2, maxR: opt.final ? 6 : opt.ambush ? 2 : 3, final: opt.final, ambush: opt.ambush }, pw);
     if (opt.ambush) defs.forEach(d => d.c && tired.add(d.id));
     const downH = R.fallen.filter(j => !before.has(j)).map(j => party[j].name), downC = R.hurt.slice(hurt0).map(id => (critter(id) || {}).name).filter(Boolean);
     const used = defs.filter(d => d.in), vs = used.map(d => d.name).join(', ') + (defs.length > used.length ? ` (et ${defs.length - used.length} en réserve)` : '');
@@ -360,17 +408,25 @@ function* battleGen(plan, R) {
   // la balade : un pas après l'autre, tantôt vers leur but, tantôt au petit bonheur
   for (;;) {
     if (!alive().length) return end('repelled', R.walk.length - 1);
+    // le Maître peut agir à chaque pas (le simulateur suit sa politique ; à l'écran, les boutons remplissent la file)
+    if (R.stepPol) R.stepPol(R, { i: R.walk.length - 1, clock, left: dist.get(K(...pos)) ?? 0, alive: alive().length, need, rank });
+    while (R.queue.length) { doStep(R.queue.shift()); if (broken()) return end('repelled', R.walk.length - 1); }
+    if (R.live) yield { tick: 1 };
+    while (R.queue.length) { doStep(R.queue.shift()); if (broken()) return end('repelled', R.walk.length - 1); }
     if (clock-- <= 0) { R.lines.push(['🌅', `Le jour se lève : ${who} rentre se coucher${R.loot.g || R.loot.s || R.loot.furn.length ? ', les poches pleines' : ', bredouille'}.`, 'good']); return end('lost', R.walk.length - 1); }
-    const here = dist.get(K(pos[0], pos[1]));
-    const nb = DIRS.map(([dx, dy]) => [pos[0] + dx, pos[1] + dy]).filter(([x, y]) => x >= 0 && y >= 0 && x < W && y < H && passable(pos[0], pos[1], x, y) && (smashOK || !barred(x, y)));
+    const here = dist.get(K(...pos));
+    const nb = DIRS.map(([dx, dy]) => [pos[0] + dx, pos[1] + dy, pos[2]]).filter(([x, y]) => x >= 0 && y >= 0 && x < W && y < H && passable(pos[0], pos[1], x, y) && (smashOK || !barred(x, y)));
+    { const s = links.get(pos.join(',')); if (s) nb.push(s); }
     if (!nb.length) { R.lines.push(['🌀', 'Ils se perdent dans un cul-de-sac et rentrent chez eux.', 'good']); return end('lost', R.walk.length - 1); }
     let nx = null;
-    if (Math.random() < bias) nx = nb.filter(c => dist.has(K(c[0], c[1])) && dist.get(K(c[0], c[1])) < here).sort((a, b) => dist.get(K(a[0], a[1])) - dist.get(K(b[0], b[1])))[0] || null;
-    if (!nx) { const fresh = nb.filter(c => !visited.has(K(c[0], c[1]))); nx = pick(fresh.length ? fresh : nb); }
-    pos = nx; visited.add(K(pos[0], pos[1])); R.walk.push(pos); const i = R.walk.length - 1;
+    if (lostSteps > 0) lostSteps--; else if (Math.random() < bias) nx = nb.filter(c => dist.has(K(...c)) && dist.get(K(...c)) < here).sort((a, b) => dist.get(K(...a)) - dist.get(K(...b)))[0] || null;
+    if (!nx) { const fresh = nb.filter(c => !visited.has(K(...c))); nx = pick(fresh.length ? fresh : nb); }
+    const z0 = pos[2]; pos = nx; visited.add(K(...pos)); R.walk.push(pos); const i = R.walk.length - 1;
+    // un escalier : la bande change d'étage (le pas suivant se joue là-haut, ou là-dessous)
+    if (pos[2] !== z0) { R.z = pos[2]; R.ev.push({ k: 'floor', i, z: pos[2] }); R.lines.push(['🪜', `${who[0].toUpperCase() + who.slice(1)} ${pos[2] > z0 ? 'monte' : 'descend'} : ${FLOOR_NAMES[pos[2]]}.`, '']); yield { floor: pos[2] }; continue; }
     if (Math.random() < .07) R.ev.push({ k: 'talk', i, j: pick(alive()).j, text: pick(NAHEUL) });
     // un piège, un verrou, une barricade
-    const d = defAt(pos[0], pos[1]);
+    const d = plan.bare === true ? null : defAt(pos[0], pos[1]), half = plan.bare === 'half';
     if (d && DEFS[d.t] && !trapsDone.has(d.id)) {
       trapsDone.add(d.id); const D = DEFS[d.t], label = D.name;
       if (D.block) { R.ev.push({ k: 'smash', i, defId: d.id }); R.smashed = d.id; R.lines.push(['🪓', `Aucun autre chemin : ${who} défonce ta ${label}.`, 'bad']); }
@@ -379,13 +435,13 @@ function* battleGen(plan, R) {
         const thief = D.kind === 'piège' && disarm > 0 ? alive().find(h => h.F.disarm) : null;
         if (thief) { disarm--; R.ev.push({ k: 'disarm', i, defId: d.id, j: thief.j }); R.moments++; R.lines.push(['🗝️', `${thief.name} désamorce ta ${label}.`, 'bad']); }
         else {
-          const h = pick(alive()); let dmg = defStr(d) + sticky; sticky = 0;
+          const h = pick(alive()); let dmg = defStr(d) + sticky; sticky = 0; if (half) dmg = Math.ceil(dmg * .6);
           if (D.kind === 'verrou' && h.F.smash) dmg = Math.ceil(dmg / 2);
           const hits = []; if (dmg > 0) hurtHero(h, dmg, hits, null);
           if (D.sticky) sticky = 1;
           R.ev.push({ k: 'trap', i, defId: d.id, hits }); R.lines.push(['⚔️', `${label} : −${dmg} PV à ${h.name}${h.ko ? ', K.O. !' : '.'}`, 'good']);
           if (broken()) return end('repelled', i);
-          if (D.lost && Math.random() < D.lost) { R.lines.push([D.kind === 'ruse' ? '🎭' : '🦁', D.kind === 'ruse' ? 'Ils filent avec le Faux trésor, ravis de leur butin.' : 'L’énigme du Sphinx les laisse secs : ils rentrent chez eux.', 'good']); return end('lost', i); }
+          if (D.lost && Math.random() < D.lost * (half ? .6 : 1)) { R.lines.push([D.kind === 'ruse' ? '🎭' : '🦁', D.lostLine || (D.kind === 'ruse' ? 'Ils filent avec le Faux trésor, ravis de leur butin.' : 'L’énigme du Sphinx les laisse secs : ils rentrent chez eux.'), 'good']); return end('lost', i); }
         }
       }
     }
@@ -396,6 +452,12 @@ function* battleGen(plan, R) {
     }
     // une pièce
     const r = roomAt(pos[0], pos[1]);
+    // un barrage : des gardes postés dans un couloir (ou au porche) arrêtent la bande au passage
+    if (r && isHall(r) && !tgSet.has(r.id) && tactic !== 'cible' && !seenRooms.has(r.id)) {
+      const gs = guardsIn({ rooms: [r.id] });
+      if (gs.length) { seenRooms.add(r.id); const res = yield* runFight({ i, k: 'room', rooms: [r.id], label: r.t === 'porche' ? 'Le porche' : 'Barrage', entry: 0 }, gs, {}); if (res === 'flee') return end('repelled', i); }
+      continue;
+    }
     if (!r || isHall(r)) continue;
     if (tgSet.has(r.id)) {
       const e = { ...goalE, i };
@@ -410,23 +472,35 @@ function* battleGen(plan, R) {
     if (e.entry > 0) { const h = pick(alive()), hits = []; hurtHero(h, e.entry + sticky, hits, null); sticky = 0; R.ev.push({ k: 'entry', i, hits }); R.lines.push(['🛡️', `${e.label} : ses défenses font −${e.entry} PV à ${h.name}${h.ko ? ', K.O. !' : '.'}`, 'good']); if (broken()) return end('repelled', i); }
     const crew = tactic === 'cible' ? [] : guardsIn(e);
     if (crew.length) { const res = yield* runFight(e, crew, {}); if (res === 'flee') return end('repelled', i); }
-    if (alive().length && Math.random() < .75) { roomEvent(r, i); if (broken()) return end('repelled', i); }
+    if (alive().length && Math.random() < (tactic === 'cible' ? 1 : .75)) { roomEvent(r, i); if (broken()) return end('repelled', i); }
   }
 }
 // le simulateur (et les sabotages joués sans toi) : garde ses pouvoirs pour le combat décisif, ou quand ça tourne mal
+// un Maître attentif : la bourse tôt (un héros de moins), les portes quand la bande approche, les pouvoirs quand le combat tourne mal
 function autoPower(ask, R) {
-  const left = Object.keys(POWERS).filter(p => !R.used.includes(p)); if (!left.length) return null;
+  const left = Object.keys(POWERS).filter(p => !R.used.includes(p) && powerOK(p)); if (!left.length || R.charges <= 0) return null;
   const heroes = ask.party.reduce((a, h) => a + h.hp + 3 * h.atk, 0), defs = ask.defs.reduce((a, d) => a + d.hp + 3 * d.atk, 0);
-  return ask.final || heroes > defs ? left[0] : null;
+  if (!(ask.final || heroes > defs)) return null;
+  const pref = ask.final ? ['elixir', 'seve', 'brume', 'cloche', 'eboulement', 'cri', 'porte'] : heroes > defs * 1.6 ? ['cloche', 'brume', 'eboulement', 'elixir', 'cri', 'porte', 'seve'] : ['eboulement', 'brume', 'cri', 'porte', 'elixir', 'seve', 'cloche'];
+  return pref.find(p => left.includes(p)) || null;
+}
+function autoStep(R, o) {
+  if (!R.used.includes('detour') && o.left <= 3 && typeof chantierDone === 'function' && chantierDone('secrete')) { R.queue.push('detour'); return; }
+  if (R.charges <= 0) return;
+  if (!R.used.includes('or') && o.i >= 1 && o.alive >= 2 && R.charges >= 2) R.queue.push('or');
+  else if (!R.used.includes('detour') && o.left <= 3 && R.charges >= 2) R.queue.push('detour');
 }
 const noPower = () => null;
-function resolveInvasion(plan, tactic, policy) {
-  return withZ(0, () => { const R = newBattle(plan, tactic || plan.tactic || 'postes'), g = battleGen(plan, R); let r = g.next(); while (!r.done) r = g.next((policy || autoPower)(r.value, R)); return R; });
+function resolveInvasion(plan, tactic, policy, stepPol) {
+  const R = newBattle(plan, tactic || plan.tactic || 'postes'), g = battleGen(plan, R), step = v => withZ(R.z || 0, () => g.next(v));
+  R.stepPol = stepPol !== undefined ? stepPol : policy === noPower ? null : autoStep;
+  let r = step(); while (!r.done) r = step(r.value && r.value.floor != null ? null : (policy || autoPower)(r.value, R)); return R;
 }
 
 /* ---------- après la bataille : bosses, expérience, butin des héros selon leur but ---------- */
 function applyCombat(plan, R, lines) {
   if (R.smashed) S.defs = S.defs.filter(d => d.id !== R.smashed);
+  if (R.gold) S.gold = Math.max(0, S.gold - R.gold);   // la bourse semée dans le couloir
   const hurt = R.hurt.map(critter).filter(Boolean);
   hurt.forEach(c => { c.hurt = S.night + 1 + HURT_NIGHTS; });
   if (hurt.length) lines.push(['🤕', `${hurt.map(c => c.name).join(', ')} ${hurt.length > 1 ? 'sont sonnés' : 'est sonné·e'} : une nuit de repos, sans garde ni raid.`, 'bad']);
@@ -461,7 +535,7 @@ applyInvasion = function (plan, outcome) {
     return [...lines, ...extra];
   }
   const lines = applyInvasionBase(plan, outcome);
-  if (outcome === 'repelled' && plan.prep > 1.15) { const g = Math.round(plan.party.length * 2 * (plan.rank || 1) * (plan.prep - 1)); S.gold += g; lines.push(['🎒', `Une bande bien préparée laisse un beau butin : +${g} 💰 (armures, potions, provisions).`, 'good']); }
+  if (outcome === 'repelled' && plan.prep > 1.15) { const g = Math.round(plan.party.length * (plan.rank || 1) * (plan.prep - 1)); S.gold += g; lines.push(['🎒', `Une bande bien préparée laisse un beau butin : +${g} 💰 (armures, potions, provisions).`, 'good']); }
   return [...lines, ...extra];
 };
 function payOff(plan) {
@@ -493,13 +567,17 @@ function heroCard(h) {
 }
 function defenseSummary(plan) {
   const enc = plan.enc || [], traps = enc.filter(e => e.k === 'def' && !DEFS[e.t].alarm).length, rooms = enc.filter(e => e.k === 'room' && guardsIn(e).length), goalE = enc.find(e => e.k === 'goal');
-  const posted = goalE ? guardsIn(goalE).length : 0, free = freeCrew().filter(c => !goalE || !goalE.rooms.includes(c.post)).length, hurt = S.creatures.filter(injured).length;
+  const posted = goalE ? guardsIn(goalE).length : 0, free = freeCrew().filter(c => !goalE || !goalE.rooms.includes(c.guard)).length, hurt = S.creatures.filter(injured).length;
   return `Ils ne connaissent pas ton château : ils vont errer, ouvrir les portes et fouiller les pièces qu’ils traversent (le jour qui se lève les fera rentrer). Sur le chemin le plus court : <b>${traps}</b> piège${traps > 1 ? 's' : ''} ou verrou${traps > 1 ? 's' : ''}, <b>${rooms.length}</b> pièce${rooms.length > 1 ? 's' : ''} gardée${rooms.length > 1 ? 's' : ''}${rooms.length ? ` (${rooms.map(e => esc(e.label)).join(', ')})` : ''}. À leur cible : <b>${posted}</b> garde${posted > 1 ? 's' : ''} posté${posted > 1 ? 's' : ''}, et <b>${free}</b> créature${free > 1 ? 's' : ''} libre${free > 1 ? 's' : ''} pour les y attendre.${hurt ? ` ${hurt} sonnée${hurt > 1 ? 's' : ''} ne se battr${hurt > 1 ? 'ont' : 'a'} pas.` : ''}`;
 }
 function goalLine(plan) { const g = plan.goal || { k: 'coeur', label: 'le Cœur' }, G = INV_GOALS[g.k]; return `${G.ico} <b>Leur but : ${esc(G.name.toLowerCase())}</b>${g.k === 'enlever' ? ` (${esc(g.label)})` : g.k === 'saccage' ? ` (${esc(g.label)})` : ''}. ${esc(G.desc)}`; }
+// combien de fois sur 20 la bande atteint son but, pour chaque tactique (tes pouvoirs lancés au bon moment)
+// leurs chances, tactique par tactique : si tu laisses faire, et si tu joues tes jetons du Cœur au bon moment
+function invOdds(plan, n = 20) { const out = {}; Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = f / n; out[k + '0'] = f0 / n; }); return out; }
+const oddsCls = v => v >= .45 ? 'bad' : v >= .2 ? 'mid' : 'good';
 function chooseTactic(plan, opts = {}) {
   if (typeof document === 'undefined' || !document.body || !document.body.appendChild) return Promise.resolve('postes');
-  const cost = ransomCost(plan), o = plan.origin, R = HERO_RANK[plan.rank || 1], ch = plan.noPowers ? 0 : powerCharges();
+  const cost = ransomCost(plan), o = plan.origin, R = HERO_RANK[plan.rank || 1], ch = plan.noPowers ? 0 : powerCharges(), odds = invOdds(plan);
   V.invPath = null; V.invGoal = plan.target;
   const m = openModal(`<h2>${opts.title || '⚔️ Des aventuriers !'}</h2>
     <p class="hint">${opts.sub || `${esc(R.label)}${o && o.name ? ` venus de ${esc(o.name)}` : ''}. Ils fuient quand ${plan.rank === 3 ? 'les deux tiers' : 'la moitié'} d’entre eux ${plan.rank === 3 ? 'sont' : 'est'} K.O.`}</p>
@@ -507,8 +585,8 @@ function chooseTactic(plan, opts = {}) {
     ${plan.prep > 1.15 ? `<p class="hint">🛡️ Ils ont étudié ta défense : armures, potions et provisions (PV ×${String(plan.prep).replace('.', ',')}). Repousse-les, et leur équipement sera à toi.</p>` : ''}
     <div class="hcards">${plan.party.map(heroCard).join('')}</div>
     <p>${defenseSummary(plan)}</p>
-    ${ch ? `<p class="hint">⚡ Tu as <b>${ch} pouvoir${ch > 1 ? 's' : ''} du Cœur</b> à lancer pendant la bataille, juste avant un combat : ${Object.values(POWERS).map(p => `${p.ico} ${esc(p.name)}`).join(', ')}.</p>` : ''}
-    <h3>Ta tactique</h3><div class="tactics">${Object.entries(TACTICS).filter(([k]) => k !== 'rancon' || !opts.noRansom).map(([k, t]) => `<button type="button" class="choice tactic" data-tac="${k}" ${k === 'rancon' && S.gold < cost ? 'disabled' : ''}><span class="emo">${t.ico}</span><b>${esc(t.name)}${k === 'rancon' ? ` (${cost} 💰)` : ''}</b><small>${esc(t.desc)}</small></button>`).join('')}</div>`, { noClose: true, wide: true, label: 'Invasion' });
+    ${ch ? `<p class="hint">⚡ Tu as <b>${ch} jeton${ch > 1 ? 's' : ''} du Cœur</b>. Avant chaque combat : ${Object.keys(POWERS).filter(powerOK).map(k => `${POWERS[k].ico} ${esc(POWERS[k].name)}`).join(', ')}. À tout moment pendant leur balade : ${Object.values(STEP_ACTS).map(p => `${p.ico} ${esc(p.name)}`).join(', ')} (${orCost(plan)} or). <b>Sans tes gestes, ils arrivent presque toujours à leurs fins.</b></p>` : ''}
+    <h3>Ta tactique</h3><p class="hint">🎲 Leurs chances d’atteindre leur but avec tes pièges et tes gardes, sans rien faire, puis en jouant tes jetons au bon moment :</p><div class="tactics">${Object.entries(TACTICS).filter(([k]) => k !== 'rancon' || !opts.noRansom).map(([k, t]) => `<button type="button" class="choice tactic" data-tac="${k}" ${k === 'rancon' && S.gold < cost ? 'disabled' : ''}><span class="emo">${t.ico}</span><b>${esc(t.name)}${k === 'rancon' ? ` (${cost} 💰)` : ''}</b><small>${esc(t.desc)}</small>${k !== 'rancon' ? `<em class="odds ${oddsCls(odds[k + '0'])}">Si tu laisses faire : ≈ ${Math.round(odds[k + '0'] * 100)} % pour eux</em><em class="odds ${oddsCls(odds[k])}">Avec tes jetons : ≈ ${Math.round(odds[k] * 100)} %</em>` : ''}</button>`).join('')}</div>`, { noClose: true, wide: true, label: 'Invasion' });
   return new Promise(res => m.addEventListener('click', e => { const b = e.target.closest('[data-tac]'); if (!b || b.disabled) return; sfx('tick'); closeModal(true); res(b.dataset.tac); }));
 }
 
@@ -533,12 +611,21 @@ function invCam(on) {
   }, 16);
 }
 // avant un combat : la bataille s'arrête, tu peux lancer un pouvoir du Cœur
+// les gestes de balade : une barre en bas de l'écran, toujours là pendant l'invasion
+function actBar(R, plan) {
+  const old = document.getElementById('actBar'); if (old) old.remove();
+  const b = el('div', 'actbar panel', ''); b.id = 'actBar'; $('#game').appendChild(b);
+  const draw = () => { b.innerHTML = `<span class="ab-tok" title="Jetons du Cœur">${gi('heart')}<b>${R.charges}</b></span>${Object.entries(STEP_ACTS).map(([k, A]) => { const no = R.charges <= 0 || R.used.includes(k) || R.queue.includes(k) || (k === 'or' && S.gold - R.gold < orCost(plan)); return `<button type="button" class="sbtn ab" data-act="${k}" ${no ? 'disabled' : ''} title="${esc(A.desc)}">${A.ico} ${esc(A.name)}${k === 'or' ? ` <small>${orCost(plan)} 💰</small>` : ''}</button>`; }).join('')}`; };
+  b.addEventListener('click', e => { const x = e.target.closest('[data-act]'); if (!x || x.disabled) return; R.queue.push(x.dataset.act); sfx('tick'); draw(); });
+  draw();
+  return { refresh: draw, hide: h => { b.hidden = h; }, remove: () => b.remove() };
+}
 function askPower(ask, R) {
   return new Promise(res => {
     const old = document.getElementById('powBar'); if (old) old.remove();
-    const left = Object.entries(POWERS).filter(([k]) => !R.used.includes(k));
-    const bar = el('div', 'powbar panel', `<div class="pwhead"><b>⚡ Pouvoirs du Cœur (${R.charges})</b><span>${esc(ask.label)} : ${ask.defs.length} défenseur${ask.defs.length > 1 ? 's' : ''} contre ${ask.party.length} héros${ask.final ? ' · <b>le combat décisif</b>' : ''}</span></div>
-      <div class="pwbtns">${left.map(([k, p]) => `<button type="button" class="choice pw" data-pw="${k}"><span class="emo">${p.ico}</span><b>${esc(p.name)}</b><small>${esc(p.desc)}</small></button>`).join('')}<button type="button" class="sbtn pri pwgo" data-pw="">⚔️ Combattre sans pouvoir</button></div>`);
+    const left = Object.entries(POWERS).filter(([k]) => !R.used.includes(k) && powerOK(k));
+    const bar = el('div', 'powbar panel', `<div class="pwhead"><b>⚡ Jetons du Cœur (${R.charges})</b><span>${esc(ask.label)} : ${ask.defs.length} défenseur${ask.defs.length > 1 ? 's' : ''} contre ${ask.party.length} héros${ask.final ? ' · <b>le combat décisif</b>' : ''}</span></div>
+      <div class="pwbtns">${left.map(([k, p]) => `<button type="button" class="choice pw" data-pw="${k}"><span class="emo">${p.ico}</span><b>${esc(p.name)}</b><small>${esc(p.desc)}</small></button>`).join('')}<button type="button" class="sbtn pri pwgo" data-pw="">⚔️ Combattre sans jeton</button></div>`);
     bar.id = 'powBar'; $('#game').appendChild(bar); sfx('tick');
     bar.addEventListener('click', e => { const b = e.target.closest('[data-pw]'); if (!b) return; bar.remove(); sfx(b.dataset.pw ? 'chime' : 'tick'); res(b.dataset.pw || null); });
   });
@@ -547,7 +634,7 @@ function enlist(id, x, y) {
   const a = ACT.get(id); if (!a || a.leaving) return null;
   a.tok++; a.walking = false; if (a.dur) { a.dur = 0; const r = a.res; a.res = null; r && r(); }
   a.fight = true; a.pose = null; if (a.life) { releaseSpot(a.life); a.life.phase = 'idle'; a.life.with = null; }
-  if ((a.z || 0) !== 0) { a.z = 0; a.x = x; a.y = y; poof(x - .5, y - .5); }
+  const hz = V.heroZ || 0; if ((a.z || 0) !== hz) { a.z = hz; a.x = x; a.y = y; poof(x - .5, y - .5); }
   else moveTo(a, x, y, invT(420)).then(() => { a.walking = false; });
   return a;
 }
@@ -560,11 +647,14 @@ async function playInvasion(plan, tactic, report) {
   const hero = j => HEROS[j], live = () => HEROS.filter(a => !a.down), enlisted = new Map();
   const moveParty = (cx, cy, ms) => { const L = live(); return Promise.all(L.map((a, k) => { a.walking = true; const o = (k - (L.length - 1) / 2) * .18; return moveTo(a, cx + .5 + o, cy + .5 - o * .6 + (k % 2) * .1, invT(ms)).then(() => { a.walking = false; }); })); };
   // tous à leur cible : on fait descendre ceux qui sont à l'étage
-  if (tactic === 'cible') { const tg = S.rooms.find(r => r.id === plan.target) || heartRoom(); S.creatures.filter(fitToFight).forEach(c => { const a = ACT.get(c.id); if (a && (a.z || 0) !== 0) { const [x, y] = randCell(tg); a.tok++; a.walking = false; a.z = 0; a.x = x + .5; a.y = y + .5; } }); }
+  if (tactic === 'cible') { const tg = S.rooms.find(r => r.id === plan.target) || heartRoom(), tz = zOf(tg); S.creatures.filter(fitToFight).forEach(c => { const a = ACT.get(c.id); if (a && (a.z || 0) !== tz) { const [x, y] = randCell(tg); a.tok++; a.walking = false; a.z = tz; a.x = x + .5; a.y = y + .5; } }); }
   await moveParty(GATE.x, H, 800);
-  const R = newBattle(plan, tactic), gen = battleGen(plan, R); R.walk = [[GATE.x, GATE.y]];
+  const R = newBattle(plan, tactic), gen = battleGen(plan, R); R.walk = [[GATE.x, GATE.y, 0]]; V.heroZ = 0; R.live = true; R.stepPol = null;
+  const bar = actBar(R, plan);
   const path = R.walk; let at = -1, slot = 0;
-  const walkTo = async idx => { for (let k = at + 1; k <= idx && k < path.length; k++) { await moveParty(path[k][0], path[k][1], k ? 360 : 520); V.invPath = path.slice(0, k + 1); } at = Math.max(at, idx); };
+  // un escalier : la bande disparaît et réapparaît à l'autre étage, et la caméra la suit
+  const changeFloor = async ([x, y, z]) => { const L = live(); L.forEach(a => poof(a.x - .5, a.y - .5)); sfx('tick'); await sleep(invT(260)); V.heroZ = z; setFloor(z); L.forEach((a, k) => { a.x = x + .5 + (k - (L.length - 1) / 2) * .18; a.y = y + .5; }); poof(x, y); await sleep(invT(320)); };
+  const walkTo = async idx => { for (let k = at + 1; k <= idx && k < path.length; k++) { if ((path[k][2] || 0) !== V.heroZ) await changeFloor(path[k]); else await moveParty(path[k][0], path[k][1], k ? 360 : 520); V.invPath = path.slice(0, k + 1); } at = Math.max(at, idx); };
   const tgRoom = () => S.rooms.find(r => r.id === plan.target) || heartRoom();
   const spot = i => { const [x, y] = path[Math.min(i, path.length - 1)], nx = path[i + 1] || (() => { const h = tgRoom(); return h ? [h.x + (h.w - 1) / 2, h.y + (h.h - 1) / 2] : [x, y]; })(); let dx = nx[0] - x, dy = nx[1] - y; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; if (!dx && !dy) dy = -1; return { x: x + .5, y: y + .5, dx, dy }; };
   const place = (sp, id, k, hp, max) => { const o = ((k % 5) - 2) * .3, back = Math.floor(k / 5) * .3, a = enlist(id, sp.x + sp.dx * (.78 + back) - sp.dy * o, sp.y + sp.dy * (.78 + back) + sp.dx * o); if (a) { a.hp = hp; a.hpMax = max; a.flip = sp.dx - sp.dy > 0; enlisted.set(id, a); } return a; };
@@ -601,6 +691,7 @@ async function playInvasion(plan, tactic, report) {
   };
   const playBeat = async b => {
     if (b.i > at) await walkTo(b.i);
+    if (b.k === 'floor') { const a = live()[0]; if (a) say(a.id, pick(['Encore des escaliers…', 'Le Cœur est par là, je le sens.', 'Qui range son Cœur à un autre étage ?', 'Mes genoux…']), 1500); return; }
     const sp = spot(b.i), now = performance.now();
     if (b.k === 'harass') { floatText(sp.x, sp.y - .6, '🪨 Cailloux !', '#ffd27a'); sfx('bonk'); for (const t of b.hits) { const a = hero(t.j); hitFx(a, `−${t.dmg}`, '#ffb4a0'); a.hp = Math.max(0, a.hp - t.dmg); if (t.ko) { a.down = true; a.pose = 'ko'; } } await sleep(invT(700)); }
     else if (b.k === 'smash') { V.hit = { id: b.defId, t: now }; floatText(sp.x, sp.y, 'Crac ! La barricade cède', '#ffd27a'); sfx('bonk'); await sleep(invT(800)); }
@@ -629,6 +720,12 @@ async function playInvasion(plan, tactic, report) {
       await sleep(invT(900));
     }
     else if (b.k === 'power') { const P = POWERS[b.p]; floatText(sp.x, sp.y - 1, `${P.ico} ${P.name} !`, '#c9f0ff'); sfx('chime'); await sleep(invT(700)); }
+    else if (b.k === 'act') {
+      const P = STEP_ACTS[b.a]; floatText(sp.x, sp.y - 1, `${P.ico} ${P.name} !`, '#ffe07a'); sfx(b.a === 'or' ? 'coin' : 'bonk');
+      if (b.a === 'or' && b.j != null) { const a = hero(b.j); if (a) { say(a.id, pick(['De l’or ! Je rentre, moi.', 'Chacun pour soi !', 'Ma retraite est faite !']), 1800); a.down = true; a.alpha = .35; } }
+      else { const a = live()[0]; if (a) say(a.id, pick(['Qui a fermé cette porte ?', 'On est déjà passés par là…', 'C’est un labyrinthe !']), 1700); }
+      await sleep(invT(800));
+    }
     else if (b.k === 'engage') {
       slot = b.defs.length;
       if (b.ambush) floatText(sp.x, sp.y - .8, '🗡️ Embuscade !', '#ffe07a');
@@ -641,19 +738,23 @@ async function playInvasion(plan, tactic, report) {
     else { const a = live()[0]; if (a) say(a.id, b.k === 'lost' ? 'On est où, là ?' : pick(HERO_LINES.flee), 1900); await sleep(invT(600)); }
   };
   // la bataille avance par à-coups : on anime ce qui s'est passé, puis on demande un pouvoir avant chaque combat
-  let k = 0, r = withZ(0, () => gen.next());
+  const step = v => withZ(R.z || 0, () => gen.next(v));
+  let k = 0, r = step();
   for (;;) {
     for (; k < R.ev.length; k++) await playBeat(R.ev[k]);
     if (r.done) break;
-    const choice = r.value && r.value.ask === 'power' ? await askPower(r.value, R) : null;
-    r = withZ(0, () => gen.next(choice));
+    if (r.value && r.value.tick) { await walkTo(R.walk.length - 1); bar.refresh(); r = step(null); continue; }   // un pas : tes gestes passent au suivant
+    bar.hide(true); const choice = r.value && r.value.ask === 'power' ? await askPower(r.value, R) : null; bar.hide(false);
+    r = step(choice); bar.refresh();
   }
+  bar.remove();
   // les K.O. restent sur place : aux Oubliettes si la bande fuit, sinon ses amis les traînent
   const caught = R.outcome === 'repelled' ? Math.max(0, sumRooms('cells') - S.prisoners) : 0;
   HEROS.filter(a => a.down).forEach((a, kk) => { floatText(a.x - .3, a.y - .3, kk < caught ? '⛓️' : '…', '#cfe0ff'); });
-  { const back = path.slice(0, Math.min(at, path.length - 1) + 1).reverse(), seen = new Set(); for (const [x, y] of back) { const kk = y * W + x; if (seen.has(kk)) continue; seen.add(kk); await moveParty(x, y, 150); } }
+  { const back = path.slice(0, Math.min(at, path.length - 1) + 1).reverse(), seen = new Set(); for (const [x, y, z] of back) { if ((z || 0) !== V.heroZ) break; const kk = y * W + x; if (seen.has(kk)) continue; seen.add(kk); await moveParty(x, y, 150); } }
+  if (V.heroZ) { await changeFloor([GATE.x, GATE.y, 0]); }
   await moveParty(GATE.x, H + 1, 520); HEROS.forEach(a => a.alpha = 0); await sleep(invT(250));
-  HEROS.length = 0; invFastBtn(false); invCam(false); V.invPath = null; V.invGoal = null;
+  HEROS.length = 0; V.heroZ = 0; invFastBtn(false); invCam(false); V.invPath = null; V.invGoal = null;
   return { R, enlisted };
 }
 function releaseFighters(enlisted) {
@@ -706,9 +807,9 @@ function drawHeroPath(p, alpha, col) {
   const [ex, ey] = pts[pts.length - 1]; ctx.beginPath(); ctx.ellipse(ex, ey, 26, 13, 0, 0, 7); ctx.strokeStyle = `rgba(${col},.9)`; ctx.lineWidth = 2 / CAM.s; ctx.stroke(); ctx.restore();
 }
 function pathOverlay() {
+  if (V.invGoal) { const r = S.rooms.find(o => o.id === V.invGoal); if (r && zOf(r) === Z) groupOf(r).rooms.forEach(o => glowPath(footprint(o), '255,110,90', true, 1.1 + .4 * Math.abs(Math.sin(performance.now() / 400)))); }
+  if (V.invPath) { drawHeroPath(V.invPath.filter(c => (c[2] || 0) === Z), 1, '255,150,120'); return; }   // pendant une invasion : le chemin que la bande a vraiment pris
   if (Z !== 0) return;
-  if (V.invGoal) { const r = S.rooms.find(o => o.id === V.invGoal); if (r) groupOf(r).rooms.forEach(o => glowPath(footprint(o), '255,110,90', true, 1.1 + .4 * Math.abs(Math.sin(performance.now() / 400)))); }
-  if (V.invPath) { drawHeroPath(V.invPath, 1, '255,150,120'); return; }   // pendant une invasion : le chemin que la bande a vraiment pris
   const hand = UI.hand && UI.hand.kind === 'def';
   if (!V.showPath && !hand) return;
   const p = heroPath(), g = V.ghost, D = hand && DEFS[UI.hand.t];

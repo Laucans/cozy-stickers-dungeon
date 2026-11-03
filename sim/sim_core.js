@@ -102,11 +102,18 @@ A.decorate = (t, budget = 6) => {   // pose un sticker de déco (ou un artefact 
 };
 A.traps = (maxSpend = 12) => {
   const p = heroPath() || []; let n = 0;
-  const kinds = ['hache', 'trappe', 'sphinx', 'porte', 'leurre', 'banane'].filter(t => !availability('def', t));
+  const kinds = ['machoire', 'automate', 'meule', 'herse', 'hache', 'ressort', 'trappe', 'sphinx', 'porte', 'leurre', 'banane'].filter(t => DEFS[t] && !availability('def', t));
   for (const [x, y] of p.slice(1, -1)) {
     const r = roomAt(x, y, 0); if (!r || r.t !== 'couloir' || defAt(x, y, 0) || furnAt(x, y, 0)) continue;
     const t = kinds.find(k => canAfford(costOf('def', k)) && (costOf('def', k).g || 0) <= maxSpend); if (!t) break;
     if (!cmd('place', { kind: 'def', t, x, y, z: 0 })) { n++; maxSpend -= costOf('def', t).g || 0; }
+  }
+  // plus de case libre : on remplace le plus faible piège du chemin par un meilleur (les plans des artisans)
+  for (let k = 0; k < 2; k++) {
+    const best = kinds.find(t => DEFS[t].rank && canAfford(costOf('def', t)) && (costOf('def', t).g || 0) <= maxSpend); if (!best) break;
+    const weak = S.defs.filter(d => DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm && !DEFS[d.t].unique && (d.z || 0) === 0 && p.some(([x, y]) => x === d.x && y === d.y) && DEFS[d.t].str < DEFS[best].str).sort((a, b) => DEFS[a.t].str - DEFS[b.t].str)[0]; if (!weak) break;
+    const { x, y } = weak; if (cmd('removeDef', { id: weak.id })) break;
+    if (!cmd('place', { kind: 'def', t: best, x, y, z: 0 })) { n++; maxSpend -= costOf('def', best).g || 0; } else break;
   }
   return n;
 };
@@ -125,17 +132,42 @@ A.care = () => {
 };
 A.acceptQuests = (expe = true) => S.creatures.forEach(c => { const q = questOf(c); if (q && (q.st === 'offered' || q.st === 'ready') && (expe || !QT[q.k].away)) cmd('qAccept', { id: c.id }); });
 const invasionSoon = () => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) >= MENACE_MAX;
-A.posts = () => {   // chaque créature dans sa pièce préférée (humeur), les costauds sur le chemin des héros ; à l'alerte, tous les gardes descendent défendre
-  if (invasionSoon()) { const onPath = [...new Set((heroPath() || []).map(([x, y]) => roomAt(x, y, 0)).filter(r => r && !isHall(r) && r.t !== 'coeur'))];
-    S.creatures.forEach(c => { if (isOut(c) || guardOf(c) < 2) return; const want = onPath.length && Math.random() < .5 ? pick(onPath).id : null; if (want !== c.post) cmd('post', { id: c.id, post: want }); }); return; }
+// les gardes : les plus costauds sur les pièces du chemin des héros (dans la limite), le reste défend le Cœur
+A.guards = () => {
+  if (typeof guardCap !== 'function') return;
+  const route = []; (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (guardable(r) && !route.includes(r)) route.push(r); });
+  S.creatures.forEach(c => { c.guard = null; }); if (!route.length) return;
+  const crew = S.creatures.filter(fitToFight).sort((a, b) => guardOf(b) - guardOf(a)), n = Math.min(guardCap(), Math.floor(crew.length * .6));
+  let k = 0; for (const c of crew.slice(0, n)) { for (let t = 0; t < route.length; t++) { const r = route[(k + t) % route.length]; if (!CMD.guard({ id: c.id, room: r.id })) { k = (k + t + 1) % route.length; break; } } }
+};
+// les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
+A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => !chantierWhy(x)).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve) cmd('chantier', { id: k }); };
+A.cook = () => { if (typeof RECIPES === 'undefined' || !hasKitchen()) return; const order = [eaters() > foodCap() ? 'tourte' : null, invasionSoon() ? 'gateau' : null, invasionSoon() ? 'poisson' : null, S.calamity >= CAL_MAX - 3 ? 'ragout' : null, 'soupe'].filter(Boolean); for (const k of order) if (canCook(k)) { cmd('cook', { id: k }); return; } };
+A.caravan = how => { if (typeof activeCaravans === 'undefined') return; const cv = activeCaravans().find(x => !x.done); if (cv && (how !== 'pille' || caravanOdds(cv) >= .5)) cmd('caravan', { id: cv.id, how }); };
+A.posts = () => {   // chaque créature dans sa pièce préférée (humeur) ; les gardes, eux, se postent sur le chemin des héros
+  A.guards();
+  if (invasionSoon()) return;
   const path = new Set((heroPath() || []).map(([x, y]) => roomAt(x, y, 0)).filter(r => r && !isHall(r) && r.t !== 'coeur').map(r => r.id));
   S.creatures.forEach(c => { if (isOut(c) || (c.secret && c.secret.known && !c.secret.done && (c.secret.t === 'seul' || c.secret.t === 'poste'))) return; const sp = SPECIES[c.sp] || {}; const fav = S.rooms.find(r => r.built && !isHall(r) && (r.t === sp.from || (ROOMS[r.t].attracts || []).includes(c.sp)));
-    const guardRoom = guardOf(c) >= 3 ? S.rooms.find(r => path.has(r.id)) : null; const want = (guardRoom && Math.random() < .5 ? guardRoom : fav) || null;
+    const guardRoom = guardOf(c) >= 3 ? S.rooms.find(r => path.has(r.id)) : null; const met = typeof WORKSHOPS !== 'undefined' ? Object.keys(WORKSHOPS).filter(w => !WORKSHOPS[w].guard && craftAff(c, w) > 1).map(w => S.rooms.find(r => r.built && workshopType(r) === w)).find(Boolean) : null;   // né·e pour un métier : à son atelier
+    const want = met || (guardRoom && Math.random() < .5 ? guardRoom : fav) || null;
     if ((want ? want.id : null) !== c.post) cmd('post', { id: c.id, post: want ? want.id : null }); });
   // les rivaux ne vivent pas au même étage : on en poste un à un autre étage s'il en existe un
   if (typeof rivalPairs === 'function') Object.keys(rivalPairs()).forEach(k => { const [pair, zz] = k.split('@'), sp = pair.split('|')[0], z0 = +zz;
     const rooms = S.rooms.filter(r => r.built && !isHall(r) && !ROOMS[r.t].stairs && zOf(r) !== z0 && zOf(r) !== EXT); if (!rooms.length) return;
     S.creatures.filter(c => c.sp === sp && !isOut(c) && livingFloor(c) === z0).forEach(c => cmd('post', { id: c.id, post: pick(rooms).id })); });
+};
+// les quêtes du journal : accepter (3 au plus), livrer, choisir la première option, cuisiner les plats, lancer raids et expéditions
+A.questStep = () => {
+  const Q = qState(); questSync();
+  Q.offers.slice().forEach(o => { if (Q.cur.length < QUEST_MAX) cmd('questAccept', { id: o.id }); });
+  Q.cur.slice().forEach(q => {
+    const st = qStep(q); if (!st) return;
+    if (st.k === 'pay') cmd('questPay', { id: q.id });
+    else if (st.k === 'choice') cmd('questChoose', { id: q.id, o: 0 });
+    else if (st.k === 'cook') Object.entries(st.dishes).forEach(([k, n]) => { if ((q.prog[k] || 0) < n) cmd('cook', { id: k }); });
+    else if ((st.k === 'raid' || st.k === 'boss') && !S.raid) A.raid(st.target, 4);
+  });
 };
 A.raid = (target, n = 3) => {
   const tg = RAIDS[target]; if (!tg || !raidKnown(target) || tg.tier > S.tier) return 'cible indisponible';
@@ -146,7 +178,10 @@ A.raid = (target, n = 3) => {
   return cmd('raidPlan', { target, team: crew.map(c => c.id), app: pool <= 1 ? 'prudente' : pool >= 4 ? 'desesperee' : 'risquee' });
 };
 A.raidPool = (target, n = 3) => { const tg = RAIDS[target]; const crew = free().filter(c => diceOf(c) > 0).sort((a, b) => diceOf(b) - diceOf(a)).slice(0, n); return crew.length ? raidBreakdown(target, crew.map(c => c.id)).pool : -9; };
-A.expedition = (siteId, n = 2) => { const s = siteById(siteId); if (!s) return 'lieu inconnu'; const X = EXPE_SITES[s.expe] || {}; const crew = free().filter(c => !(S.raid && S.raid.team.includes(c.id))).sort((a, b) => (diceOf(b) + ((SPECIES[b.sp] || {}).tag === X.tag ? 1 : 0)) - (diceOf(a) + ((SPECIES[a.sp] || {}).tag === X.tag ? 1 : 0))).slice(0, n); if (!crew.length) return 'personne'; return cmd('expe', { site: siteId, team: crew.map(c => c.id) }); };
+A.expedition = (siteId, n = 2) => { const s = siteById(siteId); if (!s) return 'lieu inconnu'; const X = EXPE_SITES[s.expe] || {};
+  if (typeof CRAWL_SITES !== 'undefined' && CRAWL_SITES.includes(s.expe)) {   // la Forêt et les Grottes : une expédition en cartes, la nuit même (elle prend la place d'un raid)
+    if (S.raid) return 'raid déjà prévu'; const crew = free().map(c => [c, crawler(c)]).sort((a, b) => b[1].hp * b[1].atk - a[1].hp * a[1].atk).slice(0, 4).map(x => x[0]);
+    return crew.length >= 2 ? cmd('expe', { site: siteId, team: crew.map(c => c.id) }) : 'personne'; } const crew = free().filter(c => !(S.raid && S.raid.team.includes(c.id))).sort((a, b) => (diceOf(b) + ((SPECIES[b.sp] || {}).tag === X.tag ? 1 : 0)) - (diceOf(a) + ((SPECIES[a.sp] || {}).tag === X.tag ? 1 : 0))).slice(0, n); if (!crew.length) return 'personne'; return cmd('expe', { site: siteId, team: crew.map(c => c.id) }); };
 A.scout = () => { const w = world(), vis = visibleSet(); const edge = w.list.filter(c => !vis.has(c.i) && HEX_DIRS.some(([dq, dr]) => { const n = w.cell(c.q + dq, c.r + dr); return n && vis.has(n.i); })); if (!edge.length) return 'carte connue';
   const target = edge.sort((a, b) => (b.site ? 2 : 0) - (a.site ? 2 : 0) || hdist(a.q, a.r) - hdist(b.q, b.r) + (Math.random() - .5))[0]; const c = free().filter(x => !(S.raid && S.raid.team.includes(x.id))).sort((a, b) => diceOf(a) - diceOf(b))[0]; if (!c) return 'personne'; return cmd('scout', { hex: target.i, team: [c.id] }); };
 A.shop = (siteId, item, arg) => cmd('shop', { site: siteId, item, arg });

@@ -30,7 +30,7 @@ function renderHUD() {
   const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures. Prochain jour de paie ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`} : ${pr} 💰.`, np <= 1 && S.gold < pr], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
     ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus les héros qui viennent sont forts, et plus la carte se dévoile.'],
     ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
-    ['beds', 'Lits', `${n}/${bd}`, 'Créatures / lits. Sans lit libre, personne de nouveau ne s’installe.', n >= bd], ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
+    (() => { const fc = typeof fameCap === 'function' ? fameCap() : bd, cap = Math.min(bd, fc); return ['beds', fc < bd ? 'Renommée' : 'Lits', `${n}/${cap}`, `Créatures / places. Une nouvelle créature ne s’installe que s’il reste un lit libre (${bd} lits) et si ton château est assez renommé (${fc} créatures au plus). Touche pour voir comment grandir.`, n >= cap]; })(), ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
   const box = $('#res');
   if (box.children.length !== res.length) { box.innerHTML = ''; res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); }); }
   res.forEach(([k, label, val, tip, warn]) => {
@@ -53,8 +53,7 @@ function sheetGroups() {
   if (UI.tab === 'def') return [[null, DEF_ORDER.map(t => ['def', t])]];
   if (UI.tab === 'decor') return [[null, DECOR_ORDER.map(t => ['furn', t])]];
   if (UI.tab === 'arte') return [[null, TREASURES.filter(k => (S.free[k] || 0) > 0 || hasItem(k)).map(t => ['furn', t])]];
-  const by = {}; FURN_ORDER.forEach(t => { (by[FURN[t].room] = by[FURN[t].room] || []).push(['furn', t]); });
-  return Object.keys(by).map(r => [ROOMS[r].name, by[r]]);
+  UI.tab = 'room'; return [[null, ROOM_ORDER.map(t => ['room', t])]];   // les meubles se posent depuis la fiche de leur pièce
 }
 function renderSheet() {
   const sh = $('#sheet'); sh.innerHTML = '';
@@ -76,10 +75,38 @@ function renderSheet() {
     : UI.tab === 'arte' ? '<b>Aucun artefact pour l’instant.</b> Les héros vaincus en abandonnent, les expéditions en rapportent, et les marchands de la ville en vendent (à prix d’or).' : '<b>Rien à poser ici.</b>'));
 }
 function tipHTML(kind, t) {
-  let html = '';
-  if (kind === 'room') { const r = ROOMS[t]; html = `<b>${esc(r.name)}</b><span class="hint">${r.size[0]}×${r.size[1]}${r.clock ? ` · chantier de ${r.clock} segments` : ''}</span><p>${esc(r.desc)}</p>${r.furn ? `<p class="hint">Meubles : ${r.furn.map(f => FURN[f].name).join(', ')}.</p>` : ''}`; }
-  else if (kind === 'def') { const f = DEFS[t]; html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · force ${f.str}` : ''}</span><p>${esc(f.desc)}</p>`; }
-  else { const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(s => SPECIES[s].name); html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : 'déco, partout'}</span><div>${statTags(f)}</div>${fans.length ? `<p class="hint">Adoré par : ${fans.join(', ')}.</p>` : ''}${t === 'toile' ? '<p class="hint">Deux toiles attirent une Araignée.</p>' : ''}`; }
+  let html = ''; const li = [], spn = k => SPECIES[k] ? SPECIES[k].name : k;
+  if (kind === 'room') {
+    const r = ROOMS[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].from === t || (r.attracts || []).includes(s)), ups = (r.furn || []).filter(f => FURN[f] && FURN[f].size);
+    html = `<b>${esc(r.name)}</b> <span class="hint">${r.size[0]}×${r.size[1]}${r.clock ? ` · chantier de ${r.clock} segments` : ' · posée tout de suite'}</span><p>${esc(r.desc || '')}</p>${statTags(r) ? `<div>${statTags(r)}</div>` : ''}`;
+    if (fans.length) li.push(`🐾 Attire : ${fans.map(spn).join(', ')} (une fois meublée).`);
+    if (r.preset) li.push(`📦 Livrée meublée : ${r.preset.map(f => FURN[f] ? FURN[f].name : f).join(', ')}.`);
+    if (r.syn) { const k = Object.keys(r.syn).find(x => x !== 'adj'); li.push(`🤝 Si elle touche ${ROOMS[r.syn.adj].name} : ${STAT_LABELS[k] ? `${STAT_LABELS[k][0]} +${r.syn[k]} ${STAT_LABELS[k][1]}` : '+' + r.syn[k] + ' ' + k}.`); }
+    if (typeof ROOM_CLASH !== 'undefined') { const cl = ROOM_CLASH.filter(([x, y]) => x === t || y === t); if (cl.length) li.push(`🚫 Jamais au même étage que : ${cl.map(([x, y, why]) => `${ROOMS[x === t ? y : x].name} (${why})`).join(', ')}.`); }
+    if (ups.length) li.push(`🧩 Collée à une autre ${r.name} : grande salle, +1 Ambiance et stickers améliorés (${ups.map(f => FURN[f].name).join(', ')}).`);
+    if (typeof ROOM_EVENTS !== 'undefined' && !isHall({ t }) && ROOM_EVENTS[t]) li.push(`🚪 Les héros qui la traversent : « ${ROOM_EVENTS[t].sk} ».`);
+    if (r.edge) li.push('📐 Doit toucher les remparts.'); if (r.far) li.push(`📐 À ${r.far} pas du porche au moins.`); if (r.unique) li.push('⭐ Unique.');
+    if (r.furn && !r.preset) li.push(`🪑 Meubles : ${r.furn.filter(f => FURN[f] && !FURN[f].size).map(f => FURN[f].name).join(', ')}.`);
+    if (!isHall({ t })) { const n = r.size[0] * r.size[1]; li.push(`📦 Place : ${Math.ceil(n / 2)} sticker${n > 2 ? 's' : ''} au plus (un pour deux cases ; une grande salle additionne ses pièces).`); }
+  } else if (kind === 'def') {
+    const f = DEFS[t];
+    html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · ${f.str} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
+    if (f.kind === 'piège') li.push('🎯 Blesse un héros au hasard. La voleuse désamorce le premier piège de la route.');
+    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.');
+    if (f.lost) li.push(`🌀 ${Math.round(f.lost * 100)} % de chances que la bande renonce et rentre.`);
+    if (f.sticky) li.push('🍌 La rencontre suivante frappe +1.'); if (f.alarm) li.push('🔔 Les défenseurs de leur cible frappent +1.'); if (f.block) li.push('🧱 Ferme le couloir : la bande fait un détour (montré en bleu quand tu la tiens).');
+    li.push('📍 Se pose dans un couloir, sur le chemin des héros (à tous les étages qu’ils traversent pour atteindre le Cœur).');
+    if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
+  } else {
+    const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(spn);
+    html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : f.out ? 'déco des Jardins' : f.artefact ? 'trésor, partout' : 'déco, partout'}</span>${f.desc ? `<p>${esc(f.desc)}</p>` : ''}<div>${statTags(f)}</div>`;
+    if (fans.length) li.push(`💛 Adoré par : ${fans.join(', ')} (humeur +1).`);
+    if (t === 'toile') li.push('🕸️ Deux toiles attirent une Araignée.');
+    if (typeof ACTS !== 'undefined') { const acts = Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => A.verb); if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
+    if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
+    if (f.unique) li.push('⭐ Unique.');
+  }
+  if (li.length) html += `<ul class="tipl">${li.map(x => `<li>${iconize(esc(x))}</li>`).join('')}</ul>`;
   const av = availability(kind, t); if (av && av.lock) html += `<p class="no">🔒 Nécessite : ${esc(av.reason)}</p>`;
   return html;
 }
@@ -112,10 +139,16 @@ function notifList() {
   });
   { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
   if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
+  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${guardCap()})`, () => guardMode(true), 5, 'bad'); }
+  if (typeof RECIPES !== 'undefined' && hasKitchen() && Object.keys(RECIPES).some(canCook) && Object.values(pantry()).reduce((a, b) => a + b, 0) >= 10) add('cook', '🍲', 'Le garde-manger déborde : cuisine !', () => cookModal(), 1);
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
-  const st = tierStatus(); if (st && st.ok) add('tier', '⭐', `Palier ${S.tier + 1} disponible`, openTier, 4);
-  if (S.night > 1 && S.creatures.length >= beds()) add('beds', '🛏️', 'Plus un lit de libre', () => openBuild('furn'), 2);
+  const st = tierStatus(); if (st && st.ok) add('tier', '⭐', `Palier ${S.tier + 1} disponible : touche le Cœur`, openHeart, 4);
+  if (typeof fameCap === 'function' && S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds()) add('fame', '🌟', `Ta renommée n’attire plus personne (${S.creatures.length}/${fameCap()})`, () => openFame(), 2);
+  if (S.night > 1 && S.creatures.length >= beds()) add('beds', '🛏️', 'Plus un lit de libre', () => { const r = roomForFurn(t => FURN[t].beds); if (r) openRoom(r.id); else { openBuild('room'); toast('Toutes tes chambres sont pleines : bâtis un autre Dortoir, puis touche-le pour y coller des lits.'); } }, 2);
+  // des meubles offerts (butin, cadeaux, meubles décollés) attendent dans la fiche de leur pièce
+  { const fr = Object.keys(S.free || {}).filter(k => S.free[k] > 0 && FURN[k] && !FURN[k].artefact && FURN[k].room !== 'any' && !TREASURES.includes(k)), r = fr.length && roomForFurn(t => fr.includes(t));
+    if (r) add('freefurn', '🎁', `${fr.length > 1 ? `${fr.length} meubles offerts` : `${itemName(fr[0])} offert·e`} : touche ${ROOMS[r.t].name}`, () => openRoom(r.id), 2); }
   const arts = TREASURES.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
   if (S.raid) add('raid', '🗺️', `Raid prévu : ${RAIDS[S.raid.target].name}`, () => openRaid(), 1);
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
@@ -132,13 +165,13 @@ function notifList() {
 function renderGoals() {
   const box = $('#notifs'); if (!box) return;
   const list = notifList(); UI.nacts = {};
-  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${esc(x.text)}</span><span class="ni emo">${x.ico}</span><span class="nx" data-nx="${x.k}" title="Masquer jusqu’à la prochaine nuit" aria-label="Masquer">✕</span></button>`; }).join('');
+  box.innerHTML = list.map(x => { UI.nacts[x.k] = x.act; return `<button class="notif ${x.cls}" type="button" data-n="${x.k}" aria-label="${esc(x.text)}"><span class="nl">${iconize(esc(x.text))}</span><span class="ni emo">${iconize(x.ico)}</span><span class="nx" data-nx="${x.k}" title="Masquer jusqu’à la prochaine nuit" aria-label="Masquer">✕</span></button>`; }).join('');
 }
 function renderQuests() {}
 // tiroir de construction (bouton Construire) et panneau des créatures, repliés par défaut
 function uiPrefs(o) { try { const p = JSON.parse(localStorage.getItem('csd-ui') || '{}'); if (o) { Object.assign(p, o); localStorage.setItem('csd-ui', JSON.stringify(p)); } return p; } catch (e) { return {}; } }
 function openBuild(tab) {
-  if (tab && typeof tab === 'string') UI.tab = tab;
+  if (tab && typeof tab === 'string') UI.tab = tab === 'furn' ? 'room' : tab;
   const was = UI.build; UI.build = true; $('#hudBottom').hidden = false; $('#btnBuild').setAttribute('aria-expanded', 'true'); document.body.classList.add('building');
   renderSheet(); if (typeof tab === 'string') $('#sheet').scrollLeft = 0;
   if (!was) drawerShift(true);
@@ -159,7 +192,9 @@ function renderHand(msg, tone) {
   if (!UI.hand) { hb.hidden = true; return; }
   hb.hidden = false; const { kind, t } = UI.hand, rot = kind === 'room' && ROOMS[t].size[0] !== ROOMS[t].size[1];
   hb.innerHTML = `${imgThumb(kind, t, 'mini')}<span class="msg ${tone || ''}">${msg ? esc(msg) : `<b>${esc(itemName(t))}</b> en main (${costText(costOf(kind, t))}). Touche le château pour coller.`}</span>` +
-    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>';
+    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + `<button class="pill" id="btnInfo" type="button" aria-expanded="${UI.handInfo !== false}">${gi('info')} Effets</button>` + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>' +
+    (UI.handInfo !== false ? `<div class="hinfo">${tipHTML(kind, t)}</div>` : '');
+  const bi = hb.querySelector('#btnInfo'); if (bi) bi.onclick = () => { UI.handInfo = UI.handInfo === false; sfx('tick'); renderHand(msg, tone); };
 }
 function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); if (typeof renderMinimap === 'function') renderMinimap(); }
 // sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit
@@ -249,9 +284,14 @@ function confirmBtn(btn, label, action) {
   setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.innerHTML = old; } }, 3000);
 }
 function roomStats(r) { const o = {}; Object.keys(STAT_LABELS).forEach(k => { const v = rstat(r, k); if (v) o[k] = v; }); return o; }
+// une pièce terminée, pas pleine, où l'on peut coller un meuble qui répond à « want »
+function roomForFurn(want) {
+  return S.rooms.filter(r => r.built && !isHall(r) && furnCount(r) < furnCap(r) && (ROOMS[r.t].furn || []).some(t => FURN[t] && want(t) && !(FURN[t].tier && S.tier < FURN[t].tier))).sort((a, b) => (zOf(a) === Z ? 0 : 1) - (zOf(b) === Z ? 0 : 1))[0] || null;
+}
 function openRoom(id) {
   const r = S.rooms.find(x => x.id === id); if (!r) return;
-  const d = ROOMS[r.t], grp = groupOf(r).rooms, items = grp.flatMap(furnIn), cap = grp.reduce((a, o) => a + o.w * o.h, 0);   // une grande salle : tous ses meubles
+  if (typeof TUTO !== 'undefined') TUTO.flags.room = r.t;
+  const d = ROOMS[r.t], grp = groupOf(r).rooms, items = grp.flatMap(furnIn), cap = furnCap(r);   // une grande salle : tous ses meubles
   const gn = groupSize(r), ups = (d.furn || []).filter(k => FURN[k].size);
   let html = `<div class="cardhead"><div class="portrait room">${imgThumb('room', r.t)}</div><div><h2>${esc(d.name)}${gn >= 2 ? ` <small class="tag2 gold">🧩 ${sizeWord(gn)}</small>` : ''}</h2><p class="hint">${esc(d.desc)}</p></div></div>`;
   if (ups.length || gn >= 2) html += `<p class="hint">🧩 ${gn >= 2 ? `${gn} pièces « ${esc(d.name)} » fusionnées (+${gn >= 3 ? 2 : 1} Ambiance).` : `Colle une autre pièce « ${esc(d.name)} » contre celle-ci : elles fusionnent en une grande salle.`}${ups.length ? ` Stickers améliorés : ${ups.map(k => `${gn >= FURN[k].size ? '✅' : '🔒'} ${esc(FURN[k].name)} (${FURN[k].size >= 3 ? '3 pièces' : '2 pièces'})`).join(', ')}.` : ''}</p>`;
@@ -262,8 +302,15 @@ function openRoom(id) {
   if (d.stairs) { const z2 = zOf(r) + (r.land ? -d.stairs : d.stairs); html += `<p>${r.land ? 'Ce palier ramène' : r.built ? 'Cet escalier mène' : 'Une fois terminé, cet escalier mènera'} vers <b>${esc(FLOOR_NAMES[z2])}</b>.</p>${r.built ? `<div class="btnrow"><button class="sbtn pri" type="button" id="mGoFloor">${z2 > zOf(r) ? '▲ Monter' : '▼ Descendre'} : ${esc(FLOOR_NAMES[z2])}</button></div>` : ''}`; }
   else if (!isHall(r) && r.t !== 'porche') {
     html += `<h3>Meubles (${items.length}/${cap})</h3><div class="flist">${items.map(f => `<div class="frow">${imgThumb('furn', f.t)}<span><b>${esc(FURN[f.t].name)}</b><br>${statTags(FURN[f.t])}</span>${f.fixed ? '<span class="hint">fixe</span>' : `<button class="sbtn" type="button" data-unstick="${f.id}">Décoller</button>`}</div>`).join('') || '<p class="hint">Aucun meuble.</p>'}</div>`;
-    const can = (d.furn || []).filter(t => !(FURN[t].tier && S.tier < FURN[t].tier));
-    if (can.length && items.length < cap && r.built) html += `<h3>Ajouter</h3><div class="btnrow">${can.map(t => `<button class="sbtn" type="button" data-take="${t}">${imgThumb('furn', t, 'mini')} ${esc(FURN[t].name)} · ${costText(costOf('furn', t))}</button>`).join('')}</div>`;
+    // ce qu'on peut y coller : chaque sticker avec ses effets, et grisé (avec la raison) s'il ne se pose pas
+    const can = (d.furn || []).filter(t => FURN[t]), full = furnCount(r) >= cap;
+    const why = t => { const f = FURN[t], av = withZ(zOf(r), () => availability('furn', t)); if (!r.built) return 'Chantier en cours'; if (full) return `Pièce pleine (${furnCount(r)}/${cap})`; if (f.tier && S.tier < f.tier) return `Palier ${f.tier}`; if (f.size && groupSize(r) < f.size) return f.size >= 3 ? 'Salle immense (3 pièces collées)' : 'Grande salle (2 pièces collées)'; if (av && av.lock) return av.reason; if (av && av.poor || !canAfford(costOf('furn', t))) return `Il te faut ${costText(costOf('furn', t))}`; return ''; };
+    if (can.length) html += `<h3>Ajouter${full ? ' <small class="hint">· pièce pleine</small>' : ''}</h3><div class="addlist">${can.map(t => { const no = why(t), f = FURN[t]; return `<div class="addrow${no ? ' off' : ''}">
+      <div class="arhead">${imgThumb('furn', t, 'mini')}<b>${esc(f.name)}</b>${S.free[t] > 0 ? `<span class="arfree">${gi('gift')} offert ×${S.free[t]}</span>` : `<span class="arcost${canAfford(costOf('furn', t)) ? '' : ' no'}">${costText(costOf('furn', t))}</span>`}</div>
+      <div class="artags">${statTags(f) || ''}</div><p class="ardesc">${esc(f.desc || '')}</p>
+      ${no ? `<p class="arwhy">${gi('lock')} ${esc(no)}</p>` : ''}
+      <details class="ardet"><summary>${gi('info')} Tous ses effets</summary><div class="ardetb">${tipHTML('furn', t)}</div></details>
+      <button class="sbtn ${no ? '' : 'pri'}" type="button" data-take="${t}" ${no ? 'disabled' : ''}>${no ? 'Indisponible' : `${gi('pin')} Coller ici`}</button></div>`; }).join('')}</div>`;
   }
   if (r.t === 'coeur') { const def = homeCreatures().filter(c => !c.post || c.post === r.id); html += `<h3>Défenseurs du Cœur</h3><p>${def.length ? def.map(c => esc(c.name)).join(', ') : 'Personne !'} <span class="hint">(garde ${def.reduce((a, c) => a + guardOf(c), 0)})</span></p>`; }
   else if (!isHall(r)) { const posted = S.creatures.filter(c => c.post === r.id); html += `<h3>Postes</h3><p>${posted.length ? posted.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne. Donne un poste ici depuis la fiche d’une créature : elle défendra la pièce.</span>'}</p>`; }

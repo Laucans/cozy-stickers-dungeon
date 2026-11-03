@@ -139,10 +139,49 @@ const DDRAW = {
     box(g, 0, 0, .86, .09, 9, 3, PAL.wood, 'wood'); box(g, .02, 0, .82, .09, 9, 15, '#a06c3c', 'wood'); box(g, -.02, 0, .84, .09, 8, 27, PAL.wood, 'wood');
     const [a1, b1] = pt(-.34, -.07, 4), [a2, b2] = pt(.34, -.07, 36); ln(g, [[a1, b1], [a2, b2]], INK, 6.5); ln(g, [[a1, b1], [a2, b2]], '#8a5a30', 4.4);
     [[-.3, 9], [.3, 21], [-.1, 31], [.14, 8]].forEach(([x, z]) => ball(g, ...pt(x, -.06, z), 1.4, '#d4d8e0', .6));
-    post(g, .3, -.12, 42); const [a, b] = pt(.3, -.12, 42); rrect(g, a - 16, b - 9, 32, 11, 2, PAL.cream, .9); g.fillStyle = INK; g.font = 'bold 6.5px Andika, sans-serif'; g.textAlign = 'center'; g.fillText('DÉTOUR', a, b - 1.5);
+    post(g, .3, -.12, 42); const [a, b] = pt(.3, -.12, 42); rrect(g, a - 16, b - 9, 32, 11, 2, PAL.cream, .9); g.fillStyle = INK; g.font = 'bold 6.5px Andika, sans-serif'; g.textAlign = 'center'; artText(g, 'DÉTOUR', a, b - 1.5);
+  },
+  // les pièges des artisans (rang 2 et 3)
+  herse: g => {
+    post(g, -.38, 0, 50, PAL.stone); post(g, .38, 0, 50, PAL.stone);
+    [-.27, -.135, 0, .135, .27].forEach(x => { const [a1, b1] = pt(x, 0, 47), [a2, b2] = pt(x, 0, 12); ln(g, [[a1, b1], [a2, b2]], INK, 4.4); ln(g, [[a1, b1], [a2, b2]], '#55505e', 2.6); poly(g, [[a2 - 2.6, b2 - 1], [a2, b2 + 8], [a2 + 2.6, b2 - 1]], '#c9ced8', .8); });
+    [40, 25].forEach(z => { const [a1, b1] = pt(-.31, 0, z), [a2, b2] = pt(.31, 0, z); ln(g, [[a1, b1], [a2, b2]], INK, 4.2); ln(g, [[a1, b1], [a2, b2]], '#625d6b', 2.4); });
+    box(g, 0, 0, .86, .14, 6, 48, PAL.stone, 'stone'); ball(g, ...pt(0, .07, 51), 2.4, '#f0902a', .6);
+  },
+  meule: g => {
+    poly(g, [pt(-.36, -.12, .5), pt(.36, -.12, .5), pt(.36, .12, .5), pt(-.36, .12, .5)], '#1e120c', 1);
+    [-.17, .17].forEach(x => { const [a, b] = pt(x, 0, 0); g.beginPath(); g.arc(a, b - 1, 12.5, Math.PI, 0); g.closePath(); g.fillStyle = radial(g, a - 3, b - 9, 14, '#bfc4ce'); fi(g, g.fillStyle, 1.1); g.beginPath(); g.arc(a, b - 1, 7.5, Math.PI, 0); g.strokeStyle = 'rgba(40,30,40,.4)'; g.lineWidth = 1.2; g.stroke(); ball(g, a, b - 1, 2.2, '#55505e', .6); });
+    const [a, b] = pt(0, 0, 0); [[-5, -17], [3, -21], [9, -14], [-1, -12]].forEach(([dx, dy]) => ball(g, a + dx, b + dy, 1.3, '#ffd27a', 0));
+  },
+  machoire: g => {
+    const [a, b] = pt(0, 0, 0);
+    ell(g, a, b, 20, 9, '#4a4652', 1); ell(g, a, b, 14, 5.5, '#1e120c', 0);
+    for (let i = 0; i < 7; i++) { const t = Math.PI * (.12 + .76 * i / 6), x = a - Math.cos(t) * 14, y = b + Math.sin(t) * 5.5; poly(g, [[x - 2, y], [x, y - 5], [x + 2, y]], '#e3e6ec', .7); }
+    g.beginPath(); g.moveTo(a - 18, b - 2); g.quadraticCurveTo(a, b - 31, a + 18, b - 2); g.lineTo(a + 13, b - 2); g.quadraticCurveTo(a, b - 22, a - 13, b - 2); g.closePath(); g.fillStyle = radial(g, a - 4, b - 16, 18, '#6a6572'); fi(g, g.fillStyle, 1.1);
+    for (let i = 1; i < 6; i++) { const t = i / 6, x = a - 13 + 26 * t, y = b - 2 - 40 * t * (1 - t); poly(g, [[x - 2, y - 1], [x, y + 5], [x + 2, y - 1]], '#e3e6ec', .7); }
+    ball(g, a, b, 3, '#f0902a', .8);
+  },
+  ressort: g => {
+    poly(g, [pt(-.36, -.36, .5), pt(.36, -.36, .5), pt(.36, .36, .5), pt(-.36, .36, .5)], '#2a1c16', 1);
+    const [a, b] = pt(0, 0, 0); for (let i = 0; i < 5; i++) ell(g, a, b - 3 - i * 4, 7, 2.6, i % 2 ? '#c9ced8' : '#9aa0aa', .7);
+    poly(g, [pt(-.32, -.32, 27), pt(.32, -.32, 23), pt(.32, .32, 17), pt(-.32, .32, 21)], PAL.wood, 1);
+    [[-.16, -.1], [.16, .1]].forEach(([x, y]) => ball(g, ...pt(x, y, 22), 1.4, '#d4d8e0', .6));
+  },
+  automate: g => {
+    box(g, 0, 0, .44, .44, 8, 0, PAL.stone, 'stone');
+    const [a, b] = pt(0, 0, 8);
+    [-4.5, 4.5].forEach(dx => rrect(g, a + dx - 3, b - 13, 6, 13, 2, '#6f7684', 1));
+    rrect(g, a - 10, b - 33, 20, 22, 5, '#9aa1ae', 1.1); ln(g, [[a - 6, b - 25], [a + 6, b - 25]], 'rgba(40,30,40,.35)', 1.2);
+    ball(g, a, b - 39, 8, '#aeb5c2', 1.1); rrect(g, a - 5.5, b - 41, 11, 3, 1, '#2a2430', 0); ball(g, a - 2.5, b - 39.6, 1, '#f0902a', 0); ball(g, a + 2.5, b - 39.6, 1, '#f0902a', 0);
+    ln(g, [[a + 9, b - 29], [a + 17, b - 41]], INK, 4.2); ln(g, [[a + 9, b - 29], [a + 17, b - 41]], '#8f96a3', 2.4); rrect(g, a + 12, b - 49, 13, 8, 2, '#6a4a32', 1);
+    ln(g, [[a - 10, b - 25], [a - 17, b - 27]], INK, 2); ell(g, a - 19.5, b - 27.5, 3, 4.5, PAL.gold, .8);
   },
   cloche: g => { post(g, -.26, 0, 46); post(g, .26, 0, 46); box(g, 0, 0, .6, .06, 4, 44, PAL.wood2); const [a, b] = pt(0, 0, 44); g.beginPath(); g.moveTo(a - 9, b + 20); g.quadraticCurveTo(a - 8, b + 4, a, b + 4); g.quadraticCurveTo(a + 8, b + 4, a + 9, b + 20); g.closePath(); g.fillStyle = radial(g, a, b + 12, 11, PAL.gold); fi(g, g.fillStyle, 1); ball(g, a, b + 21, 2.4, '#9a7420'); },
 };
+// tourné d'un quart (dans un couloir qui va dans l'autre sens) : en isométrique, c'est l'image retournée… sauf les écriteaux
+let ART_TURN = false;
+function artText(g, text, x, y) { if (!ART_TURN) return g.fillText(text, x, y); g.save(); g.translate(x, 0); g.scale(-1, 1); g.translate(-x, 0); g.fillText(text, x, y); g.restore(); }
+['porte', 'barricade', 'hache', 'cloche', 'herse', 'automate'].forEach(k => { DDRAW[k + '~'] = g => { g.save(); g.scale(-1, 1); ART_TURN = true; try { DDRAW[k](g); } finally { ART_TURN = false; g.restore(); } }; });
 
 /* ---------- décor extérieur et chantier ---------- */
 const XDRAW = {

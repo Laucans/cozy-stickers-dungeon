@@ -147,10 +147,32 @@ const maxGroup = t => S.rooms.reduce((m, r) => r.t === t && r.built ? Math.max(m
 const sizeWord = n => n >= 3 ? 'salle immense' : n >= 2 ? 'grande salle' : '';
 // les grandes salles sont plus agréables : +1 Ambiance par grande salle, +2 par salle immense
 function mergeAmb() { let a = 0; const seen = new Set(); S.rooms.forEach(r => { if (!mergeable(r)) return; const g = groupOf(r); if (seen.has(g)) return; seen.add(g); a += g.rooms.length >= 3 ? 2 : g.rooms.length >= 2 ? 1 : 0; }); return a; }
-const barred = (x, y) => S.defs.some(d => d.x === x && d.y === y && zOf(d) === 0 && DEFS[d.t] && DEFS[d.t].block);
-const heroPath = (extra) => withZ(0, () => { const h = heartRoom(), goal = (x, y) => roomAt(x, y) === h;
-  const wall = (x, y) => barred(x, y) || (extra && extra[0] === x && extra[1] === y);
-  return bfs([GATE.x, GATE.y], goal, (x1, y1, x2, y2) => passable(x1, y1, x2, y2) && !wall(x2, y2)) || (extra ? null : bfs([GATE.x, GATE.y], goal)); });
+const barred = (x, y, z = Z) => S.defs.some(d => d.x === x && d.y === y && zOf(d) === z && DEFS[d.t] && DEFS[d.t].block);
+// les escaliers relient les étages : la case de l'escalier et son palier, à la même place un étage plus loin
+function stairLinks() {
+  const L = new Map();
+  S.rooms.forEach(r => { if (!ROOMS[r.t].stairs || r.land || !r.built) return; const l = r.pair && S.rooms.find(o => o.id === r.pair); if (!l) return; const a = [r.x, r.y, zOf(r)], b = [l.x, l.y, zOf(l)]; L.set(a.join(','), b); L.set(b.join(','), a); });
+  return L;
+}
+// le chemin des héros, du porche jusqu'au Cœur, d'étage en étage : [x, y, z] à chaque pas (les barricades le détournent)
+function heroRoute(extra, to) {
+  const h = to || heartRoom(); if (!h) return null;
+  const hz = zOf(h), links = stairLinks(), key = (x, y, z) => x + ',' + y + ',' + z;
+  const go = avoid => {
+    const start = [GATE.x, GATE.y, 0], prev = new Map([[key(...start), null]]), q = [start];
+    while (q.length) {
+      const [x, y, z] = q.shift();
+      if (z === hz && withZ(z, () => { const r = roomAt(x, y); return !!r && (r === h || sameGroup(r, h)); })) { const p = []; let k = key(x, y, z); while (k) { p.unshift(k.split(',').map(Number)); k = prev.get(k); } return p; }
+      const nb = withZ(z, () => DIRS.map(([dx, dy]) => [x + dx, y + dy, z]).filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < W && ny < H && passable(x, y, nx, ny) && !(avoid && (barred(nx, ny, z) || (extra && extra[0] === nx && extra[1] === ny && (extra[2] || 0) === z)))));
+      const s = links.get(key(x, y, z)); if (s) nb.push(s);
+      for (const n of nb) { const k = key(...n); if (prev.has(k)) continue; prev.set(k, key(x, y, z)); q.push(n); }
+    }
+    return null;
+  };
+  return go(true) || (extra ? null : go(false));
+}
+// sa partie au rez-de-chaussée (jusqu'au Cœur, ou jusqu'à l'escalier qui y mène)
+const heroPath = (extra) => { const p = heroRoute(extra); return p ? p.filter(c => c[2] === 0).map(([x, y]) => [x, y]) : null; };
 // distance (en pas) depuis le porche, sur tout le château y compris les chantiers
 function gateDist() { return withZ(0, gateDist0); }
 function gateDist0() {
@@ -209,7 +231,9 @@ const sumRooms = key => builtRooms().reduce((a, r) => a + rstat(r, key), 0);
 const mult = c => c.mood >= 4 ? 2 + (c.lvl >= 5 ? 1 : 0) : c.mood >= 2 ? 1 + (c.lvl >= 5 ? 1 : 0) : 0;
 const sumCrit = key => homeCreatures().reduce((a, c) => a + (SPECIES[c.sp][key] || 0) * mult(c) + (c.evo && EVOS[c.evo] ? EVOS[c.evo][key] || 0 : 0), 0);
 const beds = () => sumRooms('beds') + (PW('accueil') ? 2 : 0);
-const foodCap = () => sumRooms('food') + (typeof claimFood === 'function' ? claimFood() : 0);
+const foodCap = () => sumRooms('food') + (typeof claimFood === 'function' ? claimFood() : 0) + bonusFood();
+// les repas en plus (ou en moins) : grande serre, saison, plats cuisinés
+function bonusFood() { return (typeof bonusFoodChantier === 'function' ? bonusFoodChantier() : 0) + (typeof bonusFoodSeason === 'function' ? bonusFoodSeason() : 0) + (typeof bonusFoodMeal === 'function' ? bonusFoodMeal() : 0) + (typeof bonusFoodCraft === 'function' ? bonusFoodCraft() : 0); }
 const eaters = () => S.creatures.reduce((a, c) => a + (c.away ? 0 : (SPECIES[c.sp].eats || 1)), 0);
 function ambiance() { return sumRooms('amb') + sumCrit('amb') + (S.theme === 'enclave' ? 3 : 0) + pwAmb() + mergeAmb(); }
 function castleTitle() { const a = ambiance(); let t = TITLES[0][1]; for (const [m, n] of TITLES) if (a >= m) t = n; return t; }
@@ -316,6 +340,9 @@ function checkRoom(t, x, y, w, h) {
   }
   return null;
 }
+// une pièce ne se remplit qu'à moitié : un sticker pour deux cases (arrondi au-dessus), sur toute la grande salle
+const furnCap = r => Math.max(1, Math.ceil(groupOf(r).rooms.reduce((a, o) => a + o.w * o.h, 0) / 2));
+const furnCount = r => groupOf(r).rooms.reduce((a, o) => a + furnIn(o).length, 0);
 function checkFurn(t, x, y) {
   const r = roomAt(x, y), f = FURN[t];
   if (Z === EXT && !r) {   // sur l'herbe : la déco seulement
@@ -329,6 +356,7 @@ function checkFurn(t, x, y) {
   if (!r.built) return 'Chantier en cours : la pièce se meuble une fois terminée (après la nuit)';
   if (f.size && groupSize(r) < f.size) return f.size >= 3 ? `Il faut une salle immense : 3 pièces « ${ROOMS[f.room].name} » collées ou plus` : `Il faut une grande salle : 2 pièces « ${ROOMS[f.room].name} » collées`;
   if (furnAt(x, y)) return 'Il y a déjà quelque chose ici';
+  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `Pièce pleine : ${furnCap(r)} sticker${furnCap(r) > 1 ? 's' : ''} au plus (un pour deux cases)`;
   if (f.room === 'any') { if (defAt(x, y)) return 'Un piège occupe déjà ce couloir'; return null; }
   if (r.t !== f.room && ROOMS[r.t].like !== f.room) return `Ce meuble va dans : ${ROOMS[f.room].name}`;
   return null;
@@ -338,7 +366,7 @@ function checkDef(t, x, y) {
   if (!r || r.t !== 'couloir') return 'Les pièges se posent dans un couloir';
   if (defAt(x, y)) return 'Il y a déjà un piège ici';
   if (furnAt(x, y)) return 'Une déco occupe ce couloir';
-  if (DEFS[t] && DEFS[t].block && !heroPath([x, y])) return 'Il faut laisser aux héros un chemin jusqu’au Cœur (sinon ils défoncent tout)';
+  if (DEFS[t] && DEFS[t].block && !heroRoute([x, y, Z])) return 'Il faut laisser aux héros un chemin jusqu’au Cœur (sinon ils défoncent tout)';
   return null;
 }
 function useCost(kind, t) { if ((S.free[t] || 0) > 0) S.free[t]--; else pay(costOf(kind, t)); }
@@ -365,7 +393,7 @@ function removeCheck(r) {
   if (ROOMS[r.t].fixed) return 'Cette pièce fait partie du château, elle ne se décolle pas.';
   if (r.land) return 'Ce palier tient à l’escalier de l’autre étage : c’est lui qu’il faut décoller.';
   if (ROOMS[r.t].stairs && r.pair) { const z2 = zOf(r) + ROOMS[r.t].stairs, n = S.rooms.filter(o => zOf(o) === z2 && o.id !== r.pair).length; if (n) return `Vide d’abord ${FLOOR_NAMES[z2]} (${n} pièce${n > 1 ? 's' : ''}).`; }
-  const z = zOf(r), root = z === 0 ? heartRoom() : floorRoot(z); if (!root) return null;
+  const z = zOf(r), root = floorHome(z); if (!root) return null;
   const occ = new Map(); S.rooms.filter(o => o !== r && zOf(o) === z).forEach(o => cellsOf(o).forEach(([x, y]) => occ.set(y * W + x, o)));
   const start = cellsOf(root)[0]; const seen = new Set([start[1] * W + start[0]]); const q = [start];
   while (q.length) {
@@ -493,12 +521,12 @@ function planInvasion0() {
     if (d) { const f = DEFS[d.t]; steps.push({ i, dmg: defStr(d) + sticky, label: f.name, lost: f.lost || 0, defId: d.id }); sticky = f.sticky ? 1 : 0; if (f.alarm) alarm = true; return; }
     if (r && r !== h && !isHall(r) && !seen.has(r.id)) {
       seen.add(r.id);
-      const guards = homeCreatures().filter(c => c.post === r.id && !injured(c));
+      const guards = homeCreatures().filter(c => c.guard === r.id && !injured(c));
       const dmg = guards.reduce((a, c) => a + guardOf(c), 0) + rstat(r, 'guard');
       if (dmg > 0) { steps.push({ i, dmg: dmg + sticky, label: `${ROOMS[r.t].name}${guards.length ? ' : ' + guards.map(c => c.name).join(', ') : ''}`, roomId: r.id }); sticky = 0; }
     }
   });
-  const free = homeCreatures().filter(c => (!c.post || c.post === h.id) && !injured(c));
+  const free = homeCreatures().filter(c => !(c.guard && S.rooms.some(o => o.id === c.guard && o.built)) && !injured(c));
   const hd = free.reduce((a, c) => a + guardOf(c) + (alarm ? 1 : 0), 0) + rstat(h, 'guard') + (S.world && S.world.merc > S.night ? 4 : 0);
   steps.push({ i: path ? path.length - 1 : 0, dmg: hd + sticky, label: free.length ? `Défense du Cœur (${free.length} créature${free.length > 1 ? 's' : ''})` : 'Le Cœur est sans défense', heart: true });
   return { party, courage, path, steps, rank, origin };
@@ -508,13 +536,13 @@ function applyInvasion(plan, outcome) {
   if (outcome !== 'robbed') {
     S.stats.repelled++; S.hype += 1;
     if (outcome === 'repelled') {
-      const purse = n * 2 * (plan.rank || 1); S.gold += purse; lines.push(['🏃', `Les aventuriers détalent en semant leur bourse : +${purse} 💰, +1 🔥.`, 'good']);
+      const purse = n * (plan.rank || 1); S.gold += purse; lines.push(['🏃', `Les aventuriers détalent en semant leur bourse : +${purse} 💰, +1 🔥.`, 'good']);
       const room = Math.max(0, sumRooms('cells') - S.prisoners), caught = (plan.res ? plan.res.fallen.map(j => plan.party[j]) : room ? [pick(plan.party)] : []).slice(0, room);
       if (caught.length) { S.prisoners += caught.length; lines.push(['⛓️', `${caught.map(h => h.name).join(', ')} ${caught.length > 1 ? 'finissent' : 'finit'} aux Oubliettes. Rançon à l’aube !`, 'good']); }
       S.creatures.forEach(c => { if (!c.raid) { c.mood = clamp(c.mood + 1, 0, 5); addLoy(c, 2); gainXP(c, 1, lines); } });
     } else lines.push(['🌀', 'Les aventuriers abandonnent et rentrent tout penauds. +1 🔥.', 'good']);
   } else {
-    const steal = Math.min(S.gold, 3 + 2 * S.tier);
+    const steal = Math.min(S.gold, 5 + 3 * S.tier + Math.round(S.gold * .3));   // ils vident un bon tiers du trésor
     S.gold -= steal; S.calamity += 2; S.creatures.forEach(c => { c.mood = clamp(c.mood - 1, 0, 5); addLoy(c, -3); });
     lines.push(['💔', `Les héros touchent le Cœur et filent avec ${steal} 💰. +2 Calamité, toutes les créatures −1 ❤️.`, 'bad']);
   }
@@ -602,10 +630,10 @@ function dawn(report) {
   }
   const capOf = sp => { const d = SPECIES[sp]; return d.from === 'coeur' ? 2 + S.tier : d.fromDecor ? Math.floor(countItem('toile') / d.fromDecor.toile) : nestsOf(sp) * (d.rare ? 1 : 2); };
   const cands = () => SPECIES_ORDER.filter(sp => !(SPECIES[sp].tier && S.tier < SPECIES[sp].tier) && rareOK(sp) && countSp(sp) < capOf(sp));
-  let free = beds() - S.creatures.length; const arrived = [];
+  let free = (typeof homeCap === 'function' ? homeCap() : beds()) - S.creatures.length; const arrived = [];
   const c0 = cands();
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
-  else if (free <= 0) report.push(['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
+  else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’est pas encore assez renommé pour les attirer (${fameCap()} créatures au plus). Accomplis de grandes choses !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
     // une arrivée de temps en temps (une espèce nouvelle se laisse tenter un peu plus vite), rarement deux
     let chance = c0.some(sp => !S.album[sp]) ? .38 : Math.min(.3, .12 + amb * .004 + (S.theme === 'enclave' ? .06 : 0) + (PW('nuit20') ? .05 : 0));
@@ -648,6 +676,8 @@ function roomBuilt(r) {
 const floorSet = () => new Set([...S.rooms.map(zOf), ...S.rooms.filter(r => ROOMS[r.t].stairs && !r.land).map(r => zOf(r) + ROOMS[r.t].stairs)].filter(z => z !== 0 && z !== EXT));
 const floorsDug = () => new Set(S.rooms.map(zOf).filter(z => z !== 0 && z !== EXT)).size;
 const floorRoot = z => S.rooms.find(o => o.land && zOf(o) === z);
+// le point d'ancrage d'un étage : le Cœur s'il y est, sinon le porche (au rez) ou le palier de l'escalier
+const floorHome = z => { const h = heartRoom(); return h && zOf(h) === z ? h : z === 0 ? (S.rooms.find(o => o.t === 'porche') || h) : floorRoot(z); };
 const floorsOpen = () => [...new Set([0, ...S.rooms.map(zOf)])].filter(z => z !== EXT).sort((a, b) => b - a);
 const SIZE_MAX = 2, SIZE_COST = [null, { g: 12, s: 16 }, { g: 22, s: 28 }];
 function expandStatus() { const n = (S.size || 0) + 1; if (n > SIZE_MAX) return null; return { n, need: n, cost: SIZE_COST[n], ok: S.tier >= n && canAfford(SIZE_COST[n]) }; }

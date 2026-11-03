@@ -26,7 +26,7 @@ const radiance = () => glowParts().reduce((a, x) => a + x[1], 0);
 const glowLevel = (v = radiance()) => { let l = 0; GLOW_LV.forEach(([m], i) => { if (v >= m) l = i; }); return l; };
 const glowRadius = (l = glowLevel()) => 2 + l;
 // ce que le château voit de la carte autour de lui : son rayonnement, le belvédère, les gargouilles qui guettent
-const visionRadius = () => Math.max(3, glowRadius()) + sumRooms('sight') + (S.creatures.some(c => SPECIES[c.sp].scout && !isOut(c)) ? 1 : 0) + (PW('carto') ? 1 : 0);
+const visionRadius = () => Math.max(3, glowRadius()) + sumRooms('sight') + (S.creatures.some(c => SPECIES[c.sp].scout && !isOut(c)) ? 1 : 0) + (PW('carto') ? 1 : 0) + (typeof craftRank === 'function' && craftRank('bibli') >= 2 ? 1 : 0);
 
 /* ---------- artefacts ---------- */
 function ownedArtefacts() { return new Set([...S.furn.filter(f => FURN[f.t] && FURN[f.t].artefact).map(f => f.t), ...ARTEFACTS.filter(k => (S.free[k] || 0) > 0)]); }
@@ -135,8 +135,8 @@ function genWorld(seed) {
   return { seed, list, at, cell, sites, roads, onRoad };
 }
 function world() {
-  if (!S.world) S.world = { seed: 1 + Math.floor(Math.random() * 1e9), known: [], met: {}, cd: {}, hit: {}, found: {}, notes: 0 };
-  if (!WORLD || WORLD.seed !== S.world.seed) { WORLD = genWorld(S.world.seed); WORLD.knownSet = null; }
+  if (!S.world) S.world = newWorldState();   // une nouvelle partie : un Val tiré au sort (version 2)
+  if (!WORLD || WORLD.seed !== S.world.seed || (WORLD.gen || 1) !== (S.world.gen || 1)) { WORLD = S.world.gen === 2 ? genWorld2(S.world.seed) : genWorld(S.world.seed); WORLD.knownSet = null; }
   if (!WORLD.knownSet || WORLD.knownN !== S.world.known.length) { WORLD.knownSet = new Set(S.world.known); WORLD.knownN = S.world.known.length; }
   return WORLD;
 }
@@ -159,7 +159,7 @@ const discAround = (q, r, n) => world().list.filter(c => hdist(c.q, c.r, q, r) <
 const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 // cibles de raid connues (il faut avoir découvert l'endroit sur la carte)
 function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
-RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 7, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon ${deM(rv.master)} : une expédition de 4 créatures, trois étages et un boss. De quoi le soumettre, et en rapporter une relique.` }; });
+RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 5, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon ${deM(rv.master)} : une expédition de 4 créatures, trois étages et un boss. De quoi le soumettre, et en rapporter une relique.` }; });
 
 /* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */
 function heroOrigin() {

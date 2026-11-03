@@ -106,7 +106,7 @@ function nemRaidPlan() {
     return { k: sp, name: `${SPECIES[sp].name} ${dN(who)}`, hp: 3 + 2 * g + 2 * S.tier + Math.floor(lead / 6), atk: 1 + Math.floor(g / 2) + (S.tier >= 2 ? 1 : 0), minion: true, F: {} };
   });
   const plan = { party, rank: 1, foe: `les sbires ${dN(who)}`, rival: r.id, courage: party.reduce((a, h) => a + h.hp, 0), steps: [] };
-  return prepareParty(assignGoal(plan, { kidnap: false, wreck: 40 }), .2);   // des sbires : piller le Cœur, vider le trésor ou tout casser, et préparés à ta défense
+  return prepareParty(assignGoal(plan, { kidnap: false, wreck: 40 }), .35);   // des sbires : piller le Cœur, vider le trésor ou tout casser, et préparés à ta défense
 }
 function applyNemRaid(plan, R, lines) {
   const n = nem(), r = nemRival(), who = nemName(), v = vicState();

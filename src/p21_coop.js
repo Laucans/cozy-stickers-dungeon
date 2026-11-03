@@ -145,8 +145,8 @@ function coopGuestMsg(m) {
   else if (m.t === 'chron' && Array.isArray(m.report)) {
     if (COOP.own && COOP.own.stats) { COOP.own.stats.coopNights++; saveHome(); }
     const rows = m.report.slice(0, 80).filter(r => Array.isArray(r)).map(([e, t, tone]) => [String(e).slice(0, 8), String(t).slice(0, 300), ['good', 'bad', 'ev', ''].includes(tone) ? tone : '']);
-    const items = rows.map(([e, t, tone]) => e === 'sec' ? `<li class="sec">${esc(t)}</li>` : `<li class="${tone}"><span class="emo">${esc(e)}</span><span>${esc(t)}</span></li>`).join('');
-    openModal(`<h2>Chronique de la nuit ${clamp(+m.n || 1, 1, 99999)}</h2><p class="hint">${esc(S.name)} · château de ${esc(COOP.host.name)}</p><ul class="chron">${items}</ul><div class="mfoot"><button class="sbtn pri" type="button" data-close>Continuer</button></div>`, { label: 'Chronique' });
+    const num = o => o && typeof o === 'object' ? Object.fromEntries(['g', 's', 'h', 'c', 'cal', 'men'].map(k => [k, Math.round(clamp(+o[k] || 0, -1e6, 1e6))])) : null, snap = num(m.snap), now = num(m.now);
+    openModal(`${chronicleHTML(clamp(+m.n || 1, 1, 99999), rows, `${esc(S.name)} · château de ${esc(COOP.host.name)}`, snap, snap && now)}<div class="mfoot nc-foot"><button class="sbtn pri nc-go" type="button" data-close>Continuer</button></div>`, { label: 'Chronique', cls: 'nchron' });
     COOP.ready = false; renderCoopBar();
   }
   else if (m.t === 'peers' && Array.isArray(m.list)) {

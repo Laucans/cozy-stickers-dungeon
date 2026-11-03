@@ -32,12 +32,12 @@ const SP_TRAITS = { diablotin: ['farceur', 'maniaque', 'bavard'], gobelin: ['rad
   sorciere: ['studieux', 'bucolique', 'bavard'], squelette: ['bagarreur', 'maniaque', 'frileux'], orque: ['bagarreur', 'gourmand', 'fetard'], araignee: ['artiste', 'solitaire', 'maniaque'],
   dragonnet: ['radin', 'frileux', 'marmotte'], mimique: ['radin', 'farceur', 'solitaire'], vampire: ['artiste', 'fetard', 'solitaire'], golem: ['marmotte', 'bucolique', 'solitaire'],
   fee: ['bucolique', 'artiste', 'farceur'], liche: ['frileux', 'studieux', 'radin'], harpie: ['artiste', 'bavard', 'fetard'], cocatrice: ['gourmand', 'farceur', 'curieux'],
-  mandragore: ['bucolique', 'bavard', 'marmotte'], nixe: ['solitaire', 'bucolique', 'artiste'], goule: ['gourmand', 'frileux', 'studieux'] };
+  mandragore: ['bucolique', 'bavard', 'marmotte'], nixe: ['solitaire', 'bucolique', 'artiste'], goule: ['gourmand', 'frileux', 'studieux'], nainsombre: ['maniaque', 'radin', 'bagarreur'] };
 // et les occupations de son métier
 const SP_ACTS = { diablotin: ['chantier', 'nettoyer'], gobelin: ['dormir', 'compter'], kobold: ['forger', 'chantier'], crapaud: ['jardiner', 'pecher'], gargouille: ['garde'], menestrel: ['musique', 'fete'],
   troll: ['manger', 'dormir'], fantome: ['lire', 'explorer'], sorciere: ['potion', 'jardiner'], squelette: ['garde', 'recueil'], orque: ['forger', 'entrainer', 'chantier'], araignee: ['nettoyer', 'rever'],
   dragonnet: ['compter', 'chauffer'], mimique: ['compter', 'rever'], vampire: ['musique', 'admirer'], golem: ['chantier', 'forger'], fee: ['jardiner', 'admirer'], liche: ['lire', 'chauffer'],
-  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'] };
+  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'], nainsombre: ['forger', 'chantier'] };
 const QUIRKS = ['Ronfle comme une forge.', 'A peur des poules.', 'Collectionne les dents (pas les siennes).', 'Parle à l’épouvantail.', 'Chante faux sous la pluie.', 'Mange les bougies quand personne ne regarde.',
   'Écrit des poèmes sur les rats.', 'Ne marche jamais sur les fissures.', 'Croit que le Cœur l’écoute.', 'Se brosse les dents avec un hérisson.', 'Range ses chaussettes par couleur de moisissure.',
   'Dit « bonjour » aux pièges.', 'Garde un caillou porte-bonheur. Il en a perdu quatre.', 'Rêve d’ouvrir une crêperie.', 'Compte les moutons, puis les mange.', 'Fait des grimaces aux portraits.',
@@ -388,7 +388,7 @@ function drawGlyphs(c, t) {
     g.vy += (g.g || 0) * dt; g.x += (g.vx + (g.sway ? Math.sin(t / 200 + g.t0) * 12 : 0)) * dt; g.y += g.vy * dt; g.rot = (g.rot || 0) + (g.vr || 0) * dt;
     const al = Math.min(1, (1 - k) * 2.2) * Math.min(1, k * 8), s = g.size * .8 * (1 + (g.grow || 0) * k);
     c.save(); c.globalAlpha = al * .92; c.translate(g.x, g.y); if (g.rot) c.rotate(g.rot);
-    if (g.ch) { c.font = `700 ${s}px "Patrick Hand", "Comic Sans MS", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; if (g.ink) { c.lineWidth = 3; c.lineJoin = 'round'; c.strokeStyle = 'rgba(26,16,12,.8)'; c.strokeText(g.ch, 0, 0); } c.fillStyle = g.col; c.fillText(g.ch, 0, 0); }
+    if (g.ch) { c.font = `700 ${s}px "Patrick Hand", "Comic Sans MS", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; if (g.ink) { c.lineWidth = 3; c.lineJoin = 'round'; c.strokeStyle = 'rgba(26,16,12,.8)'; } c.fillStyle = g.col; richText(c, g.ch, 0, 0, s, !!g.ink); }
     else if (g.shape === 'dot' || g.shape === 'wisp') { c.fillStyle = g.col; c.beginPath(); c.arc(0, 0, s, 0, 7); c.fill(); }
     else if (g.shape === 'coin') { c.fillStyle = g.col; c.strokeStyle = '#7a5a12'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(0, 0, s, s * (.35 + .65 * Math.abs(Math.cos(t / 90))), 0, 0, 7); c.fill(); c.stroke(); }
     else if (g.shape === 'ring') { c.strokeStyle = g.col; c.lineWidth = 1.4; c.beginPath(); c.arc(0, 0, s, 0, 7); c.stroke(); }
@@ -443,7 +443,7 @@ function drawHen(h, t) {
 function lifeDrawList(list, t) {
   if (Z !== EXT) return;
   updateHens(t);
-  HENS.forEach(hs => hs.forEach(h => list.push({ d: h.x + h.y, f: () => drawHen(h, t) })));
+  HENS.forEach(hs => hs.forEach(h => list.push({ d: cellKey(h.x, h.y), f: () => drawHen(h, t) })));
 }
 
 /* ---------- la forêt à racheter ---------- */

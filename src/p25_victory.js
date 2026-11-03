@@ -155,7 +155,7 @@ function victoryDawn(report) {
   if (!S.started) return;
   const v = vicState(), out = [];
   // vassaux : tribut
-  const vas = RIVALS.filter(r => isVassal(r.id)); if (vas.length) { S.gold += vas.length * 2; S.mat += vas.length; out.push(['🪙', `Tes vassaux versent leur tribut : +${vas.length * 2} 💰, +${vas.length} 🪵.`, 'good']); }
+  const vas = RIVALS.filter(r => isVassal(r.id)); if (vas.length) { S.gold += vas.length; S.mat += vas.length; out.push(['🪙', `Tes vassaux versent leur tribut : +${vas.length} 💰, +${vas.length} 🪵.`, 'good']); }
   // la bonne volonté retombe doucement ; les requêtes vieillissent ; parfois une nouvelle
   Object.keys(v.gw).forEach(k => { if (v.gw[k] > 40) v.gw[k]--; });
   v.requests.forEach(q => { if (q.st === 'open' && S.night > q.until) { q.st = 'done'; const s = siteById(q.site); if (s) { addGw(s, -5); out.push(['⌛', `${s.name} a attendu en vain : bonne volonté −5.`, 'bad']); } } });

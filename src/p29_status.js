@@ -51,18 +51,21 @@ function stickerAt(x, y, r, S0, t, born) {
   ctx.beginPath(); ctx.arc(0, 0, R + 2.2, 0, 7); ctx.fillStyle = '#fbf3e0'; ctx.fill();
   ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fillStyle = S0.bg; ctx.fill();
   ctx.beginPath(); ctx.arc(-R * .3, -R * .35, R * .45, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fill();
-  const plain = /^[!?★❤☁]$/.test(S0.ch);
+  const ik = emoKey(S0.ch); if (ik) { const im = getSprite('icon', ik, 2).img, sc = R * 1.55 / Math.max(im.width, im.height); ctx.drawImage(im, -im.width * sc / 2, -im.height * sc / 2, im.width * sc, im.height * sc); ctx.restore(); return; }
+  const plain = /^[!?★]$/.test(S0.ch);
   ctx.font = plain ? `900 ${Math.round(R * 1.45)}px Georgia, serif` : `${Math.round(R * 1.15)}px ${STATUS_FONT}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = S0.fg || '#fff'; ctx.fillText(S0.ch, 0, plain ? R * .08 : R * .06);
   ctx.restore();
 }
+const STATUS_URGENT = new Set(['captive', 'part', 'blesse', 'paie', 'faim']);
 function drawStatus(a, sx, top, t) {
   if (a.foe) { const r = RIVALS.find(o => o.id === a.foe); if (r) stickerAt(sx + 12 * CAM.s, top - 18, clamp(9 * CAM.s * 1.5, 8, 13), { ch: r.emo, bg: '#4a2a5a' }, t, 0); return; }
   if (a.kind !== 'char' || a.fight || a.leaving) return;
   const c = critter(a.id); if (!c) return;
-  const list = statusOf(c).slice(0, 2), key = list.join(',');
+  // vue de loin : seules les alertes restent (fâché, blessé, affamé, impayé, retenu), pour ne pas couvrir le château de pastilles
+  const far = CAM.s < .5, list = statusOf(c).filter(k => !far || STATUS_URGENT.has(k)).slice(0, 2), key = list.join(',');
   if (a.stKey !== key) { a.stKey = key; a.stBorn = t; }
-  const r = clamp(9 * CAM.s * 1.5, 8, 13);
+  const r = clamp(9 * CAM.s * 1.5, far ? 6 : 8, 13);
   list.forEach((k, i) => stickerAt(sx + (i ? -r * 1.9 : r * .9) + 6 * CAM.s, top - 4 - (i ? 0 : r * .3), i ? r * .82 : r, STATUS[k], t, a.stBorn));
 }
 

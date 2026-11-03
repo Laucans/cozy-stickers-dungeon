@@ -47,8 +47,8 @@ function openRaid(pre) {
     m.querySelector('#raidBody').innerHTML = `<h2>Raid sur le Val Douillet</h2>
       <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
       <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
-      <h3>Équipe (${sel.team.size}/${cap})</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); return `❤️ ${p.hp} · ⚔️ ${p.atk} · ${p.skills.filter(s => s.sig || s.gear || s.key === 'legende').map(s => s.ico).join('')}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
-      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[RAIDS[sel.target].rival].desc)} Niveau du donjon : <b>${String(crawlLevel()).replace('.', ',')}</b> (il suit la renommée de tes champions). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
+      <h3>Équipe (${sel.team.size}/${cap})</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); const K = CRAWL_SK[c.sp]; return `❤️ ${p.hp} · ⚔️ ${p.atk}${K ? ` · 🃏 ${K.ico} ${esc(K.name)}` : ''}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
+      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(crawlLevel()).replace('.', ',')}</b> (il suit la renommée de tes champions). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
       ${!crawl && typeof RAID_APPS !== 'undefined' ? `<h3>Approche</h3><div class="choices">${Object.entries(RAID_APPS).map(([k, a]) => `<button type="button" class="choice" data-app="${k}" aria-pressed="${(sel.app || 'risquee') === k}"><span class="emo">${a.ico}</span><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></button>`).join('')}</div>` : ''}
       ${b && !crawl ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
       <div class="mfoot">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
@@ -87,7 +87,7 @@ async function runRaid(report) {
   const lines = applyRaid(roll); sfx(roll.res === 'fail' ? 'bad' : 'chime');
   report.push([tg.emo, `${titles[roll.res]} (${roll.dice.join(', ')}) à ${tg.name}.`, roll.res === 'fail' ? 'bad' : 'good']); lines.forEach(l => report.push(l));
   addLog(`Raid ${tg.name} : ${titles[roll.res].replace(/^\S+ /, '')}`, roll.res === 'fail' ? 'bad' : 'good');
-  m.querySelector('#rOut').innerHTML = `<p class="outcome">${titles[roll.res]}</p><ul class="chron">${lines.map(([e, t, tone]) => `<li class="${tone}"><span class="emo">${e}</span><span>${esc(t)}</span></li>`).join('')}</ul>`;
+  m.querySelector('#rOut').innerHTML = `<p class="outcome">${titles[roll.res]}</p><ul class="chron">${lines.map(([e, t, tone]) => `<li class="${tone}"><span class="emo">${iconize(e)}</span><span>${iconize(esc(t))}</span></li>`).join('')}</ul>`;
   btn.disabled = false; btn.textContent = 'Continuer'; renderHUD();
   await new Promise(res => btn.addEventListener('click', res, { once: true }));
   closeModal(true);
@@ -137,7 +137,7 @@ async function endNight() {
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
   dropSticker(); closeModal(true); if (UI.build) closeBuild(); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
-  const n = S.night, report = [];
+  const n = S.night, report = [], snap = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
   try {
     setPhase('calamite');
     const cd = calamityDelta(), before = S.calamity; S.calamity = Math.max(0, S.calamity + cd.d);
@@ -162,7 +162,7 @@ async function endNight() {
     ad.forEach(a => report.push([a.ico, `${a.name} : pouvoir « ${a.pw} » débloqué. ${a.pd}`, 'ev']));
     S.rooms.forEach(r => { if (r.justBuilt) { delete r.justBuilt; poof(r.x, r.y, r.w, r.h); V.flash.push({ cells: cellsOf(r), t: performance.now() }); } });
     save(); renderAll();
-    await chronicle(n, report);
+    await chronicle(n, report, snap);
   } catch (err) { console.error(err); toast('Oups, la nuit a trébuché. La partie continue.', true); }
   checkGoals().forEach(g => toast(`✦ Envie comblée : ${g.text}`));
   setPhase('roder'); UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false;
@@ -170,11 +170,30 @@ async function endNight() {
   if (S.tier >= 3 && !S.won) { S.won = true; save(); toast('👑 Palier 3 : ton château est légendaire… mais le Val n’a pas encore de Grand Maître. Vise une victoire (🏛️ en haut à droite).'); }
   if (typeof victoryAfterNight === 'function') victoryAfterNight();
 }
-function chronicle(n, report) {
-  coopCast('chron', { n, report });
-  const items = report.map(([e, t, tone], i) => e === 'sec' ? `<li class="sec">${esc(t)}</li>` : `<li class="${tone}" style="animation-delay:${Math.min(i, 14) * 50}ms"><span class="emo">${e}</span><span>${esc(t)}</span></li>`).join('');
-  const m = openModal(`<h2>Chronique de la nuit ${n}</h2><p class="hint">${esc(S.name)} · ${esc(castleTitle())}</p><ul class="chron">${items}</ul>
-    <div class="mfoot"><button class="sbtn pri" type="button" id="cNext" data-focus>🌙 Nuit ${S.night}</button></div>`, { noClose: true, label: 'Chronique' });
+/* ---------- la chronique de la nuit : un parchemin illustré ---------- */
+const CHRON_SEC = [[/^Métiers/, 'anvil'], [/^Quêtes/, 'scroll'], [/^Renommée/, 'legend'], [/calamit/i, 'cal'], [/raid/i, 'raid'], [/contrecoup|invasion|assaut|croisade/i, 'swords'], [/rival|sabotage/i, 'flag'], [/r[ée]colte/i, 'gold'], [/travaux|chantier/i, 'anvil'], [/paie/i, 'purse'], [/arriv/i, 'door'], [/[âa]mes|cr[ée]ature/i, 'heart'], [/intrigue/i, 'scroll'], [/hauts? faits/i, 'trophy'], [/exp[ée]dition/i, 'expe'], [/envie/i, 'spark'], [/victoire/i, 'crown'], [/val/i, 'map']];
+const chronSecIk = t => { const f = CHRON_SEC.find(([re]) => re.test(t)); return f ? f[1] : 'bookopen'; };
+// le bilan de la nuit en quelques pastilles : ce qui a bougé depuis le soir
+function chronSummary(snap, now) {
+  if (!snap) return '';
+  const chip = (ik, label, a, b, bad) => { const d = Math.round((b || 0) - (a || 0)), cls = !d ? 'eq' : (d > 0) !== !!bad ? 'up' : 'down';
+    return `<span class="nc-chip ${cls}" title="${esc(label)} : ${a} → ${b}">${gi(ik)}<b>${b}</b><small>${d > 0 ? '+' + d : d < 0 ? '−' + -d : '='}</small><em>${esc(label)}</em></span>`; };
+  return `<div class="nc-sum">${chip('gold', 'Or', snap.g, now.g)}${chip('mat', 'Matériaux', snap.s, now.s)}${chip('hype', 'Notoriété', snap.h, now.h)}${chip('heart', 'Créatures', snap.c, now.c)}${chip('cal', 'Calamité', snap.cal, now.cal, true)}${chip('men', 'Menace', snap.men, now.men, true)}</div>`;
+}
+function chronicleHTML(n, report, sub, snap, now) {
+  const secs = []; let cur = { t: '', items: [] }; secs.push(cur); let k = 0;
+  report.forEach(([e, t, tone]) => { if (e === 'sec') { cur = { t, items: [] }; secs.push(cur); return; } cur.items.push(`<li class="${['good', 'bad', 'ev'].includes(tone) ? tone : ''}" style="animation-delay:${Math.min(k++, 18) * 45}ms"><span class="emo">${iconize(esc(e))}</span><span>${iconize(esc(t))}</span></li>`); });
+  const stars = Array.from({ length: 18 }, (_, i) => `<i style="left:${(i * 53.7 + 7) % 100}%;top:${(i * 37.3 + 11) % 70}%;animation-delay:-${(i * .37 % 3).toFixed(2)}s"></i>`).join('');
+  return `<div class="nc-sky" aria-hidden="true">${stars}<span class="nc-moon"></span><svg viewBox="0 0 600 70" preserveAspectRatio="none"><path d="M0 70 V48 Q80 30 160 44 T300 40 T450 46 T600 38 V70Z" fill="#1d1630"/><path d="M250 46 V22 h10 v-8 h8 v8 h8 V8 l8-8 l8 8 v16 h8 v-8 h8 v8 h10 v24Z" fill="#120d1f"/><rect x="290" y="16" width="6" height="8" fill="#f2c94f" opacity=".8"/></svg></div>
+    <div class="nc-head"><small>Chronique de la nuit</small><h2>Nuit ${n}</h2><p>${sub}</p></div>
+    ${now ? chronSummary(snap, now) : ''}
+    <div class="nc-body">${secs.filter(s => s.items.length || s.t).map(s => `<section class="nc-sec">${s.t ? `<h3 class="nc-rib">${gi(chronSecIk(s.t))}<span>${esc(s.t)}</span></h3>` : ''}<ul class="chron">${s.items.join('')}</ul></section>`).join('')}</div>`;
+}
+function chronicle(n, report, snap) {
+  const now = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
+  coopCast('chron', { n, report, snap, now });
+  const m = openModal(`${chronicleHTML(n, report, `${esc(S.name)} · ${esc(castleTitle())}`, snap, now)}
+    <div class="mfoot nc-foot"><button class="sbtn pri nc-go" type="button" id="cNext" data-focus>${gi('night')} Nuit ${S.night}</button></div>`, { noClose: true, label: 'Chronique', cls: 'nchron' });
   sfx('chime');
   return new Promise(res => m.querySelector('#cNext').addEventListener('click', () => { closeModal(true); res(); }, { once: true }));
 }
@@ -209,7 +228,7 @@ function openHelp() {
     <li>Chaque pièce démarre en chantier, avec une horloge de 4, 6 ou 8 segments. Tes ouvriers en remplissent 2 par nuit, plus un par diablotin ou orque.</li>
     <li>Les <b>meubles</b> donnent leurs effets à la pièce et l’éclairent : lits au Dortoir, chaudron en Cuisine, candélabres… Une pièce meublée attire son espèce.</li>
     <li>La Tour de guet touche les remparts ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
-    <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Décoller un meuble est gratuit : il retourne dans ta barre.</li></ul>
+    <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Les meubles se collent depuis la fiche de leur pièce (touche-la). Décoller un meuble est gratuit : il reste offert et se recolle sans rien payer.</li></ul>
     <h3>Créatures</h3>
     <ul><li>Comble leurs envies, pose la déco qu’elles aiment, donne-leur un poste dans leur pièce préférée. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
     <li>Une créature postée dans une pièce la défend. Les créatures libres défendent le Cœur.</li></ul>
@@ -241,24 +260,29 @@ function openMenu() {
   q('#mTitle').addEventListener('click', () => { if (COOP.role === 'guest') { coopLeave(); return; } save(); openTitle(); });
 }
 function openIntro() {
-  let theme = 'forge';
+  let theme = 'forge', vseed = 1 + Math.floor(Math.random() * 99999);
   const back = S && S.started ? curSlot() : null;   // une partie en cours : elle reste rangée, on prépare un château neuf
   if (back != null) { save(); resetActors(); newState(); renderAll(); CAM.user = false; fitCamera(); }
   const m = openModal(`<h2>Bienvenue, Maître du Château</h2>
     <p>Sur sa colline, un petit château maléfique attend son maître. Colle des pièces, meuble-les comme un nid douillet, accueille des créatures attachantes et fais trembler (un peu) les aventuriers du Val Douillet.</p>
     <div class="field"><label for="iName">Nom de ton château</label><input id="iName" maxlength="40" value="Le Château de Minuit"></div>
     <h3>Thème du château</h3><div class="choices" id="iThemes">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="choice" data-theme="${k}" aria-pressed="${k === theme}"><span class="emo">${t.emo}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span><span>Pièce unique : ${esc(ROOMS[t.room].name)}</span>${t.look ? `<span class="hint">🎨 ${esc(t.look)}</span>` : ''}</button>`).join('')}</div>
+    <h3>Le Val</h3><div class="ival"><canvas id="iVal" aria-label="La carte du Val tirée au sort"></canvas><div class="ivaltxt"><p id="iValTxt"></p><p class="hint">Chaque partie tire son propre Val : relief, côtes, rivières, et des villages, des donjons et des lieux d’expédition à découvrir (la carte ne les montre pas encore).</p><div class="btnrow"><button class="sbtn" type="button" id="iReroll">🎲 Un autre Val</button><label class="iseed">Graine <input id="iSeed" inputmode="numeric" maxlength="9" value=""></label></div></div></div>
     <label class="tutochk"><input type="checkbox" id="iTuto" checked> Suivre le tutoriel avec Gribouille, le conseiller (recommandé)</label>
     <div class="mfoot"><button class="sbtn" type="button" id="iBack">← Retour</button><button class="sbtn" type="button" id="iHelp">📖 Le Grimoire</button><button class="sbtn pri" type="button" id="iGo" data-focus>🏰 Réveiller le château</button></div>`, { noClose: true, wide: true, label: 'Nouvelle partie' });
   m.querySelector('#iBack').addEventListener('click', () => { if (back != null) loadSlot(back); else openTitle(); });
   m.querySelector('#iThemes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (!b) return; theme = b.dataset.theme; S.theme = theme; V.dirty = true; sfx('tick'); m.querySelectorAll('[data-theme]').forEach(x => x.setAttribute('aria-pressed', x.dataset.theme === theme)); });
   m.querySelector('#iHelp').addEventListener('click', () => openGrimoire());
+  const showVal = () => { const w = genWorld2(vseed); m.querySelector('#iSeed').value = vseed; m.querySelector('#iValTxt').innerHTML = `<b>Graine ${vseed}</b> : ${esc(valSummary(w))}.`; drawValPreview(m.querySelector('#iVal'), w); };
+  m.querySelector('#iReroll').addEventListener('click', () => { vseed = 1 + Math.floor(Math.random() * 99999); showVal(); sfx('tick'); });
+  m.querySelector('#iSeed').addEventListener('change', e => { const v = parseInt(String(e.target.value).replace(/\D/g, ''), 10); if (v > 0) { vseed = v; showVal(); } else e.target.value = vseed; });
+  requestAnimationFrame(showVal);
   m.querySelector('#iGo').addEventListener('click', () => {
     const name = m.querySelector('#iName').value.trim() || 'Le Château de Minuit';
     const tuto = m.querySelector('#iTuto').checked;
-    useSlot(newSlotId()); resetActors(); newState(name, theme); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
+    useSlot(newSlotId()); resetActors(); newState(name, theme); S.world = newWorldState(vseed); WORLD = null; mapDirty(); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
     banner(`🏰 ${esc(name)}`, `${THEMES[theme].emo} ${THEMES[theme].name}`, 1800);
-    if (!tuto) setTimeout(() => toast('Commence par un Dortoir collé au couloir, puis meuble-le avec la Paillasse offerte.'), 1900);
+    if (!tuto) setTimeout(() => toast('Commence par un Dortoir collé au couloir ; une fois terminé, touche-le pour y coller la Paillasse offerte.'), 1900);
   });
 }
 
@@ -314,7 +338,7 @@ function bindEvents() {
   $('#portraits').addEventListener('click', e => { const b = e.target.closest('[data-crit]'); if (b) openCreature(b.dataset.crit); });
   $('#btnNight').addEventListener('click', endNight);
   $('#btnRaid').addEventListener('click', openRaid);
-  $('#btnTier').addEventListener('click', () => { if (!UI.busy) openTier(); });
+  $('#btnTier').addEventListener('click', () => { if (!UI.busy) openHeart(); });
   $('#btnPath').addEventListener('click', e => { V.showPath = !V.showPath; e.currentTarget.classList.toggle('on', V.showPath); e.currentTarget.setAttribute('aria-pressed', V.showPath); sfx('tick'); });
   $('#btnBest').addEventListener('click', openBestiary);
   $('#floors').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (b) { setFloor(+b.dataset.z); sfx('tick'); } });
@@ -332,7 +356,7 @@ function bindEvents() {
   $('#btnMenu').addEventListener('click', () => { if (!UI.busy) openMenu(); });
   $('#btnSound').addEventListener('click', toggleSound);
   document.addEventListener('keydown', e => {
-    if (e.target.matches('input, select, textarea')) return;
+    if (e.target.matches && e.target.matches('input, select, textarea')) return;
     if (e.key === 'Escape') { if ($('#modalRoot').children.length && !UI.modalNoClose) closeModal(); else if (UI.hand) dropSticker(); else if (UI.build) closeBuild(); }
     else if (e.key === 'b' || e.key === 'B') { if (!UI.busy) toggleBuild(); }
     else if (e.key === 'r' || e.key === 'R') rotateHand();

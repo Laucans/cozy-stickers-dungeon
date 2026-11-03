@@ -4,7 +4,7 @@
    tri en profondeur, éclairage dynamique, flammes, particules
    ========================================================= */
 const $ = s => document.querySelector(s);
-const cv = $('#cv'), ctx = cv.getContext('2d');
+const cv = $('#cv'), ctx = cv.getContext('2d', { alpha: false });   // opaque : le navigateur n'a pas à le mélanger avec la page
 const AU = 2;                                   // 1 unité d'art = 2 px monde (case = 128 px)
 const WALL_FULL = 84, WALL_LOW = 22, RAMP_H = 132, RAMP_LOW = 34;
 const WP = (x, y, z = 0) => [(x - y) * 64, (x + y) * 32 - z];
@@ -23,11 +23,22 @@ const BOUNDS = () => { if (Z === EXT) { const y0 = Math.max(0, H - extDepth() - 
   return { l: WP(0, H)[0] - 120, r: WP(W, 0)[0] + 120, t: WP(0, 0)[1] - RAMP_H - 70, b: WP(W, H)[1] + 90 }; };
 
 /* ---------- caméra ---------- */
+// la finesse du rendu : un budget de pixels (un très grand écran dessine un peu moins fin), qui baisse tout seul
+// si les images n'arrivent plus à temps, et remonte quand tout redevient fluide
+const RQ = { max: 4.2e6, budget: 4.2e6, ema: 33, slow: 0, fast: 0 };
+function renderQuality(gap) {
+  if (gap > 250) return;   // un onglet caché, une pause : ça ne compte pas
+  RQ.ema = RQ.ema * .9 + gap * .1;
+  RQ.slow = RQ.ema > 46 ? RQ.slow + 1 : 0; RQ.fast = RQ.ema < 36 ? RQ.fast + 1 : 0;
+  if (RQ.slow > 45 && RQ.budget > 8e5) { RQ.budget = Math.max(8e5, RQ.budget * .7); RQ.slow = 0; RQ.ema = 33; }
+  else if (RQ.fast > 300 && RQ.budget < RQ.max) { RQ.budget = Math.min(RQ.max, RQ.budget * 1.2); RQ.fast = 0; }
+}
 function resize() {
-  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const r = cv.getBoundingClientRect();
   const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  const dpr = Math.round(Math.max(Math.min(1, window.devicePixelRatio || 1), Math.min(2, window.devicePixelRatio || 1, Math.sqrt(RQ.budget / (w * h)))) * 20) / 20;
   if (w === V.w && h === V.h && dpr === V.dpr) return false;
-  const first = !V.w; V.w = w; V.h = h; V.dpr = dpr; cv.width = w * dpr; cv.height = h * dpr;
+  const first = !V.w; V.w = w; V.h = h; V.dpr = dpr; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
   first ? fitCamera() : clampCam(); return true;
 }
 function computeInsets() {
@@ -60,7 +71,7 @@ function rebuild() {
     if (isHall(r)) L(r.x + .5, r.y + .5, 1.25, 'warm', .3, { glow: 0 });
     else L(r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w, r.h) * .8 + .6, 'warm', .55, { glow: .1 });
   }
-  const h = heartRoom(); if (h && Z === 0) L(h.x + 1, h.y + 1, 4.2, 'violet', 1, { glow: .7, pulse: 1 });
+  const h = heartRoom(); if (h && Z === zOf(h)) L(h.x + 1, h.y + 1, 4.2, 'violet', 1, { glow: .7, pulse: 1 });
   V.walls.forEach(w => {
     const mx = (w.x0 + w.x1) / 2, my = (w.y0 + w.y1) / 2, ox = w.face === 'W' ? .22 : 0, oy = w.face === 'N' ? .22 : 0;
     if (w.deco === 'torch') { L(mx + ox, my + oy, 2.6, 'fire', 1, { glow: .45, flick: 1 }); const p = lerp2(WP(w.x0, w.y0), WP(w.x1, w.y1), .5); V.flames.push({ wx: p[0], wy: p[1] - w.h * .62 - 4, s: 1.7, d: w.d + .02, seed: mx * 3 + my }); }
@@ -282,13 +293,14 @@ function shadowEll(c, wx, wy, rx, ry, a = .38) { c.beginPath(); c.ellipse(wx, wy
 const LIGHTMAP = mk(1, 1); let CARVE = null, GLOWS = {};
 function lightList(t) {
   const out = V.lights.map(l => { let i = l.i, r = l.r; if (l.flick) { const f = Math.sin(t * .011 + l.seed) * .06 + Math.sin(t * .027 + l.seed * 3) * .05; i *= 1 + f; r *= 1 + f * .5; } if (l.pulse) { i *= .85 + Math.sin(t / 420) * .15; } return { ...l, i, r }; });
-  HEROS.forEach(a => out.push({ x: a.x, y: a.y, r: 2.7, col: 'fire', i: 1, glow: .45 }));
+  if ((V.heroZ || 0) === Z) HEROS.forEach(a => out.push({ x: a.x, y: a.y, r: 2.7, col: 'fire', i: 1, glow: .45 }));
   ACT.forEach(a => out.push({ x: a.x, y: a.y, r: .95, col: 'warm', i: .62, glow: 0 }));
   ACT.forEach(a => { if (a.key === 'fantome') out.push({ x: a.x, y: a.y, r: 1.4, col: 'moon', i: .55, glow: .35 }); else if (a.key === 'diablotin' || a.key === 'dragonnet') out.push({ x: a.x, y: a.y, r: 1, col: 'red', i: .4, glow: .3 }); });
   return out;
 }
 function drawLighting(t, lights) {
-  const q = .5, lw = Math.ceil(cv.width * q), lh = Math.ceil(cv.height * q);
+  // l'ombre se calcule en petit (ce sont des dégradés très doux), puis s'étire sur l'écran
+  const q = .36, lw = Math.ceil(cv.width * q), lh = Math.ceil(cv.height * q);
   if (LIGHTMAP.width !== lw || LIGHTMAP.height !== lh) { LIGHTMAP.width = lw; LIGHTMAP.height = lh; CARVE = null; }
   const g = LIGHTMAP.getContext('2d');
   if (!CARVE) { CARVE = g.createRadialGradient(0, 0, 0, 0, 0, 1); CARVE.addColorStop(0, 'rgba(0,0,0,1)'); CARVE.addColorStop(.38, 'rgba(0,0,0,.82)'); CARVE.addColorStop(1, 'rgba(0,0,0,0)'); }
@@ -313,7 +325,7 @@ function updateParticles(dt, t) {
   if (TUNE.particles) V.flames.forEach(f => { if (Math.random() < .05) V.parts.push({ k: 'ember', x: f.wx + (Math.random() - .5) * 6, y: f.wy - 10, vx: (Math.random() - .5) * 12, vy: -24 - Math.random() * 30, life: 0, max: 1.2 + Math.random() }); });
   const dust = V.parts.filter(p => p.k === 'dust').length;
   if (TUNE.particles && dust < TUNE.dust) { const r = S.rooms.filter(r => r.built); if (r.length) { const rm = pick(r), [x, y] = WP(rm.x + Math.random() * rm.w, rm.y + Math.random() * rm.h); V.parts.push({ k: 'dust', x, y: y - Math.random() * 70, vx: (Math.random() - .5) * 5, vy: -2 - Math.random() * 4, life: 0, max: 5 + Math.random() * 5 }); } }
-  const h = heartRoom(); if (h && Math.random() < .2) { const [x, y] = WP(h.x + 1 + (Math.random() - .5) * 1.2, h.y + 1 + (Math.random() - .5) * 1.2); V.parts.push({ k: 'spark', x, y: y - 20 - Math.random() * 60, vx: 0, vy: -14, life: 0, max: 1.4 }); }
+  const h = heartRoom(); if (h && Z === zOf(h) && Math.random() < .2) { const [x, y] = WP(h.x + 1 + (Math.random() - .5) * 1.2, h.y + 1 + (Math.random() - .5) * 1.2); V.parts.push({ k: 'spark', x, y: y - 20 - Math.random() * 60, vx: 0, vy: -14, life: 0, max: 1.4 }); }
   V.parts.forEach(p => { p.life += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.k === 'ember') p.vx += Math.sin(t / 200 + p.y) * dt * 10; });
   V.parts = V.parts.filter(p => p.life < p.max);
 }
