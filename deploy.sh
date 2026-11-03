@@ -8,9 +8,13 @@ MSG="${1:-Mise à jour du jeu}"
 sh build.sh
 TMP=$(mktemp -d)
 git clone --quiet --depth 1 git@github.com:Laucans/cozy-stickers-dungeon.git "$TMP/repo"
-rm -rf "$TMP/repo/src" "$TMP/repo/docs"
+rm -rf "$TMP/repo/src" "$TMP/repo/docs" "$TMP/repo/sim" "$TMP/repo/.claude/skills/simulation-equilibrage"
 cp -R src docs "$TMP/repo/"
 cp README.md build.sh deploy.sh "$TMP/repo/"
+# le banc d'essai (sans les copies figées ni les résultats bruts) et son mode d'emploi
+mkdir -p "$TMP/repo/sim" "$TMP/repo/.claude/skills"
+cp sim/*.mjs sim/*.js sim/RAPPORT*.md "$TMP/repo/sim/"
+cp -R .claude/skills/simulation-equilibrage "$TMP/repo/.claude/skills/"
 cd "$TMP/repo"
 git add -A
 if git diff --cached --quiet; then echo "Rien à publier."; exit 0; fi

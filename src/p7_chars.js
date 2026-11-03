@@ -289,3 +289,98 @@ Object.assign(CHAR, {
   liche:  { skin: '#dfe4ee', body: '#2c3f7c', legs: '#1e2b57', hat: 'wizard', hatc: '#2a2c5e', eyes: 'sockets', nose: 'none', mouth: 'teeth', item: 'scarfstaff' },
   harpie: { sc: 1.02, skin: '#e8c6a2', body: '#55408c', belly: '#8d79c9', legs: '#e3a53a', wings: '#45297a', hair: '#2a2036', hairStyle: 'wild', eyes: 'normal', iris: '#f0b42a', nose: 'long', mouth: 'smug', item: 'lute' },
 });
+/* ---------- ajouts : créatures des Jardins (cocatrice, mandragore, nixe, goule) ---------- */
+Object.assign(ITEMS, {
+  // couverts de gourmet et bavoir noué ; la goule est voûtée : la main droite et la tête, dessinées
+  // juste après l'objet, descendent d'un cran (humanoid() restaure la transformation ensuite)
+  cutlery: g => {
+    const bib = '#fbf8f1';
+    g.beginPath(); g.moveTo(-6, -31.5); g.quadraticCurveTo(0, -28.5, 6, -31.5); g.lineTo(8.6, -17); g.quadraticCurveTo(9, -10.4, 0, -10); g.quadraticCurveTo(-9, -10.4, -8.6, -17); g.closePath(); fi(g, bib, 1.2);
+    ln(g, [[-7.6, -14], [-3, -12.4], [3, -12.4], [7.6, -14]], '#8fb0d8', 1.1);
+    poly(g, [[1.6, -21], [4.4, -22.2], [5.6, -19.6], [3.8, -17.4], [4.6, -15.4], [2.6, -16.2], [1, -18.2]], '#b8402e', 0);
+    ball(g, -3.4, -19.6, .9, '#b8402e', 0);
+    inkLn(g, [[-6, -30.8], [-10.4, -33.4]], bib, 1);
+    [[-1, -.5], [1, .45]].forEach(([s, r]) => { g.save(); g.translate(-11.2, -34); g.rotate(r); ell(g, s * 2.2, 0, 2.3, 1.4, bib, 1); g.restore(); });
+    // couteau dans la main gauche (déjà dessinée) : lame au-dessus du poing, bout du manche dessous
+    poly(g, [[-14, -24.6], [-11.4, -24.6], [-11.4, -36.5], [-12.8, -40], [-14, -37.6]], METAL, 1);
+    ln(g, [[-12.2, -26], [-12.2, -35.5]], 'rgba(255,255,255,.7)', .7);
+    inkLn(g, [[-12.6, -16.8], [-12.9, -13.6]], '#6a4630', 1.8);
+    // fourchette dans la main droite (dessinée après, plus bas)
+    inkLn(g, [[12.2, -11], [13.2, -31]], METAL, 1.6);
+    rrect(g, 10, -33.6, 6.4, 2.8, 1.2, METAL, 1);
+    [-2.3, 0, 2.3].forEach(d => inkLn(g, [[13.2 + d, -33.4], [13.3 + d * 1.15, -39.4]], METAL, 1));
+    g.translate(0, 4.5);
+  },
+  // longues mèches ondulées, nageoires en guise d'oreilles, robe et mèches d'algues, coquillage (nixe)
+  seashell: g => {
+    const fin = '#7fd0bd', alg = '#4f9a48', alg2 = '#3a7a3c', hair = '#2b6a6c';
+    [-1, 1].forEach(sd => {
+      g.beginPath(); g.moveTo(sd * 8, -52); g.bezierCurveTo(sd * 17.5, -50, sd * 20.5, -42, sd * 17.6, -35.5); g.bezierCurveTo(sd * 15.4, -31.5, sd * 20.4, -28.5, sd * 18.8, -23.2);
+      g.quadraticCurveTo(sd * 16.8, -20.6, sd * 14.8, -23.4); g.quadraticCurveTo(sd * 15.4, -27, sd * 12.6, -29.5); g.lineTo(sd * 8, -31); g.closePath(); fi(g, hair, 1.2);
+      ln(g, [[sd * 17.2, -44], [sd * 17.8, -39.5]], 'rgba(255,250,235,.3)', 1.2);
+    });
+    [-1, 1].forEach(sd => {
+      poly(g, [[sd * 9, -48], [sd * 21, -57.5], [sd * 20, -51.5], [sd * 25.5, -48.5], [sd * 21.5, -44.5], [sd * 24.5, -39.5], [sd * 10, -38]], fin, 1);
+      [[20.5, -55], [23.5, -48.4], [22.5, -41]].forEach(([x, y]) => ln(g, [[sd * 11, -43], [sd * x, y]], '#3c9a88', .9));
+    });
+    for (let i = 0; i < 6; i++) { const x = -8.3 + i * 3.32, l = 5.5 + (i % 2) * 2.6, w = i % 2 ? 1 : -1; poly(g, [[x - 1.9, -13.4], [x + 1.9, -13.4], [x + 1.3 + w, -9.5], [x + .7, -12.4 + l + 2.4], [x - .5, -12.4 + l], [x - 1.4 - w * .6, -10]], i % 2 ? alg : alg2, 1); }
+    [[-7.4, 1], [6.6, -1]].forEach(([x, s]) => inkLn(g, [[x, -31], [x - s * 1.6, -26.5], [x + s * .6, -21.5], [x - s * 1.1, -16.5]], alg, 1.6));
+    // coquille Saint-Jacques tenue par la charnière, penchée vers l'extérieur
+    g.save(); g.translate(14.2, -20.6); g.rotate(.6);
+    g.beginPath(); g.moveTo(-2, 0); g.lineTo(-7.2, -7); g.arc(0, -7.5, 7.2, Math.PI * 1.03, Math.PI * 1.97); g.lineTo(2, 0); g.closePath(); fi(g, '#f6c8b6', 1.2);
+    [-5, -2.5, 0, 2.5, 5].forEach(d => ln(g, [[0, -1], [d * 1.15, -12.8 + Math.abs(d) * .32]], '#d48e7e', .8));
+    poly(g, [[-3.6, -2.8], [3.6, -2.8], [2.6, .6], [-2.6, .6]], '#eab4a2', 1);
+    g.restore();
+  },
+});
+Object.assign(SPECIALS, {
+  // moitié coq, moitié serpent ; elle louche, d'où un regard pétrifiant qui rate toujours sa cible
+  cockatrice: g => {
+    const gold = '#eba640', red = '#de3a2c', green = '#5f9a40';
+    const C = [[-2, -9], [-14, -4.5], [-25.5, -7.5], [-31, -18], [-26, -28.5], [-17.5, -28], [-16.5, -21.5]], S = [];
+    for (let i = 0; i < C.length - 1; i++) { const p0 = C[Math.max(0, i - 1)], p1 = C[i], p2 = C[i + 1], p3 = C[Math.min(C.length - 1, i + 2)]; for (let k = 0; k < 6; k++) { const t = k / 6, t2 = t * t, t3 = t2 * t; S.push([0, 1].map(j => .5 * (2 * p1[j] + (p2[j] - p0[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * t3))); } }
+    S.push(C[C.length - 1]);
+    const n = S.length, wd = i => 4.8 * Math.pow(1 - i / (n - 1), .75) + .5, N = S.map((p, i) => { const q = S[Math.min(n - 1, i + 1)], o = S[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; });
+    poly(g, [...S.map((p, i) => [p[0] + N[i][0] * wd(i), p[1] + N[i][1] * wd(i)]), ...S.map((p, i) => [p[0] - N[i][0] * wd(i), p[1] - N[i][1] * wd(i)]).reverse()], green, 1.2);
+    ln(g, S.slice(0, n - 2).map((p, i) => [p[0] - N[i][0] * wd(i) * .45, p[1] - N[i][1] * wd(i) * .45]), '#c8de8c', 1.6);
+    for (let i = 3; i < n - 3; i += 3) { const [x, y] = S[i], w = wd(i) * .8; ln(g, [[x + N[i][0] * w, y + N[i][1] * w], [x + N[i][0] * w * .2 + (S[i + 1][0] - x) * .8, y + N[i][1] * w * .2 + (S[i + 1][1] - y) * .8], [x - N[i][0] * w * .3, y - N[i][1] * w * .3]], '#3c7a2c', 1); }
+    poly(g, [[-5, -24], [-9, -36], [-13, -33], [-11, -29.5], [-14.5, -28], [-8, -21]], '#b4561f', 1.1);
+    [[-3, -4], [5, -3.5]].forEach(([x, y]) => { inkLn(g, [[x, y - 5], [x - .6, y + 3.4]], '#f0b030', 1.6); inkLn(g, [[x - 4, y + 4], [x - .6, y + 3.4], [x + 3, y + 4.2]], '#f0b030', 1.2); });
+    ell(g, 6.6, -25, 5.6, 7.4, gold, 1.2);
+    ell(g, 1, -16.5, 12.5, 10.5, gold, 1.2);
+    ell(g, 6.8, -14.6, 6.4, 7.2, '#f8dc90', .8);
+    g.beginPath(); g.moveTo(-1, -23); g.quadraticCurveTo(-7, -32.5, -14.5, -29.5); g.quadraticCurveTo(-11.6, -27.6, -15, -24.6); g.quadraticCurveTo(-11.2, -23.6, -13.6, -20); g.quadraticCurveTo(-9, -19.8, -9.6, -16.4); g.quadraticCurveTo(-5, -17, -2.5, -15); g.closePath(); fi(g, '#c8642a', 1.1);
+    ln(g, [[-3.6, -20.6], [-11, -27]], 'rgba(90,30,10,.55)', .8); ln(g, [[-3.6, -18], [-10.6, -21.8]], 'rgba(90,30,10,.55)', .8);
+    [[4.6, -41.5, 3], [8.8, -44.4, 3.5], [13.2, -43, 3], [16, -39.4, 2.4]].forEach(([x, y, r]) => ball(g, x, y, r, red, 1));
+    ball(g, 10, -33.5, 9, gold, 1.2);
+    ell(g, 17.4, -26.4, 2.4, 3.6, red, 1);
+    poly(g, [[16.4, -35.8], [24.6, -32.6], [16.8, -29.8]], '#f4c247', 1); ln(g, [[17, -32.8], [22, -32.5]], 'rgba(120,70,10,.6)', .7);
+    eye(g, 6.8, -35.4, .8, '#8a3ec8', [1.4, .5]); eye(g, 13.6, -36, .64, '#8a3ec8', [-1.5, .8]);
+    ell(g, 4.4, -29.6, 2.4, 1.4, 'rgba(235,110,120,.45)', 0);
+  },
+  // racine qui braille : yeux plissés, larmes, bouche grande ouverte, bras en l'air
+  mandrake: g => {
+    g.save(); g.scale(.74, .74);
+    const sk = '#cfa775', dk = '#9a6e44';
+    [[-.95, 16, '#4f8f3f'], [-.48, 20, '#5fa64e'], [0, 22, '#6db85a'], [.46, 19, '#5fa64e'], [.92, 15, '#4f8f3f']].forEach(([a, L, c]) => { g.save(); g.translate(0, -45); g.rotate(a); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-5.8, -L * .5, 0, -L); g.quadraticCurveTo(5.8, -L * .5, 0, 0); fi(g, c, 1.2); ln(g, [[0, -1.5], [0, -L * .78]], 'rgba(225,255,195,.55)', .8); g.restore(); });
+    [[-1, -5.5], [1, 5.5]].forEach(([sd, x]) => { inkLn(g, [[x, -14], [x + sd * 1.8, -7], [x + sd * .6, -1]], sk, 3.2); inkLn(g, [[x + sd * .6, -1], [x + sd * 3.4, .4]], sk, 1.2); ln(g, [[x + sd * 1.6, -6], [x + sd * 4.6, -5.2]], dk, .8); });
+    [-1, 1].forEach(sd => { inkLn(g, [[sd * 12, -25], [sd * 18, -30], [sd * 20.5, -38]], sk, 2.4); [[-2.2, -3.6], [.6, -4.4], [2.8, -2.2]].forEach(([dx, dy]) => inkLn(g, [[sd * 20.5, -38], [sd * (20.5 + dx), -38 + dy]], sk, 1)); });
+    g.beginPath(); g.moveTo(0, -48); g.bezierCurveTo(10, -48, 16.5, -40, 16, -30); g.bezierCurveTo(15.5, -21, 10, -13, 5, -11); g.quadraticCurveTo(0, -9.5, -5, -11); g.bezierCurveTo(-10, -13, -15.5, -21, -16, -30); g.bezierCurveTo(-16.5, -40, -10, -48, 0, -48); g.closePath(); fi(g, sk, 1.2);
+    [[-9, -16, 4], [6.5, -14.5, 4.5], [-12.5, -41, 3], [11, -42, 3.4]].forEach(([x, y, w]) => { g.beginPath(); g.arc(x, y - w, w, .35 * Math.PI, .65 * Math.PI); g.strokeStyle = dk; g.lineWidth = .9; g.stroke(); });
+    [[15.8, -25, 19.6, -23.4], [14.6, -19, 17.6, -16.4], [-15.8, -26, -19.4, -24.8], [-14, -18, -17, -15.4]].forEach(([x0, y0, x1, y1]) => ln(g, [[x0, y0], [x1, y1]], INK, 1));
+    [-1, 1].forEach(sd => ln(g, [[sd * 9.5, -37], [sd * 4.5, -34.2], [sd * 9.5, -31.4]], INK, 1.9));
+    [-1, 1].forEach(sd => { const x = sd * 13.5, y = -38; g.beginPath(); g.moveTo(x - sd * 2, y + 2.6); g.quadraticCurveTo(x + sd * 2.6, y - .4, x + sd * 1.4, y - 3.2); g.quadraticCurveTo(x - sd * 1.6, y - .8, x - sd * 2, y + 2.6); fi(g, '#9ad8ff', 1); });
+    ell(g, 0, -23.5, 6.6, 7.2, '#5a1c22', 1.2);
+    ell(g, 0, -19.4, 4.2, 2.6, '#e0707a', 0);
+    rrect(g, -1.7, -30.4, 3.4, 2.6, .8, '#fffaf0', .8);
+    ell(g, -11.4, -27.5, 3, 1.7, 'rgba(235,110,120,.45)', 0); ell(g, 11.4, -27.5, 3, 1.7, 'rgba(235,110,120,.45)', 0);
+    [-1, 1].forEach(sd => [[18.5, -45, 22.5, -49.5], [20.5, -40.5, 25.5, -41.5], [17, -50, 18.8, -55]].forEach(([x0, y0, x1, y1]) => ln(g, [[sd * x0, y0], [sd * x1, y1]], INK, 1.3)));
+    g.restore();
+  },
+});
+Object.assign(CHAR, {
+  cocatrice:  { special: 'cockatrice', sc: .95 },
+  mandragore: { special: 'mandrake', sc: .8 },
+  nixe:       { sc: .96, skin: '#a9dcc6', body: '#3f8a62', legs: '#8ccbb4', hair: '#2b6a6c', hairStyle: 'wild', eyes: 'normal', iris: '#2c8fb0', nose: 'small', mouth: 'smug', item: 'seashell' },
+  goule:      { sc: 1.02, skin: '#a0b296', body: '#4b4560', legs: '#35303f', ears: 'pointy', hair: '#2a2830', hairStyle: 'slick', eyes: 'normal', iris: '#e3c94a', brow: true, nose: 'long', mouth: 'smug', item: 'cutlery' },
+});

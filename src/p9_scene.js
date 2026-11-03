@@ -13,7 +13,8 @@ function onGeom(dx, dy) {
 // l'étage affiché est aussi l'étage de travail (Z)
 function setFloor(z) {
   if (z === Z) return;
-  Z = z; V.dirty = true; V.hover = null; V.ghost = null; V.hoverActor = null; UI.ghostKey = null; UI.touchAnchor = null;
+  const refit = z === EXT || Z === EXT;
+  Z = z; V.dirty = true; if (refit && V.w) fitCamera(); V.hover = null; V.ghost = null; V.hoverActor = null; UI.ghostKey = null; UI.touchAnchor = null;
   renderAll(); if (UI.hand && UI.lastPt) updateGhost(UI.lastPt);
 }
 // l'escalier (ou le palier) de l'étage z qui mène vers z + dir
@@ -23,26 +24,44 @@ const worldXf = () => ctx.setTransform(V.dpr * CAM.s, 0, 0, V.dpr * CAM.s, V.dpr
 const screenXf = () => ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
 
 function backDraw(t) {
+  if (Z === EXT) return;
   if (Z > 0) { [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => { for (let i = 0; i < n; i++) rampart(ctx, lerp2(A, B, i / n), lerp2(A, B, (i + 1) / n), RAMP_LOW, side, 2); }); return; }
   if (Z < 0) { [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => { for (let i = 0; i < n; i++) { const a = lerp2(A, B, i / n), b = lerp2(A, B, (i + 1) / n); texQuad(ctx, texWall('rock', i % 3), a, b, 150, side ? .35 : .1); } }); return; }
-  tower(ctx, -.5, -.5, .62, 210, '#9c2f2a', t);
+  tower(ctx, -.5, -.5, .62, 210, curStyle().roof, t);
   [[WP(0, 0), WP(W, 0), false, W], [WP(0, 0), WP(0, H), true, H]].forEach(([A, B, side, n]) => {
     for (let i = 0; i < n; i++) rampart(ctx, lerp2(A, B, i / n), lerp2(A, B, (i + 1) / n), RAMP_H, side, 2);
     for (let i = 1; i < n; i += 3) { const p = lerp2(A, B, (i + .5) / n); ln(ctx, [[p[0], p[1] - RAMP_H * .5 + 8], [p[0], p[1] - RAMP_H * .5 - 4]], '#2a1c16', 5); ln(ctx, [[p[0], p[1] - RAMP_H * .5 + 8], [p[0], p[1] - RAMP_H * .5 - 4]], '#6a4a2a', 2.6); drawFlame(ctx, p[0], p[1] - RAMP_H * .5 - 6, 1.7, t, i * 3 + (side ? 1 : 0)); }
   });
 }
+// dehors : le rempart du château ferme les Jardins côté devant, avec son portillon
+function extFront(list, t) {
+  const [dx] = extDoor();
+  for (let x = 0; x < W; x++) if (x !== dx) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW * 1.6, false, 2) });
+  list.push({ d: W + H + .2, f: () => tower(ctx, W + .3, H + .3, .42, 80, curStyle().roof, t) });
+  list.push({ d: H - 1, f: () => tower(ctx, -.3, H + .3, .42, 80, curStyle().roof, t) });
+  list.push({ d: dx + H + .62, f: () => {
+    const A = WP(dx, H), B = WP(dx + 1, H), hh = RAMP_LOW * 1.6;
+    tower(ctx, dx - .02, H + .1, .16, hh + 14, curStyle().roof, t); tower(ctx, dx + 1.02, H + .1, .16, hh + 14, curStyle().roof, t);
+    const P = (u, z) => { const p = lerp2(A, B, u); return [p[0], p[1] - z]; };
+    ctx.beginPath(); ctx.moveTo(...P(.12, 0)); ctx.lineTo(...P(.12, hh * .7)); ctx.quadraticCurveTo(...P(.5, hh * 1.05), ...P(.88, hh * .7)); ctx.lineTo(...P(.88, 0)); ctx.closePath();
+    ctx.fillStyle = '#5a3a22'; ctx.fill(); ctx.strokeStyle = '#1e140e'; ctx.lineWidth = 2.4; ctx.stroke();
+    for (let i = 1; i < 4; i++) ln(ctx, [P(.12 + i * .19, 0), P(.12 + i * .19, hh * .8)], 'rgba(20,12,8,.55)', 1.4);
+    const k = P(.7, hh * .36); ctx.fillStyle = '#d9a441'; ctx.beginPath(); ctx.arc(k[0], k[1], 2.4, 0, 7); ctx.fill();
+  } });
+}
 function frontItems(list, t) {
+  if (Z === EXT) { extFront(list, t); return; }
   if (Z > 0) { for (let x = 0; x < W; x++) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW * .7, false, 2) }); for (let y = 0; y < H; y++) list.push({ d: W + y + .6, f: () => rampart(ctx, WP(W, y), WP(W, y + 1), RAMP_LOW * .7, true, 2) }); return; }
   if (Z < 0) return;
   for (let x = 0; x < W; x++) if (x !== GATE.x) list.push({ d: x + H + .6, f: () => rampart(ctx, WP(x, H), WP(x + 1, H), RAMP_LOW, false, 2) });
   for (let y = 0; y < H; y++) list.push({ d: W + y + .6, f: () => rampart(ctx, WP(W, y), WP(W, y + 1), RAMP_LOW, true, 2) });
-  list.push({ d: W - 1, f: () => tower(ctx, W + .5, -.5, .56, 175, '#9c2f2a', t) });
-  list.push({ d: H - 1, f: () => tower(ctx, -.5, H + .5, .56, 175, '#9c2f2a', t) });
-  list.push({ d: W + H + 1.4, f: () => tower(ctx, W + .45, H + .45, .5, 60, '#9c2f2a', t) });
+  list.push({ d: W - 1, f: () => tower(ctx, W + .5, -.5, .56, 175, curStyle().roof, t) });
+  list.push({ d: H - 1, f: () => tower(ctx, -.5, H + .5, .56, 175, curStyle().roof, t) });
+  list.push({ d: W + H + 1.4, f: () => tower(ctx, W + .45, H + .45, .5, 60, curStyle().roof, t) });
   list.push({ d: GATE.x + H + .55, f: () => {
-    tower(ctx, GATE.x - .02, H + .12, .22, 104, '#9c2f2a', t); tower(ctx, GATE.x + 1.02, H + .12, .22, 104, '#9c2f2a', t);
+    tower(ctx, GATE.x - .02, H + .12, .22, 104, curStyle().roof, t); tower(ctx, GATE.x + 1.02, H + .12, .22, 104, curStyle().roof, t);
     const A = WP(GATE.x, H), B = WP(GATE.x + 1, H), hh = 78;
-    texQuad(ctx, texWall('low', 1), [A[0], A[1] - hh], [B[0], B[1] - hh], 20, 0); capQuad(ctx, [A[0], A[1] - hh - 20], [B[0], B[1] - hh - 20], 0, [7, -3.5], '#a39886');
+    texQuad(ctx, texWall('low', 1), [A[0], A[1] - hh], [B[0], B[1] - hh], 20, 0); capQuad(ctx, [A[0], A[1] - hh - 20], [B[0], B[1] - hh - 20], 0, [7, -3.5], curStyle().cap);
     for (let i = 1; i < 6; i++) { const p = lerp2(A, B, i / 6); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#1e1612', 3); ln(ctx, [[p[0], p[1] - hh], [p[0], p[1] - hh * .62]], '#5a5560', 1.4); }
     ln(ctx, [[A[0], A[1] - hh * .64], [B[0], B[1] - hh * .64]], '#5a5560', 2.4);
   } });
@@ -59,7 +78,8 @@ function drawScene(t) {
   if (Z > 0) { screenXf(); drawSky(t); }
   worldXf(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const M = TERRAIN_M, tt = TERRAIN_T;
-  if (Z > 0) { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(0, 0)); ctx.drawImage(roofTexture(), 0, 0); ctx.restore(); }
+  if (Z === EXT) { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(-M, -M)); ctx.drawImage(extTexture(), 0, 0); ctx.restore(); }
+  else if (Z > 0) { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(0, 0)); ctx.drawImage(roofTexture(), 0, 0); ctx.restore(); }
 
   else { ctx.save(); ctx.transform(64 / tt, 32 / tt, -64 / tt, 32 / tt, ...WP(-M, -M)); ctx.drawImage(Z < 0 ? caveTexture() : terrainTexture(), 0, 0); ctx.restore(); }
   const here = o => zOf(o) === Z, actors = [...ACT.values()].filter(a => (a.z || 0) === Z), heros = Z === 0 ? HEROS : [];
@@ -82,10 +102,12 @@ function drawScene(t) {
   actors.forEach(a => list.push({ d: a.x + a.y, f: () => drawActor(ctx, a, t) }));
   heros.forEach(a => list.push({ d: a.x + a.y, f: () => drawActor(ctx, a, t) }));
   if (Z === 0) V.outside.forEach(o => list.push({ d: o.x + o.y, f: () => { const [x, y] = WP(o.x, o.y); drawSprite(ctx, getSprite('x', o.key), x, y, 1.2); } }));
+  else if (Z === EXT) (V.outsideExt || []).forEach(o => list.push({ d: o.x + o.y, f: () => { const [x, y] = WP(o.x, o.y); drawSprite(ctx, getSprite('x', o.key), x, y, 1.15); } }));
+  if (typeof lifeDrawList === 'function') lifeDrawList(list, t);
   frontItems(list, t);
   list.sort((a, b) => a.d - b.d).forEach(it => it.f());
   drawLighting(t, lightList(t));
-  worldXf(); drawParticles(ctx, t);
+  worldXf(); drawParticles(ctx, t); if (typeof drawGlyphs === 'function') drawGlyphs(ctx, t);
   drawOverlays(t);
   screenXf();
   const vg = ctx.createRadialGradient(V.w / 2, V.h / 2, Math.min(V.w, V.h) * .35, V.w / 2, V.h / 2, Math.max(V.w, V.h) * .75);
@@ -102,9 +124,9 @@ function glowPath(pts, col, closed = true, k = 1, dash) {
 }
 function drawOverlays(t) {
   worldXf();
-  if (V.showPath && Z === 0) { const p = heroPath(); if (p && p.length > 1) { const pts = p.map(([x, y]) => WP(x + .5, y + .5)); glowPath(pts, '255,228,150', false, 1, [14, 10]); const [ex, ey] = pts[pts.length - 1]; ctx.beginPath(); ctx.ellipse(ex, ey, 26, 13, 0, 0, 7); ctx.strokeStyle = 'rgba(255,228,150,.9)'; ctx.lineWidth = 2 / CAM.s; ctx.stroke(); } }
+  pathOverlay();
   if (V.tutoCells && !V.ghost) V.tutoCells.forEach(([x, y]) => glowPath(footprint({ x, y, w: 1, h: 1 }), '255,205,110', true, .7 + .5 * Math.abs(Math.sin(t / 380))));
-  if (V.hover && !V.ghost) { const r = roomAt(V.hover[0], V.hover[1]); if (r) glowPath(isHall(r) ? footprint({ x: V.hover[0], y: V.hover[1], w: 1, h: 1 }) : footprint(r), '255,205,110', true, .7); }
+  if (V.hover && !V.ghost) { const r = roomAt(V.hover[0], V.hover[1]); if (r) (isHall(r) ? [{ x: V.hover[0], y: V.hover[1], w: 1, h: 1 }] : groupOf(r).rooms).forEach(o => glowPath(footprint(o), '255,205,110', true, .7)); }
   if (UI.hand) {   // la grille n'apparaît que pendant qu'on colle un sticker
     ctx.save(); ctx.strokeStyle = 'rgba(255,240,200,.13)'; ctx.lineWidth = 1.2 / CAM.s; ctx.beginPath();
     for (let i = 0; i <= W; i++) { const a = WP(i, 0), b = WP(i, H); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
@@ -127,13 +149,15 @@ function drawOverlays(t) {
   S.rooms.filter(r => !r.built && zOf(r) === Z).forEach(r => { const [x, y] = WP(r.x + r.w / 2, r.y + r.h / 2); clockAt(x, y - 120, 24, ROOMS[r.t].clock, r.prog); });
   if (COOP.role) drawPeersWorld(t);
   screenXf();
-  if (V.hover && !V.ghost && !V.hoverActor) { const r = roomAt(V.hover[0], V.hover[1]); if (r && !isHall(r)) { const [sx, sy] = toScreen(...WP(r.x + r.w / 2, r.y + r.h / 2)); tag(sx, sy + 10, ROOMS[r.t].name); } }
+  if (V.hover && !V.ghost && !V.hoverActor) { const r = roomAt(V.hover[0], V.hover[1]); if (r && !isHall(r)) { const [sx, sy] = toScreen(...WP(r.x + r.w / 2, r.y + r.h / 2)), n = groupSize(r); tag(sx, sy + 10, ROOMS[r.t].name + (n >= 2 ? ' · ' + sizeWord(n) : '')); } }
+  if (V.hoverForest && Z === EXT && !V.ghost && !UI.hand) { const c = forestCost(), [sx, sy] = toScreen(...WP(V.hoverForest[0] + .5, V.hoverForest[1] + .5)); tag(sx, sy - 30, c ? `🌲 Acheter la forêt · ${costText(c)}` : '🌲 La forêt'); }
   [...[...ACT.values()].filter(a => (a.z || 0) === Z), ...(Z === 0 ? HEROS : [])].forEach(a => {
     const [sx, sy] = toScreen(...WP(a.x, a.y)), top = sy - 112 * CAM.s * a.sc;
-    if (a.badge) { ctx.font = `${Math.round(clamp(15 * CAM.s * 1.6, 11, 18))}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(a.badge, sx + 20 * CAM.s, top + 4); }
+    if (a.hpMax) hpBar(sx, top - 4, a.hp, a.hpMax, a.kind === 'hero' || a.foe);
+    if (typeof drawStatus === 'function') drawStatus(a, sx, top, t);
+    else if (a.badge) { ctx.font = `${Math.round(clamp(15 * CAM.s * 1.6, 11, 18))}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(a.badge, sx + 20 * CAM.s, top + 4); }
     if (a.bubble && t < a.bubble.until) bubble(sx, top - 6, a.bubble.text);
   });
-  if (V.courage != null && HEROS.length) { const a = HEROS[0], [sx, sy] = toScreen(...WP(a.x, a.y)); tag(sx, sy - 128 * CAM.s - 18, `Courage ${V.courage}`, '#ffb4a0'); }
   V.fx = V.fx.filter(f => t - f.t0 < 1500);
   V.fx.forEach(f => { const k = (t - f.t0) / 1500, [sx, sy] = toScreen(...WP(f.x, f.y)); ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.font = `800 ${Math.round(clamp(30 * CAM.s, 14, 22))}px "Grenze Gotisch", Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = '#1a100c'; ctx.strokeText(f.text, sx, sy - 70 * CAM.s - k * 40); ctx.fillStyle = f.col || '#fff1d0'; ctx.fillText(f.text, sx, sy - 70 * CAM.s - k * 40); ctx.globalAlpha = 1; });
   if (COOP.role) drawPeersScreen(t);
@@ -205,12 +229,12 @@ function wanderOnce(a, force) {
     else if (p) moveTo(a, cx + .5 + (Math.random() - .5) * .5, cy + .5 + (Math.random() - .5) * .5, 600);
   });
 }
-function moodBadge(c) { if (c.tempt) return '👀'; if (c.quest && c.quest.st === 'done') return '✨'; if (c.quest && c.quest.st === 'offered') return '❗'; return c.mood <= 0 ? '💢' : ''; }
+function moodBadge(c) { if (c.tempt) return '👀'; if (c.quest && c.quest.st === 'ready') return '🧭'; return c.mood <= 0 ? '💢' : ''; }
 function syncActors() {
-  const here = new Set(S.creatures.filter(c => !c.raid).map(c => c.id));
+  const here = new Set(S.creatures.filter(c => !c.raid && !c.captive).map(c => c.id));
   for (const [id, a] of ACT) if (!here.has(id) && !a.leaving) { a.tok++; ACT.delete(id); }
   for (const c of S.creatures) {
-    if (c.raid) continue;
+    if (c.raid || c.captive) continue;
     let a = ACT.get(c.id);
     if (!a) {
       if (c.isNew || c.back) {

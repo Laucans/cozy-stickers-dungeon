@@ -84,7 +84,7 @@ function reqDawn(team, e, out) {
 const st = (text, done, finale) => ({ text, done: !!done, finale: !!finale });
 function mapPct() { const w = world(); return Math.round(visibleSet().size / w.list.length * 100); }
 const artFound = () => Object.keys((S.world && S.world.found) || {}).length;
-const artPlaced = () => new Set(S.furn.filter(f => FURN[f.t] && FURN[f.t].artefact).map(f => f.t)).size;
+const artPlaced = () => new Set(S.furn.filter(f => ARTEFACTS.includes(f.t)).map(f => f.t)).size;
 const legendsHome = () => S.creatures.filter(c => c.legend).length;
 const albumN = () => MENAGERIE_SP.filter(k => S.album[k]).length;
 function vicStages(id) {

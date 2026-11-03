@@ -38,26 +38,30 @@ function cancelRaid() { if (!S.raid) return; S.raid.team.forEach(id => { const c
 function openRaid(pre) {
   if (UI.busy) return;
   const pk = typeof pre === 'string' && RAIDS[pre] ? pre : null;
-  UI.raidSel = S.raid ? { target: pk || S.raid.target, team: new Set(S.raid.team) } : { target: pk, team: new Set() };
+  UI.raidSel = S.raid ? { target: pk || S.raid.target, team: new Set(S.raid.team), app: S.raid.app || 'risquee' } : { target: pk, team: new Set(), app: 'risquee' };
   const m = openModal('<div id="raidBody"></div>', { wide: true, label: 'Raid' });
   const draw = () => {
-    const sel = UI.raidSel, crew = S.creatures.filter(c => diceOf(c) > 0 && !c.away && (!c.raid || sel.team.has(c.id)));
+    const sel = UI.raidSel, crawl = !!(sel.target && typeof isCrawlTarget === 'function' && isCrawlTarget(sel.target)), cap = crawl ? 4 : 3;
+    const crew = S.creatures.filter(c => (crawl || diceOf(c) > 0) && !c.away && !injured(c) && (!c.raid || sel.team.has(c.id)));
     const b = sel.target ? raidBreakdown(sel.target, [...sel.team]) : null;
     m.querySelector('#raidBody').innerHTML = `<h2>Raid sur le Val Douillet</h2>
       <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
       <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
-      <h3>Équipe (${sel.team.size}/3)</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= 3 ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
-      ${b ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
-      <div class="mfoot">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>🗺️ Planifier le raid</button></div>`;
+      <h3>Équipe (${sel.team.size}/${cap})</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); return `❤️ ${p.hp} · ⚔️ ${p.atk} · ${p.skills.filter(s => s.sig || s.gear || s.key === 'legende').map(s => s.ico).join('')}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
+      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[RAIDS[sel.target].rival].desc)} Niveau du donjon : <b>${String(crawlLevel()).replace('.', ',')}</b> (il suit la renommée de tes champions). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
+      ${!crawl && typeof RAID_APPS !== 'undefined' ? `<h3>Approche</h3><div class="choices">${Object.entries(RAID_APPS).map(([k, a]) => `<button type="button" class="choice" data-app="${k}" aria-pressed="${(sel.app || 'risquee') === k}"><span class="emo">${a.ico}</span><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></button>`).join('')}</div>` : ''}
+      ${b && !crawl ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
+      <div class="mfoot">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
   };
   draw();
   m.addEventListener('click', e => {
-    const t = e.target.closest('[data-target]'), mt = e.target.closest('[data-mate]');
+    const t = e.target.closest('[data-target]'), mt = e.target.closest('[data-mate]'), ap = e.target.closest('[data-app]');
+    if (ap) { UI.raidSel.app = ap.dataset.app; sfx('tick'); draw(); }
     if (t && !t.disabled) { UI.raidSel.target = t.dataset.target; sfx('tick'); draw(); }
     else if (mt && !mt.disabled) { const id = mt.dataset.mate; UI.raidSel.team.has(id) ? UI.raidSel.team.delete(id) : UI.raidSel.team.add(id); sfx('tick'); draw(); }
     else if (e.target.closest('#rCancel')) { if (run('raidCancel')) { closeModal(); afterChange(); } }
     else if (e.target.closest('#rGo')) {
-      if (!run('raidPlan', { target: UI.raidSel.target, team: [...UI.raidSel.team] })) return;
+      if (!run('raidPlan', { target: UI.raidSel.target, team: [...UI.raidSel.team], app: UI.raidSel.app || 'risquee' })) return;
       sfx('chime'); closeModal(); afterChange();
       toast(`🗺️ L’équipe part vers ${RAIDS[S.raid.target].name}. Résultat à la fin de la nuit.`);
     }
@@ -68,7 +72,7 @@ async function runRaid(report) {
   if (!team.length) { S.raid = null; return; }
   const b = raidBreakdown(S.raid.target, S.raid.team), n = b.pool <= 0 ? 2 : b.pool;
   const m = openModal(`<h2>${tg.emo} Raid : ${esc(tg.name)}</h2><div class="team">${team.map(c => imgThumb('char', c.sp)).join('')}</div>
-    <p>${team.map(c => esc(c.name)).join(', ')} se faufilent dans la nuit…</p><p class="odds">${oddsText(b.pool)}</p>
+    <p>${team.map(c => esc(c.name)).join(', ')} ${team.length > 1 ? 'se faufilent' : 'se faufile'} dans la nuit…</p><p class="odds">${oddsText(b.pool)}</p>
     <div class="dice">${Array.from({ length: n }, () => '<div class="die">?</div>').join('')}</div><div id="rOut"></div>
     <div class="mfoot"><button class="sbtn pri" type="button" id="rRoll" data-focus>🎲 Lancer les dés</button></div>`, { noClose: true, label: 'Raid' });
   const btn = m.querySelector('#rRoll');
@@ -131,7 +135,7 @@ async function runInvasion(report) {
 async function endNight() {
   if (UI.busy) return;
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
-  dropSticker(); closeModal(true); setFloor(0);
+  dropSticker(); closeModal(true); if (UI.build) closeBuild(); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
   const n = S.night, report = [];
   try {
@@ -147,11 +151,12 @@ async function endNight() {
     renderHUD();
     if (S.menace >= MENACE_MAX) { S.menace = 0; renderHUD(); report.push(['sec', 'Contrecoup']); await runInvasion(report); }
     else await banner('Contrecoup', `Menace ${S.menace}/${MENACE_MAX} : pas d’aventuriers cette nuit`, 1100);
+    if (typeof rivalNight === 'function') await rivalNight(report);
     setPhase('aube');
     dawn(report);
-    const gd = checkGoals(); if (gd.length) report.push(['sec', 'Envies comblées']);
+    const gd = checkGoals(); if (gd.length) report.push(['sec', 'Envies du château']);
     gd.forEach(g => { report.push(['✦', `${g.text} → ${rewardText(g.reward)}`, 'ev']); addLog(`Envie comblée : ${g.text}.`, 'ev'); });
-    const qd = checkQuests(); qd.forEach(c => report.push(['✨', `${c.name} a accompli sa mission « ${c.quest.title} » : va réclamer sa récompense !`, 'good']));
+    const ql = []; checkQuests(ql); if (ql.length) { report.push(['sec', 'Âmes du château']); ql.forEach(l => report.push(l)); }   // envies comblées par les arrivées de l'aube
     if (COOP.role === 'host') S.stats.coopNights++;
     const ad = checkAch(); if (ad.length) report.push(['sec', 'Hauts faits']);
     ad.forEach(a => report.push([a.ico, `${a.name} : pouvoir « ${a.pw} » débloqué. ${a.pd}`, 'ev']));
@@ -206,7 +211,7 @@ function openHelp() {
     <li>La Tour de guet touche les remparts ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
     <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Décoller un meuble est gratuit : il retourne dans ta barre.</li></ul>
     <h3>Créatures</h3>
-    <ul><li>Caresse-les, offre-leur des friandises, pose la déco qu’elles aiment. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
+    <ul><li>Comble leurs envies, pose la déco qu’elles aiment, donne-leur un poste dans leur pièce préférée. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
     <li>Une créature postée dans une pièce la défend. Les créatures libres défendent le Cœur.</li></ul>
     <p class="hint">Règles d’aménagement inspirées du jeu de rôle Wicked Ones (Forged in the Dark) : thèmes, horloges de projet, verrous et pièges, calamités et contrecoups.</p>
     <div class="mfoot"><button class="sbtn pri" type="button" data-close>C’est parti</button></div></div>`, { wide: true, label: 'Aide' });
@@ -214,12 +219,13 @@ function openHelp() {
 function resetActors() { ACT.clear(); HEROS.length = 0; V.fx = []; V.born.clear(); V.parts = []; V.selected = null; }
 function openMenu() {
   const guest = COOP.role === 'guest', des = S.opts.desert;
-  const m = openModal(`<h2>Partie</h2><p>${guest ? 'Tu joues dans le château d’un autre Maître : ta propre partie t’attend, bien au chaud dans ce navigateur.' : 'Ta partie est sauvegardée automatiquement dans ce navigateur.'}</p>
+  const m = openModal(`<h2>Partie</h2><p>${guest ? 'Tu joues dans le château d’un autre Maître : ta propre partie t’attend, bien au chaud dans ce navigateur.' : 'Ta partie se sauvegarde toute seule dans ce navigateur, après chaque action et chaque nuit.'}</p>
+    <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSaveNow">💾 Sauvegarder</button><button class="sbtn" type="button" id="mSlots">📂 Mes parties</button>'}<button class="sbtn" type="button" id="mTitle">🏠 Écran d’accueil</button></div>
     ${guest ? '' : `<div class="field"><label for="mName">Nom du château</label><input id="mName" maxlength="40" value="${esc(S.name)}"></div>`}
     <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSave">Renommer</button>'}<button class="sbtn" type="button" id="mLog">Chronique</button><button class="sbtn" type="button" id="mAch">🏆 Hauts faits</button><button class="sbtn" type="button" id="mRen">⭐ Renommée</button><button class="sbtn" type="button" id="mVal">🌐 Val des Maîtres</button></div>
     ${guest ? '' : `<h3>Désertions</h3><p class="hint">Une créature peu loyale peut partir pour un château qui reçoit mieux son espèce. Elle prévient toujours une nuit avant.</p>
     <div class="choices three" id="mDes">${[['on', '🧳 Activées', 'Les créatures délaissées peuvent partir.'], ['soft', '🍃 Douces', 'Deux fois moins de départs.'], ['off', '🛌 Désactivées', 'Personne ne part pour un autre château.']].map(([k, t, d]) => `<button type="button" class="choice" data-des="${k}" aria-pressed="${des === k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`}
-    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button>${guest ? '' : '<button class="sbtn danger" type="button" id="mNew">Nouvelle partie</button>'}</div>`, { label: 'Partie' });
+    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button>${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
   const q = s => m.querySelector(s);
   q('#mSave') && q('#mSave').addEventListener('click', () => { if (run('rename', { name: q('#mName').value })) { closeModal(); afterChange(); } });
   q('#mLog').addEventListener('click', openJournal);
@@ -229,22 +235,28 @@ function openMenu() {
   q('#mDes') && q('#mDes').addEventListener('click', e => { const b = e.target.closest('[data-des]'); if (!b) return; S.opts.desert = b.dataset.des; sfx('tick'); save(); m.querySelectorAll('[data-des]').forEach(x => x.setAttribute('aria-pressed', x.dataset.des === S.opts.desert)); if (COOP.role === 'host') coopDirty(); });
   q('#mTuto') && q('#mTuto').addEventListener('click', () => { closeModal(); startTutorial(); });
   q('#mTips').addEventListener('click', () => { S.tipsOff = !S.tipsOff; save(); closeModal(); toast(S.tipsOff ? 'Gribouille gardera ses conseils pour lui.' : 'Gribouille te soufflera de nouveau des conseils.'); });
-  q('#mNew') && q('#mNew').addEventListener('click', e => confirmBtn(e.currentTarget, 'Sûr ? Tout effacer', () => { if (COOP.role) coopLeave(true); wipe(); resetActors(); newState(); closeModal(true); renderAll(); fitCamera(); openIntro(); }));
+  q('#mNew') && q('#mNew').addEventListener('click', () => { if (slotIndex().list.length >= SLOTS_MAX) { closeModal(true); openTitle('load'); toast(`${SLOTS_MAX} parties au plus : supprimes-en une d’abord.`, true); return; } if (COOP.role) coopLeave(true); closeModal(true); openIntro(); });
+  q('#mSaveNow') && q('#mSaveNow').addEventListener('click', () => { if (save()) { sfx('chime'); toast(`💾 « ${S.name} » sauvegardé (nuit ${S.night}).`); } });
+  q('#mSlots') && q('#mSlots').addEventListener('click', () => { save(); openTitle('load'); });
+  q('#mTitle').addEventListener('click', () => { if (COOP.role === 'guest') { coopLeave(); return; } save(); openTitle(); });
 }
 function openIntro() {
   let theme = 'forge';
+  const back = S && S.started ? curSlot() : null;   // une partie en cours : elle reste rangée, on prépare un château neuf
+  if (back != null) { save(); resetActors(); newState(); renderAll(); CAM.user = false; fitCamera(); }
   const m = openModal(`<h2>Bienvenue, Maître du Château</h2>
     <p>Sur sa colline, un petit château maléfique attend son maître. Colle des pièces, meuble-les comme un nid douillet, accueille des créatures attachantes et fais trembler (un peu) les aventuriers du Val Douillet.</p>
     <div class="field"><label for="iName">Nom de ton château</label><input id="iName" maxlength="40" value="Le Château de Minuit"></div>
-    <h3>Thème du château</h3><div class="choices" id="iThemes">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="choice" data-theme="${k}" aria-pressed="${k === theme}"><span class="emo">${t.emo}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span><span>Pièce unique : ${esc(ROOMS[t.room].name)}</span></button>`).join('')}</div>
+    <h3>Thème du château</h3><div class="choices" id="iThemes">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="choice" data-theme="${k}" aria-pressed="${k === theme}"><span class="emo">${t.emo}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span><span>Pièce unique : ${esc(ROOMS[t.room].name)}</span>${t.look ? `<span class="hint">🎨 ${esc(t.look)}</span>` : ''}</button>`).join('')}</div>
     <label class="tutochk"><input type="checkbox" id="iTuto" checked> Suivre le tutoriel avec Gribouille, le conseiller (recommandé)</label>
-    <div class="mfoot"><button class="sbtn" type="button" id="iHelp">📖 Le Grimoire</button><button class="sbtn pri" type="button" id="iGo" data-focus>🏰 Réveiller le château</button></div>`, { noClose: true, wide: true, label: 'Nouvelle partie' });
-  m.querySelector('#iThemes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (!b) return; theme = b.dataset.theme; sfx('tick'); m.querySelectorAll('[data-theme]').forEach(x => x.setAttribute('aria-pressed', x.dataset.theme === theme)); });
+    <div class="mfoot"><button class="sbtn" type="button" id="iBack">← Retour</button><button class="sbtn" type="button" id="iHelp">📖 Le Grimoire</button><button class="sbtn pri" type="button" id="iGo" data-focus>🏰 Réveiller le château</button></div>`, { noClose: true, wide: true, label: 'Nouvelle partie' });
+  m.querySelector('#iBack').addEventListener('click', () => { if (back != null) loadSlot(back); else openTitle(); });
+  m.querySelector('#iThemes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (!b) return; theme = b.dataset.theme; S.theme = theme; V.dirty = true; sfx('tick'); m.querySelectorAll('[data-theme]').forEach(x => x.setAttribute('aria-pressed', x.dataset.theme === theme)); });
   m.querySelector('#iHelp').addEventListener('click', () => openGrimoire());
   m.querySelector('#iGo').addEventListener('click', () => {
     const name = m.querySelector('#iName').value.trim() || 'Le Château de Minuit';
     const tuto = m.querySelector('#iTuto').checked;
-    resetActors(); newState(name, theme); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
+    useSlot(newSlotId()); resetActors(); newState(name, theme); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
     banner(`🏰 ${esc(name)}`, `${THEMES[theme].emo} ${THEMES[theme].name}`, 1800);
     if (!tuto) setTimeout(() => toast('Commence par un Dortoir collé au couloir, puis meuble-le avec la Paillasse offerte.'), 1900);
   });
@@ -284,7 +296,9 @@ function bindEvents() {
     if (drag && PTR.size === 1) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) > 7) drag.moved = true; if (drag.moved) { CAM.user = true; CAM.x = drag.cx + dx; CAM.y = drag.cy + dy; clampCam(); cv.style.cursor = 'grabbing'; } return; }
     if (UI.hand) { if (e.pointerType === 'mouse') updateGhost(UI.lastPt); return; }
     const sx = e.clientX - r.left, sy = e.clientY - r.top, act = pickActor(sx, sy), [gx, gy] = tileAtScreen(sx, sy), tx = Math.floor(gx), ty = Math.floor(gy);
-    V.hoverActor = act ? act.id : null; V.hover = !act && roomAt(tx, ty) ? [tx, ty] : null; cv.style.cursor = act || V.hover ? 'pointer' : 'grab';
+    V.hoverActor = act ? act.id : null; V.hover = !act && roomAt(tx, ty) ? [tx, ty] : null;
+    V.hoverForest = !act && Z === EXT && tx >= 0 && tx < W && ty >= 0 && ty < H && !extOK(tx, ty) ? [tx, ty] : null;
+    cv.style.cursor = act || V.hover || V.hoverForest ? 'pointer' : 'grab';
   });
   const up = e => {
     PTR.delete(e.pointerId); const d = drag;
@@ -324,6 +338,7 @@ function bindEvents() {
     else if (e.key === 'r' || e.key === 'R') rotateHand();
     else if (e.key === '+' || e.key === '=') zoomAt(V.w / 2, V.h / 2, 1.2);
     else if (e.key === '-') zoomAt(V.w / 2, V.h / 2, .83);
+    else if ((e.key === 'j' || e.key === 'J') && !UI.busy) { setFloor(Z === EXT ? 0 : EXT); sfx('tick'); }
     else if (e.key === 'PageUp' || e.key === 'PageDown') { const fl = floorsOpen(), i = fl.indexOf(Z), j = i + (e.key === 'PageUp' ? -1 : 1); if (fl[j] != null) setFloor(fl[j]); e.preventDefault(); }
     else if (e.key.startsWith('Arrow') && !$('#modalRoot').children.length) { const d = 60; CAM.x += e.key === 'ArrowLeft' ? d : e.key === 'ArrowRight' ? -d : 0; CAM.y += e.key === 'ArrowUp' ? d : e.key === 'ArrowDown' ? -d : 0; clampCam(); }
   });
@@ -343,7 +358,8 @@ function tap(e) {
   const [gx, gy] = tileAtScreen(sx, sy), x = Math.floor(gx), y = Math.floor(gy);
   const f = furnAt(x, y); if (f) { openFurn(f.id); return; }
   const d = defAt(x, y); if (d) { openDef(d.id); return; }
-  const rm = roomAt(x, y); if (rm) openRoom(rm.id);
+  const rm = roomAt(x, y); if (rm) { openRoom(rm.id); return; }
+  if (Z === EXT && x >= 0 && x < W && y >= 0 && y < H && !extOK(x, y)) openForest();
 }
 
 /* ---------- démarrage ---------- */
@@ -358,6 +374,6 @@ function boot(data) {
   renderAll(); requestAnimationFrame(loop);
   bindAdmin(); bindSandboxFields(); initAdmin(); bindTutorial(); bindSouls();
   if (typeof initNet === 'function') initNet();
-  if (!S.started) openIntro();
+  if (!/[?&]coop=/.test(location.search)) openTitle(); else if (!S.started) openIntro();
   if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('17px "Patrick Hand"'), document.fonts.load('700 15px "Grenze Gotisch"')]).catch(() => {});
 }

@@ -16,7 +16,7 @@ const ONLINE_S = 420;
 const dayId = () => new Date().toISOString().slice(0, 10);
 // le château du joueur, même quand il visite un voisin ou joue chez un autre Maître
 const homeS = () => VISIT ? VISIT.back : (COOP.role === 'guest' ? COOP.own : S);
-function saveHome() { const st = homeS(); if (!st || !st.started) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(st)); } catch (e) {} }
+function saveHome() { saveState(homeS()); }
 const agoText = t => { const d = nowS() - t; return d < ONLINE_S ? 'en ligne' : d < 3600 ? `il y a ${Math.round(d / 60)} min` : d < 86400 ? `il y a ${Math.round(d / 3600)} h` : `il y a ${Math.round(d / 86400)} j`; };
 
 function valBoot() {
@@ -139,7 +139,7 @@ function visitState(m, c) {
   const size = clamp(+m.size || 0, 0, SIZE_MAX), N = 12 + 2 * size;
   const s = upgradeState({ v: 2, seq: 1, name: c.name, theme: c.theme, started: true, night: c.night, gold: 0, mat: 0, hype: c.hype, tier: c.tier, calamity: 0, menace: 0, prisoners: 0, size,
     rooms: [], furn: [], defs: [], creatures: [], raid: null, goals: {}, album: {}, free: {}, log: [], usedNames: [], rep: c.rep, tuto: { on: false, done: true }, tipsOff: true, tips: {} });
-  const inside = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < N && y < N, okZ = z => Number.isInteger(z) && z >= -DEPTH_MAX && z <= HEIGHT_MAX, used = new Set();
+  const inside = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < N && y < N, okZ = zOK, used = new Set();
   m.rooms.slice(0, 400).forEach(r => {
     if (!Array.isArray(r)) return; const [t, x, y, w, h, b, p] = r, z = okZ(r[7]) ? r[7] : 0;
     if (!ROOMS[t] || !inside(x, y) || !(w >= 1 && h >= 1 && w <= 3 && h <= 3 && x + w <= N && y + h <= N)) return;
@@ -305,7 +305,7 @@ function openVal(tab) {
   if (tab) VAL.tab = tab;
   if (!NET.ok) {
     openModal(`<h2>🌐 Le Val des Maîtres</h2><p>Le Val réunit les châteaux de tous les joueurs : visites, livre d’or, cadeaux, escarmouches, palmarès, créatures qui changent de château… et le <b>château partagé</b> pour bâtir à plusieurs.</p>
-      ${NET.why === 'claude' ? `<p>Il se joue sur la version en ligne du jeu, ouverte à tous, sans compte : <a href="${SITE_URL}" target="_blank" rel="noopener">${SITE_URL}</a></p><p class="hint">Ta partie ici reste dans ce navigateur. Les hauts faits du Val se débloquent en ligne.</p>` : '<p class="no">Connexion au Val impossible dans ce navigateur (bibliothèque réseau introuvable ou page non sécurisée).</p>'}`, { label: 'Val des Maîtres' });
+      ${NET.why === 'offline' ? '<p class="no">Mode hors ligne : retire « horsligne » de l’adresse de la page pour rejoindre le Val.</p>' : NET.why === 'claude' ? `<p>Il se joue sur la version en ligne du jeu, ouverte à tous, sans compte : <a href="${SITE_URL}" target="_blank" rel="noopener">${SITE_URL}</a></p><p class="hint">Ta partie ici reste dans ce navigateur. Les hauts faits du Val se débloquent en ligne.</p>` : '<p class="no">Connexion au Val impossible dans ce navigateur (bibliothèque réseau introuvable ou page non sécurisée).</p>'}`, { label: 'Val des Maîtres' });
     return;
   }
   if (!NET.name) { askMasterName(() => openVal(tab)); return; }

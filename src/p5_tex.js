@@ -154,7 +154,7 @@ function runes(g, cx, cy, r) {
 const TEXT = 150;              // pixels de texture par case
 const FLOOR_CACHE = new Map();
 function roomTexture(r) {
-  const key = `${r.id}:${r.t}:${r.w}x${r.h}`;
+  const key = `${r.id}:${r.t}:${r.w}x${r.h}${isHall(r) ? ':' + styleKey() : ''}`;
   if (FLOOR_CACHE.has(key)) return FLOOR_CACHE.get(key);
   const d = ROOMS[r.t], T = TEXT, seed = seedOf(r.id + r.t), Wp = r.w * T, Hp = r.h * T;
   let c;
@@ -165,21 +165,36 @@ function roomTexture(r) {
   else if (d.floor === 'garden') c = texSoil(r.w, r.h, T, seed);
   else if (d.floor === 'rock') c = texRock(r.w, r.h, T, seed);
   else if (d.floor === 'water') c = texWater(r.w, r.h, T, seed);
+  else if (d.floor === 'dirt') c = texDirt(r.w, r.h, T, seed, r.t === 'cimetiere');
   else if (d.floor === 'magic') { c = texFlag(r.w, r.h, T, seed, '#3d3652'); runes(c.getContext('2d'), Wp / 2, Hp / 2, Math.min(Wp, Hp) * .4); }
+  else if (isHall(r) && styleKey() !== 'bastion') { const st = curStyle(); if (st.floor === 'flags') c = texFlag(r.w, r.h, T, seed, st.hall); else { c = mk(Wp, Hp); const g = c.getContext('2d'); if (st.floor === 'earth') planks(g, 0, 0, Wp, Hp, T, seed, st.hall); else interiorFloor(g, 0, 0, Wp, Hp, T, seed, st, st.hall); } }
   else c = texFlag(r.w, r.h, T, seed, r.t === 'couloir' || r.t === 'porche' ? '#6e6962' : '#76706a', r.t === 'caveau' || r.t === 'oubliettes');
   edgeAO(c.getContext('2d'), Wp, Hp, T * .2, isHall(r) ? .3 : .45);
   FLOOR_CACHE.set(key, c); return c;
 }
 
+// terre battue (poulailler) ou terre de cimetière, avec touffes d'herbe
+function texDirt(wt, ht, T, seed, grave) {
+  const Wp = Math.round(wt * T), Hp = Math.round(ht * T), c = mk(Wp, Hp), g = c.getContext('2d'), R = rng(seed);
+  g.fillStyle = grave ? '#4a4036' : '#7a5f40'; g.fillRect(0, 0, Wp, Hp);
+  grunge(g, Wp, Hp, seed, .3, [90, 30, 8]);
+  for (let i = 0; i < Wp * Hp / 70; i++) { g.fillStyle = `rgba(${R() < .5 ? '30,20,10' : grave ? '120,110,100' : '190,150,100'},${.2 + R() * .3})`; g.beginPath(); g.arc(R() * Wp, R() * Hp, .8 + R() * 1.8, 0, 7); g.fill(); }
+  if (!grave) for (let i = 0; i < Wp * Hp / 260; i++) { const x = R() * Wp, y = R() * Hp, a = R() * 3; g.strokeStyle = `rgba(226,196,110,${.45 + R() * .35})`; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); g.stroke(); }
+  for (let i = 0; i < Wp * Hp / (grave ? 700 : 1600); i++) { const x = R() * Wp, y = R() * Hp; for (let k = 0; k < 5; k++) { g.strokeStyle = `rgba(${80 + R() * 40},${120 + R() * 40},55,.7)`; g.lineWidth = 1.1; g.beginPath(); g.moveTo(x + k * 2 - 4, y); g.lineTo(x + k * 2 - 4 + (R() - .5) * 4, y - 5 - R() * 5); g.stroke(); } }
+  return c;
+}
+
 /* ---------- terrain : cour pavée intérieure, herbe et route dehors ---------- */
 const TERRAIN_M = 3, TERRAIN_T = 80;
 let TERRAIN = null;
+let TERRAIN_KEY = '';
 function terrainTexture() {
-  if (TERRAIN) return TERRAIN;
+  if (TERRAIN && TERRAIN_KEY === styleKey()) return TERRAIN;
+  TERRAIN_KEY = styleKey();
   const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T;
   const c = texGrass(Wp, Hp, 77), g = c.getContext('2d'), R = rng(91);
   // dans les remparts, là où rien n'est construit : un plancher sobre, posé à plat
-  planks(g, M * T, M * T, W * T, H * T, T, 33, '#57493e');
+  interiorFloor(g, M * T, M * T, W * T, H * T, T, 33, curStyle());
   // route depuis le porche
   const rx = (M + GATE.x) * T, ry = (M + H) * T;
   g.save(); g.beginPath(); g.moveTo(rx - 4, ry); g.bezierCurveTo(rx - 10, ry + T, rx + T * .4, ry + T * 2, rx + T * .1, Hp); g.lineTo(rx + T * 1.2, Hp); g.bezierCurveTo(rx + T * 1.4, ry + T * 2, rx + T * 1.1, ry + T, rx + T + 4, ry); g.closePath();
@@ -189,6 +204,33 @@ function terrainTexture() {
   const fog = g.createRadialGradient(Wp / 2, Hp / 2, Math.min(Wp, Hp) * .38, Wp / 2, Hp / 2, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(8,6,14,0)'); fog.addColorStop(1, 'rgba(8,6,14,.92)');
   g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
   TERRAIN = c; return c;
+}
+
+// les Jardins : une pelouse défrichée contre le rempart, la forêt derrière (sous-bois sombre, feuilles mortes)
+let EXTTEX = null, EXTKEY = '';
+function extTexture() {
+  const key = W + ':' + extDepth(); if (EXTTEX && EXTKEY === key) return EXTTEX;
+  const M = TERRAIN_M, T = TERRAIN_T, Wp = (W + 2 * M) * T, Hp = (H + 2 * M) * T, d = extDepth();
+  const c = texGrass(Wp, Hp, 51), g = c.getContext('2d'), R = rng(52);
+  // sous-bois : assombri, feuilles mortes
+  g.fillStyle = 'rgba(18,22,12,.55)'; g.fillRect(0, 0, Wp, Hp);
+  for (let i = 0; i < Wp * Hp / 420; i++) { g.fillStyle = ['rgba(120,70,30,.5)', 'rgba(150,100,40,.45)', 'rgba(70,50,25,.5)'][Math.floor(R() * 3)]; g.beginPath(); g.ellipse(R() * Wp, R() * Hp, 2.5 + R() * 2, 1.4, R() * 3, 0, 7); g.fill(); }
+  // la pelouse défrichée, aux bords adoucis
+  const x0 = M * T, y0 = (M + H - d) * T, w = W * T, h = d * T;
+  g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip();
+  const lawn = texGrass(w, h, 53); g.drawImage(lawn, x0, y0); g.fillStyle = 'rgba(120,170,80,.12)'; g.fillRect(x0, y0, w, h);
+  g.restore();
+  const fade = g.createLinearGradient(0, y0 - T * .35, 0, y0 + T * .45); fade.addColorStop(0, 'rgba(18,22,12,.55)'); fade.addColorStop(1, 'rgba(18,22,12,0)'); g.fillStyle = fade; g.fillRect(x0, y0 - T * .35, w, T * .8);
+  // chemin de terre depuis le portillon
+  const px = (M + GATE.x + .5) * T, py = (M + H) * T;
+  g.save(); g.beginPath(); g.moveTo(px - T * .38, py); g.bezierCurveTo(px - T * .5, py - T * .8, px + T * .2, py - T * 1.4, px - T * .1, py - T * 2.2); g.lineTo(px + T * .32, py - T * 2.2); g.bezierCurveTo(px + T * .55, py - T * 1.4, px - T * .05, py - T * .8, px + T * .38, py); g.closePath();
+  g.fillStyle = '#6e5236'; g.fill(); g.clip(); grunge(g, Wp, Hp, 54, .35); g.restore();
+  // pied du rempart : une bande de pavés
+  g.save(); g.beginPath(); g.rect(x0 - T * .2, py, w + T * .4, T * .7); g.clip(); g.drawImage(texCobble(Wp, Hp, T, 55, () => true), 0, 0); g.restore();
+  g.fillStyle = 'rgba(8,6,14,.85)'; g.fillRect(0, py + T * .7, Wp, Hp - py);
+  const fog = g.createRadialGradient(Wp / 2, Hp * .55, Math.min(Wp, Hp) * .3, Wp / 2, Hp * .55, Math.max(Wp, Hp) * .62); fog.addColorStop(0, 'rgba(8,6,14,0)'); fog.addColorStop(1, 'rgba(8,6,14,.9)');
+  g.fillStyle = fog; g.fillRect(0, 0, Wp, Hp);
+  EXTTEX = c; EXTKEY = key; return c;
 }
 
 /* ---------- sous terre et en hauteur ---------- */
@@ -227,10 +269,11 @@ function caveTexture() {
   return CAVE = c;
 }
 // étages en hauteur : une grande terrasse dallée au sommet du château
+let ROOF_KEY = '';
 function roofTexture() {
-  if (ROOF) return ROOF;
-  const T = TERRAIN_T, c = mk(W * T, H * T); planks(c.getContext('2d'), 0, 0, W * T, H * T, T, 61, '#5a4c41');
-  return ROOF = c;
+  if (ROOF && ROOF_KEY === styleKey()) return ROOF;
+  const T = TERRAIN_T, c = mk(W * T, H * T), st = curStyle(); interiorFloor(c.getContext('2d'), 0, 0, W * T, H * T, T, 61, st, st.upper);
+  ROOF_KEY = styleKey(); return ROOF = c;
 }
 // plancher sobre : trois planches par case, des joints discrets, presque pas de veinage (il doit rester au sol, sous les pièces)
 function planks(g, x0, y0, w, h, T, seed, base) {
@@ -260,10 +303,55 @@ function earth(g, x0, y0, w, h, seed) {
   g.restore();
 }
 
+/* ---------- le style du château suit le thème choisi au départ ---------- */
+// wall / ramp : pierre des murs et des remparts ; cap / capR / merl : chaperons et créneaux ; tower / roof : tours et toits
+// floor : matière du sol des cases vides (base), des couloirs (hall) et des terrasses (upper) ; seam : joints qui brillent ; logs : palissade de rondins
+const STYLES = {
+  bastion: { wall: '#837b70', ramp: '#6f6a64', cap: '#a39886', capR: '#8f8676', merl: ['#6f685e', '#7d766a'], tower: '#7f786c', roof: '#9c2f2a', floor: 'planks', base: '#57493e', hall: '#6e6962', upper: '#5a4c41' },
+  forge:   { wall: '#5f5650', ramp: '#4e4743', cap: '#7a6e64', capR: '#6a5f57', merl: ['#4a4340', '#56504b'], tower: '#5c544e', roof: '#c0521f', floor: 'iron', base: '#3d3733', hall: '#57504a', upper: '#433c37', seam: 'ember' },
+  temple:  { wall: '#b8ad98', ramp: '#a39985', cap: '#d8cfba', capR: '#c4baa5', merl: ['#9d937f', '#ada38f'], tower: '#b2a791', roof: '#4d4270', floor: 'flags', base: '#8a8275', hall: '#958c7f', upper: '#7f776b' },
+  repaire: { wall: '#7a5a3a', ramp: '#684c32', cap: '#9a7a52', capR: '#8a6c48', merl: ['#5e4630', '#6a5036'], tower: '#6e5236', roof: '#b38b4c', floor: 'earth', base: '#6a5138', hall: '#7a6450', upper: '#5e4a36', logs: true },
+  enclave: { wall: '#625e8e', ramp: '#524e7c', cap: '#837fb2', capR: '#736fa2', merl: ['#4e4a78', '#5a5684'], tower: '#5e5a8a', roof: '#27358c', floor: 'tiles', base: '#2f3253', hall: '#45476a', upper: '#34375a', seam: 'rune' },
+};
+const styleKey = () => (typeof S !== 'undefined' && S && STYLES[S.theme]) ? S.theme : 'bastion';
+const curStyle = () => STYLES[styleKey()];
+// le sol des cases vides : sobre, à plat (planches, plaques de fer, dalles claires, terre battue ou carreaux)
+function interiorFloor(g, x0, y0, w, h, T, seed, st, base) {
+  base = base || st.base;
+  if (st.floor === 'planks') { planks(g, x0, y0, w, h, T, seed, base); return; }
+  const R = rng(seed);
+  g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip(); g.fillStyle = base; g.fillRect(x0, y0, w, h);
+  if (st.floor === 'iron') {
+    const q = T / 2;
+    for (let y = y0; y < y0 + h; y += q) for (let x = x0; x < x0 + w; x += q) {
+      g.fillStyle = shade(base, (R() - .5) * .07); g.fillRect(x + 1, y + 1, q - 2, q - 2);
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x, y, q, 1.3); g.fillRect(x, y, 1.3, q);
+      g.fillStyle = 'rgba(255,220,180,.05)'; g.fillRect(x + 1.3, y + 1.3, q - 2.6, 1);
+      g.fillStyle = 'rgba(16,12,10,.55)'; [[4, 4], [q - 4, 4], [4, q - 4], [q - 4, q - 4]].forEach(([dx, dy]) => { g.beginPath(); g.arc(x + dx, y + dy, 1.3, 0, 7); g.fill(); });
+    }
+  } else if (st.floor === 'flags') {
+    const q = T / 2;
+    for (let y = y0, row = 0; y < y0 + h; y += q, row++) {
+      let x = x0 - (row % 2) * q * .5;
+      while (x < x0 + w) { const l = q * (1 + Math.floor(R() * 2) * .5); g.fillStyle = shade(base, (R() - .5) * .08); g.fillRect(x + 1, y + 1, l - 2, q - 2); g.fillStyle = 'rgba(30,24,18,.2)'; g.fillRect(x, y, 1.1, q); x += l; }
+      g.fillStyle = 'rgba(30,24,18,.22)'; g.fillRect(x0, y, w, 1.2);
+    }
+  } else if (st.floor === 'earth') {
+    for (let i = 0; i < w * h / 2400; i++) { const x = x0 + R() * w, y = y0 + R() * h, r = 12 + R() * 30; g.fillStyle = R() < .5 ? 'rgba(120,96,66,.16)' : 'rgba(50,38,26,.18)'; g.beginPath(); g.ellipse(x, y, r, r * .6, R() * 3, 0, 7); g.fill(); }
+    for (let i = 0; i < w * h / 1500; i++) { const x = x0 + R() * w, y = y0 + R() * h, a = R() * 3; g.strokeStyle = 'rgba(210,180,110,.26)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7); g.stroke(); }
+  } else if (st.floor === 'tiles') {
+    const q = T / 3;
+    for (let y = y0; y < y0 + h; y += q) for (let x = x0; x < x0 + w; x += q) { g.fillStyle = shade(base, (R() - .5) * .09); g.fillRect(x + .8, y + .8, q - 1.6, q - 1.6); }
+    for (let i = 0; i < w * h / 6000; i++) { g.fillStyle = 'rgba(200,210,255,.35)'; g.beginPath(); g.arc(x0 + R() * w, y0 + R() * h, 1.1, 0, 7); g.fill(); }
+  }
+  grunge(g, w + x0, h + y0, seed, .06);
+  g.restore();
+}
+
 /* ---------- murs en pierre de taille ---------- */
 const WALL_CACHE = new Map();
 function texWall(kind, k) {
-  const key = kind + k; if (WALL_CACHE.has(key)) return WALL_CACHE.get(key);
+  const st = kind === 'rock' || kind === 'hedge' ? STYLES.bastion : curStyle(), key = (kind === 'rock' || kind === 'hedge' ? '' : styleKey()) + kind + k; if (WALL_CACHE.has(key)) return WALL_CACHE.get(key);
   const R = rng(seedOf(key)), Wp = 144, Hp = kind === 'ramp' || kind === 'rock' ? 264 : kind === 'full' ? 176 : 48;
   const c = mk(Wp, Hp), g = c.getContext('2d');
   if (kind === 'rock') {
@@ -274,8 +362,21 @@ function texWall(kind, k) {
   } else if (kind === 'hedge') {
     g.fillStyle = '#2f4a22'; g.fillRect(0, 0, Wp, Hp);
     for (let i = 0; i < 260; i++) { const x = R() * Wp, y = R() * Hp, col = mixc('#3d6a2c', '#8ac260', R() * (1 - y / Hp * .7)); g.fillStyle = col; g.beginPath(); g.ellipse(x, y, 4 + R() * 3, 2.5 + R() * 2, R() * 3, 0, 7); g.fill(); }
+  } else if (st.logs) {   // repaire de brigands : une palissade de rondins
+    const base = kind === 'ramp' ? st.ramp : st.wall;
+    g.fillStyle = shade(base, -.65); g.fillRect(0, 0, Wp, Hp);
+    for (let x = -4; x < Wp; ) {
+      const lw = 15 + R() * 7, col = shade(base, (R() - .5) * .3), gr = g.createLinearGradient(x, 0, x + lw, 0);
+      gr.addColorStop(0, shade(col, -.35)); gr.addColorStop(.35, shade(col, .12)); gr.addColorStop(1, shade(col, -.4)); g.fillStyle = gr; rr(g, x + 1, -6, lw - 2, Hp + 12, 6); g.fill();
+      for (let i = 0; i < Hp / 14; i++) { g.strokeStyle = 'rgba(30,18,10,.28)'; g.lineWidth = 1; g.beginPath(); const yy = R() * Hp; g.moveTo(x + 3 + R() * 3, yy); g.lineTo(x + lw - 4, yy + (R() - .5) * 6); g.stroke(); }
+      if (R() < .35) { g.fillStyle = 'rgba(30,18,10,.45)'; g.beginPath(); g.ellipse(x + lw / 2, R() * Hp, 2.5, 3.5, 0, 0, 7); g.fill(); }
+      x += lw;
+    }
+    if (kind !== 'low') { g.strokeStyle = 'rgba(40,26,14,.8)'; g.lineWidth = 3; [Hp * .22, Hp * .7].forEach(y => { g.beginPath(); g.moveTo(0, y); g.lineTo(Wp, y + 4); g.stroke(); }); }
+    grunge(g, Wp, Hp, seedOf(key), .2, [60, 18, 5]);
+    const ao = g.createLinearGradient(0, Hp * .55, 0, Hp); ao.addColorStop(0, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,.45)'); g.fillStyle = ao; g.fillRect(0, 0, Wp, Hp);
   } else {
-    const base = kind === 'ramp' ? '#6f6a64' : '#837b70', bh = kind === 'low' ? 24 : 34;
+    const base = kind === 'ramp' ? st.ramp : st.wall, bh = kind === 'low' ? 24 : 34;
     g.fillStyle = shade(base, -.6); g.fillRect(0, 0, Wp, Hp);
     for (let y = 0, row = 0; y < Hp; y += bh, row++) {
       let x = row % 2 ? -R() * 40 : -R() * 20;
@@ -288,7 +389,9 @@ function texWall(kind, k) {
         x += bw;
       }
     }
-    if (kind !== 'low') for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${70 + R() * 30},${110 + R() * 30},50,${.2 + R() * .3})`; g.beginPath(); g.arc(R() * Wp, Hp - R() * R() * Hp * .5, 1 + R() * 3, 0, 7); g.fill(); }
+    if (kind !== 'low' && !st.seam) for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${70 + R() * 30},${110 + R() * 30},50,${.2 + R() * .3})`; g.beginPath(); g.arc(R() * Wp, Hp - R() * R() * Hp * .5, 1 + R() * 3, 0, 7); g.fill(); }
+    if (st.seam === 'ember') for (let i = 0; i < 7; i++) { const y = Math.floor(R() * Hp / bh) * bh, x = R() * Wp, l = 14 + R() * 30; g.fillStyle = 'rgba(255,120,40,.55)'; g.fillRect(x, y - .8, l, 1.8); g.fillStyle = 'rgba(255,190,90,.25)'; g.fillRect(x - 2, y - 2, l + 4, 4); }
+    if (st.seam === 'rune' && kind !== 'low') for (let i = 0; i < 3; i++) { const x = 14 + R() * (Wp - 28), y = 14 + R() * (Hp * .6); g.strokeStyle = 'rgba(150,200,255,.55)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x, y + 8); g.lineTo(x, y - 8); g.moveTo(x - 5, y - 3); g.lineTo(x + 5, y + 3); g.moveTo(x - 5, y + 3); g.lineTo(x + 5, y - 3); g.stroke(); }
     grunge(g, Wp, Hp, seedOf(key), .22, [60, 18, 5]);
     const ao = g.createLinearGradient(0, Hp * .55, 0, Hp); ao.addColorStop(0, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,.45)'); g.fillStyle = ao; g.fillRect(0, 0, Wp, Hp);
   }

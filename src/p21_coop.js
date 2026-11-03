@@ -184,7 +184,7 @@ function coopLeave(silent) {
   document.body.classList.remove('coop-guest');
   if (was === 'guest' || was === 'joining') {
     if (COOP.own) { S = COOP.own; COOP.own = null; Z = 0; dirty(); resetActors(); V.dirty = true; UI.busy = false; document.body.classList.remove('busy'); $('#btnNight').disabled = false; setPhase('roder'); closeModal(true); renderAll(); CAM.user = false; fitCamera(); if (!silent) toast('🏰 De retour dans ton château.'); }
-    if (S && !S.started) setTimeout(openIntro, 300);
+    if (S && !S.started) setTimeout(typeof openTitle === 'function' ? openTitle : openIntro, 300);
     valFlush();
   }
   try { const u = new URL(location.href); if (u.searchParams.has('coop')) { u.searchParams.delete('coop'); history.replaceState(null, '', u); } } catch (e) {}

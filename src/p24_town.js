@@ -16,9 +16,10 @@ const SHOP = {
   merco: { name: 'Mercenaire à la semaine', ico: '🗡️', price: 10, per: 3, desc: 'Un garde du corps défend ton Cœur pendant 3 nuits (+4 garde). Il ne pose aucune question, et ne répond à aucune non plus.' },
   tableau: { name: 'Consulter le tableau des quêtes', ico: '📋', price: 0, desc: 'Gratuit : qui part bientôt à l’assaut d’un château… comme le tien ?' },
   dossier: { name: 'Égarer ton dossier', ico: '🗂️', price: 8, per: 3, desc: '−3 Menace. Le greffier perd ton dossier sous une pile de formulaires B-52 en triple exemplaire.' },
-  avis: { name: 'Faux avis de recherche', ico: '📜', price: 12, per: 4, desc: 'La prochaine bande d’aventuriers part avec 25 % de courage en moins : ils cherchent un dragon qui n’existe pas.' },
+  avis: { name: 'Faux avis de recherche', ico: '📜', price: 12, per: 4, desc: 'La prochaine bande d’aventuriers part avec 25 % de PV en moins : ils cherchent un dragon qui n’existe pas.' },
   carte: { name: 'Carte des environs', ico: '🗺️', price: 6, per: 1, desc: 'Dévoile les alentours de la ville et la route jusqu’à ton château.' },
   tresor: { name: 'Carte au trésor', ico: '❌', price: 12, per: 2, desc: 'Dévoile un lieu d’expédition encore inconnu. Le trésor, c’est toi qui vas le chercher.' },
+  voyance: { name: 'La diseuse de bonne aventure', ico: '🔮', price: 10, per: 2, desc: 'Madame Irma lit dans le marc de bière : elle te révèle le rêve secret d’une de tes créatures (celle qui te le cache depuis le plus longtemps).' },
   recrue: { name: 'Recruter une créature', ico: '🐾', price: 0, per: 1, desc: 'Une créature au chômage, déjà dans ton album, rejoint ton château (il faut un lit libre).' },
   deco: { name: 'Sticker de déco', ico: '🪄', per: 0 },
   artefact: { name: 'Artefact', ico: '🏺', per: 0 },
@@ -30,7 +31,7 @@ const SHOPS = {
   ville: [
     { id: 'bazar', title: 'Le Bazar de Maître Bricabrac', keeper: ['« Tout est authentique, sauf ce qui ne l’est pas. »', '« Garantie trois jours, ou jusqu’à ce que ça casse. »', '« Celle-là, elle a appartenu à un roi. Ou à son cousin. Ou à son chien. »'], items: ['deco', 'artefact', 'rachat', 'vendre'] },
     { id: 'apo', title: 'L’Apothicairerie de Dame Fiolette', keeper: ['« Ne touchez pas au flacon vert. Ni au violet. Ni à rien, en fait. »', '« Effets secondaires : aucun. Enfin, presque aucun. »'], items: ['humeur', 'fidelite', 'tisane', 'oubli'] },
-    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco', 'don'] },
+    { id: 'taverne', title: 'La Taverne du Gobelet Fêlé', keeper: ['« Ici, on paie d’abord, on raconte ensuite. »', '« Le barde ? Il est sous la table. Il chante mieux de là. »'], items: ['rumeur', 'tournee', 'merco', 'don', 'voyance'] },
     { id: 'guilde', title: 'La Guilde des Aventuriers Patentés', keeper: ['« Ticket numéro 4 312. Le guichet ferme dans cinq minutes. »', '« Formulaire B-52 en triple exemplaire, tamponné par le Grand Tamponneur. »'], items: ['tableau', 'dossier', 'avis'] },
     { id: 'carto', title: 'Le Cartographe Myope', keeper: ['« Le nord ? C’est par là. Ou par là. Passez-moi mes lunettes. »'], items: ['carte', 'tresor'] },
     { id: 'placement', title: 'Le Bureau de placement de Mme Grifouille', keeper: ['« Monstres sérieux, logés, nourris. Références exigées, mais personne n’en a. »'], items: ['recrue'] },
@@ -70,6 +71,8 @@ function shopBuy(a) {
   if (item === 'rachat' && !stock.stolen.includes(arg)) return 'Introuvable';
   if (item === 'vendre' && !(FURN[arg] && FURN[arg].artefact && (S.free[arg] || 0) > 0)) return 'Il faut l’avoir en réserve (pas exposé)';
   if (item === 'recrue') { if (!recruitable().includes(arg)) return 'Personne de cette espèce ne cherche du travail'; if (beds() <= S.creatures.length) return 'Il faut un lit libre'; }
+  const hidden = item === 'voyance' ? S.creatures.filter(c => typeof ensureSecret === 'function' && !ensureSecret(c).known && !isOut(c)).sort((x, y) => (x.joined || 1) - (y.joined || 1)) : [];
+  if (item === 'voyance' && !hidden.length) return 'Aucune de tes créatures ne te cache de rêve';
   const price = item === 'tableau' ? 0 : shopPrice(site, item, arg); if (price > 0 && S.gold < price) return `Il te faut ${price} 💰`;
   const w = world();
   if (item === 'humeur') homeCreatures().forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); });
@@ -93,6 +96,7 @@ function shopBuy(a) {
   else if (item === 'artefact') giveArtefact(arg, 'acheté en ville');
   else if (item === 'rachat') { S.world.stolen = S.world.stolen.filter(k => k !== arg); giveArtefact(arg, 'racheté au brocanteur'); }
   else if (item === 'vendre') { S.free[arg]--; addLog(`${FURN[arg].name} vendu au brocanteur.`); }
+  else if (item === 'voyance') a.found = revealSecret(hidden[0], 'voyance');
   else if (item === 'recrue') { const c = addCreature(arg); c.isNew = true; c.loy = 45; addLog(`${c.name} (${SPECIES[arg].name}) recruté·e au bureau de placement.`, 'good'); }
   if (price) S.gold -= price;
   if (item !== 'don' && item !== 'vendre' && price > 0) addGw(site, 2);
@@ -115,7 +119,7 @@ function openTown(siteId) {
     if (item === 'rachat') return stock.stolen.map(k => `<div class="srow art">${imgThumb('furn', k)}<span class="sdesc"><b>${esc(FURN[k].name)}</b><br><span class="hint">« Trouvé sur un aventurier, ça vous dit quelque chose ? »</span></span>${btn('rachat', k, 'Racheter')}</div>`).join('');
     if (item === 'vendre') { const mine = ARTEFACTS.filter(k => (S.free[k] || 0) > 0); return mine.length ? mine.map(k => `<div class="srow">${imgThumb('furn', k)}<span class="sdesc"><b>Vendre : ${esc(FURN[k].name)}</b><br><span class="hint">Un artefact en réserve ne fait pas rayonner le château.</span></span>${btn('vendre', k, 'Vendre')}</div>`).join('') : ''; }
     if (item === 'recrue') { const sp = recruitable(); return row('recrue', '') + (sp.length ? `<div class="srecr">${sp.map(k => `<div class="srow">${imgThumb('char', k)}<span class="sdesc"><b>${esc(SPECIES[k].name)}</b><br><span class="hint">${esc(SPECIES[k].skill)}</span></span>${btn('recrue', k, 'Embaucher')}</div>`).join('')}</div>` : '<p class="hint">Ton album est vide : personne à recruter.</p>'); }
-    if (item === 'tableau') return row('tableau', `<span class="sinfo">${pp.origin ? `<b>${pp.size} ${esc(HERO_RANK[pp.rank].label.toLowerCase())}</b> de ${esc(pp.origin.name)}, courage ~${pp.courage}${S.world.decoy ? ' (moins 25 % grâce à ton faux avis)' : ''}. Menace ${S.menace}/${MENACE_MAX}.` : 'Personne pour l’instant.'}</span>`);
+    if (item === 'tableau') return row('tableau', `<span class="sinfo">${pp.origin ? `<b>${pp.size} ${esc(HERO_RANK[pp.rank].label.toLowerCase())}</b> de ${esc(pp.origin.name)}, ~${pp.courage} PV au total${S.world.decoy ? ' (moins 25 % grâce à ton faux avis)' : ''}. Menace ${S.menace}/${MENACE_MAX}.` : 'Personne pour l’instant.'}</span>`);
     return row(item, btn(item));
   };
   const m = openModal(`<div class="town ${site.kind}"><h2>${site.kind === 'village' ? '🏪' : site.kind === 'ville' ? '🏙️' : '🏰'} ${esc(site.name)}</h2>
@@ -130,7 +134,7 @@ function openTown(siteId) {
     if (item === 'tableau') { sfx('tick'); toast(pp.origin ? `📋 Sur le tableau : « Château maléfique à visiter. Récompense honnête. » Départ prévu de ${pp.origin.name}.` : '📋 Rien au tableau pour ton château.'); return; }
     const a = { site: siteId, item, arg }, err = cmd('shop', a); if (err) { toast(err, true); sfx('bad'); return; }
     sfx('chime');
-    toast(item === 'rumeur' ? `🍺 « Paraît qu’il y a ${a.found || 'quelque chose'} par là-bas… » (voir la carte)` : item === 'tresor' ? `❌ La carte mène à ${a.found || 'un endroit'} !` : item === 'vendre' ? '💰 Vendu ! « Un plaisir de faire affaire. »' : item === 'recrue' ? '🐾 Ta nouvelle recrue part pour le château.' : `✓ ${SHOP[item].name} : affaire conclue.`);
+    toast(item === 'rumeur' ? `🍺 « Paraît qu’il y a ${a.found || 'quelque chose'} par là-bas… » (voir la carte)` : item === 'tresor' ? `❌ La carte mène à ${a.found || 'un endroit'} !` : item === 'vendre' ? '💰 Vendu ! « Un plaisir de faire affaire. »' : item === 'recrue' ? '🐾 Ta nouvelle recrue part pour le château.' : item === 'voyance' ? `🔮 ${a.found}` : `✓ ${SHOP[item].name} : affaire conclue.`);
     afterChange(); if (MAPV.open) renderMapPanel(); openTown(siteId);
   });
 }
@@ -163,7 +167,7 @@ Object.assign(WIKI, {
     <li><b>Éclaireur</b> : touche une case de brouillard au bord de ce que tu connais ; une créature part une nuit et dévoile les environs.</li></ul>` },
   ville: { cat: 'val', t: 'En ville', x: () => `<p>Avec une fausse moustache, le Maître fait ses courses. Mais si ton château rayonne trop, on le reconnaît et les prix grimpent.</p>
     <ul><li><b>Épicerie-buvette des villages</b> : rumeurs (un lieu inconnu, souvent la ville), potions, sirop d’oubli.</li>
-    <li><b>Bourg-Ripaille et Mirebrume</b> : le Bazar (déco, artefacts, rachat d’objets volés, vente), l’Apothicairerie (humeur, fidélité, calamité, menace), la Taverne (rumeurs, tournée générale, mercenaire), la Guilde des Aventuriers (voir la prochaine bande, égarer ton dossier, faux avis de recherche), le Cartographe et le Bureau de placement (recruter une créature de ton album).</li></ul>` },
+    <li><b>Bourg-Ripaille et Mirebrume</b> : le Bazar (déco, artefacts, rachat d’objets volés, vente), l’Apothicairerie (humeur, fidélité, calamité, menace), la Taverne (rumeurs, tournée générale, mercenaire, et la diseuse de bonne aventure qui révèle le {c:missions|rêve secret} d’une de tes créatures), la Guilde des Aventuriers (voir la prochaine bande, égarer ton dossier, faux avis de recherche), le Cartographe et le Bureau de placement (recruter une créature de ton album).</li></ul>` },
 });
 TIPS.push(
   { id: 'carte0', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'La carte du Val', x: 'Ton château n’est pas seul : villages, villes, donjons rivaux, forêts enchantées… Ouvre la Carte (en bas à droite). Le cercle doré, c’est ta renommée : les aventuriers viennent de là.', wiki: 'carte' },

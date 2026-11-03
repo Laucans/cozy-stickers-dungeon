@@ -18,7 +18,9 @@ const V = { dpr: 1, w: 0, h: 0, dirty: true, walls: [], lights: [], flames: [], 
 const ACT = new Map(), HEROS = [];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const LCOL = { warm: '255,176,96', fire: '255,128,48', gold: '255,214,120', violet: '186,128,255', green: '120,255,170', moon: '150,185,255', red: '255,90,60' };
-const BOUNDS = () => ({ l: WP(0, H)[0] - 120, r: WP(W, 0)[0] + 120, t: WP(0, 0)[1] - RAMP_H - 70, b: WP(W, H)[1] + 90 });
+// dehors, on cadre la clairière (plus une lisière de forêt), pas toute la forêt
+const BOUNDS = () => { if (Z === EXT) { const y0 = Math.max(0, H - extDepth() - 1.5); return { l: WP(0, H)[0] - 140, r: WP(W, y0)[0] + 140, t: WP(0, y0)[1] - 230, b: WP(W, H)[1] + 90 }; }
+  return { l: WP(0, H)[0] - 120, r: WP(W, 0)[0] + 120, t: WP(0, 0)[1] - RAMP_H - 70, b: WP(W, H)[1] + 90 }; };
 
 /* ---------- caméra ---------- */
 function resize() {
@@ -75,6 +77,16 @@ function rebuild() {
     for (let i = 1; i < H; i += 3) L(.35, i + .5, 2.3, 'fire', .85, { glow: .35, flick: 1 });
     braziers().forEach(([x, y]) => L(x, y, 2.8, 'fire', 1, { glow: .5, flick: 1 }));
   } else if (Z > 0) L(W / 2, H / 2, W * .75, 'moon', .5, { glow: 0 });
+  if (Z === EXT && V.extKey !== W + ':' + extDepth()) {
+    const R = rng(777), d = extDepth(), out = V.outsideExt = [], X = k => XDRAW[k] ? k : 'tree';
+    const tree = (x, y, edge) => { const k = R(); out.push({ x, y, key: edge && k < .25 ? X('souche') : k < .42 ? 'tree' : k < .7 ? 'pine' : k < .84 ? 'bush' : k < .94 ? X('fougere') : 'rock' }); };
+    for (let y = 0; y < H - d; y++) for (let x = 0; x < W; x++) if (R() < .85) tree(x + .3 + R() * .4, y + .3 + R() * .4, y === H - d - 1);
+    for (let y = -3; y < H; y++) for (let x = -3; x < 0; x++) if (R() < .6) tree(x + R(), y + R());
+    for (let y = -3; y < 0; y++) for (let x = 0; x < W + 3; x++) if (R() < .6) tree(x + R(), y + R());
+    for (let y = 0; y < H - d - 1; y++) for (let x = W; x < W + 2.5; x++) if (R() < .55) tree(x + R(), y + R());
+    for (let y = H - d - 1; y < H; y++) if (R() < .5) out.push({ x: W + .6 + R() * 1.2, y: y + R(), key: R() < .6 ? 'bush' : 'rock' });   // devant la clairière : rien qui cache le jardin
+    V.extKey = W + ':' + extDepth();
+  }
   if (!V.outside.length) {
     const R = rng(4242);
     for (let i = 0; i < 46; i++) {
@@ -94,14 +106,15 @@ function computeWalls() {
     for (const [x, y] of cellsOf(r)) {
       for (const [face, nx, ny, x0, y0, x1, y1, dep] of [['N', x, y - 1, x, y, x + 1, y, x + y + .5], ['W', x - 1, y, x, y, x, y + 1, x + y + .5], ['S', x, y + 1, x, y + 1, x + 1, y + 1, x + y + 1.5], ['E', x + 1, y, x + 1, y, x + 1, y + 1, x + y + 1.5]]) {
         if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-        const nb = roomAt(nx, ny); if (nb === r) continue;
+        const nb = roomAt(nx, ny); if (nb === r || sameGroup(r, nb)) continue;
         const ok = nb && nb.built;
         if (ok && isHall(nb) && isHall(r)) continue;
         if (ok && (face === 'S' || face === 'E')) continue;
         const door = ok && D.has(edgeKey(x, y, nx, ny));
         let kind = ok ? 'low' : (face === 'N' || face === 'W') ? 'full' : 'low';
         if (d.open || (ok && ROOMS[nb.t].open)) kind = 'hedge';
-        const w = { face, x0, y0, x1, y1, d: dep, kind, door, h: kind === 'full' ? WALL_FULL : kind === 'hedge' ? 18 : WALL_LOW, v: Math.floor(hash(x, y, face.charCodeAt(0)) * 4), room: r };
+        if (d.out) { if (d.border === 'none') continue; kind = d.border || 'fence'; }   // dehors : clôture, haie ou grille
+        const w = { face, x0, y0, x1, y1, d: dep, kind, door, h: kind === 'full' ? WALL_FULL : kind === 'hedge' ? 18 : kind === 'grille' ? 30 : kind === 'fence' ? 24 : WALL_LOW, v: Math.floor(hash(x, y, face.charCodeAt(0)) * 4), room: r };
         if (kind === 'full' && !door) {
           const k = hash(x * 3, y * 5, face.charCodeAt(0));
           if (isHall(r)) w.deco = (x + y) % 3 === 0 ? 'torch' : null;
@@ -123,18 +136,35 @@ function texQuad(c, tex, A, B, h, dark) {
   c.restore();
 }
 function capQuad(c, a, b, h, off, col) { const p = [[a[0], a[1] - h], [b[0], b[1] - h], [b[0] + off[0], b[1] - h + off[1]], [a[0] + off[0], a[1] - h + off[1]]]; path(c, p); c.fillStyle = col; c.fill(); c.strokeStyle = 'rgba(25,16,10,.75)'; c.lineWidth = 1.2; c.stroke(); }
+// clôture de bois (poulailler) ou grille de fer (cimetière), avec un portillon ouvert
+function drawFence(c, w) {
+  const A = WP(w.x0, w.y0), B = WP(w.x1, w.y1), h = w.h, iron = w.kind === 'grille', ink = '#1e140e', col = iron ? '#3d3844' : '#8f6d46';
+  const P = (u, z) => { const p = lerp2(A, B, u); return [p[0], p[1] - z]; };
+  (w.door ? [[0, .28], [.72, 1]] : [[0, 1]]).forEach(([u0, u1]) => {
+    [.34, .76].forEach(k => { ln(c, [P(u0, h * k), P(u1, h * k)], ink, iron ? 3 : 5); ln(c, [P(u0, h * k), P(u1, h * k)], iron ? '#55505e' : '#a8845a', iron ? 1.5 : 2.8); });
+    const n = iron ? 5 : 2;
+    for (let i = 0; i <= n; i++) {
+      const u = u0 + (u1 - u0) * i / n, top = h * (iron ? 1 : .92 + (i % 2) * .1);
+      ln(c, [P(u, -2), P(u, top)], ink, iron ? 2.6 : 6); ln(c, [P(u, -2), P(u, top)], col, iron ? 1.2 : 3.8);
+      const tp = P(u, top);
+      if (iron) { c.fillStyle = '#6a6274'; c.strokeStyle = ink; c.lineWidth = .8; c.beginPath(); c.moveTo(tp[0], tp[1] - 5); c.lineTo(tp[0] + 2.2, tp[1] + 1); c.lineTo(tp[0] - 2.2, tp[1] + 1); c.closePath(); c.fill(); c.stroke(); }
+      else { c.fillStyle = '#b08a5e'; c.beginPath(); c.moveTo(tp[0] - 2, tp[1] + 1); c.lineTo(tp[0], tp[1] - 3); c.lineTo(tp[0] + 2, tp[1] + 1); c.closePath(); c.fill(); }
+    }
+  });
+}
 function drawWall(c, w, t) {
+  if (w.kind === 'fence' || w.kind === 'grille') { drawFence(c, w); return; }
   const A = WP(w.x0, w.y0), B = WP(w.x1, w.y1), h = w.h, side = w.face === 'W' || w.face === 'E';
   const tex = texWall(w.kind === 'hedge' ? 'hedge' : w.kind === 'full' ? 'full' : 'low', w.v);
   const off = side ? [-7, -3.5] : [7, -3.5];
   const seg = (t0, t1) => {
     const a = lerp2(A, B, t0), b = lerp2(A, B, t1);
     texQuad(c, tex, A, B, h, side ? .3 : 0);
-    capQuad(c, a, b, h, off, w.kind === 'hedge' ? '#4f8a3c' : '#a39886');
+    capQuad(c, a, b, h, off, w.kind === 'hedge' ? '#4f8a3c' : curStyle().cap);
     c.strokeStyle = 'rgba(20,12,8,.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
   };
   if (w.door && w.kind !== 'full') {
-    [[0, .2], [.8, 1]].forEach(([t0, t1]) => { const a = lerp2(A, B, t0), b = lerp2(A, B, t1); texQuad(c, tex, a, b, h, side ? .3 : 0); capQuad(c, a, b, h, off, w.kind === 'hedge' ? '#4f8a3c' : '#a39886'); });
+    [[0, .2], [.8, 1]].forEach(([t0, t1]) => { const a = lerp2(A, B, t0), b = lerp2(A, B, t1); texQuad(c, tex, a, b, h, side ? .3 : 0); capQuad(c, a, b, h, off, w.kind === 'hedge' ? '#4f8a3c' : curStyle().cap); });
     return;
   }
   seg(0, 1);
@@ -166,13 +196,18 @@ function drawWall(c, w, t) {
   }
 }
 function merlons(c, A, B, h, off, col, n) { for (let i = 0; i < n; i += 2) { const a = lerp2(A, B, i / n), b = lerp2(A, B, (i + 1) / n); const q = [[a[0], a[1] - h], [b[0], b[1] - h], [b[0], b[1] - h - 14], [a[0], a[1] - h - 14]]; path(c, q); c.fillStyle = col; c.fill(); c.strokeStyle = 'rgba(20,12,8,.7)'; c.lineWidth = 1; c.stroke(); capQuad(c, [a[0], a[1] - 14], [b[0], b[1] - 14], h, off, '#9a907f'); } }
+// palissade : des pieux taillés en pointe au lieu des créneaux
+function stakes(c, A, B, h, col) {
+  for (let i = 0; i < 4; i++) { const p = lerp2(A, B, (i + .5) / 4), q = [[p[0] - 6, p[1] - h], [p[0] + 6, p[1] - h], [p[0] + 6, p[1] - h - 10], [p[0], p[1] - h - 20], [p[0] - 6, p[1] - h - 10]]; path(c, q); c.fillStyle = col; c.fill(); c.strokeStyle = 'rgba(20,12,8,.7)'; c.lineWidth = 1.2; c.stroke(); }
+}
 function rampart(c, A, B, h, side, n) {
   const tex = texWall('ramp', 0), off = side ? [-14, -7] : [14, -7];
-  texQuad(c, tex, A, B, h, side ? .32 : .05); capQuad(c, A, B, h, off, '#8f8676'); merlons(c, A, B, h, off, side ? '#6f685e' : '#7d766a', n);
+  const st = curStyle(); texQuad(c, tex, A, B, h, side ? .32 : .05); capQuad(c, A, B, h, off, st.capR);
+  if (st.logs) stakes(c, A, B, h, side ? st.merl[0] : st.merl[1]); else merlons(c, A, B, h, off, side ? st.merl[0] : st.merl[1], n);
 }
 function tower(c, x, y, r, hgt, roof, t) {
   const [sx, sy] = WP(x, y); c.save(); c.translate(sx, sy); c.scale(AU, AU);
-  const hh = hgt / AU; cyl(c, 0, 0, r, hh, 0, '#7f786c');
+  const hh = hgt / AU; cyl(c, 0, 0, r, hh, 0, curStyle().tower);
   for (let z = 10; z < hh; z += 10) { const [cx, cy] = pt(0, 0, z); c.beginPath(); c.ellipse(cx, cy, r * 45, r * 22.5, 0, .15, Math.PI - .15); c.strokeStyle = 'rgba(30,20,12,.28)'; c.lineWidth = .8; c.stroke(); }
   const [wx, wy] = pt(0, r, hh * .62); rr(c, wx - 3.5, wy - 8, 7, 11, 3.5); c.fillStyle = '#ffcf7a'; c.fill(); c.strokeStyle = '#2a1c16'; c.lineWidth = 1; c.stroke();
   const [tx, ty] = pt(0, 0, hh), rx = r * 52;
@@ -201,7 +236,9 @@ function drawCrystal(c, t) {
 }
 
 /* ---------- acteurs ---------- */
-function newActor(id, kind, key, x, y) { return { id, kind, key, x, y, sc: ((kind === 'char' ? CHAR : HERO_ART)[key] || {}).sc || 1, ph: Math.random() * 6, tok: 0, flip: false, walking: false, jx: 0, jy: 0 }; }
+// créatures et héros : dessinés à un peu plus de la moitié de leur taille de sticker, pour que le château paraisse plus grand
+const ACTOR_K = .55;
+function newActor(id, kind, key, x, y) { return { id, kind, key, x, y, sc: (((kind === 'char' ? CHAR : HERO_ART)[key] || {}).sc || 1) * ACTOR_K, ph: Math.random() * 6, tok: 0, flip: false, walking: false, jx: 0, jy: 0 }; }
 function moveTo(a, x, y, ms) { return new Promise(res => { const dx = (x - y) - (a.x - a.y); if (Math.abs(dx) > .01) a.flip = dx < 0; Object.assign(a, { fx: a.x, fy: a.y, tx: x, ty: y, t0: performance.now(), dur: ms, res }); }); }
 function updateActors(now) {
   [...ACT.values(), ...HEROS].forEach(a => {
@@ -220,10 +257,22 @@ function drawSky(t) {
   g.fillStyle = '#f6ecc8'; g.beginPath(); g.arc(mx, my, 26, 0, 7); g.fill(); g.fillStyle = '#1b1f4a'; g.beginPath(); g.arc(mx + 11, my - 7, 23, 0, 7); g.fill();
   for (let i = 0; i < 6; i++) { const x = ((t / 90 * (.4 + hash(i, 9) * .5) + hash(i, 7) * w * 1.6) % (w * 1.6)) - w * .3, y = h * (.12 + hash(i, 8) * .75); g.fillStyle = 'rgba(190,190,230,.08)'; [0, 1, 2].forEach(k => { g.beginPath(); g.ellipse(x + k * 46, y + (k % 2) * 8, 70, 22, 0, 0, 7); g.fill(); }); }
 }
+// attitudes : sieste (penché, souffle lent), travail (coups réguliers), repas, danse, chamaille (secoué), bavardage, lecture
 function drawActor(c, a, t) {
-  const [wx, wy] = WP(a.x, a.y), s = getSprite(a.kind, a.key), k = AU / SQ() * 1.08;
-  const bob = a.walking ? Math.abs(Math.sin(t / 95 + a.ph)) * 5 : 0, breath = a.walking ? 1 : 1 + Math.sin(t / 520 + a.ph) * .018;
-  c.save(); c.globalAlpha = a.alpha == null ? 1 : a.alpha; c.translate(wx, wy - bob); if (a.flip) c.scale(-1, 1); c.scale(k, k * breath);
+  const [wx, wy] = WP(a.x, a.y), s = getSprite(a.kind, a.key), k = AU / SQ() * 1.08 * ACTOR_K, P = a.walking ? null : a.pose;
+  let bob = a.walking ? Math.abs(Math.sin(t / 95 + a.ph)) * 5 : 0, breath = a.walking ? 1 : 1 + Math.sin(t / 520 + a.ph) * .018, rot = 0, dx = 0;
+  if (P === 'sleep') { rot = -.2; breath = .93 + Math.sin(t / 900 + a.ph) * .03; }
+  else if (P === 'work') bob = Math.abs(Math.sin(t / 130 + a.ph)) * 4;
+  else if (P === 'eat') bob = Math.abs(Math.sin(t / 170 + a.ph)) * 2.2;
+  else if (P === 'dance') { bob = Math.abs(Math.sin(t / 160 + a.ph)) * 7; rot = Math.sin(t / 320 + a.ph) * .12; }
+  else if (P === 'shake') dx = Math.sin(t / 28) * 3;
+  else if (P === 'chat') bob = Math.abs(Math.sin(t / 260 + a.ph)) * 1.6;
+  else if (P === 'read') rot = Math.sin(t / 900 + a.ph) * .03;
+  else if (P === 'ko') { rot = 1.3; breath = 1; }
+  if (a.hurtUntil && t < a.hurtUntil) dx += Math.sin(t / 22) * 5;
+  if (a.hopUntil && t < a.hopUntil) bob += Math.sin((a.hopUntil - t) / 600 * Math.PI) * 14;
+  bob *= ACTOR_K + .2; dx *= ACTOR_K + .2;
+  c.save(); c.globalAlpha = a.alpha == null ? 1 : a.alpha; c.translate(wx + dx, wy - bob); if (a.flip) c.scale(-1, 1); if (rot) c.rotate(rot); c.scale(k, k * breath);
   c.drawImage(s.img, -s.ax, -s.ay); c.restore();
 }
 function drawSprite(c, s, wx, wy, scale = 1, alpha = 1) { const k = AU / SQ() * scale; c.save(); c.globalAlpha = alpha; c.translate(wx, wy); c.scale(k, k); c.drawImage(s.img, -s.ax, -s.ay); c.restore(); }

@@ -8,7 +8,7 @@ function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.
 const UI = { tab: 'room', hand: null, busy: false, phase: 'roder', prev: {}, tracker: true };
 const PHASES = [['roder', 'Rôder'], ['calamite', 'Calamité'], ['raid', 'Raid'], ['contrecoup', 'Contrecoup'], ['aube', 'Aube']];
 const STAT_LABELS = { gold: ['💰', 'or / nuit'], mat: ['🪵', 'matériaux / nuit'], hype: ['🔥', 'notoriété / nuit'], food: ['🍲', 'repas'], beds: ['🛏️', 'lits'],
-  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde'], harass: ['🪨', 'courage retiré à l’arrivée'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
+  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde'], harass: ['🪨', 'dégâts aux héros dès leur arrivée'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
   sight: ['🔭', 'cases de carte en vue'], glow: ['✨', 'rayonnement'] };
 const statTags = o => Object.keys(STAT_LABELS).filter(k => o[k]).map(k => `<span class="tag2">${STAT_LABELS[k][0]} ${o[k] > 0 ? '+' : ''}${o[k]} ${STAT_LABELS[k][1]}</span>`).join('');
 const hearts = m => `<span class="hearts" aria-label="Humeur ${m} sur 5">${'❤️'.repeat(m)}<span class="off">${'🤍'.repeat(5 - m)}</span></span>`;
@@ -26,7 +26,8 @@ function clockSVG(n, f, col, size = 38) {
 function renderHUD() {
   $('#dname').textContent = S.name; $('#dtitle').textContent = castleTitle();
   const food = foodCap(), eat = eaters(), bd = beds(), n = S.creatures.length;
-  const res = [['gold', 'Or', S.gold, 'Or : construire, meubler, monter de palier.'], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
+  const pr = payroll(), np = nightsToPay();
+  const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures. Prochain jour de paie ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`} : ${pr} 💰.`, np <= 1 && S.gold < pr], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
     ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus les héros qui viennent sont forts, et plus la carte se dévoile.'],
     ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
     ['beds', 'Lits', `${n}/${bd}`, 'Créatures / lits. Sans lit libre, personne de nouveau ne s’installe.', n >= bd], ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
@@ -51,7 +52,7 @@ function sheetGroups() {
   if (UI.tab === 'room') return [[null, ROOM_ORDER.map(t => ['room', t])]];
   if (UI.tab === 'def') return [[null, DEF_ORDER.map(t => ['def', t])]];
   if (UI.tab === 'decor') return [[null, DECOR_ORDER.map(t => ['furn', t])]];
-  if (UI.tab === 'arte') return [[null, ARTEFACTS.filter(k => (S.free[k] || 0) > 0 || hasItem(k)).map(t => ['furn', t])]];
+  if (UI.tab === 'arte') return [[null, TREASURES.filter(k => (S.free[k] || 0) > 0 || hasItem(k)).map(t => ['furn', t])]];
   const by = {}; FURN_ORDER.forEach(t => { (by[FURN[t].room] = by[FURN[t].room] || []).push(['furn', t]); });
   return Object.keys(by).map(r => [ROOMS[r].name, by[r]]);
 }
@@ -59,6 +60,7 @@ function renderSheet() {
   const sh = $('#sheet'); sh.innerHTML = '';
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === UI.tab));
   for (const [title, items] of sheetGroups()) {
+    if (title && items.every(([kind, t]) => { const a = availability(kind, t); return a && a.hide; })) continue;   // un groupe sans rien à montrer ici
     if (title) sh.appendChild(el('div', 'grp', `<span>${esc(title)}</span>`));
     for (const [kind, t] of items) {
       const av = availability(kind, t); if (av && av.hide) continue;
@@ -70,13 +72,14 @@ function renderSheet() {
       sh.appendChild(b);
     }
   }
-  if (!sh.children.length && UI.tab === 'arte') sh.appendChild(el('div', 'empty', '<b>Aucun artefact pour l’instant.</b> Les héros vaincus en abandonnent, les expéditions en rapportent, et les marchands de la ville en vendent (à prix d’or).'));
+  if (!sh.children.length) sh.appendChild(el('div', 'empty', Z === EXT ? (UI.tab === 'def' ? '<b>Pas de pièges dans les Jardins.</b> Ils se posent dans les couloirs du château, au rez-de-chaussée.' : UI.tab === 'arte' ? '<b>Les trésors s’exposent à l’intérieur.</b> Rentre au château pour les poser.' : '<b>Rien à poser dehors ici.</b>')
+    : UI.tab === 'arte' ? '<b>Aucun artefact pour l’instant.</b> Les héros vaincus en abandonnent, les expéditions en rapportent, et les marchands de la ville en vendent (à prix d’or).' : '<b>Rien à poser ici.</b>'));
 }
 function tipHTML(kind, t) {
   let html = '';
   if (kind === 'room') { const r = ROOMS[t]; html = `<b>${esc(r.name)}</b><span class="hint">${r.size[0]}×${r.size[1]}${r.clock ? ` · chantier de ${r.clock} segments` : ''}</span><p>${esc(r.desc)}</p>${r.furn ? `<p class="hint">Meubles : ${r.furn.map(f => FURN[f].name).join(', ')}.</p>` : ''}`; }
   else if (kind === 'def') { const f = DEFS[t]; html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · force ${f.str}` : ''}</span><p>${esc(f.desc)}</p>`; }
-  else { const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(s => SPECIES[s].name); html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}` : 'déco, partout'}</span><div>${statTags(f)}</div>${fans.length ? `<p class="hint">Adoré par : ${fans.join(', ')}.</p>` : ''}${t === 'toile' ? '<p class="hint">Deux toiles attirent une Araignée.</p>' : ''}`; }
+  else { const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(s => SPECIES[s].name); html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : 'déco, partout'}</span><div>${statTags(f)}</div>${fans.length ? `<p class="hint">Adoré par : ${fans.join(', ')}.</p>` : ''}${t === 'toile' ? '<p class="hint">Deux toiles attirent une Araignée.</p>' : ''}`; }
   const av = availability(kind, t); if (av && av.lock) html += `<p class="no">🔒 Nécessite : ${esc(av.reason)}</p>`;
   return html;
 }
@@ -93,7 +96,7 @@ function renderPortraits() {
   [...S.creatures].sort((a, b) => SPECIES_ORDER.indexOf(a.sp) - SPECIES_ORDER.indexOf(b.sp)).forEach(c => {
     const sp = SPECIES[c.sp], post = c.post && S.rooms.find(r => r.id === c.post);
     const b = el('button', 'pt' + (V.selected === c.id ? ' on' : '') + (c.raid ? ' away' : '') + (c.tempt ? ' tempt' : '')); b.type = 'button'; b.dataset.crit = c.id;
-    const q = c.quest, st = c.away ? '🧭' : c.raid ? '🗺️' : c.tempt ? '👀' : q && q.st === 'done' ? '✨' : q && q.st === 'offered' ? '❗' : post ? '📍' : '';
+    const q = c.quest, st = c.away ? '🧭' : c.raid ? '🗺️' : c.tempt ? '👀' : q && q.st === 'ready' ? '🧭' : post ? '📍' : '';
     b.title = `${c.name} · ${sp.name} · niv. ${c.lvl || 1} · ${c.away ? 'en mission' : c.raid ? 'en raid' : post ? 'poste : ' + ROOMS[post.t].name : 'libre, garde le Cœur'}${c.tempt ? ' · lorgne vers ' + c.tempt.name : ''}${q && q.st === 'offered' ? ' · a une demande' : ''}${q && q.st === 'done' ? ' · mission à réclamer' : ''}`;
     b.innerHTML = `<span class="ring"><img alt="" src="${portrait(c.sp)}"></span><span class="mood m${c.mood}"></span>${st ? `<span class="st">${st}</span>` : ''}${c.lvl > 1 ? `<span class="lv">${c.lvl}</span>` : ''}`;
     box.appendChild(b);
@@ -105,20 +108,24 @@ function notifList() {
   const n = [], add = (k, ico, text, act, pri = 1, cls = '') => n.push({ k, ico, text, act, pri, cls });
   S.creatures.forEach(c => {
     if (c.tempt) add('tm' + c.id, '👀', `${c.name} lorgne vers ${c.tempt.name}`, () => openCreature(c.id), 6, 'bad');
-    const q = questOf(c); if (q && q.st === 'done') add('qd' + c.id, '✨', `${c.name} : mission accomplie, à réclamer`, () => openCreature(c.id), 5);
-    else if (q && q.st === 'offered') add('qo' + c.id, '❗', `${c.name} a une demande`, () => openCreature(c.id), 3);
+    const q = questOf(c); if (q && q.st === 'ready' && !isOut(c)) add('qa' + c.id, '🧭', `${c.name} rêve d’aventure`, () => openCreature(c.id), 3);
   });
+  { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
   if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
   const st = tierStatus(); if (st && st.ok) add('tier', '⭐', `Palier ${S.tier + 1} disponible`, openTier, 4);
   if (S.night > 1 && S.creatures.length >= beds()) add('beds', '🛏️', 'Plus un lit de libre', () => openBuild('furn'), 2);
-  const arts = ARTEFACTS.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
+  const arts = TREASURES.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
   if (S.raid) add('raid', '🗺️', `Raid prévu : ${RAIDS[S.raid.target].name}`, () => openRaid(), 1);
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
   const g = GOALS.find(x => !S.goals[x.id]); if (g) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
   if (TUTO.pending) add('tip', '💡', TUTO.pending.t, () => showPendingTip(), 1, 'hint');
   if (typeof victoryNotifs === 'function') victoryNotifs(add);
+  if (typeof rivalNotifs === 'function') rivalNotifs(add);
+  if (typeof sagaNotifs === 'function') sagaNotifs(add);
+  if (typeof valNotifs === 'function') valNotifs(add);
+  if (typeof designNotifs === 'function') designNotifs(add);
   const dis = S.ndis || {};
   return n.filter(x => dis[x.k] !== S.night).sort((a, b) => b.pri - a.pri).slice(0, 7);
 }
@@ -132,10 +139,19 @@ function renderQuests() {}
 function uiPrefs(o) { try { const p = JSON.parse(localStorage.getItem('csd-ui') || '{}'); if (o) { Object.assign(p, o); localStorage.setItem('csd-ui', JSON.stringify(p)); } return p; } catch (e) { return {}; } }
 function openBuild(tab) {
   if (tab && typeof tab === 'string') UI.tab = tab;
-  UI.build = true; $('#hudBottom').hidden = false; $('#btnBuild').setAttribute('aria-expanded', 'true'); document.body.classList.add('building');
+  const was = UI.build; UI.build = true; $('#hudBottom').hidden = false; $('#btnBuild').setAttribute('aria-expanded', 'true'); document.body.classList.add('building');
   renderSheet(); if (typeof tab === 'string') $('#sheet').scrollLeft = 0;
+  if (!was) drawerShift(true);
 }
-function closeBuild() { UI.build = false; $('#hudBottom').hidden = true; $('#btnBuild').setAttribute('aria-expanded', 'false'); document.body.classList.remove('building'); showTip(null); }
+function closeBuild() { UI.build = false; $('#hudBottom').hidden = true; $('#btnBuild').setAttribute('aria-expanded', 'false'); document.body.classList.remove('building'); showTip(null); drawerShift(false); }
+// le tiroir couvre le bas de l'écran : on remonte la vue juste assez pour garder le château visible
+function drawerShift(open) {
+  if (!V.w || !cv) return;
+  if (!open) { if (V.drawerDy) { CAM.y += V.drawerDy; V.drawerDy = 0; clampCam(); } return; }
+  const dr = $('#hudBottom').getBoundingClientRect(), top = dr.top - cv.getBoundingClientRect().top, [, by] = toScreen(...WP(W, H));
+  const over = by + 24 - top; if (over <= 0) return;
+  const dy = Math.min(over, Math.max(0, top - V.h * .12)), y0 = CAM.y; CAM.y -= dy; clampCam(); V.drawerDy = y0 - CAM.y;
+}
 function toggleBuild() { if (UI.build) { dropSticker(); closeBuild(); } else openBuild(); sfx('tick'); }
 function toggleLeft(on) { const p = $('#leftPanel'), v = on == null ? p.hidden : on; p.hidden = !v; $('#btnCrit').setAttribute('aria-expanded', v); uiPrefs({ left: v }); }
 function renderHand(msg, tone) {
@@ -147,17 +163,21 @@ function renderHand(msg, tone) {
 }
 function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); if (typeof renderMinimap === 'function') renderMinimap(); }
 // sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit
+// sélecteur d'étage (à côté du zoom), plus les Jardins (dehors) toujours accessibles
 function renderFloors() {
   const box = $('#floors'); if (!box) return;
-  const fl = floorsOpen(); if (fl.length < 2 && Z === 0) { box.hidden = true; return; }
-  box.hidden = false;
-  box.innerHTML = '<span class="flab">Étage</span>' + fl.map(z => `<button type="button" data-z="${z}" aria-pressed="${z === Z}" title="${FLOOR_NAMES[z]} (Page↑ / Page↓)">${z > 0 ? '▲' : z < 0 ? '▼' : '⌂'} ${FLOOR_SHORT[z]}</button>`).join('');
+  const fl = floorsOpen(); box.hidden = false;
+  const btn = z => `<button type="button" data-z="${z}" aria-pressed="${z === Z}" title="${FLOOR_NAMES[z]}${z === EXT ? ' (touche J)' : ' (Page↑ / Page↓)'}">${z === EXT ? '🌳' : z > 0 ? '▲' : z < 0 ? '▼' : '⌂'} ${FLOOR_SHORT[z]}</button>`;
+  box.innerHTML = '<span class="flab">Étage</span>' + fl.map(btn).join('') + btn(EXT);
 }
 
 /* ---------- placement ---------- */
 function takeSticker(kind, t) {
+  // un sticker du dehors emmène dans les Jardins (et inversement)
+  const outside = kind === 'room' ? !!(ROOMS[t] && ROOMS[t].out) : kind === 'furn' && FURN[t] ? !!(FURN[t].out || (ROOMS[FURN[t].room] && ROOMS[FURN[t].room].out)) : false;
+  if (outside && Z !== EXT) setFloor(EXT); else if (kind === 'room' && !outside && Z === EXT) setFloor(0);
   const av = availability(kind, t);
-  if (av && av.lock) { toast(`🔒 ${itemName(t)} : nécessite ${av.reason}.`, true); sfx('bad'); return false; }
+  if (av && av.lock) { toast(av.chantier ? `🔒 ${itemName(t)} : la pièce est encore en chantier. On la meublera à l’aube, une fois terminée.` : `🔒 ${itemName(t)} : nécessite ${av.reason}.`, true); sfx('bad'); return false; }
   if (av && av.poor) { toast(`Il te faut ${costText(costOf(kind, t))} pour ${itemName(t)}.`, true); sfx('bad'); return false; }
   const size = kind === 'room' ? ROOMS[t].size : [1, 1], keep = UI.hand && UI.hand.t === t ? UI.hand : null;
   UI.hand = { kind, t, w: keep ? keep.w : size[0], h: keep ? keep.h : size[1] }; UI.touchAnchor = null;
@@ -187,7 +207,8 @@ function updateGhost(pt) {
   const err = validate(a), { kind, t, w, h } = UI.hand, cells = [];
   for (let dy = 0; dy < (kind === 'room' ? h : 1); dy++) for (let dx = 0; dx < (kind === 'room' ? w : 1); dx++) cells.push([a.x + dx, a.y + dy]);
   V.ghost = { cells, ok: !err, kind, key: t, ax: a.x, ay: a.y };
-  const key = err || 'ok'; if (UI.ghostKey !== key) { UI.ghostKey = key; renderHand(err || 'Parfait, ça colle ici !', err ? 'bad' : 'ok'); }
+  const merge = !err && kind === 'room' && ROOMS[t] && mergeable({ t, built: true }) && cells.some(([x, y]) => DIRS.some(([dx, dy]) => { const o = roomAt(x + dx, y + dy); return o && o.t === t && o.built; }));
+  const key = (err || 'ok') + (merge ? 'm' : ''); if (UI.ghostKey !== key) { UI.ghostKey = key; renderHand(err || (merge ? `Fusion ! Elle formera une grande salle avec sa voisine.` : 'Parfait, ça colle ici !'), err ? 'bad' : 'ok'); }
 }
 function tryPlace(a, fromDrag) {
   const err = validate(a);
@@ -202,7 +223,7 @@ function tryPlace(a, fromDrag) {
 function afterChange() {
   if (typeof VISIT !== 'undefined' && VISIT) { renderAll(); return; }
   checkGoals().forEach(g => { toast(`✦ Envie comblée : ${g.text} → ${rewardText(g.reward)}`); sfx('chime'); addLog(`Envie comblée : ${g.text}.`, 'ev'); });
-  checkQuests().forEach(c => { toast(`✨ ${c.name} : mission accomplie ! Réclame ta récompense.`); sfx('chime'); });
+  checkQuests();   // envies et rêves comblés : récompense immédiate
   announceAch(checkAch());
   renderAll(); save();
   if (COOP.role === 'host') coopDirty();
@@ -221,7 +242,7 @@ function openModal(html, opts = {}) {
   setTimeout(() => { const f = m.querySelector('[data-focus]') || m.querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); }, 30);
   UI.modalNoClose = !!opts.noClose; return m;
 }
-function closeModal(silent) { $('#modalRoot').innerHTML = ''; UI.modalNoClose = false; UI.mctx = null; if (!silent && S && !S.started) setTimeout(openIntro, 0); }
+function closeModal(silent) { $('#modalRoot').innerHTML = ''; UI.modalNoClose = false; UI.mctx = null; if (!silent && S && !S.started) setTimeout(typeof openTitle === 'function' ? openTitle : openIntro, 0); }
 function confirmBtn(btn, label, action) {
   if (btn.dataset.armed) { action(); return; }
   btn.dataset.armed = '1'; const old = btn.innerHTML; btn.innerHTML = label;
@@ -230,22 +251,24 @@ function confirmBtn(btn, label, action) {
 function roomStats(r) { const o = {}; Object.keys(STAT_LABELS).forEach(k => { const v = rstat(r, k); if (v) o[k] = v; }); return o; }
 function openRoom(id) {
   const r = S.rooms.find(x => x.id === id); if (!r) return;
-  const d = ROOMS[r.t], items = furnIn(r);
-  let html = `<div class="cardhead"><div class="portrait room">${imgThumb('room', r.t)}</div><div><h2>${esc(d.name)}</h2><p class="hint">${esc(d.desc)}</p></div></div>`;
-  if (!r.built) html += `<div class="clockrow">${clockSVG(d.clock, r.prog, '#d9542f', 80)}<p>Chantier : ${r.prog}/${d.clock} segments. Chaque nuit, tes ouvriers en remplissent ${workPerNight()}, en commençant par le plus ancien chantier. Tu peux déjà le meubler.</p></div>`;
+  const d = ROOMS[r.t], grp = groupOf(r).rooms, items = grp.flatMap(furnIn), cap = grp.reduce((a, o) => a + o.w * o.h, 0);   // une grande salle : tous ses meubles
+  const gn = groupSize(r), ups = (d.furn || []).filter(k => FURN[k].size);
+  let html = `<div class="cardhead"><div class="portrait room">${imgThumb('room', r.t)}</div><div><h2>${esc(d.name)}${gn >= 2 ? ` <small class="tag2 gold">🧩 ${sizeWord(gn)}</small>` : ''}</h2><p class="hint">${esc(d.desc)}</p></div></div>`;
+  if (ups.length || gn >= 2) html += `<p class="hint">🧩 ${gn >= 2 ? `${gn} pièces « ${esc(d.name)} » fusionnées (+${gn >= 3 ? 2 : 1} Ambiance).` : `Colle une autre pièce « ${esc(d.name)} » contre celle-ci : elles fusionnent en une grande salle.`}${ups.length ? ` Stickers améliorés : ${ups.map(k => `${gn >= FURN[k].size ? '✅' : '🔒'} ${esc(FURN[k].name)} (${FURN[k].size >= 3 ? '3 pièces' : '2 pièces'})`).join(', ')}.` : ''}</p>`;
+  if (!r.built) html += `<div class="clockrow">${clockSVG(d.clock, r.prog, '#d9542f', 80)}<p>Chantier : ${r.prog}/${d.clock} segments. Chaque nuit, tes ouvriers en remplissent ${workPerNight()}, en commençant par le plus ancien chantier${r.boost ? `, plus ${r.boost} de renfort` : ''}. Tu pourras la meubler une fois terminée.</p></div>`;
   else if (!isHall(r)) html += `<h3>Effets</h3><div>${statTags(roomStats(r)) || '<span class="hint">Aucun effet pour l’instant : ajoute des meubles.</span>'}</div>`;
   if (d.syn) html += `<p class="hint">${neighborsTypes(r).has(d.syn.adj) ? '✅' : '➕'} Bonus si elle touche : ${ROOMS[d.syn.adj].name}.</p>`;
   if (d.attracts) html += `<p class="hint">Attire ${d.attracts.map(s => SPECIES[s].name + (SPECIES[s].tier && S.tier < SPECIES[s].tier ? ` (Palier ${SPECIES[s].tier})` : '')).join(' et ')} une fois meublée${furnished(r) ? ' ✅' : ''}.</p>`;
   if (d.stairs) { const z2 = zOf(r) + (r.land ? -d.stairs : d.stairs); html += `<p>${r.land ? 'Ce palier ramène' : r.built ? 'Cet escalier mène' : 'Une fois terminé, cet escalier mènera'} vers <b>${esc(FLOOR_NAMES[z2])}</b>.</p>${r.built ? `<div class="btnrow"><button class="sbtn pri" type="button" id="mGoFloor">${z2 > zOf(r) ? '▲ Monter' : '▼ Descendre'} : ${esc(FLOOR_NAMES[z2])}</button></div>` : ''}`; }
   else if (!isHall(r) && r.t !== 'porche') {
-    html += `<h3>Meubles (${items.length}/${r.w * r.h})</h3><div class="flist">${items.map(f => `<div class="frow">${imgThumb('furn', f.t)}<span><b>${esc(FURN[f.t].name)}</b><br>${statTags(FURN[f.t])}</span>${f.fixed ? '<span class="hint">fixe</span>' : `<button class="sbtn" type="button" data-unstick="${f.id}">Décoller</button>`}</div>`).join('') || '<p class="hint">Aucun meuble.</p>'}</div>`;
+    html += `<h3>Meubles (${items.length}/${cap})</h3><div class="flist">${items.map(f => `<div class="frow">${imgThumb('furn', f.t)}<span><b>${esc(FURN[f.t].name)}</b><br>${statTags(FURN[f.t])}</span>${f.fixed ? '<span class="hint">fixe</span>' : `<button class="sbtn" type="button" data-unstick="${f.id}">Décoller</button>`}</div>`).join('') || '<p class="hint">Aucun meuble.</p>'}</div>`;
     const can = (d.furn || []).filter(t => !(FURN[t].tier && S.tier < FURN[t].tier));
-    if (can.length && items.length < r.w * r.h) html += `<h3>Ajouter</h3><div class="btnrow">${can.map(t => `<button class="sbtn" type="button" data-take="${t}">${imgThumb('furn', t, 'mini')} ${esc(FURN[t].name)} · ${costText(costOf('furn', t))}</button>`).join('')}</div>`;
+    if (can.length && items.length < cap && r.built) html += `<h3>Ajouter</h3><div class="btnrow">${can.map(t => `<button class="sbtn" type="button" data-take="${t}">${imgThumb('furn', t, 'mini')} ${esc(FURN[t].name)} · ${costText(costOf('furn', t))}</button>`).join('')}</div>`;
   }
   if (r.t === 'coeur') { const def = homeCreatures().filter(c => !c.post || c.post === r.id); html += `<h3>Défenseurs du Cœur</h3><p>${def.length ? def.map(c => esc(c.name)).join(', ') : 'Personne !'} <span class="hint">(garde ${def.reduce((a, c) => a + guardOf(c), 0)})</span></p>`; }
   else if (!isHall(r)) { const posted = S.creatures.filter(c => c.post === r.id); html += `<h3>Postes</h3><p>${posted.length ? posted.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne. Donne un poste ici depuis la fiche d’une créature : elle défendra la pièce.</span>'}</p>`; }
   html += '<div class="btnrow">';
-  if (!r.built) html += `<button class="sbtn pri" id="mPush" type="button" ${S.gold >= 2 ? '' : 'disabled'}>🔨 Coup de pouce : +1 segment (2 💰)</button>`;
+  if (!r.built) html += `<button class="sbtn pri" id="mPush" type="button" ${S.gold >= 2 && r.prog + (r.boost || 0) < d.clock ? '' : 'disabled'}>🔨 Renfort de nuit : +1 segment à l’aube (2 💰)${r.boost ? ` · ${r.boost} prévu${r.boost > 1 ? 's' : ''}` : ''}</button>`;
   if (!d.fixed) html += `<button class="sbtn danger" id="mRemove" type="button">${r.built ? 'Décoller (rend la moitié)' : 'Annuler le chantier (remboursé)'}</button>`;
   html += `<button class="sbtn" type="button" data-wiki-open="room:${r.t}">📖 Grimoire</button></div>`;
   const m = openModal(html, { label: d.name }), q = s => m.querySelector(s); UI.mctx = ['room', id];
@@ -259,10 +282,8 @@ function openRoom(id) {
     sfx('peel'); closeModal(); afterChange();
   }));
   q('#mPush') && q('#mPush').addEventListener('click', () => {
-    if (!run('push', { id })) return; sfx('tick');
-    const rr = S.rooms.find(x => x.id === id);
-    if (!rr || rr.built) { toast(`🎉 ${d.name} est prêt !`); sfx('chime'); closeModal(); afterChange(); }
-    else { afterChange(); openRoom(id); }
+    if (!run('push', { id })) return; sfx('tick'); toast('🔨 Des bras en plus cette nuit : le segment sera posé à l’aube.');
+    afterChange(); openRoom(id);
   });
 }
 function openFurn(id) {
@@ -282,13 +303,13 @@ function openDef(id) {
     <div class="btnrow"><button class="sbtn" id="mRemove" type="button">Décoller (retourne dans ta planche)</button><button class="sbtn" type="button" data-wiki-open="def:${d.t}">📖 Grimoire</button></div>`, { label: f.name });
   m.querySelector('#mRemove').addEventListener('click', () => { if (run('removeDef', { id })) { sfx('peel'); closeModal(); afterChange(); } });
 }
+// l'envie du moment : elle se comble toute seule ; seule l'aventure demande ta décision
 function questCard(c, q) {
-  const T = QT[q.k], ch = q.ch <= 3 ? `Chapitre ${q.ch}/3 de son histoire` : 'Mission de légende', rw = questReward(q.k === 'expe' && !q.res ? { ...q, res: 'full' } : q);
-  let h = `<div class="quest st-${q.st}"><div class="qh"><span class="emo">${T.ico}</span><span><small>${ch}</small><b>${esc(q.title)}</b></span></div><p>« ${esc(q.text)} »</p>`;
-  if (q.st === 'offered') h += `<p class="hint">Récompense : ${rewardLine(rw)}${q.k === 'expe' ? ' (selon le résultat de l’expédition)' : ''}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-q="qAccept">✔ Accepter${T.away ? ' : il·elle part 2 nuits' : ''}</button><button class="sbtn" type="button" data-q="qDecline">Pas maintenant</button></div>`;
-  else if (q.st === 'active') h += `<p class="hint">En cours : <b>${esc(T.prog(q, c))}</b> · Récompense : ${rewardLine(rw)}.</p>`;
+  const T = QT[q.k], ch = q.ch <= 3 ? `Chapitre ${q.ch}/3 de son histoire` : 'Envie de légende', rw = questReward(q.k === 'expe' && !q.res ? { ...q, res: 'full' } : q);
+  let h = `<div class="quest st-${q.st}" id="mEnvie"><div class="qh"><span class="emo">${T.ico}</span><span><small>✦ Son envie · ${ch}</small><b>${esc(q.title)}</b></span></div><p>« ${esc(q.text)} »</p>`;
+  if (q.st === 'ready') h += `<p class="hint">Récompense : ${rewardLine(rw)} (selon le résultat de l’aventure), et son histoire entre dans la légende.</p><div class="btnrow"><button class="sbtn pri" type="button" data-q="qAccept">🧭 La laisser partir (2 nuits)</button></div>`;
+  else if (q.st === 'active') h += `<p class="hint">Où ça en est : <b>${esc(T.prog(q, c))}</b> · Récompense, dès que c’est fait : ${rewardLine(rw)}.</p>`;
   else if (q.st === 'away') h += `<p class="hint">🧭 En route ! Retour à l’aube, avant la nuit ${c.awayUntil}.</p>`;
-  else if (q.st === 'done') h += `<p><b>${q.res ? ({ crit: '✨ Triomphe !', full: '🎉 Réussite !', partial: '😅 À moitié réussie', fail: '💨 Raté… mais quelle aventure' })[q.res] + ` <span class="hint">(dés : ${(q.dice || []).join(', ')})</span>` : '🎉 Mission accomplie !'}</b></p><div class="btnrow"><button class="sbtn pri" type="button" data-q="qClaim">🎁 Réclamer : ${rewardLine(rw)}</button></div>`;
   return h + '</div>';
 }
 function openCreature(id) {
@@ -297,18 +318,20 @@ function openCreature(id) {
   TUTO.flags.creature = true; V.selected = id; renderPortraits();
   const sp = SPECIES[c.sp], mf = moodFactors(c), ef = epaFactors(c), q = questOf(c), out = isOut(c);
   const line = c.away ? 'Je suis parti·e en mission, je reviens vite !' : c.tempt ? pick([`Il paraît qu’à ${c.tempt.name}, on choie les ${sp.name.toLowerCase()}s…`, 'Je réfléchis à mon avenir, c’est tout.', 'Rien. Je regardais par la fenêtre. Vers là-bas.'])
-    : c.mood <= 1 ? pick(['Laisse-moi tranquille.', 'Je boude. Ça se voit pas ?', 'Il fait froid, j’ai faim, et personne ne m’aime.']) : q && q.st === 'offered' ? 'Dis, Maître… j’aurais une petite faveur à te demander.' : pick(sp.lines);
+    : c.mood <= 1 ? pick(['Laisse-moi tranquille.', 'Je boude. Ça se voit pas ?', 'Il fait froid, j’ai faim, et personne ne m’aime.']) : q && q.st === 'ready' ? 'Dis, Maître… j’ai envie de partir à l’aventure. Juste deux nuits !' : q && q.st === 'active' && Math.random() < .5 ? `Tu sais ce qui me ferait plaisir ? ${q.title}.` : pick(sp.lines);
   const rooms = builtRooms().filter(r => !isHall(r) && !ROOMS[r.t].stairs);
   const opts = '<option value="">Libre (garde le Cœur)</option>' + rooms.map(r => { const fav = r.t === sp.from || (ROOMS[r.t].attracts || []).includes(c.sp); return `<option value="${r.id}" ${c.post === r.id ? 'selected' : ''}>${fav ? '★ ' : ''}${esc(ROOMS[r.t].name)}${zOf(r) ? ' · ' + FLOOR_SHORT[zOf(r)] : ''}</option>`; }).join('');
   const perks = [2, 3, 4, 5].filter(l => c.lvl >= l).map(l => LVL_PERK[l]);
   const m = openModal(`<div class="cardhead"><div class="portrait char"><img class="th" alt="" src="${thumb('char', c.sp, true)}"></div>
       <div><h2>${esc(c.name)}</h2><p><span class="tag2">${sp.name}</span><span class="tag2">Niv. ${c.lvl}</span>${c.legend ? '<span class="tag2 gold">🗿 Légende</span>' : ''}${sp.tag ? `<span class="tag2">${TAGS[sp.tag]}</span>` : ''}${c.away ? '<span class="tag2">🧭 en mission</span>' : c.raid ? '<span class="tag2">🗺️ en raid</span>' : ''}</p><div>${hearts(c.mood)} <span class="hint">${moodWord(c.mood)}</span></div></div></div>
     <div class="bubble" id="mLine">« ${esc(line)} »</div>
-    ${c.tempt ? `<div class="tempt"><p>👀 <b>${esc(c.name)} lorgne vers ${esc(c.tempt.name)}</b> : là-bas, les ${esc(sp.name.toLowerCase())}s sont mieux reçus (${Math.round(c.tempt.v)} contre ${repOf(c.sp)} ici). Tant que sa loyauté reste sous 40, il·elle peut partir à l’aube.</p>
-      <div class="btnrow"><button class="sbtn pri" type="button" id="mReassure" ${c.reassured === S.night ? 'disabled' : ''}>💬 Rassurer (+${c.epa >= 50 ? 10 : 6} loyauté)${c.reassured === S.night ? ' (fait)' : ''}</button>${PW('palier2') ? `<button class="sbtn" type="button" id="mRappel" ${pwReady(ACH_BY.palier2) ? '' : 'disabled'}>🔔 Cloche du rappel</button>` : ''}<button class="sbtn" type="button" id="mRenown">⭐ Renommée</button></div></div>` : ''}
-    ${q ? questCard(c, q) : `<p class="hint">${c.legend ? '🗿 Son histoire est devenue légende. Il·elle repartira parfois en mission.' : `Son histoire : chapitre ${c.story || 0}/3. ${S.night < 3 ? 'Ses envies viendront dès la nuit 3.' : 'Une demande viendra peut-être à l’aube.'}`}</p>`}
-    <dl class="kv"><dt>Compétence</dt><dd><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</dd>
-      <dt>Combat</dt><dd>${guardOf(c)} 🛡️ garde · ${diceOf(c)} 🎲 en raid${sp.eats > 1 ? ' · mange pour deux' : ''}</dd>
+    ${c.tempt ? `<div class="tempt"><p>👀 <b>${esc(c.name)} lorgne vers ${esc(c.tempt.name)}</b> : là-bas, les ${esc(sp.name.toLowerCase())}s sont mieux reçus (${Math.round(c.tempt.v)} contre ${repOf(c.sp)} ici). Tant que sa loyauté reste sous 40, il·elle peut partir à l’aube. Pour la retenir : comble son envie, ou réalise son rêve secret.</p>
+      <div class="btnrow">${PW('palier2') ? `<button class="sbtn" type="button" id="mRappel" ${pwReady(ACH_BY.palier2) ? '' : 'disabled'}>🔔 Cloche du rappel</button>` : ''}<button class="sbtn" type="button" id="mRenown">⭐ Renommée</button></div></div>` : ''}
+    ${q ? questCard(c, q) : `<p class="hint" id="mEnvie">${c.legend ? '🗿 Son histoire est devenue légende. Il·elle repartira parfois à l’aventure.' : `Son histoire : chapitre ${c.story || 0}/3. ${(c.story || 0) >= 2 && !c.dream ? 'La suite (une aventure) viendra quand son rêve secret sera réalisé.' : 'Une nouvelle envie viendra bientôt.'}`}</p>`}
+    ${typeof secretHTML === 'function' ? secretHTML(c) : ''}
+    <dl class="kv">${typeof persHTML === 'function' ? persHTML(c) : ''}<dt>Compétence</dt><dd><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</dd>
+      <dt>Combat</dt><dd>${(() => { const f = fighterOf(c); return `❤️ ${f.max} PV · ⚔️ ${f.atk}`; })()} · ${guardOf(c)} 🛡️ garde · ${diceOf(c)} 🎲 en raid${sp.eats > 1 ? ' · mange pour deux' : ''}${injured(c) ? '<br><span class="no">🤕 Sonné·e : se repose jusqu’à l’aube, ni garde ni raid.</span>' : ''}</dd>
+      <dt>Salaire</dt><dd>${salaryOf(c) ? `${salaryOf(c)} 💰 tous les ${PAY_EVERY} nuits${c.unpaid && S.night - c.unpaid < PAY_EVERY ? ' · <span class="no">pas payé·e à la dernière paie</span>' : c.paidAt ? ' · payé·e à la dernière paie' : ''}` : 'Aucun : les diablotins travaillent pour le Cœur'}</dd>
       <dt>Poste</dt><dd><select class="sel" id="mPost" ${out ? 'disabled' : ''} aria-label="Poste de ${esc(c.name)}">${opts}</select></dd>
       <dt>Expérience</dt><dd>${c.lvl < 5 ? `${bar((c.xp - LVL_XP[c.lvl]) / (LVL_XP[c.lvl + 1] - LVL_XP[c.lvl]) * 100, '#8fb8ff', 'XP')} <span class="num">${c.xp}/${LVL_XP[c.lvl + 1]} XP</span>` : '<b>Niveau maximal</b>'}${perks.length ? `<br><span class="hint">${perks.map(esc).join(' · ')}</span>` : ''}</dd>
       <dt>Loyauté</dt><dd>${bar(c.loy, '#e9b949', 'Loyauté')} <b class="num">${c.loy}</b> <span class="hint">${loyWord(c.loy)}</span></dd>
@@ -316,8 +339,6 @@ function openCreature(id) {
     <h3>Humeur visée cette nuit : ${mf.target}/5</h3><div>${mf.f.map(([t, v]) => `<span class="tag2">${v > 0 ? '+' + v : v < 0 ? v : '·'} ${esc(t)}</span>`).join('')}</div>
     <details class="more"><summary>Ce qui l’épanouit (la loyauté suit l’épanouissement, nuit après nuit)</summary><div>${ef.f.map(([t, v]) => `<span class="tag2">${v > 0 ? '+' + v : v < 0 ? v : '·'} ${esc(t)}</span>`).join('')}</div></details>
     <div class="btnrow">
-      <button class="sbtn pri" id="mPet" type="button" ${c.pet || out ? 'disabled' : ''}>🤚 Caresser${c.pet ? ' (fait)' : ''}</button>
-      <button class="sbtn" id="mTreat" type="button" ${c.treat || out || S.gold < 1 ? 'disabled' : ''}>🍪 Friandise (1 💰)</button>
       <button class="sbtn" id="mTalk" type="button">💬 Discuter</button>
       <button class="sbtn" id="mFind" type="button" ${out ? 'disabled' : ''}>🔎 Voir</button>
       <button class="sbtn danger" id="mFire" type="button" ${out ? 'disabled' : ''}>👋 Renvoyer</button><button class="sbtn" type="button" data-wiki-open="sp:${c.sp}">📖 Grimoire</button></div>`, { label: c.name });
@@ -325,22 +346,17 @@ function openCreature(id) {
   const q2 = s => m.querySelector(s);
   const heartsFx = () => { const a = ACT.get(c.id); if (a) for (let i = 0; i < 3; i++) setTimeout(() => floatText(a.x + (Math.random() - .5) * .4, a.y, '♥', '#ff9cba'), i * 140); };
   const speak = l => { say(c.id, l); const b = $('#mLine'); if (b) b.textContent = '« ' + l + ' »'; };
-  q2('#mPet').addEventListener('click', () => { if (!run('pet', { id })) return; sfx('pet'); heartsFx(); afterChange(); openCreature(id); speak(pick(['Hiii, encore !', 'Rrrrr…', 'Bon, d’accord, j’aime bien ça.', 'Pas devant les autres !'])); });
-  q2('#mTreat').addEventListener('click', () => { if (!run('treat', { id })) return; sfx('pet'); heartsFx(); afterChange(); openCreature(id); speak('Miam ! Croustillant.'); });
   q2('#mTalk').addEventListener('click', () => { const l = pick(c.mood <= 1 ? ['…', 'Hmpf.', 'Va voir ailleurs si j’y suis.'] : sp.lines); q2('#mLine').textContent = '« ' + l + ' »'; say(c.id, l); sfx('tick'); });
   q2('#mFind').addEventListener('click', () => { closeModal(); focusActor(c.id); });
   q2('#mPost').addEventListener('change', e => { if (!run('post', { id, post: e.target.value || null })) return; sfx('tick'); const a = ACT.get(c.id); if (a) { a.tok++; a.walking = false; a.dur = 0; wanderOnce(a, true); } afterChange(); openCreature(id); });
   q2('#mFire').addEventListener('click', e => confirmBtn(e.currentTarget, 'Sûr ? Au revoir…', () => { if (!run('fire', { id })) return; closeModal(); critterLeave(c.id); V.selected = null; afterChange(); }));
-  q2('#mReassure') && q2('#mReassure').addEventListener('click', () => { if (!run('reassure', { id })) return; sfx('pet'); heartsFx(); afterChange(); openCreature(id); speak(pick(['Bon… d’accord, je reste encore un peu.', 'Tu tiens vraiment à moi ?', 'Personne ne m’avait jamais dit ça.'])); });
   q2('#mRappel') && q2('#mRappel').addEventListener('click', () => { if (!run('power', { pw: 'rappel', id })) return; sfx('chime'); afterChange(); openCreature(id); speak('Cette cloche… elle me rappelle pourquoi je suis là.'); });
   q2('#mRenown') && q2('#mRenown').addEventListener('click', openRenown);
   m.addEventListener('click', e => {
     const b = e.target.closest('[data-q]'); if (!b || b.disabled) return;
     const k = b.dataset.q, qq = questOf(c), away = qq && QT[qq.k].away;
     if (!run(k, { id })) return;
-    if (k === 'qAccept') { sfx('chime'); if (away) { toast(`🧭 ${c.name} part en mission. Retour dans 2 nuits.`); closeModal(); afterChange(); return; } speak('Merci, Maître ! Je savais que je pouvais compter sur toi.'); }
-    else if (k === 'qClaim') { sfx('chime'); heartsFx(); toast(`🎁 Mission accomplie : ${qq.title}`); }
-    else if (k === 'qDecline') { speak('Bon… une autre fois, peut-être.'); }
+    if (k === 'qAccept') { sfx('chime'); toast(`🧭 ${c.name} part à l’aventure. Retour dans 2 nuits.`); closeModal(); afterChange(); return; }
     afterChange(); openCreature(id);
   });
 }

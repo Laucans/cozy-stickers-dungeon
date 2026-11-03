@@ -6,12 +6,14 @@
    ========================================================= */
 
 /* ---------- mise à niveau des sauvegardes ---------- */
-const STAT0 = { dug: 0, pets: 0, decor: 0, furn: 0, raidsWon: 0, repelled: 0, invasions: 0, quests: 0, legends: 0, crits: 0, visits: 0, gifts: 0, gbRecv: 0,
+const STAT0 = { dug: 0, pets: 0, secrets: 0, dreams: 0, decor: 0, furn: 0, raidsWon: 0, repelled: 0, invasions: 0, quests: 0, legends: 0, crits: 0, visits: 0, gifts: 0, gbRecv: 0,
   coopNights: 0, migrantsIn: 0, skirmishWon: 0, calmNights: 0, deserted: 0, expeditions: 0 };
 function upgradeCreature(c) {
   if (c.loy == null) c.loy = c.sp === 'diablotin' ? 60 : 50;
   if (c.epa == null) c.epa = 50;
-  if (c.xp == null) c.xp = 0; if (!c.lvl) c.lvl = 1; if (c.story == null) c.story = 0; if (c.petN == null) c.petN = 0;
+  if (c.xp == null) c.xp = 0; if (!c.lvl) c.lvl = 1; if (c.story == null) c.story = 0;
+  if (c.quest && !QT[c.quest.k]) delete c.quest;   // une ancienne demande qui n'existe plus (les câlins)
+  else if (c.quest && c.quest.st === 'offered') c.quest.st = QT[c.quest.k].away ? 'ready' : 'active';
   return c;
 }
 function upgradeState(s) {
@@ -24,7 +26,7 @@ function upgradeState(s) {
   return s;
 }
 const critter = id => S.creatures.find(c => c.id === id);
-const isOut = c => !!(c.raid || c.away);
+const isOut = c => !!(c.raid || c.away || c.captive);
 const decorIn = r => furnIn(r).filter(f => FURN[f.t] && FURN[f.t].room === 'any').length;
 const addLoy = (c, n) => { c.loy = clamp(Math.round((c.loy == null ? 50 : c.loy) + n), 0, 100); };
 const bar = (v, col, label) => `<span class="sbar" title="${esc(label || '')}"><i style="width:${clamp(v, 0, 100)}%;background:${col}"></i></span>`;
@@ -39,9 +41,9 @@ const ACH = [
   { id: 'cosy',      cat: 'Bâtisseur', ico: '🕯️', name: 'Nid douillet',           desc: 'Atteins 15 d’Ambiance.',                       test: s => ambiance() >= 15,              pw: 'Feu de cheminée',        pd: 'La Calamité monte d’un cran de moins chaque nuit.' },
   { id: 'accueil',   cat: 'Éleveur',   ico: '🛏️', name: 'Comité d’accueil',       desc: 'Héberge 6 créatures.',                         test: s => s.creatures.length >= 6,       pw: 'Paillasses en rab',      pd: '+2 lits.' },
   { id: 'menagerie', cat: 'Éleveur',   ico: '📒', name: 'Ménagerie',              desc: 'Remplis 8 cases de l’album.',                  test: s => Object.keys(s.album).length >= 8, pw: 'Phéromones',          pd: '+10 de réputation auprès de toutes les espèces.' },
-  { id: 'calins',    cat: 'Éleveur',   ico: '🤚', name: 'Câlinothérapie',         desc: 'Donne 25 caresses.',                           test: s => s.stats.pets >= 25,            pw: 'Mains douces',           pd: 'Chaque caresse donne +3 de loyauté en plus.' },
+  { id: 'calins',    cat: 'Éleveur',   ico: '💭', name: 'Confident',              desc: 'Découvre 3 rêves secrets.',                     test: s => s.stats.secrets >= 3,          pw: 'Oreille attentive',      pd: 'Tes créatures te confient leur rêve secret dès 65 de loyauté (au lieu de 80).' },
   { id: 'fidele',    cat: 'Éleveur',   ico: '💞', name: 'À la vie, à la mort',    desc: 'Une créature atteint 90 de loyauté.',          test: s => s.creatures.some(c => c.loy >= 90), pw: 'Serment du château', pd: 'Les risques de désertion sont divisés par deux.' },
-  { id: 'conteur',   cat: 'Missions',  ico: '📜', name: 'Conteur',                desc: 'Accomplis 5 missions personnelles.',           test: s => s.stats.quests >= 5,           pw: 'Carnet de quêtes',       pd: 'Une mission de plus en même temps, et +1 💰 par mission.' },
+  { id: 'conteur',   cat: 'Missions',  ico: '📜', name: 'Conteur',                desc: 'Comble 5 envies de tes créatures.',            test: s => s.stats.quests >= 5,           pw: 'Carnet d’envies',        pd: '+1 💰 pour chaque envie comblée.' },
   { id: 'chouchou',  cat: 'Missions',  ico: '🌟', name: 'Chouchou',               desc: 'Une créature atteint le niveau 3.',            test: s => s.creatures.some(c => c.lvl >= 3), pw: 'Mentorat',           pd: '+1 XP à chaque gain d’expérience.' },
   { id: 'epopee',    cat: 'Missions',  ico: '🧭', name: 'Épopée',                 desc: 'Termine l’histoire d’une créature (3 chapitres).', test: s => s.stats.legends >= 1,      pw: 'Ballade héroïque',       pd: '+1 dé à tous les raids.' },
   { id: 'legende',   cat: 'Missions',  ico: '🗿', name: 'Légende vivante',        desc: 'Une créature atteint le niveau 5.',            test: s => s.creatures.some(c => c.lvl >= 5), pw: 'Statue au porche',   pd: '+1 🔥 de notoriété chaque nuit.' },
@@ -68,7 +70,6 @@ const PW = id => !!(S && S.ach && S.ach[id]);
 const pwRep = () => (PW('menagerie') ? 10 : 0) + (PW('livredor') ? 5 : 0) + (PW('aimant') ? 5 : 0);
 const pwAmb = () => (PW('deco') ? 2 : 0) + (PW('voisin') ? 1 : 0);
 const workPerNight = () => CONSTS.WORK + sumCrit('build') + (PW('pierre') ? 1 : 0) + (PW('coop') ? 1 : 0) + (PW('etages') ? 1 : 0);
-const questSlots = () => 2 + (PW('conteur') ? 1 : 0);
 function checkAch() {
   const done = [];
   if (!S || !S.ach) return done;
@@ -84,8 +85,8 @@ function announceAch(list) {
 }
 TIPS.push(
   { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 à gauche. Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
-  { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'offered'), t: 'Une demande personnelle', x: 'Une créature a une mission à te proposer (❗ sur son portrait). Accepte-la depuis sa fiche : la réussir rend loyal, fait gagner de l’expérience et rapporte des cadeaux.', wiki: 'missions' },
-  { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Rassure-la depuis sa fiche, caresse-la, confie-lui une mission… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
+  { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'active'), t: 'Des envies', x: 'Chaque créature déclare une envie (✦ sur sa fiche, liste 📜 à gauche). Comble-la : la récompense tombe toute seule (loyauté, expérience, cadeaux). Elle cache aussi un rêve secret : à toi de le découvrir.', wiki: 'missions' },
+  { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Comble son envie ou réalise son rêve secret pour la retenir… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
   { id: 'haut1', when: () => Object.keys(S.ach || {}).length >= 1, t: 'Premier haut fait !', x: 'Chaque haut fait débloque un pouvoir permanent pour ton château. Retrouve-les tous dans 🏆 Hauts faits.', wiki: 'hautsfaits' },
 );
 const pwReady = a => !S.pwcd[a.active] || S.night >= S.pwcd[a.active];
@@ -117,6 +118,8 @@ function repTarget(sp) {
 const repOf = sp => (S.rep && S.rep[sp] != null) ? S.rep[sp] : repTarget(sp).v;
 function updateRep() { SPECIES_ORDER.forEach(sp => { const t = repTarget(sp).v, cur = S.rep[sp]; S.rep[sp] = cur == null ? t : Math.round(cur * .6 + t * .4); }); }
 
+// « de le comte » → « du comte »
+const deM = m => /^le /i.test(m) ? 'du ' + m.slice(3) : /^les /i.test(m) ? 'des ' + m.slice(4) : 'de ' + m;
 // châteaux rivaux du Val (gérés par le jeu, toujours présents)
 const RIVALS = [
   { id: 'morgrave',  name: 'La Tour de Morgrave',        master: 'la nécromancienne Ysolde', emo: '🗼', likes: ['fantome', 'sorciere', 'squelette', 'vampire'], base: 34 },
@@ -146,22 +149,45 @@ function epaFactors(c, hungry = hungrySet()) {
   const post = c.post && S.rooms.find(r => r.id === c.post);
   if (post && (post.t === sp.from || (ROOMS[post.t].attracts || []).includes(c.sp))) f.push(['Posté·e dans sa pièce rêvée', 10]);
   if (S.creatures.some(o => o !== c && o.sp === c.sp)) f.push(['Un·e ami·e de son espèce', 8]);
-  if (c.questAt && S.night - c.questAt <= 3) f.push(['Mission accomplie récemment', 15]);
-  if (c.pet) f.push(['Caresse de la nuit', 6]);
+  if (c.questAt && S.night - c.questAt <= 3) f.push(['Envie comblée récemment', 15]);
+  if (c.dream) f.push(['Son rêve secret s’est réalisé', 12]);
+  if (c.unpaid && S.night - c.unpaid < PAY_EVERY) f.push(['Pas payé·e à la dernière paie', -15]);
+  else if (c.paidAt && S.night - c.paidAt < PAY_EVERY) f.push(['Payé·e rubis sur l’ongle', 3]);
   if (c.lvl >= 3) f.push([`Niveau ${c.lvl}`, (c.lvl - 2) * 4]);
   if (hungry.has(c.id)) f.push(['Ventre vide', -20]);
   if (sp.rival && S.creatures.some(o => o.sp === sp.rival)) f.push([`Supporte mal les ${(SPECIES[sp.rival] || { name: '?' }).name}s`, -8]);
-  if (c.quest && c.quest.st === 'offered' && S.night - c.quest.n >= 3) f.push(['Sa demande attend une réponse', -6]);
+  if (c.quest && c.quest.st === 'active' && S.night - c.quest.n >= 8) f.push(['Son envie attend depuis longtemps', -4]);
   return { f, target: clamp(f.reduce((a, x) => a + x[1], 0), 0, 100) };
 }
 const loyDelta = c => { let d = Math.round((c.epa - 50) / 8); if (S.night - (c.joined || 1) < 3) d = Math.max(d, 1); return d; };
 const loyWord = v => v >= 85 ? 'Dévoué·e corps et âme' : v >= 65 ? 'Fidèle' : v >= 45 ? 'Attaché·e' : v >= 25 ? 'Hésitant·e' : 'Prêt·e à partir';
 const epaWord = v => v >= 80 ? 'Rayonnant·e' : v >= 60 ? 'Épanoui·e' : v >= 40 ? 'Ça va' : v >= 20 ? 'Morose' : 'Malheureux·se';
 
+/* ---------- jour de paie ---------- */
+// tous les 5 nuits, à l'aube, chaque créature vient chercher son or ; les diablotins, nés du Cœur, travaillent pour rien
+const PAY_EVERY = 5;
+const salaryOf = c => { const d = SPECIES[c.sp] || {}; if (c.sp === 'diablotin') return 0; return 1 + (d.tier || 0) + (d.rare ? 2 : 0) + ((c.lvl || 1) >= 4 ? 1 : 0) + (c.legend ? 1 : 0); };
+const payroll = () => S.creatures.filter(c => !c.away).reduce((a, c) => a + salaryOf(c), 0);
+const nightsToPay = () => (PAY_EVERY - S.night % PAY_EVERY) % PAY_EVERY;   // 0 : la paie tombe à l'aube de cette nuit
+function payday(report) {
+  if (S.night % PAY_EVERY !== 0) return;
+  const due = S.creatures.filter(c => !c.away && salaryOf(c) > 0).sort((a, b) => (a.joined || 1) - (b.joined || 1));   // les anciens d'abord
+  if (!due.length) return;
+  const paid = [], unpaid = []; let total = 0;
+  due.forEach(c => { const w = salaryOf(c); if (S.gold >= w) { S.gold -= w; total += w; paid.push(c); c.paidAt = S.night; addLoy(c, 2); } else unpaid.push(c); });
+  unpaid.forEach(c => { c.unpaid = S.night; c.mood = clamp(c.mood - 1, 0, 5); addLoy(c, -10); });
+  S.pay = { night: S.night, paid: paid.map(c => c.id), unpaid: unpaid.map(c => c.id) };
+  S.stats.wages = (S.stats.wages || 0) + total; S.stats.unpaid = (S.stats.unpaid || 0) + unpaid.length;
+  report.push(['sec', 'Jour de paie']);
+  if (paid.length) report.push(['💰', `${total} 💰 versés à ${paid.length} créature${paid.length > 1 ? 's' : ''}, qui viennent chercher leur paie.`, 'good']);
+  if (unpaid.length) { report.push(['😠', `Caisses vides ! ${unpaid.length} créature${unpaid.length > 1 ? 's n’ont' : ' n’a'} pas été payée${unpaid.length > 1 ? 's' : ''} (−1 ❤️, −10 loyauté) : ${unpaid.slice(0, 5).map(c => c.name).join(', ')}${unpaid.length > 5 ? '…' : ''}.`, 'bad']); addLog(`Jour de paie : ${unpaid.length} créature(s) impayée(s).`, 'bad'); }
+  else addLog(`Jour de paie : ${total} 💰 versés.`, 'ev');
+}
+
 /* ---------- désertions ---------- */
 const desertMod = () => S.opts.desert === 'off' ? 0 : (S.opts.desert === 'soft' ? .5 : 1) * (PW('fidele') ? .5 : 1);
 function temptation(c) {
-  if (c.sp === 'diablotin' || isOut(c) || c.legend || desertMod() === 0) return null;
+  if (c.sp === 'diablotin' || isOut(c) || c.legend || c.dream || desertMod() === 0) return null;
   if (S.night < 6 || (S.tuto && S.tuto.on) || S.night - (c.joined || 1) < 4 || c.loy >= 40) return null;
   const best = bestRival(c.sp), mine = repOf(c.sp);
   return best && best.v > mine + 5 ? best : null;
@@ -191,7 +217,7 @@ const EXPE = {
   _: ['Une grande aventure', 'accomplir une quête très personnelle', 'revient grandi·e', 'revient un peu cabossé·e'],
 };
 const QT = {
-  objet: { ico: '🎁', gen: c => { const it = (SPECIES[c.sp] || {}).likes; if (!it || !FURN[it]) return null; return { item: it, goal: countItem(it) + 1, title: `Un ${itemName(it)} rien qu’à moi`, text: `Colle un nouveau sticker ${itemName(it)} dans le château.` }; },
+  objet: { ico: '🎁', gen: c => { const it = (SPECIES[c.sp] || {}).likes; if (!it || !FURN[it]) return null; return { item: it, goal: countItem(it) + 1, title: `Un sticker ${itemName(it)} rien qu’à moi`, text: `Colle un nouveau sticker ${itemName(it)} dans le château.` }; },
     test: q => countItem(q.item) >= q.goal, prog: q => `${Math.min(countItem(q.item), q.goal)}/${q.goal}` },
   piece: { ico: '🏗️', gen: c => { const r = (SPECIES[c.sp] || {}).from; if (!r || !ROOMS[r] || ROOMS[r].fixed || ROOMS[r].unique || ROOMS[r].theme) return null; return { room: r, goal: homeRooms(r) + 1, title: `Une ${ROOMS[r].name} de plus`, text: `Construis et meuble une ${ROOMS[r].name} supplémentaire.` }; },
     test: q => homeRooms(q.room) >= q.goal, prog: q => `${Math.min(homeRooms(q.room), q.goal)}/${q.goal}` },
@@ -199,8 +225,8 @@ const QT = {
     test: q => { const r = S.rooms.find(x => x.id === q.roomId); return !!r && decorIn(r) >= q.goal; }, prog: q => { const r = S.rooms.find(x => x.id === q.roomId); return r ? `${Math.min(decorIn(r), q.goal)}/${q.goal}` : 'pièce disparue'; } },
   ami: { ico: '🤝', gen: c => countSp(c.sp) < 3 && !(SPECIES[c.sp].tier > S.tier) ? { sp: c.sp, goal: countSp(c.sp) + 1, title: 'Un peu de compagnie', text: `Accueille un·e autre ${SPECIES[c.sp].name} au château.` } : null,
     test: q => countSp(q.sp) >= q.goal, prog: q => `${Math.min(countSp(q.sp), q.goal)}/${q.goal}` },
-  calin: { ico: '🤚', gen: c => ({ goal: (c.petN || 0) + 3, title: 'Des câlins, beaucoup', text: 'Caresse-moi pendant trois nuits (pas forcément d’affilée).' }),
-    test: (q, c) => (c.petN || 0) >= q.goal, prog: (q, c) => `${Math.min(3, 3 - (q.goal - (c.petN || 0)))}/3` },
+  poste: { ico: '🪑', gen: c => { const r = (SPECIES[c.sp] || {}).from; if (!r || !ROOMS[r] || ROOMS[r].fixed || !S.rooms.some(o => o.t === r && o.built)) return null; return { room: r, title: `Un poste : ${ROOMS[r].name}`, text: `Poste-moi dans une pièce « ${ROOMS[r].name} », c’est là que je me sens chez moi.` }; },
+    test: (q, c) => { const p = c.post && S.rooms.find(o => o.id === c.post); return !!p && p.t === q.room; }, prog: (q, c) => { const p = c.post && S.rooms.find(o => o.id === c.post); return p ? ROOMS[p.t].name : 'pas de poste'; } },
   raid: { ico: '🗺️', gen: c => (SPECIES[c.sp].dice || 0) > 0 ? { goal: (c.raidsWon || 0) + 1, title: 'Ma part du butin', text: 'Emmène-moi dans un raid réussi.' } : null,
     test: (q, c) => (c.raidsWon || 0) >= q.goal, prog: () => '0/1' },
   garde: { ico: '🛡️', gen: c => ({ goal: (S.stats.repelled || 0) + 1, title: 'Défendre le château', text: 'Repousse une bande d’aventuriers pendant que je suis là.' }),
@@ -208,16 +234,16 @@ const QT = {
   ravi: { ico: '💗', gen: c => c.mood < 5 ? { title: 'Être aux anges', text: 'Fais-moi atteindre 5 ❤️ d’humeur.' } : null, test: (q, c) => c.mood >= 5, prog: (q, c) => `${c.mood}/5 ❤️` },
   expe: { ico: '🧭', away: true, gen: c => { const e = EXPE[c.sp] || EXPE._; return { nights: 2, title: e[0], text: `Laisse-moi partir deux nuits pour ${e[1]}.` }; }, test: () => false, prog: () => '' },
 };
-const QCH = { 1: ['objet', 'calin', 'ravi', 'deco', 'ami'], 2: ['piece', 'raid', 'garde', 'objet', 'deco', 'ami'] };
+const QCH = { 1: ['objet', 'poste', 'ravi', 'deco', 'ami'], 2: ['piece', 'raid', 'garde', 'objet', 'deco', 'ami'] };
 function genQuest(c) {
   const ch = c.legend ? 4 : (c.story || 0) + 1;
-  if (ch >= 3) return { k: 'expe', ch, st: 'offered', n: S.night, ...QT.expe.gen(c) };
-  const ks = QCH[ch].slice().sort(() => Math.random() - .5);
-  for (const k of ks) { const q = QT[k].gen(c); if (q && !QT[k].test(q, c)) return { k, ch, st: 'offered', n: S.night, ...q }; }
+  // l'aventure (chapitre 3, puis la légende) ne se présente qu'une fois le rêve secret réalisé
+  if (ch >= 3 && (c.dream || c.legend)) return { k: 'expe', ch, st: 'ready', n: S.night, ...QT.expe.gen(c) };
+  const ks = QCH[Math.min(ch, 2)].slice().sort(() => Math.random() - .5);
+  for (const k of ks) { const q = QT[k].gen(c); if (q && !QT[k].test(q, c)) return { k, ch: Math.min(ch, 2), st: 'active', n: S.night, ...q }; }
   return null;
 }
 const questOf = c => c.quest && QT[c.quest.k] ? c.quest : null;
-const liveQuests = () => S.creatures.filter(c => c.quest).length;
 function questReward(q) {
   const extra = PW('conteur') ? 1 : 0;
   if (q.k !== 'expe') return q.ch === 1 ? { g: 2 + extra, loy: 12, xp: 2 } : { g: 3 + extra, loy: 15, xp: 3, gift: true };
@@ -229,18 +255,39 @@ function rewardLine(rw) {
   const p = []; if (rw.g) p.push(`+${rw.g} 💰`); if (rw.h) p.push(`+${rw.h} 🔥`); if (rw.loy) p.push(`+${rw.loy} loyauté`); if (rw.xp) p.push(`+${rw.xp} XP`); if (rw.gift) p.push('un sticker cadeau'); if (rw.rare) p.push('un Cristal');
   return p.join(', ');
 }
-// avance les missions acceptées ; renvoie les créatures dont la mission vient d’aboutir
-function checkQuests() {
+// envies comblées : la récompense tombe tout de suite, sans rien réclamer (lines : où raconter, sinon des bulles)
+function checkQuests(lines) {
   const done = [];
-  S.creatures.forEach(c => { const q = questOf(c); if (!q || q.st !== 'active' || QT[q.k].away) return; let ok = false; try { ok = QT[q.k].test(q, c); } catch (e) {} if (ok) { q.st = 'done'; done.push(c); } });
+  S.creatures.forEach(c => {
+    const q = questOf(c); if (!q) return;
+    let ok = q.st === 'done';   // retour d'aventure
+    if (q.st === 'active' && !QT[q.k].away) { try { ok = QT[q.k].test(q, c); } catch (e) {} }
+    if (ok) { grantEnvie(c, q, lines); done.push(c); }
+  });
+  if (typeof secretsCheck === 'function') secretsCheck(lines).forEach(c => done.push(c));
   return done;
+}
+function grantEnvie(c, q, lines) {
+  const rw = questReward(q); S.gold += rw.g || 0; S.hype += rw.h || 0; addLoy(c, rw.loy || 0);
+  if (q.res === 'fail') c.mood = clamp(c.mood - 1, 0, 5);
+  if (rw.gift) { const k = (SPECIES[c.sp].likes && FURN[SPECIES[c.sp].likes]) ? SPECIES[c.sp].likes : pick(DECOR_ORDER); S.free[k] = (S.free[k] || 0) + 1; }
+  if (rw.rare) S.free.cristal = (S.free.cristal || 0) + 1;
+  gainXP(c, rw.xp || 0, lines);
+  c.questAt = S.night; S.stats.quests++;
+  let legend = false;
+  if (q.k === 'expe') { c.lastExpe = S.night; if (!c.legend) { c.legend = true; legend = true; S.stats.legends++; addLog(`${c.name} entre dans la légende !`, 'ev'); } }
+  if (q.ch <= 3) c.story = Math.max(c.story || 0, q.ch);
+  delete c.quest;
+  addLog(`Envie comblée : ${q.title} (${c.name}).`, 'good');
+  const t = `${c.name} est comblé·e : « ${q.title} » (${rewardLine(rw)}).${legend ? ' Son histoire entre dans la légende !' : ''}`;
+  if (lines) lines.push(['✨', t, 'good']); else { toast('✨ ' + t); sfx('chime'); }
 }
 
 /* ---------- niveaux ---------- */
 const LVL_XP = [0, 0, 3, 7, 12, 18];
 const LVL_PERK = { 2: '+1 🛡️ en garde', 3: '+1 🎲 en raid', 4: 'ne boude plus jamais (humeur 2 minimum)', 5: 'sa compétence compte une fois de plus' };
-const guardOf = c => ((SPECIES[c.sp] || {}).guard || 0) + (c.lvl >= 2 ? 1 : 0);
-const diceOf = c => { const d = (SPECIES[c.sp] || {}).dice || 0; return d > 0 ? d + (c.lvl >= 3 ? 1 : 0) : 0; };
+const guardOf = c => ((SPECIES[c.sp] || {}).guard || 0) + (c.lvl >= 2 ? 1 : 0) + (c.evo && EVOS[c.evo] ? EVOS[c.evo].guard || 0 : 0);
+const diceOf = c => { const d = (SPECIES[c.sp] || {}).dice || 0; return d > 0 ? d + (c.lvl >= 3 ? 1 : 0) + (c.evo && EVOS[c.evo] ? EVOS[c.evo].dice || 0 : 0) : 0; };
 function gainXP(c, n, lines) {
   c.xp = (c.xp || 0) + n + (PW('chouchou') ? 1 : 0);
   while ((c.lvl || 1) < 5 && c.xp >= LVL_XP[(c.lvl || 1) + 1]) {
@@ -277,27 +324,25 @@ function soulsDawn(report) {
     const best = temptation(c);
     if (!best) { if (c.tempt) { out.push(['🙂', `${c.name} renonce finalement à partir.`, 'good']); delete c.tempt; } return; }
     if (c.tempt && Math.random() < desertChance(c, best)) { leaving.push([c, best]); return; }
-    if (!c.tempt) out.push(['👀', `${c.name} (${SPECIES[c.sp].name}) lorgne vers ${best.name} : là-bas, les ${SPECIES[c.sp].name.toLowerCase()}s sont mieux reçus (${Math.round(best.v)} contre ${repOf(c.sp)}). Rassure-le·la !`, 'bad']);
+    if (!c.tempt) out.push(['👀', `${c.name} (${SPECIES[c.sp].name}) lorgne vers ${best.name} : là-bas, les ${SPECIES[c.sp].name.toLowerCase()}s sont mieux reçus (${Math.round(best.v)} contre ${repOf(c.sp)}). Comble son envie pour le·la retenir !`, 'bad']);
     c.tempt = { name: best.name, master: best.master, v: best.v, pk: best.pk || null, n: S.night };
   });
   leaving.forEach(([c, best]) => {
     S.creatures = S.creatures.filter(x => x !== c);
     S.desertLog.push({ sp: c.sp, n: S.night }); if (S.desertLog.length > 30) S.desertLog.shift();
     S.stats.deserted++;
-    out.push(['🧳', `${c.name} (${SPECIES[c.sp].name}) est parti·e rejoindre ${best.name}${best.master ? ' de ' + best.master : ''}.`, 'bad']);
+    out.push(['🧳', `${c.name} (${SPECIES[c.sp].name}) est parti·e rejoindre ${best.name}${best.master ? ' ' + deM(best.master) : ''}.`, 'bad']);
     addLog(`${c.name} a déserté pour ${best.name}.`, 'bad');
     if (best.pk && typeof valMigrate === 'function') valMigrate(c, best);
   });
-  // nouvelles demandes
-  if (S.night >= 3 && !(S.tuto && S.tuto.on)) {
-    const elig = S.creatures.filter(c => !c.quest && !isOut(c) && c.mood >= 2 && S.night - (c.joined || 1) >= 1 && (!c.legend || S.night - (c.lastExpe || 0) >= 5)).sort(() => Math.random() - .5);
-    for (const c of elig) {
-      if (liveQuests() >= questSlots()) break;
-      if (Math.random() > .35) continue;
-      const q = genQuest(c); if (!q) continue;
-      c.quest = q; out.push([QT[q.k].ico, `${c.name} a une demande : « ${q.title} ». Clique sur son portrait.`, 'ev']);
-    }
+  // nouvelles envies : chaque créature présente cette nuit en déclare une (une nuit après la précédente)
+  {
+    const fresh = [];
+    S.creatures.filter(c => !c.quest && !isOut(c) && (c.questAt == null || S.night - c.questAt >= 2) && (!c.legend || S.night - (c.lastExpe || 0) >= 5) && (c.questAt == null && S.night <= 2 || Math.random() < .4)).forEach(c => { const q = genQuest(c); if (q) { c.quest = q; fresh.push(c); } });
+    if (fresh.length) out.push(['✦', fresh.length === 1 ? `${fresh[0].name} a une nouvelle envie : « ${fresh[0].quest.title} ».` : `${fresh.length} créatures ont de nouvelles envies (${fresh.slice(0, 3).map(c => c.name).join(', ')}${fresh.length > 3 ? '…' : ''}). Voir leurs fiches.`, 'ev']);
   }
+  if (typeof secretsDawn === 'function') secretsDawn(out);
+  checkQuests(out);
   if (out.length) { report.push(['sec', 'Âmes du château']); out.forEach(l => report.push(l)); }
 }
 
@@ -314,10 +359,10 @@ function usePower(id, a) {
 
 /* ---------- commandes (toutes les actions qui modifient la partie) ---------- */
 const CMD = {
-  place(a) { return withZ(Number.isInteger(a.z) && a.z >= -DEPTH_MAX && a.z <= HEIGHT_MAX ? a.z : Z, () => CMD.place0(a)); },
+  place(a) { return withZ(zOK(a.z) ? a.z : Z, () => CMD.place0(a)); },
   place0(a) {
     const { kind, t } = a, x = a.x | 0, y = a.y | 0, w = a.w | 0 || 1, h = a.h | 0 || 1;
-    if (Z !== 0 && !S.rooms.some(r => zOf(r) === Z)) return 'Cet étage n’existe pas encore';
+    if (Z !== 0 && Z !== EXT && !S.rooms.some(r => zOf(r) === Z)) return 'Cet étage n’existe pas encore';
     if (!(kind === 'room' ? ROOMS[t] : kind === 'def' ? DEFS[t] : kind === 'furn' ? FURN[t] : null)) return 'Sticker inconnu';
     const av = availability(kind, t);
     if (av && av.hide) return 'Indisponible pour ce château';
@@ -338,44 +383,28 @@ const CMD = {
     const err = removeCheck(r); if (err) return err;
     poof(r.x, r.y, r.w, r.h); removeRoom(r); addLog(`${ROOMS[r.t].name} décollé.`); return null;
   },
+  // renfort de nuit : des bras en plus, payés tout de suite, qui posent leur segment à l'aube (la nuit reste nécessaire)
   push(a) {
-    const r = S.rooms.find(x => x.id === a.id); if (!r || r.built) return 'Ce chantier est terminé'; if (S.gold < 2) return 'Il te faut 2 💰';
-    const d = ROOMS[r.t]; S.gold -= 2; r.prog++;
-    if (r.prog >= d.clock) { r.built = true; roomBuilt(r); dirty(); poof(r.x, r.y, r.w, r.h); addLog(`${d.name} terminé.`, 'good'); }
-    return null;
+    const r = S.rooms.find(x => x.id === a.id); if (!r || r.built) return 'Ce chantier est terminé';
+    if (r.prog + (r.boost || 0) >= ROOMS[r.t].clock) return 'Assez de renforts pour finir ce chantier à l’aube'; if (S.gold < 2) return 'Il te faut 2 💰';
+    S.gold -= 2; r.boost = (r.boost || 0) + 1; return null;
   },
-  pet(a) { const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e'; if (c.pet) return 'Déjà caressé·e cette nuit'; c.pet = 1; c.mood = clamp(c.mood + 1, 0, 5); c.petN = (c.petN || 0) + 1; S.stats.pets++; addLoy(c, 2 + (PW('calins') ? 3 : 0)); return null; },
-  treat(a) { const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e'; if (c.treat) return 'Déjà gâté·e cette nuit'; if (S.gold < 1) return 'Il te faut 1 💰'; S.gold -= 1; c.treat = 1; c.mood = clamp(c.mood + 1, 0, 5); addLoy(c, 2); return null; },
   post(a) {
     const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e';
     if (a.post) { const r = S.rooms.find(x => x.id === a.post); if (!r || !r.built || isHall(r)) return 'Pièce indisponible'; }
     c.post = a.post || null; return null;
   },
   fire(a) { const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e'; S.creatures = S.creatures.filter(x => x !== c); addLog(`${c.name} a été renvoyé·e.`); return null; },
-  reassure(a) { const c = critter(a.id); if (!c || !c.tempt) return 'Pas besoin'; if (c.reassured === S.night) return 'Déjà rassuré·e cette nuit'; c.reassured = S.night; addLoy(c, c.epa >= 50 ? 10 : 6); return null; },
+  // l'envie d'aventure : la seule qui demande une décision (la créature part deux nuits)
   qAccept(a) {
-    const c = critter(a.id), q = c && questOf(c); if (!q || q.st !== 'offered') return 'Plus de demande';
-    if (QT[q.k].away) { if (isOut(c)) return 'Absent·e'; if (S.raid) S.raid.team = S.raid.team.filter(id => id !== c.id); c.raid = true; c.away = q.nights; c.awayUntil = S.night + q.nights; c.post = null; q.st = 'away'; critterLeave(c.id); addLog(`${c.name} part en mission : ${q.title}.`, 'ev'); }
-    else { q.st = 'active'; let ok = false; try { ok = QT[q.k].test(q, c); } catch (e) {} if (ok) q.st = 'done'; }
+    const c = critter(a.id), q = c && questOf(c); if (!q || q.st !== 'ready') return 'Pas d’aventure en vue';
+    if (isOut(c)) return 'Absent·e'; if (S.raid) S.raid.team = S.raid.team.filter(id => id !== c.id);
+    c.raid = true; c.away = q.nights; c.awayUntil = S.night + q.nights; c.post = null; q.st = 'away'; critterLeave(c.id); addLog(`${c.name} part à l’aventure : ${q.title}.`, 'ev');
     return null;
-  },
-  qDecline(a) { const c = critter(a.id), q = c && questOf(c); if (!q || q.st !== 'offered') return 'Plus de demande'; delete c.quest; return null; },
-  qClaim(a) {
-    const c = critter(a.id), q = c && questOf(c); if (!q || q.st !== 'done') return 'Rien à réclamer';
-    const rw = questReward(q); S.gold += rw.g || 0; S.hype += rw.h || 0; addLoy(c, rw.loy || 0);
-    if (q.res === 'fail') c.mood = clamp(c.mood - 1, 0, 5);
-    if (rw.gift) { const k = (SPECIES[c.sp].likes && FURN[SPECIES[c.sp].likes]) ? SPECIES[c.sp].likes : pick(DECOR_ORDER); S.free[k] = (S.free[k] || 0) + 1; }
-    if (rw.rare) S.free.cristal = (S.free.cristal || 0) + 1;
-    gainXP(c, rw.xp || 0);
-    c.questAt = S.night; S.stats.quests++;
-    if (q.k === 'expe') { c.lastExpe = S.night; if (!c.legend) { c.legend = true; S.stats.legends++; addLog(`${c.name} entre dans la légende !`, 'ev'); } }
-    if (q.ch <= 3) c.story = Math.max(c.story || 0, q.ch);
-    addLog(`Mission accomplie : ${q.title} (${c.name}).`, 'good');
-    delete c.quest; return null;
   },
   raidPlan(a) {
     const tg = RAIDS[a.target]; if (!tg) return 'Cible inconnue'; if (tg.tier > S.tier) return `Palier ${tg.tier} requis`;
-    const team = [...new Set(a.team || [])].slice(0, 3).map(critter).filter(c => c && diceOf(c) > 0 && (!isOut(c) || (S.raid && S.raid.team.includes(c.id) && !c.away)));
+    const team = [...new Set(a.team || [])].slice(0, 3).map(critter).filter(c => c && diceOf(c) > 0 && !injured(c) && (!isOut(c) || (S.raid && S.raid.team.includes(c.id) && !c.away)));
     if (!team.length) return 'Personne ne peut partir';
     cancelRaid(); S.raid = { target: a.target, team: team.map(c => c.id) };
     team.forEach(c => { c.raid = true; say(c.id, pick(['En route !', 'On ramène quoi, chef ?', 'Je prends mon sac.']), 1800); critterLeave(c.id); });
@@ -438,7 +467,7 @@ function openRenown() {
   const vr = typeof valRivals === 'function' ? valRivals() : [];
   openModal(`<h2>⭐ Renommée du château</h2>
     <p>Chaque espèce juge ton château : pièces qui lui plaisent, sticker préféré, humeur et épanouissement des siens, ambiance. Plus ta réputation est haute, plus elle vient volontiers… et moins ses membres sont tentés d’aller voir ailleurs.</p>
-    <p class="hint">Une créature peu loyale (moins de 40) peut lorgner vers un château mieux réputé pour son espèce. Elle te prévient une nuit à l’avance : rassure-la, caresse-la, confie-lui une mission. Désertions : ${({ on: 'activées', soft: 'douces', off: 'désactivées' })[S.opts.desert]} (menu ⚙️).</p>
+    <p class="hint">Une créature peu loyale (moins de 40) peut lorgner vers un château mieux réputé pour son espèce. Elle te prévient une nuit à l’avance : comble son envie ou réalise son rêve secret. Désertions : ${({ on: 'activées', soft: 'douces', off: 'désactivées' })[S.opts.desert]} (menu ⚙️).</p>
     <h3>Ta réputation</h3><div class="replist">${known.map(row).join('') || '<p class="hint">Accueille des créatures pour te faire une réputation.</p>'}</div>
     ${unknown.length ? `<p class="hint">${unknown.length} espèce${unknown.length > 1 ? 's' : ''} encore inconnue${unknown.length > 1 ? 's' : ''}.</p>` : ''}
     <h3>Les châteaux rivaux</h3><div class="rivals">${RIVALS.map(r => `<div class="rival"><span class="emo">${r.emo}</span><span><b>${esc(r.name)}</b><br><span class="hint">Tenu par ${esc(r.master)}. Prisé des ${r.likes.map(s => SPECIES[s] ? SPECIES[s].name.toLowerCase() + 's' : s).join(', ')}.</span></span></div>`).join('')}
@@ -459,23 +488,23 @@ Object.assign(WIKI, {
     <p>La réputation rejoint doucement sa visée à chaque aube. Une bonne réputation fait venir l’espèce plus souvent, et retient ceux qui sont déjà là : une créature ne lorgne vers un autre château que s’il reçoit mieux son espèce que toi. Voir {c:desertion} et {c:rivaux}.</p>` },
   loyaute: { cat: 'ames', t: 'Loyauté et épanouissement', x: () => `<p>Chaque créature a deux jauges sur 100, visibles sur sa fiche.</p>
     <ul><li><b>Épanouissement</b> : son bonheur profond. Il suit l’{c:humeur} (un toit, un lit, puis 10 points par cœur), son sticker préféré, un poste dans sa pièce rêvée, un·e ami·e de son espèce, une {c:missions|mission} réussie, une caresse… Il baisse avec la faim, un rival, une demande ignorée.</li>
-    <li><b>Loyauté</b> : son attachement à toi. À chaque aube, elle monte si l’épanouissement dépasse 50 et baisse s’il est en dessous. Caresses, friandises, raids réussis, invasions repoussées et missions accomplies la font grimper d’un coup.</li></ul>
+    <li><b>Loyauté</b> : son attachement à toi. À chaque aube, elle monte si l’épanouissement dépasse 50 et baisse s’il est en dessous. Les envies comblées, les rêves réalisés, les raids réussis et les invasions repoussées la font grimper d’un coup.</li></ul>
     <p>Sous 40 de loyauté, une créature peut être tentée par un château mieux réputé : voir {c:desertion}.</p>` },
   desertion: { cat: 'ames', t: 'Désertions', x: () => `<p>Une créature peu loyale (moins de 40) peut lorgner vers un château qui reçoit mieux son espèce : un {c:rivaux|château rival} du jeu, ou le château d’un autre joueur du {c:val}. Elle prévient toujours <b>une nuit avant</b> (👀 sur son portrait).</p>
-    <ul><li>Pour la retenir : <b>Rassurer</b> depuis sa fiche (une fois par nuit), caresses et friandises, une {c:missions|mission}, améliorer ta {c:reputation}. Le pouvoir <b>Cloche du rappel</b> la retient à coup sûr.</li>
+    <ul><li>Pour la retenir : combler son {c:missions|envie} (+12 à +20 loyauté), réaliser son rêve secret (+25, et elle ne partira plus jamais), ou améliorer ta {c:reputation}. Le pouvoir <b>Cloche du rappel</b> la retient à coup sûr.</li>
     <li>Le risque dépend de sa loyauté, de son épanouissement et de l’écart de réputation. Il n’y a jamais de départ avant la nuit 6, pendant le tutoriel, ni pendant les 4 premières nuits d’une recrue.</li>
     <li>Les diablotins, nés du Cœur, et les créatures entrées dans la légende ne partent jamais.</li></ul>
     <p>Les désertions sont <b>optionnelles</b> : menu ⚙️ → Désertions activées, douces (deux fois moins) ou désactivées. En ligne, une créature qui part pour le château d’un autre joueur frappe vraiment à sa porte !</p>` },
-  missions: { cat: 'ames', t: 'Missions personnelles', x: () => `<p>Dès la nuit 3, tes créatures te confient leurs envies (❗ sur le portrait, et la liste « Missions des créatures » à droite). Chacune a une petite histoire en trois chapitres :</p>
-    <ol><li><b>Chapitre 1</b> : une envie simple (son sticker préféré, des câlins, être aux anges, déco dans sa pièce, un·e ami·e).</li><li><b>Chapitre 2</b> : plus ambitieux (une pièce de plus, un raid réussi, défendre le château…).</li>
-    <li><b>Chapitre 3</b> : une <b>expédition personnelle</b>. La créature part deux nuits accomplir sa quête ; à son retour, ses dés décident du résultat.</li></ol>
-    <p>Accepte depuis sa fiche, puis réclame la récompense quand c’est fait (✨) : or, notoriété, stickers, beaucoup de {c:loyaute|loyauté} et de l’expérience ({c:niveaux}). Après le chapitre 3, la créature devient une <b>légende</b> et repart parfois en expédition. ${questSlots()} missions au plus en même temps.</p>` },
-  niveaux: { cat: 'ames', t: 'Niveaux et légendes', x: () => `<p>Les créatures gagnent de l’expérience avec les missions, les raids réussis et les invasions repoussées.</p>
+  missions: { cat: 'ames', t: 'Envies et rêves secrets', x: () => `<p>Chaque créature déclare une <b>envie</b> (✦ sur sa fiche, et la liste 📜 des envies) : son sticker préféré, un poste dans sa pièce, de la déco, un·e ami·e, une pièce de plus, un raid réussi… Comble-la : la récompense tombe aussitôt (or, notoriété, stickers, {c:loyaute|loyauté}, expérience), sans rien réclamer.</p>
+    <ol><li><b>Chapitres 1 et 2</b> de son histoire : des envies comblées. Une créature n’a pas toujours une envie : une nouvelle se déclare de temps en temps, au plus tôt deux nuits après la précédente.</li><li><b>Chapitre 3</b> : une fois son <b>rêve secret</b> réalisé, l’envie d’<b>aventure</b>, la seule qui demande ta décision. Laisse-la partir deux nuits ; à son retour, ses dés décident du résultat et son histoire entre dans la <b>légende</b> (une légende ne déserte jamais).</li></ol>
+    <p>Chaque créature cache aussi un <b>rêve secret</b> (💭), tiré de son {c:caracteres|caractère} : un lit à baldaquin, un poste rien qu’à elle, un étage de plus… Réalisé, il rapporte gros (+25 loyauté, de l’expérience, un Cristal), et la créature ne songe plus jamais à partir. Pour le découvrir :</p>
+    <ul><li><b>Par hasard</b> : tu le réalises sans le savoir, et la surprise est totale.</li><li><b>Les confidences</b> : à ${PW('calins') ? 65 : 80} de loyauté, elle te le confie.</li><li><b>Les ragots de la Taverne</b> : chaque nuit, une {room:taverne} meublée peut trahir un secret, plus souvent avec des Ménestrels et des bavards.</li><li><b>La diseuse de bonne aventure</b>, à la taverne des villes : contre quelques pièces, elle lit le rêve d’une de tes créatures dans le marc de bière.</li></ul>` },
+  niveaux: { cat: 'ames', t: 'Niveaux et légendes', x: () => `<p>Les créatures gagnent de l’expérience avec leurs envies comblées, les raids réussis et les invasions repoussées.</p>
     <ul>${[2, 3, 4, 5].map(l => `<li><b>Niveau ${l}</b> (${LVL_XP[l]} XP) : ${LVL_PERK[l]}.</li>`).join('')}</ul><p>Une <b>légende</b> (histoire terminée) ne déserte jamais.</p>` },
   hautsfaits: { cat: 'ames', t: 'Hauts faits et pouvoirs', x: () => `<p>Chaque haut fait débloque un <b>pouvoir</b> permanent pour ton château (🏆 à gauche de l’écran). Certains pouvoirs s’activent à la demande, puis se rechargent pendant quelques nuits.</p>
     <ul>${ACH.map(a => `<li><b>${esc(a.name)}</b> : ${esc(a.desc)} → <i>${esc(a.pw)}</i> : ${esc(a.pd)}</li>`).join('')}</ul>` },
   rivaux: { cat: 'ames', t: 'Châteaux rivaux', x: () => `<p>Quatre châteaux voisins tenus par le jeu se disputent les créatures du Val. Leur réputation grandit doucement au fil des nuits :</p>
-    <ul>${RIVALS.map(r => `<li><b>${esc(r.name)}</b>, de ${esc(r.master)} : prisé des ${r.likes.map(s => `{sp:${s}}`).join(', ')}.</li>`).join('')}</ul><p>En ligne, les châteaux des autres joueurs du {c:val} comptent aussi comme rivaux.</p>` },
+    <ul>${RIVALS.map(r => `<li><b>${esc(r.name)}</b>, ${esc(deM(r.master))} : prisé des ${r.likes.map(s => `{sp:${s}}`).join(', ')}.</li>`).join('')}</ul><p>En ligne, les châteaux des autres joueurs du {c:val} comptent aussi comme rivaux.</p>` },
   val: { cat: 'val', t: 'Le Val des Maîtres', x: () => `<p>La version en ligne du jeu (${SITE_URL}) réunit tous les joueurs, sans compte : ta clé de Maître est gardée dans ton navigateur.</p>
     <ul><li><b>Châteaux</b> : la liste des châteaux du Val, qui est en ligne, et un bouton pour les <b>visiter</b> (on regarde, on ne touche pas).</li>
     <li><b>Livre d’or</b> : laisse un mot gentil et un sticker, une fois par jour et par château.</li><li><b>Cadeaux</b> : offre 3 or, 3 matériaux ou un sticker de ta réserve. Un par voisin et trois par jour.</li>
@@ -483,20 +512,22 @@ Object.assign(WIKI, {
     <li><b>Créatures voyageuses</b> : une créature qui {c:desertion|déserte} peut rejoindre le château d’un autre joueur mieux réputé pour son espèce… et inversement !</li><li>Et le {c:partage|château partagé} pour jouer à plusieurs.</li></ul>
     <p class="hint">Tout ce qui est publié dans le Val (nom de Maître, château, mots) est public. Évite d’y mettre ton vrai nom.</p>` },
   partage: { cat: 'val', t: 'Le château partagé', x: () => `<p>Ouvre ton château à 4 amis au plus (🌐 Le Val → Château partagé) : tu obtiens un code à 6 lettres et un lien à leur envoyer.</p>
-    <ul><li>Tout le monde colle des pièces, des meubles et des pièges, caresse les créatures, accepte des missions, prépare des raids. L’hôte vérifie chaque action.</li>
+    <ul><li>Tout le monde colle des pièces, des meubles et des pièges, comble les envies des créatures, prépare des raids. L’hôte vérifie chaque action.</li>
     <li>On voit les curseurs des autres, le sticker qu’ils ont en main, et on peut discuter.</li><li>Les invités cliquent <b>Je suis prêt·e</b> ; l’hôte lance la nuit et chacun voit la chronique.</li>
     <li>La partie se joue dans le château de l’hôte. Les invités retrouvent le leur en partant, et gagnent le haut fait « Main dans la main ».</li></ul>` },
   escarmouches: { cat: 'val', t: 'Escarmouches et boucliers', x: () => `<p>En visite chez un voisin, tu peux lancer une <b>escarmouche</b> : jusqu’à 3 créatures tentent de chaparder un peu d’or. On lance un dé par point de raid de l’équipe, moins un dé par tranche de 6 de défense du château visé (pièges sur le chemin et gardes).</p>
     <ul><li>Réussie : de l’or (selon le palier du voisin) et de la notoriété. Le voisin perd au plus 4 or.</li><li>Ratée : ton équipe rentre vexée, la Menace monte, et le voisin gagne de l’or et de la notoriété.</li>
     <li>Une escarmouche par nuit. Un château visité gagne un <b>bouclier</b> de 12 heures.</li><li>Un château <b>pacifique</b> (case à cocher dans le Val) ne peut ni viser, ni être visé.</li></ul>` },
 });
-// envies et missions dans une fenêtre (sur téléphone, le suivi de droite est masqué)
+// toutes les envies du château dans une fenêtre (sur téléphone, le suivi de droite est masqué)
 function openMissions() {
-  const qs = S.creatures.filter(c => questOf(c)), goals = GOALS.filter(g => !S.goals[g.id]).slice(0, 4);
-  const m = openModal(`<h2>📜 Envies et missions</h2>
-    <h3>Missions des créatures (${qs.length}/${questSlots()})</h3><div class="clist">${qs.map(c => { const q = c.quest, T = QT[q.k], st = q.st === 'offered' ? '❗ nouvelle demande' : q.st === 'done' ? '✨ à réclamer !' : q.st === 'away' ? `🧭 retour nuit ${c.awayUntil}` : `en cours : ${T.prog(q, c)}`;
-      return `<button class="crow" type="button" data-crit="${c.id}"><img class="th" alt="" src="${thumb('char', c.sp)}"><span class="who"><b>${esc(c.name)}</b><span>${T.ico} ${esc(q.title)} · ${esc(st)}</span></span></button>`; }).join('') || `<p class="hint">${S.night < 3 ? 'Tes créatures te confieront leurs envies dès la nuit 3.' : 'Pas de demande en ce moment.'}</p>`}</div>
+  const cs = S.creatures.slice().sort((a, b) => (questOf(b) && questOf(b).st === 'ready' ? 1 : 0) - (questOf(a) && questOf(a).st === 'ready' ? 1 : 0)), goals = GOALS.filter(g => !S.goals[g.id]).slice(0, 4);
+  const row = c => { const q = questOf(c), T = q && QT[q.k], st = !q ? (c.legend ? '🗿 légende' : 'pas d’envie pour l’instant') : q.st === 'ready' ? '🧭 rêve d’aventure : à toi de décider' : q.st === 'away' ? `🧭 en route, retour nuit ${c.awayUntil}` : `${T.ico} ${q.title} · ${T.prog(q, c)}`;
+    const sec = typeof secretLine === 'function' ? secretLine(c) : '';
+    return `<button class="crow" type="button" data-crit="${c.id}"><img class="th" alt="" src="${thumb('char', c.sp)}"><span class="who"><b>${esc(c.name)}</b><span>${esc(st)}</span>${sec ? `<span class="hint" style="display:block">${esc(sec)}</span>` : ''}</span></button>`; };
+  const m = openModal(`<h2>📜 Les envies</h2>
+    <h3>Tes créatures</h3><div class="clist">${cs.map(row).join('') || '<p class="hint">Personne pour l’instant.</p>'}</div>
     <h3>Envies du château</h3><ul class="chron">${goals.map(g => `<li class="ev"><span class="emo">✦</span><span>${esc(g.text)} <span class="hint">→ ${esc(rewardText(g.reward))}</span></span></li>`).join('') || '<li><span>Toutes les envies sont comblées !</span></li>'}</ul>
-    <div class="btnrow"><button class="sbtn" type="button" data-wiki-open="missions">📖 Les missions</button><button class="sbtn" type="button" id="mqLog">Chronique</button></div>`, { wide: true, label: 'Missions' });
+    <div class="btnrow"><button class="sbtn" type="button" data-wiki-open="missions">📖 Envies et rêves secrets</button><button class="sbtn" type="button" id="mqLog">Chronique</button></div>`, { wide: true, label: 'Envies' });
   m.addEventListener('click', e => { const c = e.target.closest('[data-crit]'); if (c) openCreature(c.dataset.crit); else if (e.target.closest('#mqLog')) openJournal(); });
 }

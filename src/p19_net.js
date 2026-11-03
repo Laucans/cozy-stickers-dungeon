@@ -21,6 +21,7 @@ const cleanName = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u
 
 function initNet() {
   if (inClaude()) { NET.why = 'claude'; return; }
+  if (/[?&]horsligne\b/.test(location.search)) { NET.why = 'offline'; return; }   // ?horsligne : jouer (ou tester) sans rien envoyer au Val
   if (!window.NostrTools || !window.WebSocket || !(window.crypto && crypto.subtle) || !window.isSecureContext) { NET.why = 'lib'; return; }
   try {
     let id = null; try { id = JSON.parse(localStorage.getItem(ID_KEY) || 'null'); } catch (e) {}

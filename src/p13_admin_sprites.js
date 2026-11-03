@@ -11,7 +11,7 @@ const ART_OPTS = {
   mouth: [['grin', 'sourire'], ['teeth', 'dents'], ['tusks', 'défenses'], ['fangs', 'crocs'], ['smug', 'moue'], ['o', 'bouche bée']],
   hat: [['', 'aucun'], ['wizard', 'mage'], ['witch', 'sorcière'], ['helmet', 'casque'], ['horned', 'casque à cornes'], ['bucket', 'heaume'], ['hood', 'capuche'], ['straw', 'paille'], ['feather', 'plume'], ['bandana', 'bandana']],
   hairStyle: [['', 'aucune'], ['spiky', 'en pétard'], ['slick', 'plaquée'], ['long', 'longue'], ['wild', 'sauvage']],
-  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche'], ['wand', 'baguette'], ['scarfstaff', 'bâton et écharpe']],
+  item: [['', 'rien'], ['hammer', 'marteau'], ['sack', 'sac'], ['wrench', 'clé'], ['ladle', 'louche'], ['broom', 'balai'], ['lute', 'luth'], ['sword', 'épée'], ['axe', 'hache'], ['bow', 'arc'], ['staff', 'bâton'], ['dagger', 'dague'], ['pitchfork', 'fourche'], ['wand', 'baguette'], ['scarfstaff', 'bâton et écharpe'], ['cutlery', 'couverts et bavoir'], ['seashell', 'coquillage et algues']],
 };
 const COLOR_FIELDS = [['skin', 'Peau', 0], ['body', 'Corps', 0], ['belly', 'Ventre', 1], ['legs', 'Jambes', 1], ['iris', 'Iris', 1], ['hair', 'Cheveux', 1], ['beard', 'Barbe', 1], ['hatc', 'Chapeau', 1], ['cape', 'Cape', 1], ['wings', 'Ailes', 1], ['tail', 'Queue', 1], ['horns', 'Cornes', 1]];
 const STAT_FIELDS = [['guard', 'Garde'], ['dice', 'Dés de raid'], ['eats', 'Mange (rations)'], ['build', 'Travaux / nuit'], ['gold', 'Or / nuit'], ['mat', 'Matériaux / nuit'], ['hype', 'Notoriété / nuit'], ['cal', 'Calamité −'], ['amb', 'Ambiance'], ['trap', 'Bonus pièges']];
@@ -23,7 +23,7 @@ function catItems(cat) {
   if (cat === 'furn') return FURN_ORDER.map(k => ['furn', k, FURN[k].name]);
   if (cat === 'decor') return DECOR_ORDER.map(k => ['furn', k, FURN[k].name]);
   if (cat === 'def') return DEF_ORDER.map(k => ['def', k, DEFS[k].name]);
-  return Object.keys(XDRAW).map(k => ['x', k, { scaffold: 'Échafaudage', tree: 'Chêne', pine: 'Sapin', rock: 'Rocher', bush: 'Buisson', brazier: 'Brasero' }[k] || k]);
+  return Object.keys(XDRAW).map(k => ['x', k, { scaffold: 'Échafaudage', tree: 'Chêne', pine: 'Sapin', rock: 'Rocher', bush: 'Buisson', brazier: 'Brasero', poule: 'Poule', souche: 'Souche', fougere: 'Fougères' }[k] || k]);
 }
 const tableOfKind = kind => kind === 'char' ? 'SPECIES' : kind === 'hero' ? 'HEROES' : kind === 'furn' ? 'FURN' : kind === 'def' ? 'DEFS' : null;
 
@@ -86,7 +86,7 @@ function renderSpriteDetail() {
       ${fld('DEFS', key, 'needs', 'Pièce requise', 'sel', { opts: optsOf(ROOMS, '(aucune)') })}${fld('DEFS', key, 'tier', 'Palier requis', 'num', { min: 0, max: 3 })}${fld('DEFS', key, 'cost.g', 'Coût en or', 'num', { min: 0 })}${fld('DEFS', key, 'cost.s', 'Coût en matériaux', 'num', { min: 0 })}
       ${fld('DEFS', key, 'sticky', 'Collant (+1 à la rencontre suivante)', 'bool')}${fld('DEFS', key, 'alarm', 'Alarme (+1 garde au Cœur)', 'bool')}${fld('DEFS', key, 'unique', 'Unique', 'bool')}${fld('DEFS', key, 'desc', 'Description', 'area')}</div>
       <div class="btnrow"><button type="button" class="sbtn" data-act="give" data-arg="${key}">+3 stickers gratuits</button><button type="button" class="sbtn" data-act="resetD" data-arg="${key}">Réinitialiser</button></div>`;
-  } else html += `<h2>Décor extérieur <small class="hint">« ${esc(key)} »</small></h2><p class="hint">Décor posé automatiquement autour des remparts (arbres, rochers, braseros du porche, échafaudage des chantiers). Pas de statistiques.</p>`;
+  } else html += `<h2>Décor extérieur <small class="hint">« ${esc(key)} »</small></h2><p class="hint">Décor posé automatiquement autour des remparts (arbres, rochers, braseros du porche, échafaudage des chantiers, souches et fougères de la forêt des Jardins, poules du poulailler). Pas de statistiques.</p>`;
   box.innerHTML = html;
   startPreview($('#admPrev'), kind, key);
   ADMIN.onApply = () => { document.querySelectorAll('.spc.on img').forEach(i => { i.src = thumb(ADMIN.sel.kind, ADMIN.sel.key); }); };

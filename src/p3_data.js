@@ -10,8 +10,11 @@ let W = 12, H = 12;
 const GATE = { x: 6, y: 11 };
 // étages : un nouvel étage par palier, vers le haut (les Hauteurs, les Cimes) ou vers le bas (les Caves, les Profondeurs)
 const DEPTH_MAX = 2, HEIGHT_MAX = 2;
-const FLOOR_NAMES = { 2: 'Les Cimes', 1: 'Les Hauteurs', 0: 'Rez-de-chaussée', '-1': 'Les Caves', '-2': 'Les Profondeurs' };
-const FLOOR_SHORT = { 2: 'Cimes', 1: 'Hauteurs', 0: 'Rez', '-1': 'Caves', '-2': 'Profondeurs' };
+// les Jardins : dehors, derrière les remparts. Ce n'est pas un étage (pas d'escalier) : on y sort par le portillon
+const EXT = 9;
+const FLOOR_NAMES = { 9: 'Les Jardins', 2: 'Les Cimes', 1: 'Les Hauteurs', 0: 'Rez-de-chaussée', '-1': 'Les Caves', '-2': 'Les Profondeurs' };
+const FLOOR_SHORT = { 9: 'Dehors', 2: 'Cimes', 1: 'Hauteurs', 0: 'Rez', '-1': 'Caves', '-2': 'Profondeurs' };
+const zOK = z => Number.isInteger(z) && ((z >= -DEPTH_MAX && z <= HEIGHT_MAX) || z === EXT);
 const HEART = { x: 5, y: 1, w: 2, h: 2 };
 let CAL_MAX = 8, MENACE_MAX = 6;
 const CONSTS = { START_GOLD: 10, START_MAT: 8, WORK: 2 };
@@ -26,33 +29,35 @@ const ROOMS = {
   coeur:    { name: 'Cœur du château', size: [2,2], fixed: true, floor: 'magic', color: '#7b52b8', gold: 2, beds: 2, food: 3,
               desc: 'Le cristal qui fait battre ton château. Si des héros l’atteignent, ils pillent ton or. Les créatures sans poste le défendent.' },
   dortoir:  { name: 'Dortoir', size: [3,2], cost: { g: 3, s: 3 }, clock: 4, floor: 'straw', color: '#b9a4e6',
-              furn: ['paillasse','litsup','baldaquin','coffre'], attracts: ['gobelin'], desc: 'Pose des lits pour loger tes créatures. Attire les Gobelins.' },
+              furn: ['paillasse','litsup','baldaquin','coffre','grandlit'], attracts: ['gobelin'], desc: 'Pose des lits pour loger tes créatures. Attire les Gobelins.' },
   cuisine:  { name: 'Cuisine', size: [2,2], cost: { g: 3, s: 2 }, clock: 4, floor: 'checker', color: '#f2c48d',
-              furn: ['chaudron','tonneau','jambons'], syn: { adj: 'taverne', food: 2 }, attracts: ['troll'],
+              furn: ['chaudron','tonneau','jambons','broche','banquet'], syn: { adj: 'taverne', food: 2 }, attracts: ['troll'],
               desc: 'Nourrit ton petit monde. +2 repas si elle touche la Taverne. Attire les Trolls (Palier 1).' },
-  potager:  { name: 'Potager', size: [2,2], cost: { g: 2, s: 2 }, clock: 4, floor: 'garden', open: true, color: '#9ccc7c',
-              furn: ['choux','champis','epouvantail'], attracts: ['crapaud'], desc: 'Un carré de verdure à ciel ouvert. Attire les Crapauds.' },
-  taverne:  { name: 'Taverne', size: [3,3], cost: { g: 5, s: 4 }, clock: 6, floor: 'wood', color: '#e0a96d', amb: 1,
-              furn: ['biere','tablee','scene'], attracts: ['menestrel'], desc: 'Le cœur social du château. +1 Ambiance. Attire les Ménestrels.' },
-  atelier:  { name: 'Atelier', size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'wood', color: '#d9b38c',
-              furn: ['etabli','caisse'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Attire les Kobolds.' },
+  potager:  { name: 'Potager', size: [2,2], cost: { g: 2, s: 2 }, clock: 4, floor: 'garden', open: true, color: '#9ccc7c', syn: { adj: 'cuisine', food: 1 },
+              furn: ['choux','champis','epouvantail','serre'], attracts: ['crapaud'], desc: 'Un carré de verdure à ciel ouvert. Attire les Crapauds.' },
+  taverne:  { name: 'Taverne', size: [3,3], cost: { g: 5, s: 4 }, clock: 6, floor: 'wood', color: '#e0a96d', amb: 1, syn: { adj: 'dortoir', amb: 1 },
+              furn: ['biere','tablee','scene','comptoir','piste'], attracts: ['menestrel'], desc: 'Le cœur social du château. +1 Ambiance. Attire les Ménestrels.' },
+  atelier:  { name: 'Atelier', size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'wood', color: '#d9b38c', syn: { adj: 'tour', harass: 1 },
+              furn: ['etabli','caisse','pedale'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Attire les Kobolds.' },
   tour:     { name: 'Tour de guet', size: [2,2], cost: { g: 3, s: 3 }, clock: 4, edge: true, floor: 'flag', color: '#a8c6e8', harass: 1,
-              furn: ['longuevue','perchoir'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Les héros arrivent déjà fatigués. Attire les Gargouilles.' },
-  bibli:    { name: 'Bibliothèque', tier: 1, size: [3,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'carpet', color: '#c27a5a',
-              furn: ['etagere','pupitre','fauteuil'], attracts: ['fantome'], desc: 'Grimoires poussiéreux et fauteuils qui grincent. Attire les Fantômes.' },
-  labo:     { name: 'Laboratoire', tier: 1, size: [2,2], cost: { g: 5, s: 3 }, clock: 6, floor: 'checker', color: '#8fd6c6',
-              furn: ['alambic','marmite','fioles'], attracts: ['sorciere'], desc: 'Potions calmantes et fumées suspectes. Attire les Sorcières.' },
-  caveau:   { name: 'Caveau', tier: 1, size: [2,2], cost: { g: 5, s: 5 }, clock: 8, far: 5, floor: 'flag', color: '#a99fc0',
-              furn: ['cercueil','ossuaire'], attracts: ['squelette'], desc: 'Au calme, loin du porche (5 pas minimum). Attire les Squelettes.' },
+              furn: ['longuevue','perchoir','catapulte'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Les héros arrivent déjà fatigués. Attire les Gargouilles.' },
+  bibli:    { name: 'Bibliothèque', tier: 1, size: [3,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'carpet', color: '#c27a5a', syn: { adj: 'salon', amb: 2 },
+              furn: ['etagere','pupitre','fauteuil','rayonnage','globe'], attracts: ['fantome'], desc: 'Grimoires poussiéreux et fauteuils qui grincent. Attire les Fantômes.' },
+  labo:     { name: 'Laboratoire', tier: 1, size: [2,2], cost: { g: 5, s: 3 }, clock: 6, floor: 'checker', color: '#8fd6c6', syn: { adj: 'bibli', cal: 1 },
+              furn: ['alambic','marmite','fioles','athanor'], attracts: ['sorciere'], desc: 'Potions calmantes et fumées suspectes. Attire les Sorcières.' },
+  caveau:   { name: 'Caveau', tier: 1, size: [2,2], cost: { g: 5, s: 5 }, clock: 8, far: 5, floor: 'flag', color: '#a99fc0', syn: { adj: 'oubliettes', guard: 1 },
+              furn: ['cercueil','ossuaire','sarcophage'], attracts: ['squelette'], desc: 'Au calme, loin du porche (5 pas minimum). Attire les Squelettes.' },
+  forgeancetres: { name: 'Forge des Ancêtres', unique: true, saga: true, like: 'forge', size: [2,2], cost: { g: 8, s: 8 }, clock: 6, floor: 'flag', color: '#ff9a5c', gold: 3, guard: 2, amb: 1, preset: ['hautfourneau','enclume'],
+              attracts: ['orque'], desc: 'Rallumée par un orque au bout d’une longue intrigue. +3 💰 chaque nuit et 2 de garde : le feu des anciens ne s’éteint jamais.' },
   forge:    { name: 'Forge', tier: 1, size: [2,2], cost: { g: 6, s: 6 }, clock: 8, floor: 'flag', color: '#f2a477',
-              furn: ['enclume','fourneau','ratelier'], syn: { adj: 'atelier', gold: 2 }, attracts: ['orque'],
+              furn: ['enclume','fourneau','ratelier','hautfourneau','pilon'], syn: { adj: 'atelier', gold: 2 }, attracts: ['orque'],
               desc: '+2 💰 si elle touche l’Atelier. Attire les Orques.' },
-  oubliettes: { name: 'Oubliettes', tier: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, far: 4, floor: 'flag', color: '#9aa1ad',
+  oubliettes: { name: 'Oubliettes', tier: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, far: 4, floor: 'flag', color: '#9aa1ad', syn: { adj: 'tour', cells: 1 },
               furn: ['cage','chaines'], desc: 'Les héros repoussés y finissent. Chaque prisonnier rapporte 4 💰 de rançon à l’aube.' },
-  tresor:   { name: 'Salle au trésor', tier: 2, size: [2,2], cost: { g: 8, s: 6 }, clock: 8, far: 7, floor: 'checker', color: '#f5d76e',
-              furn: ['tasdor','coffreor'], attracts: ['dragonnet','mimique'], desc: 'Tout au fond (7 pas du porche). Attire Dragonnets et Mimiques.' },
+  tresor:   { name: 'Salle au trésor', tier: 2, size: [2,2], cost: { g: 8, s: 6 }, clock: 8, far: 7, floor: 'checker', color: '#f5d76e', syn: { adj: 'trone', gold: 2 },
+              furn: ['tasdor','coffreor','montagnedor'], attracts: ['dragonnet','mimique'], desc: 'Tout au fond (7 pas du porche). Attire Dragonnets et Mimiques.' },
   salon:    { name: 'Salon pourpre', tier: 2, size: [3,2], cost: { g: 6, s: 4 }, clock: 6, floor: 'carpet', color: '#d9779a', amb: 1,
-              furn: ['canape','orgue','candelabre'], attracts: ['vampire'], desc: 'Velours, chandelles et orgue lugubre. Attire les Vampires.' },
+              furn: ['canape','orgue','candelabre','lustre'], attracts: ['vampire'], desc: 'Velours, chandelles et orgue lugubre. Attire les Vampires.' },
   trone:    { name: 'Salle du trône', tier: 2, unique: true, size: [3,3], cost: { g: 12, s: 10 }, clock: 8, far: 6, floor: 'carpet', color: '#c8413a', hype: 1,
               furn: ['trone','banniere'], desc: 'Ton siège de Maître. Loin du porche (6 pas). Requise pour le Palier 3.' },
   // pièces de thème : livrées meublées
@@ -63,7 +68,7 @@ const ROOMS = {
   planque:  { name: 'Planque', theme: 'repaire', unique: true, size: [2,2], cost: { g: 4, s: 3 }, clock: 6, floor: 'wood', color: '#c9cf86',
               dice: 1, mat: 1, preset: ['caisse','coffre'], desc: 'Pièce de thème, livrée meublée. +1 dé aux raids, +1 🪵 par nuit.' },
   garde:    { name: 'Corps de garde', theme: 'bastion', unique: true, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'flag', color: '#b5c4d6',
-              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits, −3 courage aux héros qui la traversent.' },
+              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; ses râteliers font 3 dégâts au premier héros qui y entre.' },
   observatoire: { name: 'Observatoire', theme: 'enclave', unique: true, size: [2,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'magic', color: '#8f9fe8',
               amb: 2, hype: 1, dice: 1, preset: ['longuevue','cristal'], desc: 'Pièce de thème, livrée meublée. +2 Ambiance, +1 🔥, +1 dé aux raids.' },
   // sous le château : un escalier ouvre l'étage du dessous (les héros n'y descendent jamais)
@@ -76,15 +81,26 @@ const ROOMS = {
   voliere:  { name: 'Volière', high: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'straw', color: '#d8c08a',
               furn: ['nid','mangeoire'], attracts: ['harpie','gargouille'], desc: 'En hauteur seulement. Le royaume des créatures ailées. Attire la Harpie mélomane (rare) et les Gargouilles.' },
   belvedere: { name: 'Belvédère', high: 2, size: [2,2], cost: { g: 6, s: 5 }, clock: 8, floor: 'flag', open: true, color: '#a8c6e8', harass: 2, sight: 2,
-              furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et les héros reçoivent des cailloux dès l’approche (−2 courage).' },
+              furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et les héros reçoivent des cailloux dès l’approche (2 dégâts répartise).' },
   mine:     { name: 'Mine', deep: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'rock', color: '#a08a6a', mat: 2,
               furn: ['wagonnet','filon','etai'], attracts: ['golem'], desc: 'Sous terre seulement. +2 🪵 par nuit, plus avec ses filons. Attire le Golem de mousse, une créature rare.' },
   reliquaire: { name: 'Reliquaire', deep: 1, size: [3,2], cost: { g: 8, s: 5 }, clock: 8, floor: 'carpet', color: '#c9a2e8', amb: 1,
               furn: ['vitrine','socle'], attracts: ['liche'], desc: 'Sous terre seulement. Les artefacts exposés ici rayonnent moitié plus. Attire la Liche frileuse, une créature rare.' },
   lac:      { name: 'Lac souterrain', deep: 2, size: [3,3], cost: { g: 6, s: 6 }, clock: 8, floor: 'water', color: '#5aa0c8', amb: 2, cal: 1,
               furn: ['nenuphar','barque'], attracts: ['crapaud'], desc: 'Dans les Profondeurs seulement. Une eau noire et paisible : −1 Calamité, +2 Ambiance, du poisson aveugle au menu. Les Crapauds adorent.' },
+  // dehors : les Jardins, derrière les remparts (on les agrandit en achetant la forêt)
+  poulailler: { name: 'Poulailler', out: true, border: 'fence', size: [3,2], cost: { g: 4, s: 4 }, clock: 4, floor: 'dirt', color: '#d9b77a', food: 1,
+              furn: ['nichoir','grain','juchoir'], attracts: ['cocatrice'], desc: 'Dehors seulement. Des poules, des œufs (+1 repas) et beaucoup de caquetage. Attire la Cocatrice.' },
+  simples:  { name: 'Jardin des simples', out: true, border: 'hedge', size: [3,3], cost: { g: 5, s: 3 }, clock: 6, floor: 'garden', open: true, color: '#a6d48a', cal: 1,
+              furn: ['herbes','melon','arrosoir'], attracts: ['mandragore','sorciere'], desc: 'Dehors seulement. Des herbes qui soignent et des racines qui crient : −1 Calamité. Attire la Mandragore (et les Sorcières).' },
+  maresacree: { name: 'Mare sacrée', out: true, border: 'none', unique: true, saga: true, like: 'mare', size: [2,2], cost: { g: 6, s: 3 }, clock: 4, floor: 'water', color: '#5fd0b8', amb: 3, cal: 2, preset: ['nenuphar','roseaux'],
+              attracts: ['nixe','crapaud'], desc: 'Née du Chant de la Grande Mare. +3 Ambiance et −2 Calamité chaque nuit. Les crapauds y chantent enfin juste.' },
+  mare:     { name: 'Mare', out: true, border: 'none', size: [2,2], cost: { g: 4, s: 2 }, clock: 4, floor: 'water', color: '#6fb0c8', amb: 1,
+              furn: ['roseaux','ponton'], attracts: ['nixe','crapaud'], desc: 'Dehors seulement. Coâ. +1 Ambiance. Attire la Nixe des marais (et les Crapauds).' },
+  cimetiere: { name: 'Petit cimetière', out: true, border: 'grille', tier: 1, size: [3,3], cost: { g: 6, s: 5 }, clock: 6, floor: 'dirt', color: '#9a9aa8', hype: 1,
+              furn: ['tombe','saule','mausolee'], attracts: ['goule','squelette'], desc: 'Dehors seulement. Des tombes très mal entretenues : +1 🔥. Attire la Goule gourmette (et les Squelettes).' },
 };
-const ROOM_ORDER = ['couloir','dortoir','cuisine','potager','taverne','atelier','tour','fonderie','chapelle','planque','garde','observatoire','bibli','labo','caveau','forge','oubliettes','tresor','salon','trone','escalier','mine','reliquaire','lac','montee','jardin','voliere','belvedere'];
+const ROOM_ORDER = ['couloir','dortoir','cuisine','potager','taverne','atelier','tour','fonderie','chapelle','planque','garde','observatoire','bibli','labo','caveau','forge','oubliettes','tresor','salon','trone','escalier','mine','reliquaire','lac','montee','jardin','voliere','belvedere','poulailler','simples','mare','cimetiere'];
 
 // meubles (room = pièce autorisée) et déco (room: 'any')
 const FURN = {
@@ -154,6 +170,39 @@ const FURN = {
   mangeoire:  { name: 'Mangeoire', room: 'voliere', cost: { g: 1 }, food: 1, amb: 1 },
   girouette:  { name: 'Girouette', room: 'belvedere', cost: { g: 2, s: 1 }, harass: 1 },
   lanterne:   { name: 'Lanterne de guet', room: 'belvedere', cost: { g: 2 }, amb: 1, sight: 1 },
+  // stickers améliorés : seulement dans une grande salle (2 pièces du même type collées) ou une salle immense (3 et plus)
+  grandlit:     { name: 'Grand lit commun', room: 'dortoir', size: 2, cost: { g: 4, s: 2 }, beds: 4, amb: 1 },
+  broche:       { name: 'Broche à rôtir géante', room: 'cuisine', size: 2, cost: { g: 4, s: 2 }, food: 5 },
+  banquet:      { name: 'Table du banquet', room: 'cuisine', size: 3, cost: { g: 6, s: 3 }, food: 7, amb: 2 },
+  serre:        { name: 'Petite serre', room: 'potager', size: 2, cost: { g: 3, s: 2 }, food: 4 },
+  comptoir:     { name: 'Comptoir en chêne', room: 'taverne', size: 2, cost: { g: 4, s: 3 }, gold: 2, amb: 1 },
+  piste:        { name: 'Piste de danse', room: 'taverne', size: 3, cost: { g: 6, s: 2 }, amb: 3, hype: 2 },
+  pedale:       { name: 'Établi à pédale', room: 'atelier', size: 2, cost: { g: 3, s: 3 }, mat: 3 },
+  rayonnage:    { name: 'Rayonnage géant', room: 'bibli', size: 2, cost: { g: 4 }, hype: 2, amb: 1 },
+  globe:        { name: 'Globe céleste', room: 'bibli', size: 3, cost: { g: 6, s: 2 }, hype: 3, dice: 1 },
+  athanor:      { name: 'Athanor', room: 'labo', size: 2, cost: { g: 4, s: 2 }, cal: 2 },
+  hautfourneau: { name: 'Haut fourneau', room: 'forge', size: 2, cost: { g: 5, s: 4 }, gold: 2, mat: 1 },
+  pilon:        { name: 'Marteau-pilon', room: 'forge', size: 3, cost: { g: 7, s: 5 }, gold: 3, mat: 3 },
+  sarcophage:   { name: 'Sarcophage', room: 'caveau', size: 2, cost: { g: 3, s: 2 }, beds: 2, amb: 1 },
+  montagnedor:  { name: 'Montagne d’or', room: 'tresor', size: 2, cost: { g: 10 }, gold: 4 },
+  lustre:       { name: 'Grand lustre', room: 'salon', size: 2, cost: { g: 5, s: 1 }, amb: 4 },
+  catapulte:    { name: 'Catapulte à cailloux', room: 'tour', size: 2, cost: { g: 4, s: 4 }, harass: 3 },
+  // dehors
+  nichoir:    { name: 'Nichoir à poules', room: 'poulailler', cost: { g: 1 }, food: 1 },
+  grain:      { name: 'Sac de grain', room: 'poulailler', cost: { g: 1 }, food: 1 },
+  juchoir:    { name: 'Juchoir', room: 'poulailler', cost: { g: 1, s: 1 }, amb: 1 },
+  herbes:     { name: 'Carré d’herbes', room: 'simples', cost: { g: 1 }, cal: 1 },
+  melon:      { name: 'Cloches à melon', room: 'simples', cost: { g: 2 }, food: 2 },
+  arrosoir:   { name: 'Arrosoir', room: 'simples', cost: { g: 1 }, amb: 1 },
+  roseaux:    { name: 'Roseaux', room: 'mare', cost: { g: 1 }, amb: 1 },
+  ponton:     { name: 'Ponton de pêche', room: 'mare', cost: { g: 2, s: 2 }, food: 2 },
+  tombe:      { name: 'Pierre tombale', room: 'cimetiere', cost: { g: 1, s: 1 }, hype: 1 },
+  saule:      { name: 'Saule pleureur', room: 'cimetiere', cost: { g: 2 }, amb: 2 },
+  mausolee:   { name: 'Mausolée', room: 'cimetiere', cost: { g: 3, s: 3 }, beds: 2 },
+  // déco d'extérieur : sur l'herbe des Jardins
+  banc:       { name: 'Banc moussu', room: 'any', out: true, cost: { g: 1, s: 1 }, amb: 1 },
+  puits:      { name: 'Puits à souhaits', room: 'any', out: true, cost: { g: 2, s: 2 }, amb: 1, cal: 1 },
+  nain:       { name: 'Nain de jardin maléfique', room: 'any', out: true, cost: { g: 2 }, amb: 2 },
   // artefacts : trouvés, pillés, achetés… jamais en vente dans la barre. Ils font rayonner le château.
   couronne:     { name: 'Couronne du Roi Gobelin', room: 'any', artefact: true, glow: 8, hype: 1, repSp: 'gobelin', desc: 'Un peu trop grande, un peu cabossée. Les gobelins se prosternent devant elle.' },
   epeefaux:     { name: 'Épée qui chante faux', room: 'any', artefact: true, glow: 6, dice: 1, desc: 'Elle fredonne en combat. Faux. Les ennemis en perdent leurs moyens.' },
@@ -167,29 +216,50 @@ const FURN = {
   baton:        { name: 'Bâton de l’archimage distrait', room: 'any', artefact: true, glow: 7, cal: 1, amb: 1, desc: 'Son propriétaire le cherche encore. Il a oublié où il l’a posé.' },
   harpe:        { name: 'Harpe ensorcelée', room: 'any', artefact: true, glow: 6, amb: 2, repSp: 'fee', desc: 'Elle joue toute seule des berceuses. Les fées adorent.' },
   sablier:      { name: 'Sablier à l’envers', room: 'any', artefact: true, glow: 7, gold: 1, desc: 'Le sable remonte. Le temps, c’est de l’argent : il en rapporte.' },
+  // trésors uniques, gagnés au bout d'une intrigue : on ne les trouve nulle part ailleurs
+  violon:        { name: 'Violon d’os', room: 'any', artefact: true, saga: true, glow: 9, amb: 3, hype: 1, desc: 'Il joue tout seul la gigue des os. Impossible de rester assis.' },
+  chaudronmamie: { name: 'Chaudron de Mamie Troll', room: 'any', artefact: true, saga: true, glow: 7, food: 5, amb: 1, desc: 'La soupe de Mamie : il y en a toujours assez pour tout le monde, et un peu plus.' },
 };
 const FURN_ORDER = Object.keys(FURN).filter(k => FURN[k].room !== 'any' && !FURN[k].hidden);
 const DECOR_ORDER = Object.keys(FURN).filter(k => FURN[k].room === 'any' && !FURN[k].artefact);
-const ARTEFACTS = Object.keys(FURN).filter(k => FURN[k].artefact);
+const ARTEFACTS = Object.keys(FURN).filter(k => FURN[k].artefact && !FURN[k].saga);
+// des pièces qui ne supportent pas d'être au même étage : il faut choisir, ou monter (descendre) d'un étage
+const ROOM_CLASH = [
+  ['taverne', 'bibli', 'le vacarme des chopes contre le silence des grimoires'],
+  ['cuisine', 'labo', 'une potion dans la soupe, plus jamais'],
+  ['forge', 'potager', 'la fumée grille les choux'],
+  ['caveau', 'taverne', 'les morts veulent dormir, eux'],
+  ['tresor', 'oubliettes', 'les prisonniers lorgnent l’or'],
+  ['salon', 'forge', 'la suie sur le velours'],
+];
+const TREASURES = Object.keys(FURN).filter(k => FURN[k].artefact);   // avec les trésors d'intrigue
+// évolutions : au bout d'une intrigue, une créature devient unique
+const EVOS = {
+  roi:       { title: 'Roi des Égouts', guard: 2, dice: 1, gold: 2, look: 'crown', desc: '+2 garde, +1 dé, et un tribut de 2 💰 chaque nuit.' },
+  lunenoire: { title: 'Sorcière de la Lune Noire', guard: 1, dice: 2, cal: 1, look: 'moon', desc: '+1 garde, +2 dés en raid, −1 Calamité chaque nuit.' },
+  spectre:   { title: 'Spectre du Grand Bal', guard: 2, hype: 2, amb: 2, look: 'aura', desc: '+2 garde, +2 🔥 et +2 Ambiance chaque nuit.' },
+};
 
 // défenses posées dans les couloirs
 const DEFS = {
-  porte:   { name: 'Porte cloutée', kind: 'verrou', str: 2, cost: { g: 1, s: 2 }, desc: 'Verrou : les héros perdent 2 courage à l’enfoncer.' },
-  banane:  { name: 'Peau de banane géante', kind: 'piège', str: 1, sticky: true, cost: { g: 1, s: 1 }, desc: 'Piège : −1 courage, et la rencontre suivante fait +1 (ils sont encore par terre).' },
-  trappe:  { name: 'Trappe à pics', kind: 'piège', str: 3, needs: 'atelier', cost: { g: 2, s: 2 }, desc: 'Piège : −3 courage. Nécessite un Atelier.' },
-  sphinx:  { name: 'Sphinx empaillé', kind: 'verrou', str: 2, lost: 0.3, tier: 1, cost: { g: 3, s: 1 }, desc: 'Verrou à énigme : −2 courage, et 30 % de chances que les héros sèchent et rentrent chez eux.' },
-  hache:   { name: 'Hache pendulaire', kind: 'piège', str: 4, needs: 'atelier', tier: 1, cost: { g: 3, s: 3 }, desc: 'Piège : −4 courage. Nécessite un Atelier.' },
-  leurre:  { name: 'Faux trésor', kind: 'ruse', str: 1, lost: 0.4, needs: 'bibli', cost: { g: 2, s: 1 }, desc: 'Ruse : −1 courage, 40 % de chances que les héros repartent avec le faux butin. Nécessite une Bibliothèque.' },
+  porte:   { name: 'Porte cloutée', kind: 'verrou', str: 2, cost: { g: 1, s: 2 }, desc: 'Verrou : 2 dégâts au héros qui l’enfonce (moitié moins pour un barbare).' },
+  banane:  { name: 'Peau de banane géante', kind: 'piège', str: 1, sticky: true, cost: { g: 1, s: 1 }, desc: 'Piège : 1 dégât, et la rencontre suivante frappe +1 (ils sont encore par terre).' },
+  trappe:  { name: 'Trappe à pics', kind: 'piège', str: 3, needs: 'atelier', cost: { g: 2, s: 2 }, desc: 'Piège : 3 dégâts à un héros. Nécessite un Atelier.' },
+  sphinx:  { name: 'Sphinx empaillé', kind: 'verrou', str: 2, lost: 0.3, tier: 1, cost: { g: 3, s: 1 }, desc: 'Verrou à énigme : 2 dégâts, et 30 % de chances que les héros sèchent et rentrent chez eux.' },
+  hache:   { name: 'Hache pendulaire', kind: 'piège', str: 4, needs: 'atelier', tier: 1, cost: { g: 3, s: 3 }, desc: 'Piège : 4 dégâts à un héros. Nécessite un Atelier.' },
+  leurre:  { name: 'Faux trésor', kind: 'ruse', str: 1, lost: 0.4, needs: 'bibli', cost: { g: 2, s: 1 }, desc: 'Ruse : 1 dégât, 40 % de chances que les héros repartent avec le faux butin. Nécessite une Bibliothèque.' },
   cloche:  { name: 'Cloche d’alarme', kind: 'ruse', str: 0, alarm: true, unique: true, cost: { g: 2, s: 1 }, desc: 'Ruse : quand les héros la franchissent, chaque créature libre gagne +1 en garde au Cœur.' },
+  grandpiege: { name: 'Le Grand Piège', kind: 'piège', str: 6, sticky: true, unique: true, saga: true, cost: { g: 2, s: 2 }, desc: 'Inventé par un kobold de génie au bout d’une longue intrigue : −6 PV, et la victime reste sonnée (+1 à la rencontre suivante). Unique.' },
+  barricade: { name: 'Barricade', kind: 'mur', str: 0, block: true, cost: { g: 1, s: 3 }, desc: 'Mur : les héros ne passent pas par ce couloir. Force-les à faire un détour par tes pièges et tes gardes (il faut toujours leur laisser un chemin jusqu’au Cœur).' },
 };
 const DEF_ORDER = Object.keys(DEFS);
 
 const THEMES = {
-  forge:   { name: 'Château-forge', emo: '🔥', room: 'fonderie', desc: 'Les pièces coûtent 1 🪵 de moins.' },
-  temple:  { name: 'Abbaye maudite', emo: '🕯️', room: 'chapelle', desc: 'Chaque nuit, la Calamité monte d’un cran de moins.' },
-  repaire: { name: 'Repaire de brigands', emo: '🗝️', room: 'planque', desc: '+1 dé à tous les raids.' },
-  bastion: { name: 'Forteresse têtue', emo: '🛡️', room: 'garde', desc: 'Tes verrous gagnent +1 en force.' },
-  enclave: { name: 'Tour arcanique', emo: '🔮', room: 'observatoire', desc: '+3 Ambiance, et les créatures viennent plus volontiers.' },
+  forge:   { name: 'Château-forge', emo: '🔥', room: 'fonderie', desc: 'Les pièces coûtent 1 🪵 de moins.', look: 'Basalte, plaques de fer rivetées et joints de braise' },
+  temple:  { name: 'Abbaye maudite', emo: '🕯️', room: 'chapelle', desc: 'Chaque nuit, la Calamité monte d’un cran de moins.', look: 'Pierre blanche, grandes dalles et toits d’ardoise violette' },
+  repaire: { name: 'Repaire de brigands', emo: '🗝️', room: 'planque', desc: '+1 dé à tous les raids.', look: 'Palissade de rondins, terre battue et toits de chaume' },
+  bastion: { name: 'Forteresse têtue', emo: '🛡️', room: 'garde', desc: 'Tes verrous gagnent +1 en force.', look: 'Granit gris, planchers de bois et tours rouges' },
+  enclave: { name: 'Tour arcanique', emo: '🔮', room: 'observatoire', desc: '+3 Ambiance, et les créatures viennent plus volontiers.', look: 'Pierre bleue gravée de runes, carreaux étoilés' },
 };
 
 // tags de raid : pillage, ruse, combat, magie
@@ -233,6 +303,15 @@ const SPECIES = {
     lines: ['Mille ans de non-vie, et toujours ce courant d’air.', 'Tu n’aurais pas une bouillotte ?', 'Mes artefacts. MES artefacts. Bon, d’accord : tes artefacts.'] },
   harpie:    { name: 'Harpie mélomane', from: 'voliere', rare: true, tier: 1, glow: 45, site: 'pic', hype: 1, amb: 1, guard: 2, dice: 2, tag: 'ruse', likes: 'mangeoire', rival: 'gargouille', skill: 'Chant perçant', sd: '+1 🔥 et +1 Ambiance par nuit, 2 dés de ruse. Elle chante faux, mais très fort.',
     lines: ['Laaaaa ! Pardon, je m’échauffais.', 'Les gargouilles n’ont aucune oreille musicale.', 'Une mangeoire bien garnie, et je fais les chœurs.'] },
+  // dehors : les créatures des Jardins
+  cocatrice: { name: 'Cocatrice', from: 'poulailler', food: 1, guard: 2, dice: 1, tag: 'ruse', likes: 'grain', rival: 'gargouille', skill: 'Œil pétrifiant (myope)', sd: '+1 repas par nuit (ses œufs). Garde 2 : elle pétrifie les héros… quand elle les voit.',
+    lines: ['Je t’ai pétrifié ? Non ? Approche un peu, je vois flou.', 'Cot cot. Sssss. Cot.', 'La gargouille dit qu’elle était déjà en pierre. Menteuse.'] },
+  mandragore: { name: 'Mandragore', from: 'simples', tier: 1, cal: 1, hype: 1, guard: 1, dice: 1, tag: 'magie', likes: 'arrosoir', skill: 'Cri qui décoiffe', sd: '−1 Calamité et +1 🔥 par nuit : on entend son cri jusqu’au village.',
+    lines: ['AAAAAAH ! Pardon. Bonjour.', 'Arrose-moi, mais pas sur les feuilles.', 'Les sorcières veulent toutes me mettre dans une soupe.'] },
+  nixe:      { name: 'Nixe des marais', from: 'mare', tier: 1, amb: 2, guard: 1, dice: 2, tag: 'magie', likes: 'roseaux', rival: 'troll', skill: 'Chant de l’eau', sd: '+2 Ambiance par nuit, 2 dés de magie en raid.',
+    lines: ['La mare est un peu petite. Comme mon ego.', 'Le troll a encore pris un bain dans MA mare.', 'Glou. C’est de l’elfique aquatique.'] },
+  goule:     { name: 'Goule gourmette', from: 'cimetiere', tier: 1, guard: 3, dice: 2, tag: 'combat', likes: 'tombe', rival: 'vampire', skill: 'Critique gastronomique', sd: 'Garde 3 et 2 dés en raid. Note les plats de la cuisine, sévèrement.',
+    lines: ['Ce ragoût manque de… fossoyeur.', 'Deux étoiles. Et je suis généreuse.', 'Le vampire ne mange que liquide. Quel manque de culture.'] },
 };
 const SPECIES_ORDER = Object.keys(SPECIES);
 
@@ -273,7 +352,7 @@ const GOALS = [
   { id: 'dig',    text: 'Pose 2 nouveaux couloirs',          test: s => s.stats.dug >= 2,           reward: { s: 2 } },
   { id: 'dorm',   text: 'Construis un Dortoir',               test: s => s.rooms.some(r => r.t === 'dortoir'), reward: { g: 3 } },
   { id: 'bed',    text: 'Pose un lit dans le Dortoir',        test: s => s.furn.some(f => FURN[f.t].beds && roomAt(f.x, f.y) && roomAt(f.x, f.y).t === 'dortoir'), reward: { free: 'torche', n: 2 } },
-  { id: 'pet',    text: 'Caresse une créature',               test: s => s.stats.pets >= 1,          reward: { free: 'plante', n: 1 } },
+  { id: 'pet',    text: 'Comble l’envie d’une créature',      test: s => s.stats.quests >= 1,        reward: { free: 'plante', n: 1 } },
   { id: 'deco3',  text: 'Colle 3 décorations',                test: s => s.stats.decor >= 3,         reward: { g: 2 } },
   { id: 'night2', text: 'Termine ta première nuit',           test: s => s.night >= 2,               reward: { s: 2 } },
   { id: 'gob',    text: 'Accueille un Gobelin',               test: s => s.creatures.some(c => c.sp === 'gobelin'), reward: { free: 'os', n: 2 } },

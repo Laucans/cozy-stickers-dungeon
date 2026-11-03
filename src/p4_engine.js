@@ -46,7 +46,7 @@ function addCreature(sp) {
 function addLog(text, tone) { S.log.unshift({ n: S.night, text, tone: tone || '' }); if (S.log.length > 40) S.log.length = 40; }
 
 /* ---------- grille & portes ---------- */
-const dirty = () => { GRIDS = {}; DOORSZ = {}; syncGeom(); };
+const dirty = () => { GRIDS = {}; DOORSZ = {}; GROUPS = {}; syncGeom(); };
 // la taille du château suit S.size (remparts agrandis) ; l'affichage est prévenu du décalage
 function syncGeom() {
   const n = 12 + 2 * ((S && S.size) || 0); if (n === W) return;
@@ -82,12 +82,19 @@ function doors(z = Z) {
     }
   }
   pairs.forEach(list => DOORS.add(list[Math.floor((list.length - 1) / 2)]));
+  // dehors : chaque enclos a un portillon, de préférence côté château
+  if (z === EXT) S.rooms.filter(r => zOf(r) === EXT).forEach(r => {
+    const mx = r.x + Math.floor((r.w - 1) / 2), my = r.y + Math.floor((r.h - 1) / 2);
+    for (const [x, y, nx, ny] of [[mx, r.y + r.h - 1, mx, r.y + r.h], [r.x + r.w - 1, my, r.x + r.w, my], [r.x, my, r.x - 1, my], [mx, r.y, mx, r.y - 1]])
+      if (extOK(nx, ny) && !(g[ny] && g[ny][nx])) { DOORS.add(edgeKey(x, y, nx, ny)); break; }
+  });
   return DOORS;
 }
 function passable(x1, y1, x2, y2) {
+  if (Z === EXT) return passExt(x1, y1, x2, y2);
   const a = roomAt(x1, y1), b = roomAt(x2, y2);
   if (!a || !b || !a.built || !b.built) return false;
-  if (a === b) return true;
+  if (a === b || sameGroup(a, b)) return true;
   return doors().has(edgeKey(x1, y1, x2, y2));
 }
 function bfs(from, goal, pass = passable) {
@@ -104,7 +111,46 @@ function bfs(from, goal, pass = passable) {
   }
   return null;
 }
-const heroPath = () => withZ(0, () => { const h = heartRoom(); return bfs([GATE.x, GATE.y], (x, y) => roomAt(x, y) === h); });
+// les Jardins : l'herbe défrichée (les rangées les plus proches du château) ; le reste est encore la forêt
+const extState = () => S.ext || (S.ext = { n: 0 });
+const extDepth = () => Math.min(H, 4 + 2 * extState().n);
+const extOK = (x, y) => x >= 0 && x < W && y < H && y >= H - extDepth();
+const extDoor = () => [GATE.x, H - 1];
+const forestCost = () => extDepth() >= H ? null : { g: 8 + 10 * (extState().n + 1) };
+function passExt(x1, y1, x2, y2) {
+  if (!extOK(x1, y1) || !extOK(x2, y2)) return false;
+  const a = roomAt(x1, y1), b = roomAt(x2, y2);
+  if (a === b) return !a || a.built;
+  if ((a && !a.built) || (b && !b.built)) return false;
+  if (sameGroup(a, b)) return true;
+  return doors().has(edgeKey(x1, y1, x2, y2));
+}
+// salles fusionnées : des pièces terminées du même type, collées l'une à l'autre, ne font plus qu'une grande salle
+let GROUPS = {};
+const mergeable = r => !!r && r.built && !isHall(r) && r.t !== 'coeur' && !ROOMS[r.t].stairs && !r.land && !ROOMS[r.t].unique && !ROOMS[r.t].fixed;
+function groups(z) {
+  if (GROUPS[z]) return GROUPS[z];
+  const g = grid(z), map = new Map();
+  for (const r of S.rooms) {
+    if (zOf(r) !== z || map.has(r.id)) continue;
+    const grp = { t: r.t, rooms: [r] }; map.set(r.id, grp);
+    if (!mergeable(r)) continue;
+    const q = [r];
+    while (q.length) { const a = q.pop(); for (const [x, y] of cellsOf(a)) for (const [dx, dy] of DIRS) { const b = g[y + dy] && g[y + dy][x + dx]; if (b && b !== a && b.t === a.t && mergeable(b) && !map.has(b.id)) { map.set(b.id, grp); grp.rooms.push(b); q.push(b); } } }
+  }
+  return GROUPS[z] = { map };
+}
+const groupOf = r => (r && groups(zOf(r)).map.get(r.id)) || { t: r && r.t, rooms: r ? [r] : [] };
+const sameGroup = (a, b) => !!a && !!b && a !== b && a.t === b.t && mergeable(a) && mergeable(b) && groupOf(a) === groupOf(b);
+const groupSize = r => groupOf(r).rooms.length;
+const maxGroup = t => S.rooms.reduce((m, r) => r.t === t && r.built ? Math.max(m, groupSize(r)) : m, 0);
+const sizeWord = n => n >= 3 ? 'salle immense' : n >= 2 ? 'grande salle' : '';
+// les grandes salles sont plus agréables : +1 Ambiance par grande salle, +2 par salle immense
+function mergeAmb() { let a = 0; const seen = new Set(); S.rooms.forEach(r => { if (!mergeable(r)) return; const g = groupOf(r); if (seen.has(g)) return; seen.add(g); a += g.rooms.length >= 3 ? 2 : g.rooms.length >= 2 ? 1 : 0; }); return a; }
+const barred = (x, y) => S.defs.some(d => d.x === x && d.y === y && zOf(d) === 0 && DEFS[d.t] && DEFS[d.t].block);
+const heroPath = (extra) => withZ(0, () => { const h = heartRoom(), goal = (x, y) => roomAt(x, y) === h;
+  const wall = (x, y) => barred(x, y) || (extra && extra[0] === x && extra[1] === y);
+  return bfs([GATE.x, GATE.y], goal, (x1, y1, x2, y2) => passable(x1, y1, x2, y2) && !wall(x2, y2)) || (extra ? null : bfs([GATE.x, GATE.y], goal)); });
 // distance (en pas) depuis le porche, sur tout le château y compris les chantiers
 function gateDist() { return withZ(0, gateDist0); }
 function gateDist0() {
@@ -115,7 +161,7 @@ function gateDist0() {
       const nx = x + dx, ny = y + dy, k = ny * W + nx;
       if (d.has(k) || !roomAt(nx, ny)) continue;
       const a = roomAt(x, y), b = roomAt(nx, ny);
-      if (a !== b && !doors().has(edgeKey(x, y, nx, ny))) continue;
+      if (a !== b && !sameGroup(a, b) && !doors().has(edgeKey(x, y, nx, ny))) continue;
       d.set(k, cur + 1); q.push([nx, ny]);
     }
   }
@@ -138,6 +184,10 @@ const nestsOf = sp => { const d = SPECIES[sp] || {}; return S.rooms.filter(r => 
 const rareOK = sp => { const d = SPECIES[sp] || {}; if (!d.rare) return true; return (!d.site || (typeof worldMet === 'function' && worldMet(sp))) && (typeof radiance !== 'function' || radiance() >= (d.glow || 0)); };
 const mainRoomsBuilt = () => S.rooms.filter(r => r.built && !isHall(r) && r.t !== 'coeur').length;
 const homeCreatures = () => S.creatures.filter(c => !c.raid);
+// l'étage où vit une créature : celui de son poste, sinon le rez-de-chaussée (autour du Cœur)
+function livingFloor(c) { const r = c.post && S.rooms.find(o => o.id === c.post && o.built); return r ? zOf(r) : 0; }
+// une créature sonnée au combat se repose : ni garde, ni raid
+function injured(c) { return !!c && (c.hurt || 0) > S.night; }
 const countSp = sp => S.creatures.filter(c => c.sp === sp).length;
 const hasItem = t => S.furn.some(f => f.t === t);
 const countItem = t => S.furn.filter(f => f.t === t).length;
@@ -157,11 +207,11 @@ function rstat(r, key) {
 const sumRooms = key => builtRooms().reduce((a, r) => a + rstat(r, key), 0);
 // humeur : 0-1 boudeur (compétence éteinte), 2-3 normal, 4-5 ravi (compétence ×2)
 const mult = c => c.mood >= 4 ? 2 + (c.lvl >= 5 ? 1 : 0) : c.mood >= 2 ? 1 + (c.lvl >= 5 ? 1 : 0) : 0;
-const sumCrit = key => homeCreatures().reduce((a, c) => a + (SPECIES[c.sp][key] || 0) * mult(c), 0);
+const sumCrit = key => homeCreatures().reduce((a, c) => a + (SPECIES[c.sp][key] || 0) * mult(c) + (c.evo && EVOS[c.evo] ? EVOS[c.evo][key] || 0 : 0), 0);
 const beds = () => sumRooms('beds') + (PW('accueil') ? 2 : 0);
-const foodCap = () => sumRooms('food');
+const foodCap = () => sumRooms('food') + (typeof claimFood === 'function' ? claimFood() : 0);
 const eaters = () => S.creatures.reduce((a, c) => a + (c.away ? 0 : (SPECIES[c.sp].eats || 1)), 0);
-function ambiance() { return sumRooms('amb') + sumCrit('amb') + (S.theme === 'enclave' ? 3 : 0) + pwAmb(); }
+function ambiance() { return sumRooms('amb') + sumCrit('amb') + (S.theme === 'enclave' ? 3 : 0) + pwAmb() + mergeAmb(); }
 function castleTitle() { const a = ambiance(); let t = TITLES[0][1]; for (const [m, n] of TITLES) if (a >= m) t = n; return t; }
 function hungrySet() {
   let left = foodCap(); const hungry = new Set();
@@ -185,10 +235,15 @@ function costOf(kind, t) {
 const canAfford = c => S.gold >= (c.g || 0) && S.mat >= (c.s || 0);
 function pay(c) { S.gold -= c.g || 0; S.mat -= c.s || 0; }
 function costText(c) { const p = []; if (c.g) p.push(c.g + ' 💰'); if (c.s) p.push(c.s + ' 🪵'); return p.length ? p.join(' ') : 'gratuit'; }
+// dehors, la construction ne montre que les stickers d'extérieur ; dedans, ceux de l'intérieur
+const outdoorItem = (kind, t) => kind === 'room' ? !!ROOMS[t].out : kind === 'def' ? false : !!(FURN[t].out || (FURN[t].room !== 'any' && ROOMS[FURN[t].room] && ROOMS[FURN[t].room].out));
 function availability(kind, t) {
+  if ((Z === EXT) !== outdoorItem(kind, t)) return { hide: true };
   if (kind === 'room') {
     const d = ROOMS[t];
     if (d.theme && d.theme !== S.theme) return { hide: true };
+    if (d.saga && !(S.sagas && S.sagas.rooms.includes(t))) return { hide: true };
+    if (d.out ? Z !== EXT : Z === EXT) return { lock: true, reason: d.out ? 'Dehors' : 'Pas dehors' };
     if (d.deep && Z > -d.deep) return { lock: true, reason: d.deep > 1 ? 'Profondeurs' : 'Sous terre' };
     if (d.high && Z < d.high) return { lock: true, reason: d.high > 1 ? 'Les Cimes' : 'En hauteur' };
     if (Z < 0 && (d.open || d.edge)) return { lock: true, reason: 'À l’air libre' };
@@ -201,8 +256,10 @@ function availability(kind, t) {
     }
     if (d.tier && S.tier < d.tier) return { lock: true, reason: 'Palier ' + d.tier };
     if (d.unique && S.rooms.some(r => r.t === t)) return { lock: true, reason: 'Unique' };
+    { const cl = clashOn(t, Z); if (cl) return { lock: true, reason: `Pas avec : ${ROOMS[cl.t].name}`, clash: true }; }
   } else if (kind === 'def') {
     const d = DEFS[t];
+    if (d.saga && !(S.sagas && S.sagas.defs.includes(t))) return { hide: true };
     if (Z !== 0) return { lock: true, reason: 'Rez-de-chaussée' };
     if (d.tier && S.tier < d.tier) return { lock: true, reason: 'Palier ' + d.tier };
     if (d.needs && !builtCount(d.needs)) return { lock: true, reason: ROOMS[d.needs].name };
@@ -210,9 +267,13 @@ function availability(kind, t) {
   } else {
     const f = FURN[t];
     if (f.hidden) return { hide: true };
+    if (f.out && Z !== EXT) return { lock: true, reason: 'Dehors' };
     if (f.artefact && !(S.free[t] > 0)) return { lock: true, reason: hasItem(t) ? 'Exposé' : 'À trouver' };
     if (f.tier && S.tier < f.tier) return { lock: true, reason: 'Palier ' + f.tier };
-    if (f.room !== 'any' && !S.rooms.some(r => r.t === f.room)) return { lock: true, reason: ROOMS[f.room].name };
+    const kin = r => r.t === f.room || ROOMS[r.t].like === f.room;
+    if (f.room !== 'any' && !S.rooms.some(kin)) return { lock: true, reason: ROOMS[f.room].name };
+    if (f.room !== 'any' && !S.rooms.some(r => kin(r) && r.built)) return { lock: true, reason: 'Chantier', chantier: true };
+    if (f.size && maxGroup(f.room) < f.size) return { lock: true, reason: f.size >= 3 ? 'Salle immense' : 'Grande salle', grow: f.size };
     if (f.unique && hasItem(t)) return { lock: true, reason: 'Unique' };
   }
   if (!canAfford(costOf(kind, t))) return { poor: true, reason: 'Pas assez' };
@@ -220,10 +281,26 @@ function availability(kind, t) {
 }
 
 /* ---------- placement ---------- */
+// une pièce incompatible déjà à cet étage ? (la Mare sacrée compte comme une Mare, etc.)
+function clashOn(t, z) {
+  const k = ROOMS[t] && ROOMS[t].like || t;
+  for (const [a, b, why] of ROOM_CLASH) { const o = k === a ? b : k === b ? a : null; if (o && S.rooms.some(r => (r.t === o || ROOMS[r.t].like === o) && zOf(r) === z)) return { t: o, why }; }
+  return null;
+}
 function checkRoom(t, x, y, w, h) {
   const d = ROOMS[t];
-  if (x < 0 || y < 0 || x + w > W || y + h > H) return 'Hors des remparts';
+  { const cl = clashOn(t, Z); if (cl) return `Pas au même étage que ${ROOMS[cl.t].name} : ${cl.why}`; }
+  if (x < 0 || y < 0 || x + w > W || y + h > H) return Z === EXT ? 'Hors des Jardins' : 'Hors des remparts';
   for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) if (roomAt(x + dx, y + dy)) return 'Cet endroit est déjà occupé';
+  if (Z === EXT) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) {
+      const cx = x + dx, cy = y + dy;
+      if (!extOK(cx, cy)) return 'La forêt pousse encore ici : achète-la pour défricher';
+      if (cx === extDoor()[0] && cy === extDoor()[1]) return 'Laisse le portillon dégagé';
+      if (furnAt(cx, cy)) return 'Il y a déjà quelque chose ici';
+    }
+    return null;
+  }
   const touching = [];
   for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) for (const [ax, ay] of DIRS) {
     const nx = x + dx + ax, ny = y + dy + ay;
@@ -241,11 +318,19 @@ function checkRoom(t, x, y, w, h) {
 }
 function checkFurn(t, x, y) {
   const r = roomAt(x, y), f = FURN[t];
+  if (Z === EXT && !r) {   // sur l'herbe : la déco seulement
+    if (!extOK(x, y)) return 'La forêt pousse encore ici : achète-la pour défricher';
+    if (x === extDoor()[0] && y === extDoor()[1]) return 'Laisse le portillon dégagé';
+    if (furnAt(x, y)) return 'Il y a déjà quelque chose ici';
+    return f.room === 'any' ? null : `Ce meuble va dans : ${ROOMS[f.room].name}`;
+  }
   if (!r) return 'Un meuble se pose dans une pièce';
   if (r.t === 'porche') return 'Laisse le porche dégagé';
+  if (!r.built) return 'Chantier en cours : la pièce se meuble une fois terminée (après la nuit)';
+  if (f.size && groupSize(r) < f.size) return f.size >= 3 ? `Il faut une salle immense : 3 pièces « ${ROOMS[f.room].name} » collées ou plus` : `Il faut une grande salle : 2 pièces « ${ROOMS[f.room].name} » collées`;
   if (furnAt(x, y)) return 'Il y a déjà quelque chose ici';
   if (f.room === 'any') { if (defAt(x, y)) return 'Un piège occupe déjà ce couloir'; return null; }
-  if (r.t !== f.room) return `Ce meuble va dans : ${ROOMS[f.room].name}`;
+  if (r.t !== f.room && ROOMS[r.t].like !== f.room) return `Ce meuble va dans : ${ROOMS[f.room].name}`;
   return null;
 }
 function checkDef(t, x, y) {
@@ -253,6 +338,7 @@ function checkDef(t, x, y) {
   if (!r || r.t !== 'couloir') return 'Les pièges se posent dans un couloir';
   if (defAt(x, y)) return 'Il y a déjà un piège ici';
   if (furnAt(x, y)) return 'Une déco occupe ce couloir';
+  if (DEFS[t] && DEFS[t].block && !heroPath([x, y])) return 'Il faut laisser aux héros un chemin jusqu’au Cœur (sinon ils défoncent tout)';
   return null;
 }
 function useCost(kind, t) { if ((S.free[t] || 0) > 0) S.free[t]--; else pay(costOf(kind, t)); }
@@ -292,7 +378,7 @@ function removeCheck(r) {
 // les meubles retournent dans la planche ; la pièce rend la moitié de son prix (tout si chantier)
 function removeRoom(r) {
   const c = costOf('room', r.t), k = r.built ? .5 : 1;
-  S.gold += Math.floor((c.g || 0) * k); S.mat += Math.floor((c.s || 0) * k);
+  S.gold += Math.floor((c.g || 0) * k) + (r.built ? 0 : 2 * (r.boost || 0)); S.mat += Math.floor((c.s || 0) * k);
   S.furn = S.furn.filter(f => { if (!inRoomZ(r, f)) return true; if (!f.fixed) S.free[f.t] = (S.free[f.t] || 0) + 1; return false; });
   S.defs = S.defs.filter(d => { if (!inRoomZ(r, d)) return true; S.free[d.t] = (S.free[d.t] || 0) + 1; return false; });
   S.creatures.forEach(c => { if (c.post === r.id) c.post = null; });
@@ -407,12 +493,12 @@ function planInvasion0() {
     if (d) { const f = DEFS[d.t]; steps.push({ i, dmg: defStr(d) + sticky, label: f.name, lost: f.lost || 0, defId: d.id }); sticky = f.sticky ? 1 : 0; if (f.alarm) alarm = true; return; }
     if (r && r !== h && !isHall(r) && !seen.has(r.id)) {
       seen.add(r.id);
-      const guards = homeCreatures().filter(c => c.post === r.id);
+      const guards = homeCreatures().filter(c => c.post === r.id && !injured(c));
       const dmg = guards.reduce((a, c) => a + guardOf(c), 0) + rstat(r, 'guard');
       if (dmg > 0) { steps.push({ i, dmg: dmg + sticky, label: `${ROOMS[r.t].name}${guards.length ? ' : ' + guards.map(c => c.name).join(', ') : ''}`, roomId: r.id }); sticky = 0; }
     }
   });
-  const free = homeCreatures().filter(c => !c.post || c.post === h.id);
+  const free = homeCreatures().filter(c => (!c.post || c.post === h.id) && !injured(c));
   const hd = free.reduce((a, c) => a + guardOf(c) + (alarm ? 1 : 0), 0) + rstat(h, 'guard') + (S.world && S.world.merc > S.night ? 4 : 0);
   steps.push({ i: path ? path.length - 1 : 0, dmg: hd + sticky, label: free.length ? `Défense du Cœur (${free.length} créature${free.length > 1 ? 's' : ''})` : 'Le Cœur est sans défense', heart: true });
   return { party, courage, path, steps, rank, origin };
@@ -423,7 +509,8 @@ function applyInvasion(plan, outcome) {
     S.stats.repelled++; S.hype += 1;
     if (outcome === 'repelled') {
       const purse = n * 2 * (plan.rank || 1); S.gold += purse; lines.push(['🏃', `Les aventuriers détalent en semant leur bourse : +${purse} 💰, +1 🔥.`, 'good']);
-      if (sumRooms('cells') > S.prisoners) { S.prisoners++; lines.push(['⛓️', `${pick(plan.party).name} finit aux Oubliettes. Rançon à l’aube !`, 'good']); }
+      const room = Math.max(0, sumRooms('cells') - S.prisoners), caught = (plan.res ? plan.res.fallen.map(j => plan.party[j]) : room ? [pick(plan.party)] : []).slice(0, room);
+      if (caught.length) { S.prisoners += caught.length; lines.push(['⛓️', `${caught.map(h => h.name).join(', ')} ${caught.length > 1 ? 'finissent' : 'finit'} aux Oubliettes. Rançon à l’aube !`, 'good']); }
       S.creatures.forEach(c => { if (!c.raid) { c.mood = clamp(c.mood + 1, 0, 5); addLoy(c, 2); gainXP(c, 1, lines); } });
     } else lines.push(['🌀', 'Les aventuriers abandonnent et rentrent tout penauds. +1 🔥.', 'good']);
   } else {
@@ -446,7 +533,7 @@ function moodFactors(c, hungry = hungrySet(), amb = ambiance()) {
     f.push(home ? ['Posté·e dans sa pièce préférée', 1] : [`Aimerait un poste : ${ROOMS[sp.from].name}`, 0]);
   } else f.push(['Libre comme l’air', 1]);
   if (hungry.has(c.id)) f.push(['Ventre vide', -2]);
-  if (sp.rival && S.creatures.some(o => o.sp === sp.rival)) f.push([`Supporte mal les ${SPECIES[sp.rival].name}s`, -1]);
+  if (sp.rival && S.creatures.some(o => o.sp === sp.rival && !isOut(o) && livingFloor(o) === livingFloor(c))) f.push([`Supporte mal les ${SPECIES[sp.rival].name}s (même étage)`, -1]);
   return { f, target: clamp(f.reduce((a, x) => a + x[1], 0), 0, 5) };
 }
 function calamityDelta() {
@@ -476,18 +563,21 @@ function dawn(report) {
   const sites = S.rooms.filter(r => !r.built);
   if (sites.length) report.push(['sec', 'Travaux']);
   for (const r of sites) {
+    const boost = Math.min(r.boost || 0, ROOMS[r.t].clock - r.prog); r.prog += boost; r.boost = 0;   // renforts payés pendant la nuit
     const need = ROOMS[r.t].clock - r.prog, take = Math.min(work, need);
     r.prog += take; work -= take;
     if (r.prog >= ROOMS[r.t].clock) { r.built = true; r.justBuilt = true; roomBuilt(r); report.push(['🎉', `Chantier terminé : ${ROOMS[r.t].name} !`, 'good']); addLog(`${ROOMS[r.t].name} terminé.`, 'good'); }
-    else if (take) report.push(['🔨', `${ROOMS[r.t].name} : ${r.prog}/${ROOMS[r.t].clock} segments.`, '']);
+    else if (take || boost) report.push(['🔨', `${ROOMS[r.t].name} : ${r.prog}/${ROOMS[r.t].clock} segments${boost ? ` (dont ${boost} de renfort)` : ''}.`, '']);
   }
   dirty();
+  const merged = new Set(); S.rooms.filter(r => r.justBuilt && groupSize(r) >= 2).forEach(r => { if (merged.has(groupOf(r))) return; merged.add(groupOf(r)); const n = groupSize(r), up = FURN_ORDER.filter(k => FURN[k].room === r.t && FURN[k].size && FURN[k].size <= n); report.push(['🧩', `Fusion ! Tes ${n} pièces « ${ROOMS[r.t].name} » collées ne font plus qu’une ${sizeWord(n)}${up.length ? ` : nouveau${up.length > 1 ? 'x' : ''} sticker${up.length > 1 ? 's' : ''} ${up.map(k => FURN[k].name).join(', ')}` : ''}.`, 'good']); });
   const gold = sumRooms('gold') + sumCrit('gold'), mat = sumRooms('mat') + sumCrit('mat') + (PW('palier1') ? 1 : 0), hype = sumRooms('hype') + sumCrit('hype') + (PW('legende') ? 1 : 0);
   const ransom = S.prisoners * 4;
   S.gold += gold + ransom; S.mat += mat; S.hype += hype;
   report.push(['sec', 'Récoltes']);
   report.push(['🌾', `+${gold} 💰, +${mat} 🪵${hype ? `, +${hype} 🔥` : ''}.`, 'good']);
   if (ransom) { report.push(['⛓️', `Rançons : +${ransom} 💰. Les prisonniers rentrent chez eux en jurant de ne rien dire.`, 'good']); S.prisoners = 0; }
+  if (typeof payday === 'function') payday(report);
   S.creatures.forEach(c => { if (c.raid && !c.away) { c.raid = false; c.back = true; } });
   S.raid = null;
   const hungry = hungrySet(), amb = ambiance(), leaving = [];
@@ -517,13 +607,16 @@ function dawn(report) {
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
   else if (free <= 0) report.push(['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
-    let chance = c0.some(sp => !S.album[sp]) ? 1 : Math.min(.95, .6 + amb * .03 + (S.theme === 'enclave' ? .15 : 0) + (PW('nuit20') ? .1 : 0));
-    let tries = amb >= 8 ? 2 : 1;
+    // une arrivée de temps en temps (une espèce nouvelle se laisse tenter un peu plus vite), rarement deux
+    let chance = c0.some(sp => !S.album[sp]) ? .38 : Math.min(.3, .12 + amb * .004 + (S.theme === 'enclave' ? .06 : 0) + (PW('nuit20') ? .05 : 0));
+    let tries = amb >= 40 ? 2 : 1;
     while (tries-- > 0 && free > 0) {
       if (Math.random() > chance) continue;
-      chance = Math.min(chance, .5);
+      chance = Math.min(chance, .15);
       const pool = cands(); if (!pool.length) break;
-      const sp = wpick(pool, s => (S.album[s] ? 1 : 3) * (.4 + repOf(s) / 100)), c = addCreature(sp), d = SPECIES[sp]; c.isNew = true; free--; arrived.push(c);
+      const sp = wpick(pool, s => (S.album[s] ? 1 : 3) * (.4 + repOf(s) / 100));
+      if (typeof nemSnatch === 'function' && nemSnatch(sp, report)) continue;   // le rival l'a attirée chez lui
+      const c = addCreature(sp), d = SPECIES[sp]; c.isNew = true; free--; arrived.push(c);
       const why = d.rare ? 'est attiré·e par le rayonnement de ton château' : repOf(sp) >= 70 ? `a entendu vanter ta réputation chez les ${d.name.toLowerCase()}s` : d.from === 'coeur' ? 'sort du Cœur en baillant' : d.fromDecor ? 'a suivi les toiles d’araignée' : `a entendu parler de ta pièce « ${ROOMS[d.from].name} »`;
       report.push(['🆕', `${c.name} (${d.name}) ${why} et s’installe !`, 'good']);
       addLog(`${c.name} (${d.name}) arrive.`, 'good');
@@ -534,6 +627,12 @@ function dawn(report) {
   S.creatures.forEach(c => { c.pet = 0; c.treat = 0; });
   updateRep();
   if (typeof victoryDawn === 'function') victoryDawn(report);
+  if (typeof rivalDawn === 'function') rivalDawn(report);
+  if (typeof sagaDawn === 'function') sagaDawn(report);
+  if (typeof fatigueDawn === 'function') fatigueDawn();
+  if (typeof valDawn === 'function') valDawn(report);
+  if (typeof captiveDawn === 'function') captiveDawn(report);
+  if (typeof designDawn === 'function') designDawn(report);
   return arrived;
 }
 
@@ -546,10 +645,10 @@ function roomBuilt(r) {
   addLog(`Un escalier ${d.stairs < 0 ? 'descend' : 'monte'} désormais vers ${FLOOR_NAMES[z]}.`, 'ev'); dirty();
 }
 // étages ouverts ou en chantier (hors rez-de-chaussée) ; le palier d'arrivée sert de point d'ancrage à son étage
-const floorSet = () => new Set([...S.rooms.map(zOf), ...S.rooms.filter(r => ROOMS[r.t].stairs && !r.land).map(r => zOf(r) + ROOMS[r.t].stairs)].filter(z => z !== 0));
-const floorsDug = () => new Set(S.rooms.map(zOf).filter(z => z !== 0)).size;
+const floorSet = () => new Set([...S.rooms.map(zOf), ...S.rooms.filter(r => ROOMS[r.t].stairs && !r.land).map(r => zOf(r) + ROOMS[r.t].stairs)].filter(z => z !== 0 && z !== EXT));
+const floorsDug = () => new Set(S.rooms.map(zOf).filter(z => z !== 0 && z !== EXT)).size;
 const floorRoot = z => S.rooms.find(o => o.land && zOf(o) === z);
-const floorsOpen = () => [...new Set([0, ...S.rooms.map(zOf)])].sort((a, b) => b - a);
+const floorsOpen = () => [...new Set([0, ...S.rooms.map(zOf)])].filter(z => z !== EXT).sort((a, b) => b - a);
 const SIZE_MAX = 2, SIZE_COST = [null, { g: 12, s: 16 }, { g: 22, s: 28 }];
 function expandStatus() { const n = (S.size || 0) + 1; if (n > SIZE_MAX) return null; return { n, need: n, cost: SIZE_COST[n], ok: S.tier >= n && canAfford(SIZE_COST[n]) }; }
 // agrandir : une rangée de chaque côté et deux au fond ; tout le château glisse d'autant
@@ -563,6 +662,32 @@ function expandCastle() {
 }
 
 /* ---------- sauvegarde ---------- */
-function save() { if ((typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest')) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
-function load() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && s.v === 2 && Array.isArray(s.rooms)) return s; } catch (e) {} return null; }
-function wipe() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+// plusieurs parties par navigateur (et par profil) : un index des cases, chaque partie dans sa case
+const SLOTS_KEY = 'csd-saves-v1' + (PROFILE ? '-' + PROFILE : ''), SLOTS_MAX = 8;
+const slotKey = id => id ? SAVE_KEY + ':' + id : SAVE_KEY;   // la case '' est l'ancienne sauvegarde unique
+const slotMeta = (id, s) => ({ id, name: s.name, theme: s.theme, night: s.night, tier: s.tier || 0, crit: (s.creatures || []).length, at: Date.now() });
+const newSlotId = () => 's' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+let SAVE_WARNED = false;
+function slotIndex() {
+  let ix = null; try { ix = JSON.parse(localStorage.getItem(SLOTS_KEY) || 'null'); } catch (e) {}
+  if (!ix || !Array.isArray(ix.list)) {   // première fois : l'ancienne partie unique devient la première case
+    ix = { cur: '', list: [] };
+    try { const old = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (old && old.v === 2 && Array.isArray(old.rooms) && old.started) ix.list.push(slotMeta('', old)); } catch (e) {}
+    writeIndex(ix);
+  }
+  return ix;
+}
+function writeIndex(ix) { try { localStorage.setItem(SLOTS_KEY, JSON.stringify(ix)); } catch (e) {} }
+const curSlot = () => slotIndex().cur;
+function useSlot(id) { const ix = slotIndex(); ix.cur = id; writeIndex(ix); }
+function saveState(st) {
+  if (!st || !st.started) return false;
+  const ix = slotIndex();
+  try { localStorage.setItem(slotKey(ix.cur), JSON.stringify(st)); }
+  catch (e) { if (!SAVE_WARNED && typeof toast === 'function') { SAVE_WARNED = true; toast('⚠️ Sauvegarde impossible : le navigateur manque de place. Supprime une vieille partie (☰ → Mes parties).', true); } return false; }
+  const m = slotMeta(ix.cur, st), i = ix.list.findIndex(x => x.id === ix.cur); if (i >= 0) ix.list[i] = m; else ix.list.unshift(m);
+  writeIndex(ix); return true;
+}
+function save() { if ((typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest')) return false; return saveState(S); }
+function load(id) { const k = slotKey(id == null ? slotIndex().cur : id); try { const s = JSON.parse(localStorage.getItem(k) || 'null'); if (s && s.v === 2 && Array.isArray(s.rooms)) return s; } catch (e) {} return null; }
+function wipe(id) { const ix = slotIndex(), sid = id == null ? ix.cur : id; try { localStorage.removeItem(slotKey(sid)); } catch (e) {} ix.list = ix.list.filter(x => x.id !== sid); writeIndex(ix); }
