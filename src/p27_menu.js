@@ -31,7 +31,7 @@ function renderTitle() {
     <button class="ttbtn" type="button" data-tt="load" ${list.length ? '' : 'disabled'}><b>📂 Mes parties</b><small>${list.length ? `${list.length} partie${list.length > 1 ? 's' : ''} sauvegardée${list.length > 1 ? 's' : ''} dans ce navigateur` : 'Aucune partie pour l’instant'}</small></button>
     <button class="ttbtn" type="button" data-tt="multi"><b>🌐 Multijoueur</b><small>${NET.ok ? 'Château partagé avec tes amis, et le Val des Maîtres' : esc(netWhy())}</small></button>
   </div>
-  <div class="trow"><button class="sbtn" type="button" data-tt="import">📥 Importer une sauvegarde</button><button class="sbtn" type="button" data-tt="grim">📖 Grimoire</button></div>${file}`;
+  <div class="trow"><button class="sbtn" type="button" data-tt="import">📥 Importer une sauvegarde</button><button class="sbtn" type="button" data-tt="grim">📖 Grimoire</button><button class="sbtn" type="button" data-tt="stickers">📚 Le Livre des stickers</button></div>${file}`;
 }
 function slotsHTML(list) {
   return `<h2>📂 Mes parties</h2><p class="hint">Chaque partie se sauvegarde toute seule, dans ce navigateur${PROFILE ? ` (profil « ${esc(PROFILE)} »)` : ''} : ${list.length}/${SLOTS_MAX} cases. Exporte un fichier pour la garder ailleurs ou la continuer sur un autre appareil.</p>
@@ -64,6 +64,7 @@ function titleClick(e) {
   else if (k === 'del') confirmBtn(b, 'Sûr ?', () => { deleteSlot(id); renderTitle(); });
   else if (k === 'import') { const f = $('#tImport'); if (f) { f.value = ''; f.click(); } }
   else if (k === 'grim') openGrimoire();
+  else if (k === 'stickers' && typeof openStickerBook === 'function') openStickerBook();
   else if (k === 'host') { closeModal(true); coopHost(); }
   else if (k === 'join') { const v = normCode(($('#tCode') || {}).value); if (v.length !== 6) { toast('Le code fait 6 lettres ou chiffres.', true); return; } const go = () => coopJoin(v); if (NET.name) go(); else askMasterName(go); }
   else if (k === 'val') { closeModal(true); openVal(); }

@@ -1362,31 +1362,93 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
   .cpage .hand.tight .kcard:hover, .cpage .hand.tight .kcard:focus-visible{transform:translateY(-34%) scale(1.42); z-index:40; transition:transform .12s ease-out}
   .cpage .hand.tight .kcard:first-child:hover{transform-origin:left bottom} .cpage .hand.tight .kcard:last-child:hover{transform-origin:right bottom}
 }
-/* le Livre du Maître : un livre de stickers, un chapitre par ère */
-.modal.livrem{max-width:860px; background:linear-gradient(90deg, #e9d9b4 0, #f6ead0 4%, #f6ead0 96%, #e2cfa6 100%); border-color:#5a3a22; box-shadow:0 0 0 6px #6b4528, 0 0 0 9px #3a2416, 0 20px 50px rgba(0,0,0,.6)}
-.livre .lv-nav{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; margin:0 30px 8px; font-family:var(--f-display); font-weight:800; color:#5a3a22}
-.livre .lv-nav span{flex:1 1 160px; text-align:center}
-.lv-page{padding:4px 6px 8px}
-.lv-page.open{animation:lvOpen .55s ease-out}
-@keyframes lvOpen{0%{transform:perspective(900px) rotateY(-75deg); transform-origin:left center; opacity:0}100%{transform:none; opacity:1}}
-.lv-chap{text-align:center; font-family:var(--f-hand); font-size:18px; color:#8a5a2a; letter-spacing:.08em}
-.lv-title{text-align:center; font-family:var(--f-display); font-size:30px; margin:0 0 2px; color:#3a2416}
-.lv-dates{text-align:center; color:#6e5444; margin:0 0 12px}
-.lv-stickers{display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:12px; margin:8px 0 14px}
-.lv-st{position:relative; transform:rotate(var(--rot, 0deg)); background:#fffdf5; border:3px solid #fff; border-radius:14px; box-shadow:0 0 0 1.5px #c9b38a, 0 4px 10px rgba(80,50,20,.25); padding:8px 8px 7px; text-align:center; display:flex; flex-direction:column; gap:3px; align-items:center}
-.lv-st .lv-ico{font-size:28px; line-height:1.1} .lv-st .lv-ico .gi{width:30px; height:30px}
-.lv-st b{font-size:13px; line-height:1.15} .lv-st small{font-size:11px; color:#6e5444; line-height:1.2}
-.lv-st.after{box-shadow:0 0 0 1.5px #b8a6a0, 0 4px 10px rgba(80,50,20,.2)}
-.lv-st.rv{background:#f3e7e7; transform:rotate(var(--rot, 0deg)) scale(.92)}
-.lv-st.off{background:#ece2cc; border-color:#e2d6bb; box-shadow:inset 0 0 0 2px #d6c6a2; opacity:.75} .lv-st.off .lv-ico{filter:grayscale(1); opacity:.6}
-.lv-margin{border-left:3px double #b08a5a; padding:4px 0 4px 12px; margin:6px 0}
-.lv-margin h4{margin:0 0 4px} .lv-margin ol{margin:0; padding-left:20px} .lv-margin li{display:flex; justify-content:space-between; gap:10px; max-width:420px} .lv-margin li.me{font-weight:800; color:#2f5e1e}
-.lv-rv{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px} .lv-rv .lv-st{width:150px}
-.lv-gain{background:#fff6dc; border:2px solid #e2b85a; border-radius:12px; padding:8px 12px; margin:8px 0}
-.lv-gain.dark{background:#ece6f2; border-color:#7d6a99}
-.lv-pacts{display:flex; flex-direction:column; gap:8px} .lv-pacts .sbtn{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px} .lv-pacts small{font-weight:400}
-.lv-relics p{margin:4px 0}
-@media (max-width:640px){ .lv-title{font-size:24px} .lv-stickers{grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:9px} .lv-st b{font-size:12px} }
+/* le Livre du Maître, dessiné : une couverture de cuir, du papier, des pages qui tournent, de grands stickers collés */
+.modal.livrebook{max-width:none; width:min(1120px, 97vw); background:none; border:0; box-shadow:none; padding:0; overflow:visible; display:flex; flex-direction:column; align-items:center; gap:10px}
+.modal.livrebook > .x{top:-6px; right:4px; z-index:20; background:#3a2416; color:#f3e3c0; border-color:#e9b949}
+.lvbook{position:relative; width:min(1100px, 96vw, calc(84vh * 1.48)); aspect-ratio:1.48; border-radius:16px; padding:14px; box-sizing:border-box;
+  background:radial-gradient(circle at 30% 20%, #7a4a2c, #4a2a18 70%), #4a2a18; box-shadow:0 0 0 2px #2a1408, 0 22px 50px rgba(0,0,0,.65), inset 0 0 30px rgba(0,0,0,.45)}
+.lvbook::before{content:''; position:absolute; inset:6px; border:2px dashed rgba(233,185,73,.45); border-radius:12px; pointer-events:none}
+.lvbook::after{content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none; background:radial-gradient(circle at 0 0, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 100% 0, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 0 100%, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 100% 100%, #e9b949 0 16px, transparent 17px); opacity:.85}
+.lvbook.single{width:min(470px, 94vw, calc(80vh * .74)); aspect-ratio:.74}
+.lv-spread{position:relative; display:flex; width:100%; height:100%; perspective:2200px; z-index:1}
+.lv-pg{position:relative; flex:1; overflow:hidden; background:#f7eedb}
+.lv-pg.l{border-radius:8px 2px 2px 8px; box-shadow:-3px 0 0 #e8dcc0, -6px 0 0 #dccdab, inset -26px 0 30px -18px rgba(90,55,25,.45)}
+.lv-pg.r{border-radius:2px 8px 8px 2px; box-shadow:3px 0 0 #e8dcc0, 6px 0 0 #dccdab, inset 26px 0 30px -18px rgba(90,55,25,.45)}
+.lv-pg.one{border-radius:4px 8px 8px 4px; box-shadow:3px 0 0 #e8dcc0, 6px 0 0 #dccdab, inset 20px 0 26px -18px rgba(90,55,25,.45)}
+.lvpg-in{position:absolute; inset:0; background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%), #f7eedb}
+.lv-leaf{position:absolute; top:0; bottom:0; width:50%; transform-style:preserve-3d; transition:transform .66s cubic-bezier(.35,.1,.25,1); z-index:5}
+.lv-leaf.fwd{left:50%; transform-origin:left center} .lv-leaf.fwd.go{transform:rotateY(-180deg)}
+.lv-leaf.bwd{left:0; transform-origin:right center} .lv-leaf.bwd.go{transform:rotateY(180deg)}
+.lv-leaf.one{left:0; width:100%; transform-origin:left center} .lv-leaf.one.fwd.go{transform:rotateY(-180deg)}
+.lv-leaf.one.bwd{transform:rotateY(-180deg)} .lv-leaf.one.bwd.go{transform:rotateY(0)}
+.lv-face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; overflow:hidden; box-shadow:0 0 24px rgba(0,0,0,.25)} .lv-face.back{transform:rotateY(180deg)}
+.lv-cover{position:absolute; top:14px; bottom:14px; left:50%; width:calc(50% - 14px); z-index:8; transform-origin:left center; transition:transform .85s cubic-bezier(.4,.1,.2,1) .15s; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:4px 12px 12px 4px;
+  background:radial-gradient(circle at 40% 30%, #8a5432, #4f2c18 75%); box-shadow:inset 0 0 0 3px #2a1408, inset 0 0 0 9px #6b4528, inset 0 0 0 11px #e9b949, 0 8px 20px rgba(0,0,0,.5)}
+.lvbook.single .lv-cover{left:14px; width:calc(100% - 28px)}
+.lvbook.opened .lv-cover{transform:rotateY(-178deg)}
+.lv-cover-in{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#f3d78a; text-align:center; padding:20px}
+.lv-cover-in span{font-size:58px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))} .lv-cover-in b{font-family:var(--f-display); font-size:clamp(24px, 3.6vw, 40px); text-shadow:0 2px 0 #2a1408} .lv-cover-in small{font-family:var(--f-hand); font-size:18px; color:#e8c78a}
+.lv-ribbon{position:absolute; top:-6px; left:calc(50% + 40px); width:18px; height:90px; background:linear-gradient(#b02a2a, #8a1c1c); clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%); z-index:9; box-shadow:0 2px 3px rgba(0,0,0,.3)}
+.lvbook.single .lv-ribbon{left:auto; right:40px}
+.lv-bar{display:flex; align-items:center; gap:14px; color:#f3e3c0; font-family:var(--f-hand); font-size:16px}
+.lv-arrow{width:46px; height:46px; border-radius:50%; border:2px solid #e9b949; background:#4a2a18; color:#f3d78a; font-size:18px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.5)} .lv-arrow:disabled{opacity:.35; cursor:default}
+/* les pages */
+.lvp{position:absolute; inset:0; padding:26px 30px 22px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; color:#3a2416; overflow:hidden}
+.lvbook.single .lvp{padding:22px 20px 18px}
+.lv-runhead{align-self:stretch; text-align:center; font-family:var(--f-hand); font-size:14px; color:#9a7a52; border-bottom:1px solid #d9c59c; padding-bottom:3px; margin-bottom:6px}
+.lv-hand{font-family:var(--f-hand); font-size:18px; text-align:center; margin:6px 0; color:#4a3020} .lv-hand.big{font-size:26px; color:#3a2416} .lv-hand.small{font-size:15px; color:#7a5a3e}
+.lv-orn{font-size:34px; color:#b08a4a; line-height:1}
+.lvp.garde{background:radial-gradient(circle at 20% 30%, rgba(80,120,170,.55) 0 12%, transparent 13%), radial-gradient(circle at 70% 60%, rgba(170,70,60,.45) 0 14%, transparent 15%), radial-gradient(circle at 40% 80%, rgba(220,180,90,.5) 0 10%, transparent 11%), radial-gradient(circle at 85% 15%, rgba(80,140,110,.45) 0 9%, transparent 10%), repeating-radial-gradient(circle at 50% 50%, #e9dcc0 0 6px, #e2d1ae 6px 12px)}
+.lvp.titre .lv-frame{margin:auto; padding:28px 22px; border:3px double #b08a4a; border-radius:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; max-width:88%}
+.lvp.titre h1{font-family:var(--f-display); font-size:clamp(28px, 3.6vw, 44px); margin:0; color:#5a2414} .lv-castle{font-family:var(--f-display); font-size:22px; margin:2px 0; color:#8a5a2a}
+.lvp.chap{justify-content:center; gap:4px} .lv-chapn{font-family:var(--f-hand); font-size:22px; letter-spacing:.12em; color:#9a6a3a} .lvp.chap h2{font-family:var(--f-display); font-size:clamp(30px, 3.8vw, 46px); margin:0; text-align:center; color:#3a2416; text-shadow:0 2px 0 #fff}
+.lv-seal{width:122px; height:122px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; transform:rotate(-9deg); margin:12px auto 4px; color:#fff; text-align:center; font-family:var(--f-display); box-shadow:0 0 0 4px rgba(255,255,255,.4), 0 6px 12px rgba(0,0,0,.35); border:3px double rgba(255,255,255,.7)}
+.lv-seal span{font-size:34px} .lv-seal b{font-size:16px; padding:0 8px; line-height:1.05}
+.lv-seal.or{background:radial-gradient(circle at 35% 30%, #ffe08a, #c9902a)} .lv-seal.heroique{background:radial-gradient(circle at 35% 30%, #ff9d7a, #a8321e)} .lv-seal.normal{background:radial-gradient(circle at 35% 30%, #c9b08a, #7a5e3e)} .lv-seal.sombre{background:radial-gradient(circle at 35% 30%, #8a78a8, #2e2440)}
+.lvp.st{justify-content:space-around}
+.lvs{position:relative; margin:4px 0; display:flex; flex-direction:column; align-items:center; transform:rotate(var(--rot, 0deg)); max-width:94%}
+.lvp.st .lvs:nth-of-type(odd){align-self:flex-start; margin-left:6%} .lvp.st .lvs:nth-of-type(even){align-self:flex-end; margin-right:6%}
+.lvs-hold{position:relative}
+.lvs-die{position:relative; width:clamp(104px, 21vh, 190px); aspect-ratio:1; border-radius:30px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--col) 30%, #fff), var(--col) 72%); border:8px solid #fff; box-shadow:0 0 0 1.5px rgba(80,50,20,.18), 0 10px 18px rgba(60,35,10,.38)}
+.lvbook.single .lvs-die{width:clamp(96px, 17vh, 150px)}
+.lvs-art{width:100%; height:100%; display:flex; align-items:center; justify-content:center} .lvs-art img{width:86%; height:86%; object-fit:contain; filter:drop-shadow(0 4px 3px rgba(0,0,0,.35))} .lvs-art img.room{width:78%; height:78%; border-radius:12px}
+.lvs-emo{font-size:clamp(52px, 10vh, 96px); line-height:1; filter:drop-shadow(0 4px 3px rgba(0,0,0,.25))} .lvs-emo .gi{width:1.1em; height:1.1em}
+.lvs-shine{position:absolute; inset:0; background:linear-gradient(125deg, transparent 32%, rgba(255,255,255,.5) 44%, transparent 56%); pointer-events:none}
+.lvs-tape{position:absolute; top:-9px; width:58px; height:20px; background:rgba(238,224,182,.78); box-shadow:0 1px 2px rgba(0,0,0,.15)} .lvs-tape.a{left:-10px; transform:rotate(-28deg)} .lvs-tape.b{right:-10px; transform:rotate(25deg)}
+.lvs-count{position:absolute; right:-10px; bottom:-8px; background:#3a2416; color:#ffe08a; font-family:var(--f-display); font-size:20px; padding:2px 9px; border-radius:14px; border:2px solid #fff; transform:rotate(8deg)}
+.lvs figcaption{font-family:var(--f-hand); text-align:center; margin-top:6px; max-width:240px; display:flex; flex-direction:column; line-height:1.15}
+.lvs-night{font-size:14px; color:#9a6a3a} .lvs figcaption b{font-size:19px; color:#2a1a0c} .lvs figcaption small{font-size:14px; color:#6e5444} .lvs-after{color:#a0402e !important}
+.lvs.relic .lvs-die{border-color:#fff6d6; box-shadow:0 0 0 2px #e9b949, 0 0 22px rgba(233,185,73,.7), 0 10px 18px rgba(60,35,10,.38)}
+.lvs.fresh{animation:lvStick .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:var(--d, .3s)}
+@keyframes lvStick{0%{opacity:0; transform:rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45) translateY(-30px)} 60%{opacity:1} 100%{opacity:1; transform:rotate(var(--rot, 0deg)) scale(1)}}
+.lv-note{position:relative; max-width:72%; margin-top:auto; padding:8px 12px; background:#fff3a0; font-family:var(--f-hand); font-size:15px; color:#5a3a1a; transform:rotate(var(--rot)); box-shadow:2px 4px 8px rgba(0,0,0,.2)} .lv-note::before{content:''; position:absolute; top:-7px; left:40%; width:40px; height:14px; background:rgba(238,224,182,.8)}
+.lv-race{list-style:none; padding:0; margin:6px 0; width:min(320px, 90%); font-family:var(--f-hand); font-size:17px} .lv-race li{display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted #c9b38a; padding:2px 0} .lv-race li.me{color:#2f5e1e; font-weight:700}
+.lv-pacts{display:flex; flex-direction:column; gap:8px; width:min(380px, 96%); margin-top:6px}
+.lv-pact{display:flex; align-items:center; gap:10px; text-align:left; background:#fffaf0; border:2px solid #c9b38a; border-radius:12px; padding:7px 10px; cursor:pointer; font-family:var(--f-hand); color:#3a2416} .lv-pact:hover{border-color:#7d6a99} .lv-pact.done{cursor:default; border-color:#7d6a99}
+.lv-pact b{display:block; font-size:17px} .lv-pact small{display:block; font-size:14px; color:#6e5444} .lv-pact small.cost{color:#8a2a18}
+.lv-wax{flex:none; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; background:radial-gradient(circle at 35% 30%, #9a3a3a, #5a1a1a); box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.lvp.blanc{justify-content:center}
+.lv-slots{display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin:12px 0} .lv-slots.small{grid-template-columns:repeat(3, 1fr); gap:10px}
+.lv-slot{width:clamp(64px, 11vh, 96px); aspect-ratio:1; border-radius:22px; border:3px dashed #c9b38a; display:flex; align-items:center; justify-content:center; transform:rotate(var(--rot)); color:#c9b38a; font-family:var(--f-display); font-size:34px; background:rgba(255,255,255,.35)}
+.lv-relics{display:flex; flex-wrap:wrap; gap:6px; justify-content:center} .lv-relics .lvs-die{width:clamp(80px, 12vh, 110px)}
+.lvp-prev{background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%); border-radius:12px; padding:18px 12px 10px; display:flex; justify-content:center}
+.lvp.st.free{display:block}
+.lvs.free{position:absolute; margin:0; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)); max-width:none}
+.lvs.free.fresh{animation:lvStickFree .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:.15s}
+@keyframes lvStickFree{0%{opacity:0; transform:translate(-50%, -62%) rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45)} 60%{opacity:1} 100%{opacity:1; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1)}}
+.lvp.st.free .lvs-die{width:clamp(96px, 19vh, 176px)}
+.lv-here{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) rotate(-4deg); border:3px dashed #d2bf98; border-radius:24px; padding:30px 22px; color:#b8a27a !important}
+.lvp.st.hover{box-shadow:inset 0 0 0 4px rgba(233,185,73,.8); background:rgba(255,236,170,.25)}
+.lv-notes{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px} .lv-notes .lv-note{margin-top:0}
+.lv-planche{width:min(980px, 96vw); display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 12px 10px; border-radius:14px; background:repeating-linear-gradient(45deg, #e9f2f7 0 10px, #dfeaf1 10px 20px); box-shadow:0 0 0 2px #fff, 0 6px 16px rgba(0,0,0,.45)}
+.lv-planche .lv-hand{margin:0; font-size:16px; color:#3a2416}
+.lv-sheet{display:flex; gap:14px; overflow-x:auto; max-width:100%; padding:10px 6px 4px; scrollbar-width:thin}
+.lv-peel{flex:none; cursor:grab; touch-action:none; transition:transform .15s} .lv-peel:hover{transform:translateY(-4px) rotate(-2deg)} .lv-peel.lifting{opacity:.35}
+.lv-peel .lvs{margin:0} .lv-peel .lvs-die{width:clamp(70px, 11vh, 96px); border-width:6px; border-radius:20px} .lv-peel figcaption{max-width:120px} .lv-peel figcaption b{font-size:14px} .lv-peel figcaption small, .lv-peel .lvs-night{font-size:12px}
+.lv-ghost{position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%, -50%) rotate(-6deg) scale(1.15); filter:drop-shadow(0 18px 14px rgba(0,0,0,.35))} .lv-ghost .lvs{margin:0} .lv-ghost .lvs-die{width:110px; border-width:6px}
+.lvs-how{font-size:12px !important; color:#8a7a5e !important; margin-top:2px; max-width:220px}
+.modal.livrebook.withsheet .lvbook:not(.single){width:min(1100px, 96vw, calc((84vh - 210px) * 1.48))}
+.modal.livrebook.withsheet .lvbook.single{width:min(470px, 94vw, calc((80vh - 200px) * .74))}
 </style>
 <meta name="description" content="Un petit château maléfique mais douillet : colle des pièces et des meubles comme des stickers, accueille des créatures attachantes, repousse les aventuriers… et rends visite aux autres Maîtres du Val.">
 <meta name="theme-color" content="#0b0910">
@@ -11040,7 +11102,7 @@ function renderTitle() {
     <button class="ttbtn" type="button" data-tt="load" ${list.length ? '' : 'disabled'}><b>📂 Mes parties</b><small>${list.length ? `${list.length} partie${list.length > 1 ? 's' : ''} sauvegardée${list.length > 1 ? 's' : ''} dans ce navigateur` : 'Aucune partie pour l’instant'}</small></button>
     <button class="ttbtn" type="button" data-tt="multi"><b>🌐 Multijoueur</b><small>${NET.ok ? 'Château partagé avec tes amis, et le Val des Maîtres' : esc(netWhy())}</small></button>
   </div>
-  <div class="trow"><button class="sbtn" type="button" data-tt="import">📥 Importer une sauvegarde</button><button class="sbtn" type="button" data-tt="grim">📖 Grimoire</button></div>${file}`;
+  <div class="trow"><button class="sbtn" type="button" data-tt="import">📥 Importer une sauvegarde</button><button class="sbtn" type="button" data-tt="grim">📖 Grimoire</button><button class="sbtn" type="button" data-tt="stickers">📚 Le Livre des stickers</button></div>${file}`;
 }
 function slotsHTML(list) {
   return `<h2>📂 Mes parties</h2><p class="hint">Chaque partie se sauvegarde toute seule, dans ce navigateur${PROFILE ? ` (profil « ${esc(PROFILE)} »)` : ''} : ${list.length}/${SLOTS_MAX} cases. Exporte un fichier pour la garder ailleurs ou la continuer sur un autre appareil.</p>
@@ -11073,6 +11135,7 @@ function titleClick(e) {
   else if (k === 'del') confirmBtn(b, 'Sûr ?', () => { deleteSlot(id); renderTitle(); });
   else if (k === 'import') { const f = $('#tImport'); if (f) { f.value = ''; f.click(); } }
   else if (k === 'grim') openGrimoire();
+  else if (k === 'stickers' && typeof openStickerBook === 'function') openStickerBook();
   else if (k === 'host') { closeModal(true); coopHost(); }
   else if (k === 'join') { const v = normCode(($('#tCode') || {}).value); if (v.length !== 6) { toast('Le code fait 6 lettres ou chiffres.', true); return; } const go = () => coopJoin(v); if (NET.name) go(); else askMasterName(go); }
   else if (k === 'val') { closeModal(true); openVal(); }
@@ -18578,6 +18641,7 @@ WIKI.coups = { cat: 'danger', t: 'Les rivaux contre-attaquent', x: () => `<p>Les
    rencontres finissent autrement quand on les possède.
    ========================================================= */
 const ERA_NAMES = ['du Réveil', 'des Lanternes', 'des Brumes', 'des Os dorés', 'du Grand Festin', 'des Chandelles', 'des Toiles', 'du Gel', 'des Crocs', 'des Grimoires', 'des Racines', 'du Tonnerre', 'des Masques', 'des Sorts perdus', 'des Cendres', 'de la Lune rousse', 'des Couronnes', 'des Murmures', 'des Champignons', 'du Chaudron', 'des Girouettes', 'des Clés rouillées', 'des Ronces', 'des Lucioles'];
+const BOOK_DYN = { reve: 2, donjon: 3, quete: 2, grandequete: 4 };   // les points des familles de stickers (rêve d'une espèce, donjon, quête), réglables dans l'Atelier
 const BOOK_LEN = [8, 14];   // la durée d'une ère, en nuits (réglable dans l'Atelier)
 const ROMAN = n => ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'][n] || String(n);
 // les moments : les anciens hauts faits (sans leurs pouvoirs), et de nouveaux
@@ -18614,20 +18678,20 @@ const MOMENTS = [
 ];
 // les moments récurrents : chaque fois que ça arrive (avec un plafond par chapitre), pour que la course reste ouverte toute la partie
 const RECUR = [
-  { id: 'r_invasion', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
-  { id: 'r_boss', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
-  { id: 'r_expe', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
-  { id: 'r_album', ico: '📒', t: 'Nouvelle page d’album', pts: 1, cap: 3, v: s => Object.keys(s.album || {}).length },
-  { id: 'r_palier', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
-  { id: 'r_crit', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
-  { id: 'r_envies', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
-  { id: 'r_quete', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0 },
-  { id: 'r_merveille', ico: '🏛️', t: 'Merveille agrandie', pts: 1, cap: 2, v: s => s.stats.wonders || 0 },
-  { id: 'r_coup', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0 },
-  { id: 'r_legende', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length },
-  { id: 'r_artefact', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0 },
-  { id: 'r_vassal', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length },
-  { id: 'r_fete', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => s.feteAt || 0 },
+  { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
+  { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
+  { id: 'r_expe', cat: 'Profondeurs', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
+  { id: 'r_album', cat: 'Éleveur', ico: '📒', t: 'Nouvelle page d’album', pts: 1, cap: 3, v: s => Object.keys(s.album || {}).length },
+  { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
+  { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
+  { id: 'r_envies', cat: 'Éleveur', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
+  { id: 'r_quete', cat: 'Val', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0 },
+  { id: 'r_merveille', cat: 'Bâtisseur', ico: '🏛️', t: 'Merveille agrandie', pts: 1, cap: 2, v: s => s.stats.wonders || 0 },
+  { id: 'r_coup', cat: 'Stratège', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0 },
+  { id: 'r_legende', cat: 'Missions', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length },
+  { id: 'r_artefact', cat: 'Château', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0 },
+  { id: 'r_vassal', cat: 'Val', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length },
+  { id: 'r_fete', cat: 'Éleveur', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => s.feteAt || 0 },
 ];
 const MOM_BY = Object.fromEntries([...MOMENTS, ...RECUR].map(m => [m.id, m]));
 // les reliques d'ère (le pouvoir d'un ancien haut fait, gagné en âge d'or)
@@ -18664,8 +18728,23 @@ const PACTS = [
 ];
 const PACT_BY = Object.fromEntries(PACTS.map(p => [p.id, p]));
 const AGES = { or: { ico: '🌟', name: 'Âge d’or' }, heroique: { ico: '⚜️', name: 'Âge héroïque' }, normal: { ico: '📜', name: 'Âge ordinaire' }, sombre: { ico: '🌑', name: 'Âge sombre' } };
-const RIVAL_RATE = { base: 1.3, form: [.6, 1.4], spread: .3 };   // les points de moments d'un rival par nuit, sa forme du chapitre (réglés par simulation)
+const RIVAL_RATE = { base: 2.2, form: [.6, 1.4], spread: .3 };   // les points de moments d'un rival par nuit, sa forme du chapitre (réglés par simulation)
 
+const chapScore = c => c.mine.reduce((a, x) => a + x.pts * (x.n || 1), 0);
+// coller un sticker à la prochaine place libre du chapitre (deux par page, en quinconce)
+const STICK_SLOTS = [[33, 31, -4], [66, 70, 3]];
+function bookPlace(c, x) {
+  const used = {}; c.mine.forEach(y => { if (y !== x && y.pos) used[y.pos.pg] = (used[y.pos.pg] || 0) + 1; });
+  let pg = Math.max(0, ...Object.keys(used).map(Number)); if ((used[pg] || 0) >= 2) pg++;
+  const [sx, sy, r] = STICK_SLOTS[Math.min(1, used[pg] || 0)]; x.pos = { pg, x: sx, y: sy, r }; x.stuck = true; return x;
+}
+const bookAutoStick = () => typeof headless === 'function' && headless();   // sans écran (IA, ligne de commande) : collé tout de suite
+function bookAdd(c, x) {
+  // un récurrent déjà dans le chapitre : on empile (×2, ×3…) au lieu d'en coller un de plus
+  const same = /^r_/.test(x.id) ? c.mine.find(y => y.id === x.id) : null;
+  if (same) { same.n = (same.n || 1) + 1; same.last = x.night; return same; }
+  c.mine.push(x); if (bookAutoStick()) bookPlace(c, x); else x.stuck = false; return x;
+}
 /* ---------- l'état ---------- */
 function bookState() {
   if (!S) return null;
@@ -18677,6 +18756,7 @@ function bookState() {
     FIRSTS.forEach(f => { S.book.plan[f.id] = Object.fromEntries(RIVALS.map(r => [r.id, f.win[0] + Math.floor(Math.random() * (f.win[1] - f.win[0] + 1))])); });
     bookOpenChapter(true);
   }
+  S.book.ch.forEach(c => c.mine.forEach(x => { if (x.stuck !== false && !x.pos) bookPlace(c, x); }));
   return S.book;
 }
 const bookCur = () => { const B = bookState(); return B && B.ch[B.ch.length - 1]; };
@@ -18696,14 +18776,14 @@ function bookEarn(id, night) {
   if (m.online && typeof netUsable === 'function' && !netUsable()) return null;
   const by = m.first && B.firsts[id] && B.firsts[id] !== 'moi' ? B.firsts[id] : null, pts = by ? 1 : m.pts;
   if (m.first && !by) B.firsts[id] = 'moi';
-  B.got[id] = night || S.night; c.mine.push({ id, night: S.night, pts, after: by });
+  B.got[id] = night || S.night; bookAdd(c, { id, night: S.night, pts, after: by, ...(typeof bookCtx === 'function' ? bookCtx(id) : {}) });
   return { m, pts, by };
 }
 function bookRecur() {
   const B = bookState(), c = bookCur(), out = []; B.cnt = B.cnt || {};
   RECUR.forEach(r => { let v = 0; try { v = r.v(S); } catch (e) {} const was = B.cnt[r.id]; B.cnt[r.id] = v; if (was == null || v <= was) return;
-    const n = Math.min(v - was, Math.max(0, r.cap - c.mine.filter(x => x.id === r.id).length));
-    for (let i = 0; i < n; i++) { c.mine.push({ id: r.id, night: S.night, pts: r.pts }); out.push({ m: r, pts: r.pts }); } });
+    const had = c.mine.find(x => x.id === r.id), n = Math.min(v - was, Math.max(0, r.cap - (had ? had.n || 1 : 0)));
+    for (let i = 0; i < n; i++) { bookAdd(c, { id: r.id, night: S.night, pts: r.pts, ...(typeof bookCtx === 'function' ? bookCtx(r.id) : {}) }); out.push({ m: r, pts: r.pts }); } });
   return out;
 }
 function bookCheck(report) {
@@ -18729,10 +18809,11 @@ function bookTick(report) {
   bookRivalsNight(out);
   const c = bookCur();
   if (S.night >= c.to) {
-    const mine = c.mine.reduce((a, x) => a + x.pts, 0), rs = Object.values(c.rivals), prev = B.ch[B.ch.length - 2];
+    const mine = chapScore(c), rs = Object.values(c.rivals), prev = B.ch[B.ch.length - 2];
     let age = !rs.length ? (mine >= 3 ? 'or' : 'normal') : rs.every(x => mine > x) ? 'or' : rs.every(x => mine < x) ? 'sombre' : 'normal';
     if (age === 'or' && prev && prev.age === 'sombre') age = 'heroique';
     c.age = age; c.score = mine; c.end = S.night;
+    const left = c.mine.filter(x => x.stuck === false); left.forEach(x => bookPlace(c, x)); if (left.length) out.push(['📖', `Gribouille a collé pour toi ${left.length} sticker${left.length > 1 ? 's' : ''} oublié${left.length > 1 ? 's' : ''} dans le chapitre.`, '']);
     if (B.pact && B.pact.ch === c.n) B.pact = null;   // le pacte ne vaut que pour un chapitre
     out.push(['📖', `Fin du chapitre ${ROMAN(c.n)}, l’Ère ${c.name} : ${AGES[age].ico} ${AGES[age].name} (${Math.round(mine)} points, contre ${rs.length ? rs.map(x => Math.round(x)).join(', ') : 'personne'} pour les rivaux).`, age === 'sombre' ? 'bad' : 'good']);
     if (age === 'or' || age === 'heroique') {
@@ -18764,7 +18845,7 @@ CMD.pact = a => bookPact(a && a.id);
 const dawnBook = dawn;
 dawn = function (report) { const r = dawnBook(report); try { bookTick(report); bookCheck(report); } catch (e) { console.error(e); } return r; };
 const afterChangeBook = afterChange;
-afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck().forEach((r, i) => setTimeout(() => { toast(`📖 Nouveau sticker : ${r.m.t}${r.by ? ` (après ${racer(r.by).master})` : ''}`); sfx('chime'); }, i * 900)); } catch (e) { console.error(e); } return afterChangeBook(); };
+afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck().forEach((r, i) => setTimeout(() => { toast(`📖 Un sticker à coller : ${r.m.t}${r.by ? ` (après ${racer(r.by).master})` : ''}`); sfx('chime'); }, i * 900)); } catch (e) { console.error(e); } return afterChangeBook(); };
 // les hauts faits n'existent plus à part : ce sont des stickers
 checkAch = function () { return []; };
 announceAch = function () {};
@@ -18784,51 +18865,7 @@ wrapEvB('cage', 0, (R, f0) => { const t = f0(R); if (!hasM('epopee')) return t; 
   const y0 = COUPS.morgrave.run; COUPS.morgrave.run = (r, out) => { if (!hasM('collec')) return y0(r, out); out.push(['🗼', `📖 « Collectionneur » : tes vitrines connaissent les spectres. Ceux d’${r.master.replace(/^la nécromancienne /, '')} repartent bredouilles.`, 'good']); };
   const p0 = COUPS.ombrelune.run; COUPS.ombrelune.run = (r, out) => { if (!hasM('conteur') && !hasM('livredor')) return p0(r, out); if (typeof settlements === 'function') settlements().forEach(s => addGw(s, -5)); out.push(['🦇', `📖 « Conteur » : on connaît tes histoires dans le Val ; les rumeurs de ${r.master} prennent mal (−5 de bonne volonté seulement, et tes créatures n’y croient pas).`, 'bad']); };
 }
-/* ---------- le livre ---------- */
-function bookStickerHTML(x, i, rival) {
-  const m = MOM_BY[x.id]; if (!m) return '';
-  return `<div class="lv-st${rival ? ' rv' : ''}${x.after ? ' after' : ''}" style="--rot:${((i * 37) % 9) - 4}deg"><span class="lv-ico">${iconize(m.ico)}</span><b>${esc(m.t)}</b><small>${rival ? esc(racer(x.who).master) + ' · ' : ''}nuit ${x.night}${x.pts != null ? ` · +${x.pts}` : ''}${x.after ? ` · après ${esc(racer(x.after).master)}` : ''}</small></div>`;
-}
-function bookPageHTML(c) {
-  const B = S.book, live = c === bookCur(), mine = c.mine.reduce((a, x) => a + x.pts, 0), rows = Object.entries(c.rivals).sort((a, b) => b[1] - a[1]);
-  const rank = [['moi', mine], ...rows].sort((a, b) => b[1] - a[1]);
-  return `<div class="lv-page${B._anim === c.n ? ' open' : ''}"><div class="lv-chap">Chapitre ${ROMAN(c.n)}</div><h2 class="lv-title">L’Ère ${esc(c.name)}</h2>
-    <p class="lv-dates">Nuits ${c.from} à ${c.to}${live ? ` · <b>en cours</b>, encore ${Math.max(0, c.to - S.night)} nuit${c.to - S.night > 1 ? 's' : ''}` : ` · ${AGES[c.age].ico} <b>${AGES[c.age].name}</b>`}</p>
-    <div class="lv-stickers">${c.mine.length ? c.mine.map((x, i) => bookStickerHTML(x, i)).join('') : '<p class="hint">Aucun sticker pour l’instant. Les moments marquants viendront s’y coller : un palier, un boss, une espèce rare, une fête…</p>'}</div>
-    <div class="lv-margin"><h4>${live ? 'La course du chapitre' : 'Le classement du chapitre'}</h4><ol>${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? `<b>${esc(S.name)}</b>` : `${racer(w).emo} ${esc(racer(w).name)}`} <span>${Math.round(p)} pts</span></li>`).join('')}</ol>
-      ${live ? '<p class="hint">Premier à la fin du chapitre : âge d’or et une relique d’ère. Dernier : âge sombre, et un pacte à choisir.</p>' : ''}
-      ${c.rmom.length ? `<div class="lv-rv">${c.rmom.map((x, i) => bookStickerHTML(x, i, true)).join('')}</div>` : ''}</div>
-    ${c.relics && c.relics.length ? `<div class="lv-gain">${c.relics.map(id => `<p>${RELIC_BY[id].ico} <b>${esc(RELIC_BY[id].name)}</b> : ${esc(RELIC_BY[id].d)}</p>`).join('')}</div>` : ''}
-    ${c.age === 'sombre' && c.choices && !c.pact ? `<div class="lv-gain dark"><h4>🌑 Un pacte pour le chapitre suivant</h4><p class="hint">Un vrai coup de pouce pendant tout le chapitre, contre une perte tout de suite.</p><div class="lv-pacts">${c.choices.map(id => { const P = PACT_BY[id]; return `<button type="button" class="sbtn" data-pact="${id}">${P.ico} <b>${esc(P.name)}</b><small>${esc(P.d)} · coût : ${esc(P.cost)}</small></button>`; }).join('')}</div></div>` : c.pact ? `<div class="lv-gain dark"><p>${PACT_BY[c.pact].ico} Pacte choisi : <b>${esc(PACT_BY[c.pact].name)}</b> (${esc(PACT_BY[c.pact].d)}).</p></div>` : ''}
-  </div>`;
-}
-function bookCollectionHTML() {
-  const B = S.book, cats = [...new Set(MOMENTS.filter(m => !m.online || (typeof netUsable === 'function' && netUsable())).map(m => m.cat))];
-  return `<div class="lv-page"><div class="lv-chap">Fin du livre</div><h2 class="lv-title">La collection</h2>
-    <h3>Reliques d’ère (${B.relics.length})</h3>${B.relics.length ? `<div class="lv-relics">${B.relics.map(r => `<p>${RELIC_BY[r.id].ico} <b>${esc(RELIC_BY[r.id].name)}</b>, de l’Ère ${esc(r.era)} : ${esc(RELIC_BY[r.id].d)}</p>`).join('')}</div>` : '<p class="hint">Aucune pour l’instant : finis un chapitre en tête de la course.</p>'}
-    ${B.pact ? `<p>${PACT_BY[B.pact.id].ico} Pacte en cours : <b>${esc(PACT_BY[B.pact.id].name)}</b> (${esc(PACT_BY[B.pact.id].d)}), jusqu’à la fin du chapitre ${ROMAN(B.pact.ch)}.</p>` : ''}
-    ${cats.map(cat => `<h3>${esc(cat)}</h3><div class="lv-stickers all">${MOMENTS.filter(m => m.cat === cat && (!m.online || (typeof netUsable === 'function' && netUsable()))).map((m, i) => { const by = m.first && B.firsts[m.id] && B.firsts[m.id] !== 'moi' ? B.firsts[m.id] : null; return B.got[m.id] ? bookStickerHTML({ id: m.id, night: B.got[m.id] }, i) : `<div class="lv-st off" style="--rot:${((i * 37) % 9) - 4}deg"><span class="lv-ico">${by ? iconize(m.ico) : '?'}</span><b>${esc(m.t)}</b><small>${esc(m.d)}${by ? ` · déjà pris par ${esc(racer(by).master)}` : ''}</small></div>`; }).join('')}</div>`).join('')}
-    ${B.prologue ? `<h3>Prologue (avant le Livre)</h3><div class="lv-stickers">${B.prologue.map((x, i) => bookStickerHTML(x, i)).join('')}</div>` : ''}
-  </div>`;
-}
-function openBook(focus) {
-  const B = bookState(); if (!B) return;
-  let i = typeof focus === 'number' ? focus - 1 : B.ch.length - 1; const N = B.ch.length + 1;   // la dernière page : la collection
-  const m = openModal('<div class="livre" id="livre"></div>', { wide: true, label: 'Le Livre du Maître', cls: 'livrem' });
-  const draw = () => {
-    const box = m.querySelector('#livre');
-    box.innerHTML = `<div class="lv-nav"><button type="button" class="sbtn small" data-lv="-1" ${i <= 0 ? 'disabled' : ''}>◀</button><span>📖 Le Livre du Maître · ${i < B.ch.length ? `chapitre ${ROMAN(i + 1)} sur ${ROMAN(B.ch.length)}` : 'la collection'}</span><button type="button" class="sbtn small" data-lv="1" ${i >= N - 1 ? 'disabled' : ''}>▶</button><button type="button" class="sbtn small" data-lv="col">Collection</button></div>${i < B.ch.length ? bookPageHTML(B.ch[i]) : bookCollectionHTML()}`;
-    B._anim = null;
-  };
-  B._anim = typeof focus === 'number' ? focus : null; draw();
-  m.addEventListener('click', e => {
-    const n = e.target.closest('[data-lv]'), p = e.target.closest('[data-pact]');
-    if (n) { i = n.dataset.lv === 'col' ? N - 1 : Math.max(0, Math.min(N - 1, i + +n.dataset.lv)); sfx('tick'); draw(); }
-    if (p && !run('pact', { id: p.dataset.pact })) return;
-    if (p) { sfx('chime'); toast(`${PACT_BY[p.dataset.pact].ico} Pacte : ${PACT_BY[p.dataset.pact].name}.`); afterChange(); draw(); }
-  });
-}
-openAch = function () { openBook(); };
+/* ---------- le livre : dessiné et feuilleté dans p65_livre_ui.js (openBook) ---------- */
 // le Livre s'ouvre de lui-même sur un nouveau chapitre (et sur le pacte à choisir), dès que la voie est libre
 if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => {
   try { if (!S || !S.started || !S.book || !S.book.pending || UI.busy || (typeof V !== 'undefined' && V.spotOn) || $('#modalRoot').children.length || (document.getElementById('world') && !document.getElementById('world').hidden) || document.body.classList.contains('crawling')) return;
@@ -18839,8 +18876,9 @@ if (typeof setInterval === 'function' && typeof document !== 'undefined') setInt
 const victoryNotifsBook = victoryNotifs;
 victoryNotifs = function (add) {
   victoryNotifsBook(add); if (!S.started || !S.book) return;
+  { const cur = bookCur(), n = cur ? cur.mine.filter(x => x.stuck === false).length : 0; if (n) add('coller', '📖', `${n} sticker${n > 1 ? 's' : ''} à coller dans le Livre`, () => openBook(), 4, 'goal'); }
   const c = S.book.ch.find(x => x.age === 'sombre' && x.choices && !x.pact); if (c) add('pacte', '🌑', 'Âge sombre : choisis ton pacte dans le Livre', () => openBook(c.n), 6, 'bad');
-  const cur = bookCur(); if (cur && cur.to - S.night <= 2) { const mine = cur.mine.reduce((a, x) => a + x.pts, 0), best = Math.max(0, ...Object.values(cur.rivals)); add('chap', '📖', `Fin du chapitre dans ${Math.max(0, cur.to - S.night)} nuit(s) : ${Math.round(mine)} pts contre ${Math.round(best)} pour le meilleur rival`, () => openBook(), 3, mine > best ? '' : 'bad'); }
+  const cur = bookCur(); if (cur && cur.to - S.night <= 2) { const mine = chapScore(cur), best = Math.max(0, ...Object.values(cur.rivals)); add('chap', '📖', `Fin du chapitre dans ${Math.max(0, cur.to - S.night)} nuit(s) : ${Math.round(mine)} pts contre ${Math.round(best)} pour le meilleur rival`, () => openBook(), 3, mine > best ? '' : 'bad'); }
 };
 UNE_RULES.push([9, /Fin du chapitre|Relique d’ère|Âge sombre|Le Livre s’ouvre/], [7, /Nouveau sticker|ce sticker va dans sa marge/]);
 // le Grimoire
@@ -18865,7 +18903,7 @@ const bookData = m => { const o = { t: m.t, d: m.d, ico: m.ico, pts: m.pts }; if
 const BOOK_STICKERS = Object.fromEntries(Object.entries(MOM_BY).map(([k, m]) => [k, bookData(m)]));
 const BOOK_RELICS = Object.fromEntries(RELICS_ERA.map(r => [r.id, { name: r.name, ico: r.ico, d: r.d, pw: r.pw.slice() }]));
 const BOOK_PACTS = Object.fromEntries(PACTS.map(p => [p.id, { name: p.name, ico: p.ico, d: p.d, cost: p.cost }]));
-const BOOK_TUNE = { base: RIVAL_RATE.base, form: RIVAL_RATE.form.slice(), spread: RIVAL_RATE.spread, lenMin: BOOK_LEN[0], lenMax: BOOK_LEN[1], names: ERA_NAMES.slice() };
+const BOOK_TUNE = { base: RIVAL_RATE.base, form: RIVAL_RATE.form.slice(), spread: RIVAL_RATE.spread, lenMin: BOOK_LEN[0], lenMax: BOOK_LEN[1], names: ERA_NAMES.slice(), dyn: { ...BOOK_DYN } };
 Object.assign(TABLES, { BOOK_STICKERS, BOOK_RELICS, BOOK_PACTS });
 Object.assign(BASE, structuredClone({ BOOK_STICKERS, BOOK_RELICS, BOOK_PACTS, BOOK_TUNE }));
 const entryOfBook = entryOf; entryOf = function (t, k) { return t === 'BOOK_TUNE' ? BOOK_TUNE : entryOfBook(t, k); };
@@ -18877,6 +18915,7 @@ function bookSyncAdmin() {
   Object.entries(TABLES.BOOK_PACTS || {}).forEach(([k, v]) => { if (PACT_BY[k]) Object.assign(PACT_BY[k], clone(v)); });
   RIVAL_RATE.base = +BOOK_TUNE.base || 0; if (Array.isArray(BOOK_TUNE.form) && BOOK_TUNE.form.length === 2) RIVAL_RATE.form = BOOK_TUNE.form.slice(); RIVAL_RATE.spread = +BOOK_TUNE.spread || 0;
   if (Array.isArray(BOOK_TUNE.names) && BOOK_TUNE.names.length) ERA_NAMES.splice(0, ERA_NAMES.length, ...BOOK_TUNE.names);
+  if (BOOK_TUNE.dyn) Object.keys(BOOK_DYN).forEach(k => { if (BOOK_TUNE.dyn[k] != null) BOOK_DYN[k] = +BOOK_TUNE.dyn[k]; });
   BOOK_LEN[0] = Math.max(3, +BOOK_TUNE.lenMin || 8); BOOK_LEN[1] = Math.max(BOOK_LEN[0], +BOOK_TUNE.lenMax || 14);
   if (typeof S !== 'undefined' && S && S.book) bookRecalcPw();
 }
@@ -18892,7 +18931,7 @@ ADMIN.livre = { cat: 'premiers', key: null };
 const LIVRE_CATS = [['premiers', 'Premiers du Val', 'BOOK_STICKERS'], ['moments', 'Moments', 'BOOK_STICKERS'], ['recur', 'Moments récurrents', 'BOOK_STICKERS'], ['reliques', 'Reliques d’ère', 'BOOK_RELICS'], ['pactes', 'Pactes d’âge sombre', 'BOOK_PACTS'], ['reglages', 'Ères et rivaux', 'BOOK_TUNE']];
 const livreKeys = cat => cat === 'premiers' ? FIRSTS.map(f => f.id) : cat === 'moments' ? MOMENTS.filter(m => !m.first).map(m => m.id) : cat === 'recur' ? RECUR.map(r => r.id) : cat === 'reliques' ? Object.keys(BOOK_RELICS) : cat === 'pactes' ? Object.keys(BOOK_PACTS) : ['_'];
 // l'aperçu d'un sticker, tel qu'il sera collé dans le Livre
-const livreSticker = k => { const m = BOOK_STICKERS[k] || {}; return `<div class="lv-st" style="--rot:-3deg; width:160px"><span class="lv-ico">${iconize(esc(m.ico || '?'))}</span><b>${esc(m.t || k)}</b><small>nuit 12 · +${m.pts || 0}</small></div>`; };
+const livreSticker = k => typeof lvSticker === 'function' ? `<div class="lvp-prev">${lvSticker({ id: k, night: 12, pts: (BOOK_STICKERS[k] || {}).pts }, 0, false)}</div>` : '';
 const PW_HELP = () => ACH.filter(a => !a.active && !a.online).map(a => `<span><code>${a.id}</code> ${esc(a.pd)}</span>`).join('');
 function livreDetail() {
   const st = ADMIN.livre, c = st.cat, k = st.key;
@@ -18921,6 +18960,7 @@ function livreDetail() {
   return `<div class="cprev"><div class="cval"><b>La course d’un chapitre</b><small>Un rival marque ${T.base} point par nuit × sa forme du chapitre (tirée entre ${(T.form || [])[0]} et ${(T.form || [])[1]}) × (1 + sa course à la victoire ÷ 100), à ±${Math.round(T.spread * 50)} % près chaque nuit, plus 3 points par « premier du Val » qu’il prend.</small>
       <small>Sur un chapitre moyen (${len} nuits) : environ <b>${at(0)}</b> points au début de la partie, <b>${at(50)}</b> à mi-course, <b>${at(90)}</b> en fin de course. Repère : un joueur actif marque 15 à 30 points par chapitre.</small></div></div>
     <h3>Les rivaux</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'base', 'Points par nuit', 'num', { min: 0, step: .1 })}${fld('BOOK_TUNE', '_', 'form', 'Forme du chapitre (de, à)', 'pair', { ph: '0.6, 1.4' })}${fld('BOOK_TUNE', '_', 'spread', 'Hasard de chaque nuit (part)', 'num', { min: 0, max: 1, step: .05 })}</div>
+    <h3>Les familles de stickers (points)</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'dyn.reve', 'Premier rêve exaucé d’une espèce', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.donjon', 'Un donjon vaincu', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.quete', 'Une quête du Val', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.grandequete', 'La grande quête', 'num', { min: 0 })}</div>
     <h3>Les ères</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'lenMin', 'Durée la plus courte (nuits)', 'num', { min: 3, max: 30 })}${fld('BOOK_TUNE', '_', 'lenMax', 'Durée la plus longue (nuits)', 'num', { min: 3, max: 40 })}${fld('BOOK_TUNE', '_', 'names', 'Noms des ères (« l’Ère … » ; le premier sert au chapitre I)', 'lines', { rows: 8 })}</div>`;
 }
 ADMIN_TABS.livre = body => {
@@ -18943,6 +18983,334 @@ Object.assign(ACTIONS, {
   livrePick: k => { ADMIN.livre.key = k; renderAdminTab(); },
   livreReset: () => { const st = ADMIN.livre, cat = LIVRE_CATS.find(c => c[0] === st.cat); if (!cat) return; resetEntry(cat[2], cat[2] === 'BOOK_TUNE' ? '_' : st.key); renderAdminTab(); },
 });
+/* =========================================================
+   Le Livre du Maître, dessiné : on le feuillette
+   Une couverture de cuir qui s'ouvre, une double page de papier
+   (une seule au téléphone), des pages qui tournent. Le livre
+   raconte la partie dans l'ordre : page de titre, puis pour
+   chaque ère une page de chapitre enluminée, ses moments en
+   grands stickers collés (deux par page, avec leur illustration
+   et leur légende), les rivaux en pense-bêtes dans la marge, et
+   la page de fin du chapitre (le sceau de l'âge, la relique, le
+   pacte). Au bout du livre : des pages blanches et des
+   emplacements vides, sans dire comment les remplir.
+   Et des familles de stickers à découvrir : le premier rêve
+   secret exaucé de chaque espèce, chaque donjon vaincu, chaque
+   quête du Val accomplie.
+   ========================================================= */
+// un sticker de famille : il porte lui-même son titre, son icône et son illustration
+function bookEarnDyn(id, data, lines) {
+  if (!S || !S.started) return null; const B = bookState(), c = bookCur(); if (!B || B.got[id]) return null;
+  B.got[id] = S.night; const x = bookAdd(c, { id, night: S.night, pts: data.pts, t: data.t, ico: data.ico, cat: data.cat, sub: data.sub, art: data.art, d: data.d });
+  const t = `Nouveau sticker dans le Livre : ${data.t} (+${data.pts}).`; addLog(t, 'ev'); if (lines) lines.push(['📖', t, 'good']);
+  return x;
+}
+// le premier rêve secret exaucé d'une espèce
+const secretsCheckBook = secretsCheck;
+secretsCheck = function (lines) {
+  const before = new Set(S.creatures.filter(c => { try { return ensureSecret(c).done; } catch (e) { return false; } }).map(c => c.id));
+  const r = secretsCheckBook(lines);
+  try { S.creatures.forEach(c => { if (before.has(c.id)) return; const d = ensureSecret(c); if (!d.done) return; const sp = SPECIES[c.sp];
+    bookEarnDyn('reve:' + c.sp, { t: `Le rêve d’un ${sp.name.toLowerCase()}`, ico: '💭', cat: 'Rêves', pts: BOOK_DYN.reve, d: `Réaliser pour la première fois le rêve secret d’un·e ${sp.name.toLowerCase()}.`, sub: `${c.name} rêvait ${typeof dreamOf === 'function' ? dreamOf(d.label) : 'en secret'}`, art: { k: 'sp', key: c.sp } }, lines); }); } catch (e) { console.error(e); }
+  return r;
+};
+// chaque quête du Val accomplie
+const questCompleteBook = questComplete;
+questComplete = function (q, out) {
+  const r = questCompleteBook(q, out);
+  try { const D = q.def || {}; bookEarnDyn('quete:' + q.id + ':' + (D.title || ''), { t: D.title || 'Une quête', ico: D.main ? '🗡️' : '📜', cat: 'Quêtes', pts: D.main ? BOOK_DYN.grandequete : BOOK_DYN.quete, d: D.main ? 'Mener la grande quête du Val jusqu’au bout.' : 'Accomplir cette quête du journal.', sub: D.giver ? `pour ${D.giver}` : '' }, out); } catch (e) { console.error(e); }
+  return r;
+};
+// chaque donjon vaincu (son boss terrassé), et de quoi illustrer les stickers d'expédition
+const crawlApplyBookUI = crawlApply;
+crawlApply = function (R, team, lines) {
+  try { if (S && S.book && R) { S.book.lastParty = (R.party || []).map(p => p.sp).filter(Boolean); if (R.done === 'boss' && CRAWL_DG[R.dg]) S.book.lastBoss = CRAWL_DG[R.dg].boss; } } catch (e) {}
+  const r = crawlApplyBookUI(R, team, lines);
+  try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+  try { if (R && R.done === 'boss' && CRAWL_DG[R.dg]) { const E = CRAWL_EN[CRAWL_DG[R.dg].boss] || {}, key = S.raid && S.raid.target, place = (RAIDS[key] || {}).name || (typeof racer === 'function' && racer(R.dg) ? racer(R.dg).name : R.dg);
+    bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+  return r;
+};
+// le contexte d'un sticker (qui, quoi) pour l'illustrer et le légender
+function bookCtx(id) {
+  try {
+    const B = S.book || {}, home = S.creatures.filter(c => !isOut(c)), newest = home.slice().sort((a, b) => (b.joined || 0) - (a.joined || 0))[0], star = home.slice().sort((a, b) => ((b.legend || b.evo) ? 9 : 0) + (b.lvl || 1) - ((a.legend || a.evo) ? 9 : 0) - (a.lvl || 1))[0];
+    const spOf = c => c ? { art: { k: 'sp', key: c.sp }, sub: `${c.name}, ${SPECIES[c.sp].name.toLowerCase()}` } : {};
+    if (id === 'f_dragon') { const c = home.find(x => x.sp === 'dragonnet'); return c ? spOf(c) : { art: { k: 'sp', key: 'dragonnet' } }; }
+    if (id === 'f_rare') { const c = home.find(x => SPECIES[x.sp] && SPECIES[x.sp].rare); return spOf(c); }
+    if (['r_album', 'menagerie', 'album16', 'album24', 'accueil', 'pop30', 'aimant'].includes(id)) return spOf(newest);
+    if (['legende', 'r_legende', 'chouchou', 'fidele', 'epopee', 'calins', 'conteur'].includes(id)) return spOf(star);
+    if (['f_boss', 'r_boss', 'boss3'].includes(id) && B.lastBoss) { const E = CRAWL_EN[B.lastBoss] || {}; return { art: E.sp ? { k: 'char', key: E.sp } : null, sub: E.name || '' }; }
+    if (['propre', 'r_expe'].includes(id) && B.lastParty && B.lastParty.length) return { art: { k: 'sp', key: B.lastParty[0] }, sub: id === 'propre' ? 'Toute l’équipe rentre debout' : '' };
+    if (['r_invasion', 'repousse', 'rempart', 'forteresse'].includes(id)) return { art: { k: 'hero', key: pick(['barbare', 'paladin', 'mage', 'voleuse', 'elfe']) }, sub: 'La bande détale !' };
+    if (['r_palier', 'f_palier1', 'f_palier2', 'f_palier3', 'palier1', 'palier2'].includes(id)) return { art: { k: 'room', key: 'coeur' }, sub: `Palier ${S.tier}` };
+    if (['r_coup', 'coup'].includes(id)) return { sub: 'Le rival rentre bredouille' };
+  } catch (e) {}
+  return {};
+}
+
+/* ---------- les pages ---------- */
+const LVCOL = { 'Premiers du Val': '#e9b949', 'Bâtisseur': '#c98b4a', 'Éleveur': '#7fbf5a', 'Missions': '#b48ad9', 'Stratège': '#e06a5a', 'Château': '#6aa0e0', 'Profondeurs': '#4fb3a9', 'Val': '#e9894a', 'Val des Maîtres': '#d77fa8', 'Rêves': '#c49bff', 'Donjons': '#8f6ad0', 'Quêtes': '#d9a441' };
+const lvMeta = x => MOM_BY[x.id] || { t: x.t || x.id, ico: x.ico || '✨', cat: x.cat };
+function lvArt(x, m) {
+  const a = x.art;
+  try { if (a && a.k === 'sp' && SPECIES[a.key]) return `<img alt="" src="${portrait(a.key)}">`; if (a && a.k === 'char') return `<img alt="" src="${thumb('char', a.key, true)}">`; if (a && a.k === 'hero') return `<img alt="" src="${thumb('hero', a.key, true)}">`; if (a && a.k === 'room') return `<img alt="" class="room" src="${roomThumb(a.key)}">`; } catch (e) {}
+  return `<span class="lvs-emo">${iconize(esc(m.ico || '✨'))}</span>`;
+}
+function lvSticker(x, i, fresh, free) {
+  const m = lvMeta(x), col = m.cat ? (LVCOL[m.cat] || '#a08a70') : '#8fa6b8', P = free && x.pos;
+  return `<figure class="lvs${fresh ? ' fresh' : ''}${P ? ' free' : ''}" style="--rot:${P ? x.pos.r : [-4, 3, -2, 4, -3][i % 5]}deg; --col:${col}; --d:${.25 + i * .25}s${P ? `; left:${x.pos.x}%; top:${x.pos.y}%` : ''}"><div class="lvs-hold"><div class="lvs-die"><div class="lvs-art">${lvArt(x, m)}</div><i class="lvs-shine"></i></div><span class="lvs-tape a"></span><span class="lvs-tape b"></span>${x.n > 1 ? `<span class="lvs-count">×${x.n}</span>` : ''}</div>
+    <figcaption><span class="lvs-night">Nuit ${x.night}${x.n > 1 && x.last !== x.night ? ` à ${x.last}` : ''}</span><b>${esc(m.t)}</b>${x.sub ? `<small>${esc(x.sub)}</small>` : ''}${x.after ? `<small class="lvs-after">après ${esc(racer(x.after).master)}</small>` : ''}${(x.d || m.d) ? `<small class="lvs-how">🔓 ${esc(x.d || m.d)}</small>` : ''}</figcaption></figure>`;
+}
+const lvRelic = (id, i, fresh) => { const r = RELIC_BY[id]; return r ? `<figure class="lvs relic${fresh ? ' fresh' : ''}" style="--rot:${i ? 3 : -3}deg; --col:#e9b949; --d:${.4 + i * .3}s"><div class="lvs-hold"><div class="lvs-die"><div class="lvs-art"><span class="lvs-emo">${iconize(esc(r.ico))}</span></div><i class="lvs-shine"></i></div><span class="lvs-tape a"></span><span class="lvs-tape b"></span></div><figcaption><span class="lvs-night">Relique d’ère</span><b>${esc(r.name)}</b><small>${esc(r.d)}</small></figcaption></figure>` : ''; };
+function livrePages(fresh) {
+  const B = bookState(), P = [], isNew = x => x.night > fresh;
+  P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
+  const stickers = B.ch.reduce((a, c) => a + c.mine.length, 0);
+  P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
+  if (B.prologue && B.prologue.length) for (let i = 0; i < B.prologue.length; i += 2) P.push({ k: 'prologue', html: `<div class="lvp st"><div class="lv-runhead">Prologue</div>${B.prologue.slice(i, i + 2).map((x, j) => lvSticker(x, i + j, false)).join('')}</div>` });
+  B.ch.forEach(c => {
+    const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}"><span>${AGES[c.age].ico}</span><b>${AGES[c.age].name}</b></div>` : '';
+    P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div><h2>L’Ère ${esc(c.name)}</h2><p class="lv-hand">Nuits ${c.from} à ${c.to}</p><div class="lv-orn">❧</div>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
+    const stuck = c.mine.filter(x => x.stuck !== false && x.pos), pend = c.mine.filter(x => x.stuck === false), maxPg = stuck.reduce((a, x) => Math.max(a, x.pos.pg), -1);
+    const nPg = maxPg + 1 + (live && pend.length ? 1 : 0);
+    for (let pgi = 0; pgi < nPg; pgi++) { const on = stuck.filter(x => x.pos.pg === pgi).sort((a, b) => a.night - b.night);
+      P.push({ k: 'st', n: c.n, pg: pgi, html: `<div class="lvp st free${on.length < 3 && live ? ' room' : ''}" data-ch="${c.n}" data-pg="${pgi}"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => lvSticker(x, q, isNew(x), true)).join('')}${!on.length ? '<p class="lv-hand small lv-here">Colle un sticker ici</p>' : ''}</div>` }); }
+    const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
+    const mine = chapScore(c), rank = [['moi', mine], ...Object.entries(c.rivals)].sort((a, b) => b[1] - a[1]);
+    const race = `<ol class="lv-race">${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? esc(S.name) : `${racer(w).emo} ${esc(racer(w).name)}`}<span>${Math.round(p)}</span></li>`).join('')}</ol>`;
+    if (live) P.push({ k: 'suite', n: c.n, html: `<div class="lvp fin"><div class="lv-runhead">L’Ère ${esc(c.name)}</div><p class="lv-hand big">La suite s’écrit encore…</p><p class="lv-hand">Encore ${Math.max(0, c.to - S.night)} nuit${c.to - S.night > 1 ? 's' : ''} avant la fin du chapitre. La course :</p>${race}<p class="lv-hand small">Premier : âge d’or et une relique d’ère. Dernier : âge sombre, et un pacte à choisir.</p>${notes ? `<div class="lv-notes">${notes}</div>` : ''}</div>` });
+    else {
+      const pact = c.age === 'sombre' && c.choices && !c.pact ? `<div class="lv-pacts"><p class="lv-hand">Un pacte pour traverser l’âge sombre (tout le chapitre suivant) :</p>${c.choices.map(id => { const Pp = PACT_BY[id]; return `<button type="button" class="lv-pact" data-pact="${id}"><span class="lv-wax">${iconize(esc(Pp.ico))}</span><span><b>${esc(Pp.name)}</b><small>${esc(Pp.d)}</small><small class="cost">en échange : ${esc(Pp.cost)}</small></span></button>`; }).join('')}</div>`
+        : c.pact ? `<div class="lv-pacts"><button type="button" class="lv-pact done" disabled><span class="lv-wax">${iconize(esc(PACT_BY[c.pact].ico))}</span><span><b>${esc(PACT_BY[c.pact].name)}</b><small>${esc(PACT_BY[c.pact].d)}</small></span></button></div>` : '';
+      P.push({ k: 'fin', n: c.n, html: `<div class="lvp fin"><div class="lv-runhead">L’Ère ${esc(c.name)}</div><p class="lv-hand big">Fin du chapitre ${ROMAN(c.n)}</p>${seal}${race}${notes ? `<div class="lv-notes">${notes}</div>` : ''}${(c.relics || []).map((id, i) => lvRelic(id, i, c.end > fresh)).join('')}${pact}</div>` });
+    }
+  });
+  // au bout du livre : des pages blanches, des emplacements vides, sans dire comment les remplir
+  const offline = typeof netUsable === 'function' && !netUsable();
+  const left = MOMENTS.filter(m => !B.got[m.id] && !(m.online && offline) && !(m.first && B.firsts[m.id] && B.firsts[m.id] !== 'moi')).length + SPECIES_ORDER.filter(sp => !B.got['reve:' + sp]).length + Object.keys(CRAWL_DG).filter(d => !B.got['donjon:' + d]).length;
+  const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
+  P.push({ k: 'blanc', html: `<div class="lvp blanc"><p class="lv-hand big">Les pages suivantes sont blanches…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand">Encore ${left} stickers à découvrir dans cette partie, et des quêtes à écrire. Qui sait ce qui les fera apparaître ?</p><button type="button" class="sbtn small" data-allstk="1">📚 Le Livre des stickers (toutes tes parties)</button></div>` });
+  P.push({ k: 'reliques', html: `<div class="lvp blanc"><p class="lv-hand big">Le coffret des reliques</p>${B.relics.length ? `<div class="lv-relics">${B.relics.map((r, i) => lvRelic(r.id, i, false)).join('')}</div>` : ''}<div class="lv-slots small">${slots(Math.min(6, RELICS_ERA.length - B.relics.length))}</div><p class="lv-hand small">${B.relics.length} relique${B.relics.length > 1 ? 's' : ''} sur ${RELICS_ERA.length}.${B.pact ? ` Pacte en cours : ${esc(PACT_BY[B.pact.id].name)}.` : ''}</p></div>` });
+  if (P.length % 2) P.push({ k: 'blanc2', html: '<div class="lvp blanc"></div>' });
+  P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
+  return P;
+}
+/* ---------- le livre ---------- */
+let LV = null;
+const lvPending = () => { const c = bookCur(); return c ? c.mine.filter(x => x.stuck === false) : []; };
+function openBook(n, where) {
+  const B = bookState(); if (!B) return;
+  const fresh = B.readNight == null ? 0 : B.readNight, single = innerWidth < 760;
+  let pages = livrePages(fresh);
+  const pick0 = () => {
+    if (lvPending().length) { const k = pages.map((p, i) => [p, i]).filter(([p]) => p.k === 'st' && p.n === bookCur().n); if (k.length) return k[k.length - 1][1]; }
+    const c = B.ch.find(x => x.n === n);
+    if (c && (where === 'fin' || (c.age === 'sombre' && c.choices && !c.pact))) return pages.findIndex(p => p.k === 'fin' && p.n === n);
+    if (n != null) return pages.findIndex(p => p.k === 'chap' && p.n === n);
+    const live = pages.map((p, i) => [p, i]).filter(([p]) => p.n === bookCur().n && (p.k === 'st' || p.k === 'suite')); return live.length ? live[live.length - 1][1] : 1;
+  };
+  let at = pick0(); if (at < 0) at = 1;
+  const m = openModal(`<div class="lvbook${single ? ' single' : ''}"><div class="lv-spread"></div><div class="lv-cover"><div class="lv-cover-in"><span>📖</span><b>Le Livre du Maître</b><small>${esc(S.name)}</small></div></div><div class="lv-ribbon"></div></div>
+    <div class="lv-planche" hidden></div>
+    <div class="lv-bar"><button type="button" class="lv-arrow" data-lvgo="-1" aria-label="Page précédente">◀</button><span class="lv-folio"></span><button type="button" class="lv-arrow" data-lvgo="1" aria-label="Page suivante">▶</button></div>`, { label: 'Le Livre du Maître', cls: 'livrebook', wide: true });
+  LV = { idx: single ? at : at - (at % 2), single, m, anim: false, fresh };
+  const book = m.querySelector('.lvbook'), spread = m.querySelector('.lv-spread'), folio = m.querySelector('.lv-folio'), planche = m.querySelector('.lv-planche');
+  const pg = i => `<div class="lvpg-in">${(pages[i] || { html: '<div class="lvp blanc"></div>' }).html}</div>`;
+  const last = () => LV.single ? pages.length - 1 : pages.length - 2;
+  const drawPlanche = () => {
+    const pend = lvPending(); planche.hidden = !pend.length; m.classList.toggle('withsheet', !!pend.length); if (!pend.length) return;
+    planche.innerHTML = `<p class="lv-hand">${pend.length > 1 ? `${pend.length} stickers à coller` : 'Un sticker à coller'} : fais-${pend.length > 1 ? 'les' : 'le'} glisser sur une page de l’ère en cours, ou touche-${pend.length > 1 ? 'les' : 'le'}.</p><div class="lv-sheet">${pend.map((x, i) => `<div class="lv-peel" data-peel="${i}">${lvSticker(x, i, false)}</div>`).join('')}</div>${pend.length > 2 ? '<button type="button" class="sbtn small" data-lvall="1">Tout coller</button>' : ''}`;
+  };
+  const render = () => {
+    spread.innerHTML = LV.single ? `<div class="lv-pg one">${pg(LV.idx)}</div>` : `<div class="lv-pg l">${pg(LV.idx)}</div><div class="lv-pg r">${pg(LV.idx + 1)}</div>`;
+    m.querySelector('[data-lvgo="-1"]').disabled = LV.idx <= 0; m.querySelector('[data-lvgo="1"]').disabled = LV.idx >= last();
+    folio.textContent = LV.single ? `page ${LV.idx + 1} sur ${pages.length}` : `pages ${LV.idx + 1}–${LV.idx + 2} sur ${pages.length}`;
+    drawPlanche();
+  };
+  const rebuild = (focusPg) => { pages = livrePages(LV.fresh); if (focusPg != null) { const i = pages.findIndex(p => p.k === 'st' && p.n === bookCur().n && p.pg === focusPg); if (i >= 0) LV.idx = LV.single ? i : i - (i % 2); } LV.idx = Math.max(0, Math.min(LV.idx, last())); render(); };
+  const flip = (dir, to) => {
+    if (LV.anim) return; const step = LV.single ? 1 : 2, nx = to != null ? to : LV.idx + dir * step; if (nx < 0 || nx > last() || nx === LV.idx) return;
+    LV.anim = true; sfx('tick');
+    const leaf = document.createElement('div');
+    if (LV.single) {
+      if (dir > 0) { leaf.className = 'lv-leaf one fwd'; leaf.innerHTML = `<div class="lv-face front">${pg(LV.idx)}</div><div class="lv-face back"><div class="lvpg-in"><div class="lvp blanc"></div></div></div>`; spread.querySelector('.lv-pg').innerHTML = pg(nx); }
+      else { leaf.className = 'lv-leaf one bwd'; leaf.innerHTML = `<div class="lv-face front">${pg(nx)}</div><div class="lv-face back"><div class="lvpg-in"><div class="lvp blanc"></div></div></div>`; }
+    } else if (dir > 0) { leaf.className = 'lv-leaf fwd'; leaf.innerHTML = `<div class="lv-face front">${pg(LV.idx + 1)}</div><div class="lv-face back">${pg(nx)}</div>`; spread.querySelector('.lv-pg.r').innerHTML = pg(nx + 1); }
+    else { leaf.className = 'lv-leaf bwd'; leaf.innerHTML = `<div class="lv-face front">${pg(LV.idx)}</div><div class="lv-face back">${pg(nx + 1)}</div>`; spread.querySelector('.lv-pg.l').innerHTML = pg(nx); }
+    spread.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
+    setTimeout(() => { LV.idx = nx; render(); LV.anim = false; }, 680);
+  };
+  // coller : là où on lâche le sticker (une page de l'ère en cours, trois stickers au plus), ou à la prochaine place libre
+  const stickAt = (x, page, cx, cy) => {
+    const c = bookCur(), pgi = +page.dataset.pg, on = c.mine.filter(y => y.stuck !== false && y.pos && y.pos.pg === pgi).length;
+    if (+page.dataset.ch !== c.n) { toast(`Ce sticker va dans le chapitre en cours : l’Ère ${c.name}.`, true); return false; }
+    if (on >= 3) { toast('Cette page est pleine : tourne la page.', true); return false; }
+    const r = page.getBoundingClientRect(), px = Math.max(24, Math.min(76, (cx - r.left) / r.width * 100)), py = Math.max(24, Math.min(78, (cy - r.top) / r.height * 100));
+    x.pos = { pg: pgi, x: Math.round(px), y: Math.round(py), r: Math.round(Math.random() * 10 - 5) }; x.stuck = true; x.glued = S.night; return true;
+  };
+  const stuckFx = x => { sfx('pop'); save(); LV.fresh = Math.min(LV.fresh, x.night - 1); rebuild(x.pos.pg); setTimeout(() => sfx('chime'), 250); };
+  const autoStick = x => { bookPlace(bookCur(), x); stuckFx(x); };
+  let drag = null;
+  planche.addEventListener('pointerdown', e => {
+    const el = e.target.closest('[data-peel]'); if (!el || LV.anim) return; e.preventDefault();
+    const x = lvPending()[+el.dataset.peel]; if (!x) return; const ghost = el.cloneNode(true); ghost.className = 'lv-ghost'; document.body.appendChild(ghost);
+    drag = { x, el, ghost, sx: e.clientX, sy: e.clientY, moved: false }; el.classList.add('lifting');
+    const mv = ev => { if (!drag) return; if (Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 8) drag.moved = true; ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st')); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover')); if (pgEl) pgEl.classList.add('hover'); };
+    const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); const d = drag; drag = null; ghost.remove(); d.el.classList.remove('lifting'); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover'));
+      if (!d.moved) { autoStick(d.x); return; }   // un simple toucher : à la prochaine place libre
+      const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st') && !n.closest('.lv-leaf'));
+      if (pgEl && stickAt(d.x, pgEl, ev.clientX, ev.clientY)) stuckFx(d.x); else if (!pgEl) sfx('tick'); };
+    mv(e); addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  });
+  render();
+  // la couverture s'ouvre, puis on note ce qui a été lu
+  requestAnimationFrame(() => requestAnimationFrame(() => book.classList.add('opened')));
+  setTimeout(() => { const cv = m.querySelector('.lv-cover'); if (cv) cv.remove(); }, 1000);
+  B.readNight = S.night; save();
+  m.addEventListener('click', e => {
+    const g = e.target.closest('[data-lvgo]'); if (g) { flip(+g.dataset.lvgo); return; }
+    if (e.target.closest('[data-allstk]')) { closeModal(true); if (typeof openStickerBook === 'function') openStickerBook(); return; }
+    if (e.target.closest('[data-lvall]')) { const c = bookCur(); lvPending().forEach(x => bookPlace(c, x)); sfx('pop'); save(); rebuild(); toast('📖 Tous les stickers sont collés.'); return; }
+    const p = e.target.closest('[data-pact]');
+    if (p) { if (!run('pact', { id: p.dataset.pact })) return; sfx('chime'); toast(`${PACT_BY[p.dataset.pact].ico} Pacte : ${PACT_BY[p.dataset.pact].name}.`); afterChange(); rebuild(); return; }
+    // toucher le bord d'une page la tourne
+    const r = e.target.closest('.lv-pg'); if (!r || e.target.closest('button')) return; const box = r.getBoundingClientRect(), xx = (e.clientX - box.left) / box.width;
+    if (LV.single) { if (xx > .7) flip(1); else if (xx < .3) flip(-1); } else if (r.classList.contains('r') && xx > .65) flip(1); else if (r.classList.contains('l') && xx < .35) flip(-1);
+  });
+  // glisser du doigt sur le livre
+  let sx = null; spread.addEventListener('pointerdown', e => { sx = e.clientX; }); spread.addEventListener('pointerup', e => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 50) flip(dx < 0 ? 1 : -1); });
+  const key = e => { if (!m.isConnected) { removeEventListener('keydown', key); return; } if (e.key === 'ArrowRight') { e.preventDefault(); flip(1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); flip(-1); } };
+  addEventListener('keydown', key);
+}
+openAch = function () { openBook(); };
+/* =========================================================
+   Des stickers en abondance, et le Livre des stickers
+   Bien plus de stickers qu'une partie ne peut en offrir, pour
+   donner envie de rejouer : le premier arrivant et la première
+   légende de chaque espèce, chaque élite terrassée (une fois,
+   cinq fois), chaque classe de héros vaincue, les invasions
+   marquantes, les choix des rencontres d'expédition (certains
+   exclusifs : soigner le blessé ferme la bourse), la première
+   victoire (une seule par partie), chaque relique, chaque
+   Merveille, chaque pacte, l'âge d'or de chaque ère.
+   Sous chaque sticker collé : comment il a été débloqué.
+   Le Livre des stickers garde tout ce qui a été découvert,
+   toutes parties confondues (dans ce navigateur), et montre
+   les emplacements vides sans dire comment les remplir.
+   ========================================================= */
+const META_KEY = 'csd-livre';
+const metaLoad = () => { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; } catch (e) { return {}; } };
+function metaAdd(x) {
+  if (typeof headless === 'function' && headless()) return; if (!x || !x.id) return;
+  try { const M = metaLoad(), m = MOM_BY[x.id] || {}; M.got = M.got || {}; const g = M.got[x.id];
+    if (g) g.n = (g.n || 1) + 1; else M.got[x.id] = { t: x.t || m.t, ico: x.ico || m.ico, d: x.d || m.d, cat: x.cat || m.cat, art: x.art || null, sub: x.sub || '', night: x.night, castle: S.name, date: Date.now(), n: 1 };
+    localStorage.setItem(META_KEY, JSON.stringify(M)); } catch (e) {}
+}
+const bookAddMeta = bookAdd;
+bookAdd = function (c, x) { const r = bookAddMeta(c, x); metaAdd(x); return r; };
+// un sticker de famille, avec son « comment » et son groupe exclusif
+function stk(id, t, ico, cat, pts, d, o = {}) {
+  if (!S || !S.started || !S.book) return null; const B = S.book; B.closed = B.closed || {};
+  if (o.excl && B.closed[o.excl] && B.closed[o.excl] !== id) return null;   // un choix exclusif a déjà été fait dans cette partie
+  const x = bookEarnDyn(id, { t, ico, cat, pts, sub: o.sub || '', art: o.art || null, d }, o.lines);
+  if (x) { x.d = d; if (o.excl) B.closed[o.excl] = id; if (!o.lines && typeof toast === 'function' && !(typeof headless === 'function' && headless())) { toast(`📖 Un sticker à coller : ${t}`); sfx('chime'); } }
+  return x;
+}
+const spName = sp => (SPECIES[sp] || {}).name || sp;
+/* ---------- les familles ---------- */
+// à l'aube : premiers arrivants, légendes, reliques, Merveilles
+function stkDawn(report) {
+  if (!S.book) return;
+  S.creatures.forEach(c => {
+    stk('espece:' + c.sp, `Le premier ${spName(c.sp).toLowerCase()}`, '🐾', 'Éleveur', 1, `Accueillir pour la première fois un·e ${spName(c.sp).toLowerCase()}.`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
+    if (c.legend || c.evo || (c.lvl || 1) >= 5) stk('legende:' + c.sp, `La légende des ${spName(c.sp).toLowerCase()}s`, '🗿', 'Missions', 2, `Faire d’un·e ${spName(c.sp).toLowerCase()} une légende (niveau 5).`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
+  });
+  (S.book.relics || []).forEach(r => { const R = RELIC_BY[r.id]; if (R) stk('relique:' + r.id, R.name, R.ico, 'Château', 2, `Finir un chapitre en âge d’or et recevoir cette relique d’ère.`, { sub: `de l’Ère ${r.era}`, lines: report }); });
+  if (typeof WONDERS !== 'undefined') Object.entries(WONDERS).forEach(([k, W]) => { const L = wonderLv(k); if (L >= 1) stk('merveille:' + k, W.name, W.ico === 'shield' ? '🛡️' : W.ico === 'mug' ? '🍺' : W.ico === 'statue' ? '🗽' : '📚', 'Bâtisseur', 1, `Bâtir ${W.name}.`, { lines: report }); if (L >= 5) stk('merveille:' + k + ':5', `${W.name}, niveau 5`, '🏛️', 'Bâtisseur', 3, `Agrandir ${W.name} jusqu’au niveau 5.`, { lines: report }); });
+}
+const dawnStk = dawn;
+dawn = function (report) { const r = dawnStk(report); try { stkDawn(report); } catch (e) { console.error(e); } return r; };
+// l'âge d'or de chaque ère, et chaque pacte choisi
+const bookTickStk = bookTick;
+bookTick = function (report) {
+  const B = S && S.book, before = B ? B.ch.length : 0; bookTickStk(report);
+  try { if (B && B.ch.length > before) { const c = B.ch[before - 1]; if (c && (c.age === 'or' || c.age === 'heroique')) stk('or:' + c.name, `L’âge d’or de l’Ère ${c.name}`, '🌟', 'Âges', 3, `Finir l’Ère ${c.name} en tête de la course des rivaux.`, { lines: report }); if (c && c.age === 'heroique') stk('heroique', 'Un âge héroïque', '⚜️', 'Âges', 4, 'Finir un chapitre en âge d’or juste après un âge sombre.', { lines: report }); if (c && c.age === 'sombre') stk('sombre', 'Traverser l’âge sombre', '🌑', 'Âges', 1, 'Finir un chapitre derrière tous les rivaux.', { lines: report }); } } catch (e) { console.error(e); }
+};
+const cmdPactStk = CMD.pact;
+CMD.pact = a => { const e = cmdPactStk(a); if (!e && PACT_BY[a.id]) stk('pacte:' + a.id, PACT_BY[a.id].name, PACT_BY[a.id].ico, 'Âges', 1, `Choisir ce pacte pour traverser un âge sombre.`); return e; };
+// la première victoire : une seule par partie
+const winVictoryStk = winVictory;
+winVictory = function (id, out) { const first = !(S.stats.victories || 0); winVictoryStk(id, out); try { if (first && VIC_BY[id]) stk('vic:' + id, `Première victoire : ${VIC_BY[id].name.replace(/^Victoire (de la |de |des )?/, '')}`, VIC_BY[id].ico, 'Victoires', 5, `Faire de la ${VIC_BY[id].name.replace('Victoire', 'victoire')} la première victoire de la partie.`, { excl: 'victoire1', lines: out }); } catch (e) { console.error(e); } };
+// les élites terrassées (une fois, puis cinq fois)
+const crawlFoesStk = crawlFoes;
+crawlFoes = function (R, kind) { const f = crawlFoesStk(R, kind); try { R._foes = f.map(x => x.k); } catch (e) {} return f; };
+const crawlWinLootStk = crawlWinLoot;
+crawlWinLoot = function (R, kind) {
+  const r = crawlWinLootStk(R, kind);
+  try { if (kind === 'elite') { const k = (R._foes || []).find(x => CRAWL_EN[x] && CRAWL_EN[x].elite); if (k) { const E = CRAWL_EN[k], st = (S.stats.eliteKills = S.stats.eliteKills || {}); st[k] = (st[k] || 0) + 1;
+    const art = E.sp ? { k: 'char', key: E.sp } : null; stk('elite:' + k, `${E.name} terrassé·e`, E.emo || '💥', 'Profondeurs', 2, `Vaincre l’élite ${E.name} en expédition.`, { art });
+    if (st[k] >= 5) stk('elite:' + k + ':5', `Le fléau des ${E.name}s`, '🏅', 'Profondeurs', 3, `Vaincre cinq fois l’élite ${E.name}.`, { art }); } } } catch (e) { console.error(e); }
+  return r;
+};
+// les invasions : chaque classe de héros vaincue, les bandes marquantes
+const HERO_NAMES = { paysan: 'paysan', voleuse: 'voleuse', elfe: 'archer elfe', mage: 'mage', paladin: 'paladin', barbare: 'barbare' };
+const applyCombatStk = applyCombat;
+applyCombat = function (plan, R, lines) {
+  const r = applyCombatStk(plan, R, lines);
+  try {
+    if (!S.book) return r; const st = (S.stats.heroKind = S.stats.heroKind || {});
+    (R.fallen || []).forEach(h => { const k = h && (h.k || (typeof h === 'number' && plan.party[h] && plan.party[h].k)); if (!k || !HERO_NAMES[k]) return; st[k] = (st[k] || 0) + 1;
+      stk('heros:' + k, `Un ${HERO_NAMES[k]} à terre`, '🗡️', 'Invasions', 1, `Mettre K.O. un·e ${HERO_NAMES[k]} pendant une invasion.`, { art: { k: 'hero', key: k }, sub: h.name || '', lines });
+      if (st[k] >= 10) stk('heros:' + k + ':10', `Dix ${HERO_NAMES[k]}s plus tard`, '🏆', 'Invasions', 2, `Mettre K.O. dix ${HERO_NAMES[k]}s au fil des invasions.`, { art: { k: 'hero', key: k }, lines }); });
+    if (R.outcome === 'repelled') {
+      if (!(R.hurt || []).length) stk('inv:intacte', 'Pas une égratignure', '✨', 'Invasions', 2, 'Repousser une invasion sans qu’aucune créature ne soit sonnée.', { lines });
+      if ((plan.party || []).length >= 5 || (plan.rank || 0) >= 3) stk('inv:redoutable', 'Une bande redoutable', '🔥', 'Invasions', 3, 'Repousser une bande de cinq héros, ou venue de très loin.', { art: { k: 'hero', key: 'paladin' }, lines });
+      if (S.vic && S.vic.croisade && S.vic.croisade.done) stk('inv:croisade', 'Les croisés en déroute', '⚔️', 'Invasions', 3, 'Repousser une bande de la croisade.', { art: { k: 'hero', key: 'paladin' }, lines });
+    }
+  } catch (e) { console.error(e); }
+  return r;
+};
+// les rencontres d'expédition : chaque choix est un sticker, certains s'excluent
+const EV_STK = {
+  blesse: [['Âme charitable', '😇', 'Soigner l’aventurier blessé rencontré en expédition.', 'moral'], ['Détrousseur', '🪙', 'Prendre la bourse de l’aventurier blessé.', 'moral']],
+  cage: [['Libérateur', '🔓', 'Libérer le prisonnier d’une cage en expédition.', 'cage'], ['Cœur de pierre', '🪨', 'Ignorer le prisonnier qui supplie.', 'cage']],
+  miroir: [['Briseur de miroirs', '🪞', 'Briser le miroir qui montre ton château en ruines.', 'miroir'], ['Narcisse', '🔮', 'Regarder longtemps le miroir des ruines.', 'miroir']],
+  champignons: [['Goûteur intrépide', '🍄', 'Goûter les champignons luisants.'], ['Cueilleur', '🧺', 'Cueillir les champignons pour le château.']],
+  osselets: [['Joueur d’osselets', '🎲', 'Parier contre le gobelin aux osselets.'], ['Sage prudent', '🙅', 'Refuser la partie d’osselets.']],
+  autel: [['Fidèle de l’autel', '🕯️', 'Prier devant l’autel aux bougies noires.'], null],
+  fontaine: [['Eau de jouvence', '⛲', 'Boire à la fontaine du noir.'], ['Gourdes pleines', '🫗', 'Remplir les gourdes à la fontaine.']],
+  marchand: [['Bon client', '🧪', 'Acheter une potion au marchand perdu.'], ['Bon samaritain', '🧭', 'Indiquer la sortie au marchand perdu.']],
+  coffre: [['Ouvreur de coffres', '🗝️', 'Ouvrir le coffre trop bien en évidence.'], ['Méfiant', '🤨', 'Laisser le coffre là où il est.']],
+  grimoire: [['Lecteur d’abîmes', '📖', 'Étudier une page de la bibliothèque engloutie.'], ['Repêcheur', '🎣', 'Repêcher les reliures de la bibliothèque engloutie.']],
+  forge: [['Forgeron d’un soir', '⚒️', 'Aiguiser une carte sur l’enclume abandonnée.'], null],
+  colporteur: [['Chineur', '🛍️', 'Acheter une carte au colporteur.'], null],
+};
+CRAWL_EVENTS.forEach(E => (EV_STK[E.k] || []).forEach((v, i) => { if (!v || !E.a[i]) return; const f0 = E.a[i][1]; E.a[i][1] = R => { const t = f0(R); try { stk(`ev:${E.k}:${i}`, v[0], v[1], 'Rencontres', 1, v[2], v[3] ? { excl: v[3] } : {}); } catch (e) {} return t; }; }));
+/* ---------- le Livre des stickers : tout ce qui a été découvert, toutes parties confondues ---------- */
+function stkCatalogSize() {
+  const sp = SPECIES_ORDER.length, el = Object.keys(CRAWL_EN).filter(k => CRAWL_EN[k].elite).length, bo = Object.keys(CRAWL_EN).filter(k => CRAWL_EN[k].boss).length;
+  return MOMENTS.filter(m => !m.online).length + RECUR.length + sp * 3 + el * 2 + bo + Object.keys(CRAWL_DG).length + 12 + 3 + Object.values(EV_STK).reduce((a, v) => a + v.filter(Boolean).length, 0) + VICTORIES.length + RELICS_ERA.length + PACTS.length + 8 + ERA_NAMES.length + 3;
+}
+function openStickerBook() {
+  const M = metaLoad(), got = Object.entries(M.got || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
+  const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
+  for (let i = 0; i < got.length; i += 2) P.push(`<div class="lvp st free">${got.slice(i, i + 2).map(([id, g], j) => lvSticker({ id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night, pos: { x: j ? 66 : 33, y: j ? 70 : 31, r: j ? 3 : -4 } }, j, false, true)).join('')}</div>`);
+  const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
+  P.push(`<div class="lvp blanc"><p class="lv-hand big">Encore ${Math.max(0, total - got.length)} stickers à découvrir…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand small">Personne ne sait vraiment ce qui les fait apparaître. Essaie des choses.</p></div>`);
+  if (P.length % 2) P.push('<div class="lvp blanc"></div>'); P.push('<div class="lvp garde"></div>');
+  const m = openModal(`<div class="lvbook${single ? ' single' : ''}"><div class="lv-spread"></div><div class="lv-cover"><div class="lv-cover-in"><span>📚</span><b>Le Livre des stickers</b><small>toutes tes parties</small></div></div><div class="lv-ribbon"></div></div><div class="lv-bar"><button type="button" class="lv-arrow" data-g="-1">◀</button><span class="lv-folio"></span><button type="button" class="lv-arrow" data-g="1">▶</button></div>`, { label: 'Le Livre des stickers', cls: 'livrebook', wide: true });
+  let idx = 0, anim = false; const spread = m.querySelector('.lv-spread'), pg = i => `<div class="lvpg-in">${P[i] || '<div class="lvp blanc"></div>'}</div>`, last = single ? P.length - 1 : P.length - 2;
+  const render = () => { spread.innerHTML = single ? `<div class="lv-pg one">${pg(idx)}</div>` : `<div class="lv-pg l">${pg(idx)}</div><div class="lv-pg r">${pg(idx + 1)}</div>`; m.querySelector('[data-g="-1"]').disabled = idx <= 0; m.querySelector('[data-g="1"]').disabled = idx >= last; m.querySelector('.lv-folio').textContent = `page ${idx + 1} sur ${P.length}`; };
+  const flip = dir => { if (anim) return; const nx = idx + dir * (single ? 1 : 2); if (nx < 0 || nx > last) return; anim = true; sfx('tick'); const leaf = document.createElement('div');
+    if (single) { leaf.className = `lv-leaf one ${dir > 0 ? 'fwd' : 'bwd'}`; leaf.innerHTML = `<div class="lv-face front">${pg(dir > 0 ? idx : nx)}</div><div class="lv-face back"><div class="lvpg-in"><div class="lvp blanc"></div></div></div>`; if (dir > 0) spread.querySelector('.lv-pg').innerHTML = pg(nx); }
+    else if (dir > 0) { leaf.className = 'lv-leaf fwd'; leaf.innerHTML = `<div class="lv-face front">${pg(idx + 1)}</div><div class="lv-face back">${pg(nx)}</div>`; spread.querySelector('.lv-pg.r').innerHTML = pg(nx + 1); }
+    else { leaf.className = 'lv-leaf bwd'; leaf.innerHTML = `<div class="lv-face front">${pg(idx)}</div><div class="lv-face back">${pg(nx + 1)}</div>`; spread.querySelector('.lv-pg.l').innerHTML = pg(nx); }
+    spread.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go'))); setTimeout(() => { idx = nx; render(); anim = false; }, 680); };
+  render(); requestAnimationFrame(() => requestAnimationFrame(() => m.querySelector('.lvbook').classList.add('opened'))); setTimeout(() => { const cv = m.querySelector('.lv-cover'); if (cv) cv.remove(); }, 1000);
+  m.addEventListener('click', e => { const g = e.target.closest('[data-g]'); if (g) flip(+g.dataset.g); });
+  let sx = null; spread.addEventListener('pointerdown', e => { sx = e.clientX; }); spread.addEventListener('pointerup', e => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 50) flip(dx < 0 ? 1 : -1); });
+}
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}

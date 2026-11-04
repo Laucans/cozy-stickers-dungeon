@@ -1361,29 +1361,91 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
   .cpage .hand.tight .kcard:hover, .cpage .hand.tight .kcard:focus-visible{transform:translateY(-34%) scale(1.42); z-index:40; transition:transform .12s ease-out}
   .cpage .hand.tight .kcard:first-child:hover{transform-origin:left bottom} .cpage .hand.tight .kcard:last-child:hover{transform-origin:right bottom}
 }
-/* le Livre du Maître : un livre de stickers, un chapitre par ère */
-.modal.livrem{max-width:860px; background:linear-gradient(90deg, #e9d9b4 0, #f6ead0 4%, #f6ead0 96%, #e2cfa6 100%); border-color:#5a3a22; box-shadow:0 0 0 6px #6b4528, 0 0 0 9px #3a2416, 0 20px 50px rgba(0,0,0,.6)}
-.livre .lv-nav{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; margin:0 30px 8px; font-family:var(--f-display); font-weight:800; color:#5a3a22}
-.livre .lv-nav span{flex:1 1 160px; text-align:center}
-.lv-page{padding:4px 6px 8px}
-.lv-page.open{animation:lvOpen .55s ease-out}
-@keyframes lvOpen{0%{transform:perspective(900px) rotateY(-75deg); transform-origin:left center; opacity:0}100%{transform:none; opacity:1}}
-.lv-chap{text-align:center; font-family:var(--f-hand); font-size:18px; color:#8a5a2a; letter-spacing:.08em}
-.lv-title{text-align:center; font-family:var(--f-display); font-size:30px; margin:0 0 2px; color:#3a2416}
-.lv-dates{text-align:center; color:#6e5444; margin:0 0 12px}
-.lv-stickers{display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:12px; margin:8px 0 14px}
-.lv-st{position:relative; transform:rotate(var(--rot, 0deg)); background:#fffdf5; border:3px solid #fff; border-radius:14px; box-shadow:0 0 0 1.5px #c9b38a, 0 4px 10px rgba(80,50,20,.25); padding:8px 8px 7px; text-align:center; display:flex; flex-direction:column; gap:3px; align-items:center}
-.lv-st .lv-ico{font-size:28px; line-height:1.1} .lv-st .lv-ico .gi{width:30px; height:30px}
-.lv-st b{font-size:13px; line-height:1.15} .lv-st small{font-size:11px; color:#6e5444; line-height:1.2}
-.lv-st.after{box-shadow:0 0 0 1.5px #b8a6a0, 0 4px 10px rgba(80,50,20,.2)}
-.lv-st.rv{background:#f3e7e7; transform:rotate(var(--rot, 0deg)) scale(.92)}
-.lv-st.off{background:#ece2cc; border-color:#e2d6bb; box-shadow:inset 0 0 0 2px #d6c6a2; opacity:.75} .lv-st.off .lv-ico{filter:grayscale(1); opacity:.6}
-.lv-margin{border-left:3px double #b08a5a; padding:4px 0 4px 12px; margin:6px 0}
-.lv-margin h4{margin:0 0 4px} .lv-margin ol{margin:0; padding-left:20px} .lv-margin li{display:flex; justify-content:space-between; gap:10px; max-width:420px} .lv-margin li.me{font-weight:800; color:#2f5e1e}
-.lv-rv{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px} .lv-rv .lv-st{width:150px}
-.lv-gain{background:#fff6dc; border:2px solid #e2b85a; border-radius:12px; padding:8px 12px; margin:8px 0}
-.lv-gain.dark{background:#ece6f2; border-color:#7d6a99}
-.lv-pacts{display:flex; flex-direction:column; gap:8px} .lv-pacts .sbtn{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px} .lv-pacts small{font-weight:400}
-.lv-relics p{margin:4px 0}
-@media (max-width:640px){ .lv-title{font-size:24px} .lv-stickers{grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:9px} .lv-st b{font-size:12px} }
+/* le Livre du Maître, dessiné : une couverture de cuir, du papier, des pages qui tournent, de grands stickers collés */
+.modal.livrebook{max-width:none; width:min(1120px, 97vw); background:none; border:0; box-shadow:none; padding:0; overflow:visible; display:flex; flex-direction:column; align-items:center; gap:10px}
+.modal.livrebook > .x{top:-6px; right:4px; z-index:20; background:#3a2416; color:#f3e3c0; border-color:#e9b949}
+.lvbook{position:relative; width:min(1100px, 96vw, calc(84vh * 1.48)); aspect-ratio:1.48; border-radius:16px; padding:14px; box-sizing:border-box;
+  background:radial-gradient(circle at 30% 20%, #7a4a2c, #4a2a18 70%), #4a2a18; box-shadow:0 0 0 2px #2a1408, 0 22px 50px rgba(0,0,0,.65), inset 0 0 30px rgba(0,0,0,.45)}
+.lvbook::before{content:''; position:absolute; inset:6px; border:2px dashed rgba(233,185,73,.45); border-radius:12px; pointer-events:none}
+.lvbook::after{content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none; background:radial-gradient(circle at 0 0, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 100% 0, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 0 100%, #e9b949 0 16px, transparent 17px), radial-gradient(circle at 100% 100%, #e9b949 0 16px, transparent 17px); opacity:.85}
+.lvbook.single{width:min(470px, 94vw, calc(80vh * .74)); aspect-ratio:.74}
+.lv-spread{position:relative; display:flex; width:100%; height:100%; perspective:2200px; z-index:1}
+.lv-pg{position:relative; flex:1; overflow:hidden; background:#f7eedb}
+.lv-pg.l{border-radius:8px 2px 2px 8px; box-shadow:-3px 0 0 #e8dcc0, -6px 0 0 #dccdab, inset -26px 0 30px -18px rgba(90,55,25,.45)}
+.lv-pg.r{border-radius:2px 8px 8px 2px; box-shadow:3px 0 0 #e8dcc0, 6px 0 0 #dccdab, inset 26px 0 30px -18px rgba(90,55,25,.45)}
+.lv-pg.one{border-radius:4px 8px 8px 4px; box-shadow:3px 0 0 #e8dcc0, 6px 0 0 #dccdab, inset 20px 0 26px -18px rgba(90,55,25,.45)}
+.lvpg-in{position:absolute; inset:0; background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%), #f7eedb}
+.lv-leaf{position:absolute; top:0; bottom:0; width:50%; transform-style:preserve-3d; transition:transform .66s cubic-bezier(.35,.1,.25,1); z-index:5}
+.lv-leaf.fwd{left:50%; transform-origin:left center} .lv-leaf.fwd.go{transform:rotateY(-180deg)}
+.lv-leaf.bwd{left:0; transform-origin:right center} .lv-leaf.bwd.go{transform:rotateY(180deg)}
+.lv-leaf.one{left:0; width:100%; transform-origin:left center} .lv-leaf.one.fwd.go{transform:rotateY(-180deg)}
+.lv-leaf.one.bwd{transform:rotateY(-180deg)} .lv-leaf.one.bwd.go{transform:rotateY(0)}
+.lv-face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; overflow:hidden; box-shadow:0 0 24px rgba(0,0,0,.25)} .lv-face.back{transform:rotateY(180deg)}
+.lv-cover{position:absolute; top:14px; bottom:14px; left:50%; width:calc(50% - 14px); z-index:8; transform-origin:left center; transition:transform .85s cubic-bezier(.4,.1,.2,1) .15s; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:4px 12px 12px 4px;
+  background:radial-gradient(circle at 40% 30%, #8a5432, #4f2c18 75%); box-shadow:inset 0 0 0 3px #2a1408, inset 0 0 0 9px #6b4528, inset 0 0 0 11px #e9b949, 0 8px 20px rgba(0,0,0,.5)}
+.lvbook.single .lv-cover{left:14px; width:calc(100% - 28px)}
+.lvbook.opened .lv-cover{transform:rotateY(-178deg)}
+.lv-cover-in{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#f3d78a; text-align:center; padding:20px}
+.lv-cover-in span{font-size:58px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))} .lv-cover-in b{font-family:var(--f-display); font-size:clamp(24px, 3.6vw, 40px); text-shadow:0 2px 0 #2a1408} .lv-cover-in small{font-family:var(--f-hand); font-size:18px; color:#e8c78a}
+.lv-ribbon{position:absolute; top:-6px; left:calc(50% + 40px); width:18px; height:90px; background:linear-gradient(#b02a2a, #8a1c1c); clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%); z-index:9; box-shadow:0 2px 3px rgba(0,0,0,.3)}
+.lvbook.single .lv-ribbon{left:auto; right:40px}
+.lv-bar{display:flex; align-items:center; gap:14px; color:#f3e3c0; font-family:var(--f-hand); font-size:16px}
+.lv-arrow{width:46px; height:46px; border-radius:50%; border:2px solid #e9b949; background:#4a2a18; color:#f3d78a; font-size:18px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.5)} .lv-arrow:disabled{opacity:.35; cursor:default}
+/* les pages */
+.lvp{position:absolute; inset:0; padding:26px 30px 22px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; color:#3a2416; overflow:hidden}
+.lvbook.single .lvp{padding:22px 20px 18px}
+.lv-runhead{align-self:stretch; text-align:center; font-family:var(--f-hand); font-size:14px; color:#9a7a52; border-bottom:1px solid #d9c59c; padding-bottom:3px; margin-bottom:6px}
+.lv-hand{font-family:var(--f-hand); font-size:18px; text-align:center; margin:6px 0; color:#4a3020} .lv-hand.big{font-size:26px; color:#3a2416} .lv-hand.small{font-size:15px; color:#7a5a3e}
+.lv-orn{font-size:34px; color:#b08a4a; line-height:1}
+.lvp.garde{background:radial-gradient(circle at 20% 30%, rgba(80,120,170,.55) 0 12%, transparent 13%), radial-gradient(circle at 70% 60%, rgba(170,70,60,.45) 0 14%, transparent 15%), radial-gradient(circle at 40% 80%, rgba(220,180,90,.5) 0 10%, transparent 11%), radial-gradient(circle at 85% 15%, rgba(80,140,110,.45) 0 9%, transparent 10%), repeating-radial-gradient(circle at 50% 50%, #e9dcc0 0 6px, #e2d1ae 6px 12px)}
+.lvp.titre .lv-frame{margin:auto; padding:28px 22px; border:3px double #b08a4a; border-radius:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; max-width:88%}
+.lvp.titre h1{font-family:var(--f-display); font-size:clamp(28px, 3.6vw, 44px); margin:0; color:#5a2414} .lv-castle{font-family:var(--f-display); font-size:22px; margin:2px 0; color:#8a5a2a}
+.lvp.chap{justify-content:center; gap:4px} .lv-chapn{font-family:var(--f-hand); font-size:22px; letter-spacing:.12em; color:#9a6a3a} .lvp.chap h2{font-family:var(--f-display); font-size:clamp(30px, 3.8vw, 46px); margin:0; text-align:center; color:#3a2416; text-shadow:0 2px 0 #fff}
+.lv-seal{width:122px; height:122px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; transform:rotate(-9deg); margin:12px auto 4px; color:#fff; text-align:center; font-family:var(--f-display); box-shadow:0 0 0 4px rgba(255,255,255,.4), 0 6px 12px rgba(0,0,0,.35); border:3px double rgba(255,255,255,.7)}
+.lv-seal span{font-size:34px} .lv-seal b{font-size:16px; padding:0 8px; line-height:1.05}
+.lv-seal.or{background:radial-gradient(circle at 35% 30%, #ffe08a, #c9902a)} .lv-seal.heroique{background:radial-gradient(circle at 35% 30%, #ff9d7a, #a8321e)} .lv-seal.normal{background:radial-gradient(circle at 35% 30%, #c9b08a, #7a5e3e)} .lv-seal.sombre{background:radial-gradient(circle at 35% 30%, #8a78a8, #2e2440)}
+.lvp.st{justify-content:space-around}
+.lvs{position:relative; margin:4px 0; display:flex; flex-direction:column; align-items:center; transform:rotate(var(--rot, 0deg)); max-width:94%}
+.lvp.st .lvs:nth-of-type(odd){align-self:flex-start; margin-left:6%} .lvp.st .lvs:nth-of-type(even){align-self:flex-end; margin-right:6%}
+.lvs-hold{position:relative}
+.lvs-die{position:relative; width:clamp(104px, 21vh, 190px); aspect-ratio:1; border-radius:30px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--col) 30%, #fff), var(--col) 72%); border:8px solid #fff; box-shadow:0 0 0 1.5px rgba(80,50,20,.18), 0 10px 18px rgba(60,35,10,.38)}
+.lvbook.single .lvs-die{width:clamp(96px, 17vh, 150px)}
+.lvs-art{width:100%; height:100%; display:flex; align-items:center; justify-content:center} .lvs-art img{width:86%; height:86%; object-fit:contain; filter:drop-shadow(0 4px 3px rgba(0,0,0,.35))} .lvs-art img.room{width:78%; height:78%; border-radius:12px}
+.lvs-emo{font-size:clamp(52px, 10vh, 96px); line-height:1; filter:drop-shadow(0 4px 3px rgba(0,0,0,.25))} .lvs-emo .gi{width:1.1em; height:1.1em}
+.lvs-shine{position:absolute; inset:0; background:linear-gradient(125deg, transparent 32%, rgba(255,255,255,.5) 44%, transparent 56%); pointer-events:none}
+.lvs-tape{position:absolute; top:-9px; width:58px; height:20px; background:rgba(238,224,182,.78); box-shadow:0 1px 2px rgba(0,0,0,.15)} .lvs-tape.a{left:-10px; transform:rotate(-28deg)} .lvs-tape.b{right:-10px; transform:rotate(25deg)}
+.lvs-count{position:absolute; right:-10px; bottom:-8px; background:#3a2416; color:#ffe08a; font-family:var(--f-display); font-size:20px; padding:2px 9px; border-radius:14px; border:2px solid #fff; transform:rotate(8deg)}
+.lvs figcaption{font-family:var(--f-hand); text-align:center; margin-top:6px; max-width:240px; display:flex; flex-direction:column; line-height:1.15}
+.lvs-night{font-size:14px; color:#9a6a3a} .lvs figcaption b{font-size:19px; color:#2a1a0c} .lvs figcaption small{font-size:14px; color:#6e5444} .lvs-after{color:#a0402e !important}
+.lvs.relic .lvs-die{border-color:#fff6d6; box-shadow:0 0 0 2px #e9b949, 0 0 22px rgba(233,185,73,.7), 0 10px 18px rgba(60,35,10,.38)}
+.lvs.fresh{animation:lvStick .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:var(--d, .3s)}
+@keyframes lvStick{0%{opacity:0; transform:rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45) translateY(-30px)} 60%{opacity:1} 100%{opacity:1; transform:rotate(var(--rot, 0deg)) scale(1)}}
+.lv-note{position:relative; max-width:72%; margin-top:auto; padding:8px 12px; background:#fff3a0; font-family:var(--f-hand); font-size:15px; color:#5a3a1a; transform:rotate(var(--rot)); box-shadow:2px 4px 8px rgba(0,0,0,.2)} .lv-note::before{content:''; position:absolute; top:-7px; left:40%; width:40px; height:14px; background:rgba(238,224,182,.8)}
+.lv-race{list-style:none; padding:0; margin:6px 0; width:min(320px, 90%); font-family:var(--f-hand); font-size:17px} .lv-race li{display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted #c9b38a; padding:2px 0} .lv-race li.me{color:#2f5e1e; font-weight:700}
+.lv-pacts{display:flex; flex-direction:column; gap:8px; width:min(380px, 96%); margin-top:6px}
+.lv-pact{display:flex; align-items:center; gap:10px; text-align:left; background:#fffaf0; border:2px solid #c9b38a; border-radius:12px; padding:7px 10px; cursor:pointer; font-family:var(--f-hand); color:#3a2416} .lv-pact:hover{border-color:#7d6a99} .lv-pact.done{cursor:default; border-color:#7d6a99}
+.lv-pact b{display:block; font-size:17px} .lv-pact small{display:block; font-size:14px; color:#6e5444} .lv-pact small.cost{color:#8a2a18}
+.lv-wax{flex:none; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; background:radial-gradient(circle at 35% 30%, #9a3a3a, #5a1a1a); box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.lvp.blanc{justify-content:center}
+.lv-slots{display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin:12px 0} .lv-slots.small{grid-template-columns:repeat(3, 1fr); gap:10px}
+.lv-slot{width:clamp(64px, 11vh, 96px); aspect-ratio:1; border-radius:22px; border:3px dashed #c9b38a; display:flex; align-items:center; justify-content:center; transform:rotate(var(--rot)); color:#c9b38a; font-family:var(--f-display); font-size:34px; background:rgba(255,255,255,.35)}
+.lv-relics{display:flex; flex-wrap:wrap; gap:6px; justify-content:center} .lv-relics .lvs-die{width:clamp(80px, 12vh, 110px)}
+.lvp-prev{background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%); border-radius:12px; padding:18px 12px 10px; display:flex; justify-content:center}
+.lvp.st.free{display:block}
+.lvs.free{position:absolute; margin:0; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)); max-width:none}
+.lvs.free.fresh{animation:lvStickFree .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:.15s}
+@keyframes lvStickFree{0%{opacity:0; transform:translate(-50%, -62%) rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45)} 60%{opacity:1} 100%{opacity:1; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1)}}
+.lvp.st.free .lvs-die{width:clamp(96px, 19vh, 176px)}
+.lv-here{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) rotate(-4deg); border:3px dashed #d2bf98; border-radius:24px; padding:30px 22px; color:#b8a27a !important}
+.lvp.st.hover{box-shadow:inset 0 0 0 4px rgba(233,185,73,.8); background:rgba(255,236,170,.25)}
+.lv-notes{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px} .lv-notes .lv-note{margin-top:0}
+.lv-planche{width:min(980px, 96vw); display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 12px 10px; border-radius:14px; background:repeating-linear-gradient(45deg, #e9f2f7 0 10px, #dfeaf1 10px 20px); box-shadow:0 0 0 2px #fff, 0 6px 16px rgba(0,0,0,.45)}
+.lv-planche .lv-hand{margin:0; font-size:16px; color:#3a2416}
+.lv-sheet{display:flex; gap:14px; overflow-x:auto; max-width:100%; padding:10px 6px 4px; scrollbar-width:thin}
+.lv-peel{flex:none; cursor:grab; touch-action:none; transition:transform .15s} .lv-peel:hover{transform:translateY(-4px) rotate(-2deg)} .lv-peel.lifting{opacity:.35}
+.lv-peel .lvs{margin:0} .lv-peel .lvs-die{width:clamp(70px, 11vh, 96px); border-width:6px; border-radius:20px} .lv-peel figcaption{max-width:120px} .lv-peel figcaption b{font-size:14px} .lv-peel figcaption small, .lv-peel .lvs-night{font-size:12px}
+.lv-ghost{position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%, -50%) rotate(-6deg) scale(1.15); filter:drop-shadow(0 18px 14px rgba(0,0,0,.35))} .lv-ghost .lvs{margin:0} .lv-ghost .lvs-die{width:110px; border-width:6px}
+.lvs-how{font-size:12px !important; color:#8a7a5e !important; margin-top:2px; max-width:220px}
+.modal.livrebook.withsheet .lvbook:not(.single){width:min(1100px, 96vw, calc((84vh - 210px) * 1.48))}
+.modal.livrebook.withsheet .lvbook.single{width:min(470px, 94vw, calc((80vh - 200px) * .74))}
 </style>

@@ -160,3 +160,10 @@ Demande : des ères courtes en compétition avec les rivaux, avec âge d'or (rel
 - Reliques d'ère : 19 pouvoirs des anciens hauts faits (Truelle bénie, Sacoches profondes, Trèfle…). Pactes d'âge sombre : 6 (Serrer les rangs, Tout pour le butin, Portes ouvertes, Économie de guerre, Veillées, L'école du château).
 - Fins alternatives : coffre, osselets, autel, fontaine et cage en expédition ; les quatre coups des rivaux.
 - IA scriptées : victoires inchangées (Légende 100 % · 50, Terreur 83 % · 74, Voisinage 100 % · 40, Secrets 100 % · 43), aucune erreur.
+
+## Le Livre dessiné, les stickers à coller, le Livre des stickers
+
+- Le Livre du Maître devient un livre illustré qu'on feuillette (`src/p65_livre_ui.js`) : couverture qui s'ouvre, double page (une au téléphone), pages qui tournent en 3D ; page de titre, page enluminée de chaque chapitre, pages de stickers, page de fin (sceau de l'âge, relique, pacte, pense-bêtes des rivaux), pages blanches et emplacements vides sans dire comment les remplir.
+- Les nouveaux stickers attendent sur une planche : on les fait glisser sur une page de l'ère en cours (ou on les touche pour la prochaine place libre) ; Gribouille colle les oubliés en fin de chapitre ; les récurrents s'empilent (×N). Sous chaque sticker : comment il a été débloqué.
+- `src/p66_stickers.js` : 273 stickers au catalogue (familles par espèce, élite, boss, donjon, classe de héros, rencontre, ère…), certains exclusifs (une seule première victoire ; soigner le blessé ferme la bourse), et le Livre des stickers de toutes les parties (stockage `csd-livre` du navigateur, ouvert depuis l'écran titre).
+- Avec ces familles, le joueur marque environ 37 points par chapitre : rythme des rivaux relevé à 2,2 (46 % d'âges d'or, 26 % d'ordinaires, 28 % de sombres sur 39 chapitres simulés).

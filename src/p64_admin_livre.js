@@ -11,7 +11,7 @@ const bookData = m => { const o = { t: m.t, d: m.d, ico: m.ico, pts: m.pts }; if
 const BOOK_STICKERS = Object.fromEntries(Object.entries(MOM_BY).map(([k, m]) => [k, bookData(m)]));
 const BOOK_RELICS = Object.fromEntries(RELICS_ERA.map(r => [r.id, { name: r.name, ico: r.ico, d: r.d, pw: r.pw.slice() }]));
 const BOOK_PACTS = Object.fromEntries(PACTS.map(p => [p.id, { name: p.name, ico: p.ico, d: p.d, cost: p.cost }]));
-const BOOK_TUNE = { base: RIVAL_RATE.base, form: RIVAL_RATE.form.slice(), spread: RIVAL_RATE.spread, lenMin: BOOK_LEN[0], lenMax: BOOK_LEN[1], names: ERA_NAMES.slice() };
+const BOOK_TUNE = { base: RIVAL_RATE.base, form: RIVAL_RATE.form.slice(), spread: RIVAL_RATE.spread, lenMin: BOOK_LEN[0], lenMax: BOOK_LEN[1], names: ERA_NAMES.slice(), dyn: { ...BOOK_DYN } };
 Object.assign(TABLES, { BOOK_STICKERS, BOOK_RELICS, BOOK_PACTS });
 Object.assign(BASE, structuredClone({ BOOK_STICKERS, BOOK_RELICS, BOOK_PACTS, BOOK_TUNE }));
 const entryOfBook = entryOf; entryOf = function (t, k) { return t === 'BOOK_TUNE' ? BOOK_TUNE : entryOfBook(t, k); };
@@ -23,6 +23,7 @@ function bookSyncAdmin() {
   Object.entries(TABLES.BOOK_PACTS || {}).forEach(([k, v]) => { if (PACT_BY[k]) Object.assign(PACT_BY[k], clone(v)); });
   RIVAL_RATE.base = +BOOK_TUNE.base || 0; if (Array.isArray(BOOK_TUNE.form) && BOOK_TUNE.form.length === 2) RIVAL_RATE.form = BOOK_TUNE.form.slice(); RIVAL_RATE.spread = +BOOK_TUNE.spread || 0;
   if (Array.isArray(BOOK_TUNE.names) && BOOK_TUNE.names.length) ERA_NAMES.splice(0, ERA_NAMES.length, ...BOOK_TUNE.names);
+  if (BOOK_TUNE.dyn) Object.keys(BOOK_DYN).forEach(k => { if (BOOK_TUNE.dyn[k] != null) BOOK_DYN[k] = +BOOK_TUNE.dyn[k]; });
   BOOK_LEN[0] = Math.max(3, +BOOK_TUNE.lenMin || 8); BOOK_LEN[1] = Math.max(BOOK_LEN[0], +BOOK_TUNE.lenMax || 14);
   if (typeof S !== 'undefined' && S && S.book) bookRecalcPw();
 }
@@ -38,7 +39,7 @@ ADMIN.livre = { cat: 'premiers', key: null };
 const LIVRE_CATS = [['premiers', 'Premiers du Val', 'BOOK_STICKERS'], ['moments', 'Moments', 'BOOK_STICKERS'], ['recur', 'Moments récurrents', 'BOOK_STICKERS'], ['reliques', 'Reliques d’ère', 'BOOK_RELICS'], ['pactes', 'Pactes d’âge sombre', 'BOOK_PACTS'], ['reglages', 'Ères et rivaux', 'BOOK_TUNE']];
 const livreKeys = cat => cat === 'premiers' ? FIRSTS.map(f => f.id) : cat === 'moments' ? MOMENTS.filter(m => !m.first).map(m => m.id) : cat === 'recur' ? RECUR.map(r => r.id) : cat === 'reliques' ? Object.keys(BOOK_RELICS) : cat === 'pactes' ? Object.keys(BOOK_PACTS) : ['_'];
 // l'aperçu d'un sticker, tel qu'il sera collé dans le Livre
-const livreSticker = k => { const m = BOOK_STICKERS[k] || {}; return `<div class="lv-st" style="--rot:-3deg; width:160px"><span class="lv-ico">${iconize(esc(m.ico || '?'))}</span><b>${esc(m.t || k)}</b><small>nuit 12 · +${m.pts || 0}</small></div>`; };
+const livreSticker = k => typeof lvSticker === 'function' ? `<div class="lvp-prev">${lvSticker({ id: k, night: 12, pts: (BOOK_STICKERS[k] || {}).pts }, 0, false)}</div>` : '';
 const PW_HELP = () => ACH.filter(a => !a.active && !a.online).map(a => `<span><code>${a.id}</code> ${esc(a.pd)}</span>`).join('');
 function livreDetail() {
   const st = ADMIN.livre, c = st.cat, k = st.key;
@@ -67,6 +68,7 @@ function livreDetail() {
   return `<div class="cprev"><div class="cval"><b>La course d’un chapitre</b><small>Un rival marque ${T.base} point par nuit × sa forme du chapitre (tirée entre ${(T.form || [])[0]} et ${(T.form || [])[1]}) × (1 + sa course à la victoire ÷ 100), à ±${Math.round(T.spread * 50)} % près chaque nuit, plus 3 points par « premier du Val » qu’il prend.</small>
       <small>Sur un chapitre moyen (${len} nuits) : environ <b>${at(0)}</b> points au début de la partie, <b>${at(50)}</b> à mi-course, <b>${at(90)}</b> en fin de course. Repère : un joueur actif marque 15 à 30 points par chapitre.</small></div></div>
     <h3>Les rivaux</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'base', 'Points par nuit', 'num', { min: 0, step: .1 })}${fld('BOOK_TUNE', '_', 'form', 'Forme du chapitre (de, à)', 'pair', { ph: '0.6, 1.4' })}${fld('BOOK_TUNE', '_', 'spread', 'Hasard de chaque nuit (part)', 'num', { min: 0, max: 1, step: .05 })}</div>
+    <h3>Les familles de stickers (points)</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'dyn.reve', 'Premier rêve exaucé d’une espèce', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.donjon', 'Un donjon vaincu', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.quete', 'Une quête du Val', 'num', { min: 0 })}${fld('BOOK_TUNE', '_', 'dyn.grandequete', 'La grande quête', 'num', { min: 0 })}</div>
     <h3>Les ères</h3><div class="afgrid">${fld('BOOK_TUNE', '_', 'lenMin', 'Durée la plus courte (nuits)', 'num', { min: 3, max: 30 })}${fld('BOOK_TUNE', '_', 'lenMax', 'Durée la plus longue (nuits)', 'num', { min: 3, max: 40 })}${fld('BOOK_TUNE', '_', 'names', 'Noms des ères (« l’Ère … » ; le premier sert au chapitre I)', 'lines', { rows: 8 })}</div>`;
 }
 ADMIN_TABS.livre = body => {
