@@ -596,7 +596,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 @keyframes cpIn{from{opacity:0; transform:scale(1.03)}} @keyframes cpOut{to{opacity:0; transform:scale(.98)}}
 /* les invasions aux cartes : le château en décor, le parcours de la bande */
 .cpage.theme-chateau{--c1:#3d2c1f; --c2:#120b07; --acc:#ffcf7a; --wall:#2a1d14}
-.cpage.theme-chateau .fnm{display:block; max-width:112px; margin:0 auto} .cpage.theme-chateau .cparty{gap:8px 14px}
+.cpage.theme-chateau .fnm, .cpage.theme-cite .fnm{display:block; max-width:112px; margin:0 auto} .cpage.theme-chateau .cparty{gap:8px 14px}
 #btnPath, #btnGuards{display:none !important}   /* plus de chemin à afficher, plus de gardes à poster : les défenseurs sont tirés au sort */
 .invtrack{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px 2px; margin:4px auto 8px; max-width:900px}
 .invtrack .it{display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; background:rgba(255,240,210,.12); border:1.5px solid rgba(255,220,160,.35); color:#f3e2c2; font-size:13px; opacity:.7}
@@ -607,7 +607,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 .modal.invintro .hcards{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
 .cpage.theme-morgrave{--c1:#20393a; --c2:#081011; --acc:#86e0d4; --wall:#11201f} .cpage.theme-septbieres{--c1:#4a2c14; --c2:#140b05; --acc:#f6b85a; --wall:#2b1a0d}
 .cpage.theme-moussues{--c1:#22402a; --c2:#08120a; --acc:#a6e88a; --wall:#0f2214} .cpage.theme-ombrelune{--c1:#33204a; --c2:#0c0714; --acc:#cfa8ff; --wall:#1d1230}
-.cpage.theme-ruines{--c1:#3b3226; --c2:#0e0b08; --acc:#f2d48a; --wall:#1d1812} .cpage.theme-foret{--c1:#17482c; --c2:#06140b; --acc:#c4f5a6; --wall:#0c2716} .cpage.theme-grotte{--c1:#1f2a3e; --c2:#070a12; --acc:#a6d4ff; --wall:#111a2a}
+.cpage.theme-ruines{--c1:#3b3226; --c2:#0e0b08; --acc:#f2d48a; --wall:#1d1812} .cpage.theme-foret{--c1:#17482c; --c2:#06140b; --acc:#c4f5a6; --wall:#0c2716} .cpage.theme-grotte{--c1:#1f2a3e; --c2:#070a12; --acc:#a6d4ff; --wall:#111a2a} .cpage.theme-cite{--c1:#2b3550; --c2:#0a0d16; --acc:#f2c86a; --wall:#161d2e}
 .cpage.quake{animation:quake .35s} .cpage.quake2{animation:quake2 .45s}
 @keyframes quake{20%{transform:translate(-4px,2px)} 40%{transform:translate(4px,-2px)} 60%{transform:translate(-3px,1px)} 80%{transform:translate(2px,-1px)}}
 @keyframes quake2{15%{transform:translate(-9px,4px)} 30%{transform:translate(8px,-5px)} 45%{transform:translate(-6px,3px)} 60%{transform:translate(5px,-2px)} 80%{transform:translate(-2px,1px)}}
@@ -683,7 +683,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 .side{position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:flex-end; max-width:44%}
 .side.party{justify-content:flex-start} .side.foes{justify-content:flex-end}
 .fig{position:relative; width:100px; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 2px; border-radius:14px; transition:transform .18s ease-out, filter .3s, opacity .3s; outline:none}
-.fspr{position:relative; width:84px; height:84px; display:grid; place-items:end center}
+.fspr{position:relative; width:84px; height:84px; display:grid; grid-template:minmax(0,1fr) / minmax(0,1fr); place-items:end center}   /* la piste reste à la taille du cadre : un dessin en hauteur (héros) ne déborde pas */
 .fspr img{position:relative; z-index:1; width:100%; height:100%; object-fit:contain; object-position:50% 100%; filter:drop-shadow(0 5px 4px rgba(0,0,0,.55))}
 .fspr.idle{animation:breathe 3.2s ease-in-out infinite}
 @keyframes breathe{50%{transform:translateY(-3px) scale(1.015, .99)}}
@@ -1636,7 +1636,7 @@ const ROOMS = {
   taverne:  { name: 'Taverne', size: [3,3], cost: { g: 5, s: 4 }, clock: 6, floor: 'wood', color: '#e0a96d', amb: 1, syn: { adj: 'dortoir', amb: 1 },
               furn: ['biere','tablee','scene','comptoir','piste'], attracts: ['menestrel'], desc: 'Le cœur social du château. +1 Ambiance. Attire les Ménestrels.' },
   atelier:  { name: 'Atelier', size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'wood', color: '#d9b38c', syn: { adj: 'tour', harass: 1 },
-              furn: ['etabli','caisse','pedale'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Attire les Kobolds.' },
+              furn: ['etabli','caisse','pedale'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Son établi fabrique des matériaux, sa caisse à outils équipe tes raids. Attire les Kobolds.' },
   tour:     { name: 'Tour de guet', size: [2,2], cost: { g: 3, s: 3 }, clock: 4, edge: true, floor: 'flag', color: '#a8c6e8', harass: 1,
               furn: ['longuevue','perchoir','catapulte'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Dès l’arrivée de la bande, ses guetteurs lui jettent des cailloux. Attire les Gargouilles.' },
   bibli:    { name: 'Bibliothèque', tier: 1, size: [3,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'carpet', color: '#c27a5a', syn: { adj: 'salon', amb: 2 },
@@ -1664,7 +1664,7 @@ const ROOMS = {
   chapelle: { name: 'Chapelle des murmures', theme: 'temple', unique: true, size: [2,2], cost: { g: 4, s: 3 }, clock: 6, floor: 'checker', color: '#c7b8f0',
               cal: 1, hype: 1, preset: ['candelabre','pupitre'], desc: 'Pièce de thème, livrée meublée. −1 Calamité et +1 🔥 par nuit.' },
   planque:  { name: 'Planque', theme: 'repaire', unique: true, size: [2,2], cost: { g: 4, s: 3 }, clock: 6, floor: 'wood', color: '#c9cf86',
-              dice: 1, mat: 1, preset: ['caisse','coffre'], desc: 'Pièce de thème, livrée meublée. +1 dé aux raids, +1 🪵 par nuit.' },
+              dice: 1, mat: 1, preset: ['caisse','coffre'], desc: 'Pièce de thème, livrée meublée. +1 dé aux raids et +1 🪵 par nuit ; sa caisse à outils ajoute un dé de plus.' },
   garde:    { name: 'Corps de garde', theme: 'bastion', unique: true, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'flag', color: '#b5c4d6',
               beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; avec son râtelier, sa garde fait 10 dégâts au premier héros qui y entre (une fois par invasion). Tant qu’il est bâti, chaque pièce tire un défenseur de plus quand une bande attaque, et les créatures qui y travaillent apprennent le guet (sentinelles).' },
   observatoire: { name: 'Observatoire', theme: 'enclave', unique: true, size: [2,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'magic', color: '#8f9fe8',
@@ -1681,7 +1681,7 @@ const ROOMS = {
   belvedere: { name: 'Belvédère', high: 2, size: [2,2], cost: { g: 6, s: 5 }, clock: 8, floor: 'flag', open: true, color: '#a8c6e8', harass: 2, sight: 2,
               furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et la bande reçoit des cailloux dès son arrivée (5 PV répartis sur les héros).' },
   mine:     { name: 'Mine', deep: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'rock', color: '#a08a6a', mat: 2,
-              furn: ['wagonnet','filon','etai'], attracts: ['golem'], desc: 'Sous terre seulement. +2 🪵 par nuit, plus avec ses filons. Attire le Golem de mousse, une créature rare.' },
+              furn: ['wagonnet','filon','etai'], attracts: ['golem'], desc: 'Sous terre seulement. +2 🪵 par nuit, plus avec ses wagonnets et ses filons. Attire le Golem de mousse, une créature rare.' },
   reliquaire: { name: 'Reliquaire', deep: 1, size: [3,2], cost: { g: 8, s: 5 }, clock: 8, floor: 'carpet', color: '#c9a2e8', amb: 1,
               furn: ['vitrine','socle'], attracts: ['liche'], desc: 'Sous terre seulement. Les artefacts exposés ici rayonnent moitié plus. Attire la Liche frileuse, une créature rare.' },
   lac:      { name: 'Lac souterrain', deep: 2, size: [3,3], cost: { g: 6, s: 6 }, clock: 8, floor: 'water', color: '#5aa0c8', amb: 2, cal: 1,
@@ -1715,15 +1715,15 @@ const FURN = {
   biere:      { name: 'Tonneau de bière', room: 'taverne', cost: { g: 2, s: 1 }, gold: 1, amb: 1 },
   tablee:     { name: 'Grande tablée', room: 'taverne', cost: { g: 2, s: 2 }, food: 2, amb: 1 },
   scene:      { name: 'Estrade du barde', room: 'taverne', cost: { g: 3, s: 2 }, amb: 2, hype: 1 },
-  etabli:     { name: 'Établi', room: 'atelier', cost: { g: 1, s: 2 }, mat: 1 },
-  caisse:     { name: 'Caisse à outils', room: 'atelier', cost: { g: 1 }, mat: 1 },
+  etabli:     { name: 'Établi', room: 'atelier', cost: { g: 1, s: 2 }, mat: 1, desc: 'Scie, rabot et sciure : on y fabrique et on y répare tout ce que le château use.' },
+  caisse:     { name: 'Caisse à outils', room: 'atelier', cost: { g: 1, s: 1 }, dice: 1, desc: 'Pinces, cordes et pied-de-biche : de quoi ouvrir n’importe quelle porte du village, les soirs de raid.' },
   longuevue:  { name: 'Longue-vue', room: 'tour', cost: { g: 2 }, harass: 2 },
   perchoir:   { name: 'Perchoir de pierre', room: 'tour', cost: { g: 1, s: 1 }, harass: 1, amb: 1 },
-  etagere:    { name: 'Étagère à grimoires', room: 'bibli', cost: { g: 2 }, hype: 1 },
+  etagere:    { name: 'Étagère à grimoires', room: 'bibli', cost: { g: 3 }, hype: 2, desc: 'Des grimoires rares, et franchement interdits : on en parle jusqu’au village.' },
   pupitre:    { name: 'Pupitre', room: 'bibli', cost: { g: 2 }, hype: 1, amb: 1 },
   fauteuil:   { name: 'Fauteuil moelleux', room: 'bibli', cost: { g: 2 }, amb: 2 },
-  alambic:    { name: 'Alambic', room: 'labo', cost: { g: 3 }, cal: 1 },
-  marmite:    { name: 'Marmite à potions', room: 'labo', cost: { g: 2, s: 1 }, cal: 1 },
+  alambic:    { name: 'Alambic', room: 'labo', cost: { g: 3 }, cal: 1, desc: 'Goutte à goutte, il distille de quoi calmer tout le château.' },
+  marmite:    { name: 'Marmite à potions', room: 'labo', cost: { g: 2, s: 1 }, hype: 1, desc: 'Elle bouillonne en vert, et ses fumées se voient du village : ça fait parler.' },
   fioles:     { name: 'Étagère à fioles', room: 'labo', cost: { g: 2 }, dice: 1 },
   cercueil:   { name: 'Cercueil douillet', room: 'caveau', cost: { g: 1, s: 1 }, beds: 2 },
   ossuaire:   { name: 'Pile d’os', room: 'caveau', cost: { g: 1 }, amb: 1 },
@@ -1748,12 +1748,12 @@ const FURN = {
   armure:     { name: 'Armure décorative', room: 'any', cost: { g: 2 }, amb: 1, guard: 1 },
   citrouille: { name: 'Citrouille', room: 'any', cost: { g: 2 }, amb: 2 },
   theiere:    { name: 'Service à thé', room: 'any', cost: { g: 2 }, amb: 2 },
-  tableau:    { name: 'Portrait d’ancêtre', room: 'any', cost: { g: 3 }, amb: 2 },
+  tableau:    { name: 'Portrait d’ancêtre', room: 'any', cost: { g: 2 }, amb: 2 },
   cristal:    { name: 'Cristal', room: 'any', cost: { g: 3 }, amb: 3 },
   // sous terre
   colimacon:  { name: 'Escalier en colimaçon', room: 'escalier', hidden: true, cost: {} },
-  wagonnet:   { name: 'Wagonnet', room: 'mine', cost: { g: 2, s: 1 }, mat: 1 },
-  filon:      { name: 'Filon doré', room: 'mine', cost: { g: 3 }, gold: 1, mat: 1 },
+  wagonnet:   { name: 'Wagonnet', room: 'mine', cost: { g: 2, s: 1 }, mat: 2, desc: 'Il remonte la pierre au jour, chargé à ras bord : rien que des matériaux.' },
+  filon:      { name: 'Filon doré', room: 'mine', cost: { g: 3 }, gold: 1, mat: 1, desc: 'Une veine dorée dans la roche : un peu d’or, un peu de pierre.' },
   etai:       { name: 'Étais et lanterne', room: 'mine', cost: { g: 1, s: 2 }, guard: 1, amb: 1 },
   vitrine:    { name: 'Vitrine', room: 'reliquaire', cost: { g: 3 }, amb: 1, hype: 1 },
   socle:      { name: 'Socle de velours', room: 'reliquaire', cost: { g: 2 }, amb: 1 },
@@ -1775,7 +1775,7 @@ const FURN = {
   serre:        { name: 'Petite serre', room: 'potager', size: 2, cost: { g: 3, s: 2 }, food: 6 },
   comptoir:     { name: 'Comptoir en chêne', room: 'taverne', size: 2, cost: { g: 4, s: 3 }, gold: 2, amb: 1 },
   piste:        { name: 'Piste de danse', room: 'taverne', size: 3, cost: { g: 6, s: 2 }, amb: 3, hype: 2 },
-  pedale:       { name: 'Établi à pédale', room: 'atelier', size: 2, cost: { g: 3, s: 3 }, mat: 3 },
+  pedale:       { name: 'Établi à pédale', room: 'atelier', size: 2, cost: { g: 3, s: 3 }, mat: 3, desc: 'Un établi qui tourne tout seul (ou presque) : trois fois plus de matériaux, et des réparations plus solides.' },
   rayonnage:    { name: 'Rayonnage géant', room: 'bibli', size: 2, cost: { g: 4 }, hype: 2, amb: 1 },
   globe:        { name: 'Globe céleste', room: 'bibli', size: 3, cost: { g: 6, s: 2 }, hype: 3, dice: 1 },
   athanor:      { name: 'Athanor', room: 'labo', size: 2, cost: { g: 4, s: 2 }, cal: 2 },
@@ -1786,9 +1786,9 @@ const FURN = {
   lustre:       { name: 'Grand lustre', room: 'salon', size: 2, cost: { g: 5, s: 1 }, amb: 4 },
   catapulte:    { name: 'Catapulte à cailloux', room: 'tour', size: 2, cost: { g: 4, s: 4 }, harass: 3 },
   // dehors
-  nichoir:    { name: 'Nichoir à poules', room: 'poulailler', cost: { g: 1 }, food: 2 },
-  grain:      { name: 'Sac de grain', room: 'poulailler', cost: { g: 1 }, food: 2 },
-  juchoir:    { name: 'Juchoir', room: 'poulailler', cost: { g: 1, s: 1 }, amb: 1 },
+  nichoir:    { name: 'Nichoir à poules', room: 'poulailler', cost: { g: 1 }, food: 2, desc: 'Les poules y pondent : des repas, et des œufs pour la cuisine.' },
+  grain:      { name: 'Sac de grain', room: 'poulailler', cost: { g: 1 }, food: 3, desc: 'Un gros sac de grain : de quoi nourrir tout le monde (mais pas d’œufs pour la cuisine).' },
+  juchoir:    { name: 'Juchoir', room: 'poulailler', cost: { g: 1, s: 1 }, amb: 1, desc: 'Les poules y dorment, y caquettent et y pondent : des œufs pour la cuisine.' },
   herbes:     { name: 'Carré d’herbes', room: 'simples', cost: { g: 1 }, cal: 1 },
   melon:      { name: 'Cloches à melon', room: 'simples', cost: { g: 2 }, food: 3 },
   arrosoir:   { name: 'Arrosoir', room: 'simples', cost: { g: 1 }, amb: 1 },
@@ -1798,7 +1798,7 @@ const FURN = {
   saule:      { name: 'Saule pleureur', room: 'cimetiere', cost: { g: 2 }, amb: 2 },
   mausolee:   { name: 'Mausolée', room: 'cimetiere', cost: { g: 3, s: 3 }, beds: 3 },
   // déco d'extérieur : sur l'herbe des Jardins
-  banc:       { name: 'Banc moussu', room: 'any', out: true, cost: { g: 1, s: 1 }, amb: 1 },
+  banc:       { name: 'Banc moussu', room: 'any', out: true, cost: { g: 1 }, amb: 1 },
   puits:      { name: 'Puits à souhaits', room: 'any', out: true, cost: { g: 2, s: 2 }, amb: 1, cal: 1 },
   nain:       { name: 'Nain de jardin maléfique', room: 'any', out: true, cost: { g: 2 }, amb: 2 },
   // artefacts : trouvés, pillés, achetés… jamais en vente dans la barre. Ils font rayonner le château.
@@ -6607,8 +6607,9 @@ function tipHTML(kind, t) {
     html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : f.out ? 'déco des Jardins' : f.artefact ? 'trésor, partout' : 'déco, partout'}</span>${f.desc ? `<p>${esc(f.desc)}</p>` : ''}<div>${statTags(f)}</div>`;
     if (fans.length) li.push(`💛 Adoré par : ${fans.join(', ')} (humeur +1).`);
     if (t === 'toile') li.push('🕸️ Deux toiles attirent une Araignée.');
-    if (typeof ACTS !== 'undefined') { const acts = Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => A.verb); if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
-    if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
+    if (typeof ACTS !== 'undefined') { const acts = [...new Set(Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => (A.verbs && A.verbs[t]) || A.verb))]; if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
+    // sa carte (ou ses cartes) au combat : le sac des expéditions, et les combats d'invasion dans sa pièce ; un meuble de qualité la donne améliorée
+    if (typeof CASTLE_CARDS !== 'undefined') { const up = typeof fineSrc === 'function' && fineSrc(t); Object.keys(CASTLE_CARDS).filter(x => CASTLE_CARDS[x].from.includes(t)).forEach(k => li.push(`🃏 Sa carte au combat (expéditions, invasions dans sa pièce) : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name}${up ? ' ✦' : ''} (${cardText({ src: 'castle', key: k, up })}${up ? ' Meuble de qualité : la carte arrive déjà améliorée.' : ''})`)); }
     if (f.unique) li.push('⭐ Unique.');
   }
   if (li.length) html += `<ul class="tipl">${li.map(x => `<li>${iconize(esc(x))}</li>`).join('')}</ul>`;
@@ -6982,7 +6983,7 @@ function openRaid(pre) {
       <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
       <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
       <h3>Équipe (${sel.team.size}/${cap})</h3>${!crawl && S.creatures.some(c => diceOf(c) <= 0 && !isOut(c)) ? `<p class="hint">Pas dans la liste : ${esc(S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).slice(0, 4).map(c => c.name).join(', '))}${S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).length > 4 ? '…' : ''} (trop petits pour piller : ils bâtissent et gardent le château).</p>` : ''}<div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); const K = CRAWL_SK[c.sp]; return `❤️ ${p.hp} · ⚔️ ${p.atk}${K ? ` · 🃏 ${K.ico} ${esc(K.name)}` : ''}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
-      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(Math.round((crawlLevel() + (typeof crawlResist === 'function' ? crawlResist(crawlDgOf(sel.target)) : 0)) * 10) / 10).replace('.', ',')}</b> (il suit la renommée de tes champions, et un donjon rival grandit avec ton palier). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
+      ${crawl && RAIDS[sel.target].siege && typeof siegeFiche === 'function' ? siegeFiche() : crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(Math.round((crawlLevel() + (typeof crawlResist === 'function' ? crawlResist(crawlDgOf(sel.target)) : 0)) * 10) / 10).replace('.', ',')}</b> (il suit la renommée de tes champions, et un donjon rival grandit avec ton palier). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
       ${!crawl && typeof RAID_APPS !== 'undefined' ? `<h3>Approche</h3><div class="choices">${Object.entries(RAID_APPS).map(([k, a]) => `<button type="button" class="choice" data-app="${k}" aria-pressed="${(sel.app || 'risquee') === k}"><span class="emo">${a.ico}</span><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></button>`).join('')}</div>` : ''}
       ${b && !crawl ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
       ${(() => { const add = sel.target && RAIDS[sel.target] && !crawl ? (RAIDS[sel.target].menace || 0) : 0, men = S.menace + (S.hype >= 3 ? 1 : 0) + add; return men >= MENACE_MAX ? `<p class="warnline">⚠️ Une bande arrivera sans doute cette nuit (Menace ${S.menace} → ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}${add ? ', dont +' + add + ' pour ce raid' : ''}) : ${crawl ? 'l’expédition' : 'l’équipe'} ne sera pas là pour défendre le Cœur.</p>` : add ? `<p class="hint">Menace après ce raid : ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}.</p>` : ''; })()}
@@ -7938,10 +7939,11 @@ const WIKI = {
     <p>Créatures et aventuriers ne passent que par les portes. En {c:invasion|invasion}, la bande ne cherche pas le plus court chemin : elle traverse quelques pièces tirées au hasard, puis le Cœur. Colle tes {c:pieges|pièges} dans les couloirs qui bordent tes pièces : ils frappent la bande quand elle y entre.</p>` },
   meubler: { cat: 'build', t: 'Meubler', x: () => `<p>Les meubles donnent ses effets à une pièce : {furn:paillasse|lits}, {furn:chaudron|repas}, {furn:fourneau|or}, {furn:etagere|notoriété}… Chaque meuble va dans sa pièce : <b>touche la pièce</b>, sa fiche liste tout ce qu’on peut y coller, avec ses effets (grisé, avec la raison, s’il ne se pose pas encore), puis « Coller ici ». La {cat:decor|déco} et les trésors, eux, sont dans le bouton Construire et se posent partout, même dans les couloirs.</p>
     <ul><li>Une pièce <b>meublée</b> attire son espèce ({c:creatures}).</li><li>Une pièce se meuble <b>une fois terminée</b> : on la bâtit, on laisse passer la nuit, puis on l’aménage.</li><li>Décoller un meuble est <b>gratuit</b> : il reste offert (×N dans la fiche de la pièce) et se recolle sans rien payer.</li>
-    <li>Bougies, torches, fourneaux et cristaux <b>éclairent</b> la pièce.</li><li>La déco préférée d’une espèce rend ses membres plus heureux ({c:humeur}).</li></ul>` },
+    <li>Bougies, torches, fourneaux et cristaux <b>éclairent</b> la pièce.</li><li>La déco préférée d’une espèce rend ses membres plus heureux ({c:humeur}).</li>
+    <li>Chaque meuble et chaque déco donne aussi sa <b>carte</b> au combat : dans le sac des {c:expeditions|expéditions}, et dans les combats d’{c:invasion|invasion} de sa pièce (une bibliothèque fait piocher, une marmite empoisonne, un établi rafistole…). Un meuble <b>de qualité</b> (au moins 6 💰+🪵, ou de palier 2) la donne déjà améliorée ✦. Sa fiche dit laquelle.</li></ul>` },
   themes: { cat: 'build', t: 'Thèmes de château', x: () => `<p>Choisi au début de la partie, le thème donne un bonus permanent et une pièce unique livrée meublée :</p><ul>${Object.entries(THEMES).map(([k, t]) => `<li><b>${esc(t.name)}</b> : ${esc(t.desc)} Pièce : {room:${t.room}}.</li>`).join('')}</ul>` },
   ressources: { cat: 'eco', t: 'Or, matériaux, notoriété', x: () => `<ul><li><b>Or</b> : pièces, meubles, paliers, achats en ville. Vient du {room:coeur} (+2 par nuit), des {c:raids|raids}, de la {room:forge}, du {room:tresor}, des rançons ({c:prisonniers}).</li>
-    <li><b>Matériaux</b> : surtout pour bâtir. Viennent de la {room:atelier|l’Atelier}, des gobelins chapardeurs et des raids sur les fermes.</li>
+    <li><b>Matériaux</b> : surtout pour bâtir. Viennent de l’{room:atelier|Atelier} (ses {furn:etabli|établis}), de la {room:forge}, de la {room:mine} (ses {furn:wagonnet|wagonnets}), des gobelins chapardeurs et des raids sur les fermes.</li>
     <li><b>Notoriété</b> : ta réputation maléfique. Elle débloque les {c:paliers|paliers}, mais au-delà de 3 elle remplit la {c:menace|Menace} de 1 chaque nuit, et elle renforce les aventuriers.</li></ul>` },
   ambiance: { cat: 'eco', t: 'Ambiance', x: () => `<p>L’Ambiance additionne la déco, certains meubles, certaines pièces et le bonus de quelques créatures.</p>
     <ul><li>Si elle atteint le nombre de créatures : +1 à l’{c:humeur|humeur} visée de chacune.</li><li>Sous la moitié du nombre de créatures : +1 {c:calamite|Calamité} par nuit (château lugubre).</li>
@@ -7979,7 +7981,7 @@ const WIKI = {
     <li><b>Collants</b> : la {def:banane}, la {def:herse}, la {def:machoire} et le Grand Piège clouent leur victime au sol : elle perd son premier tour au combat suivant.</li></ul>` },
   prisonniers: { cat: 'danger', t: 'Oubliettes et rançons', x: () => `<p>Chaque {furn:cage} des {room:oubliettes} garde un prisonnier. Quand tu repousses une bande, un héros finit en cage s’il reste de la place. À l’aube suivante, chaque prisonnier rapporte 4 or de rançon, puis rentre chez lui.</p>` },
   raids: { cat: 'danger', t: 'Raids et dés', x: () => `<p>Pendant ton tour, le bouton <b>Raid</b> envoie jusqu’à 3 créatures piller une {cat:raid|cible}. Le résultat tombe pendant la nuit.</p>
-    <ul><li><b>Réserve de dés</b> : les dés de chaque créature, +1 si sa spécialité correspond à la cible, −1 si elle boude, + les bonus de pièces et de meubles ({room:planque}, {furn:fioles}, {furn:ratelier}…), − le risque de la cible.</li>
+    <ul><li><b>Réserve de dés</b> : les dés de chaque créature, +1 si sa spécialité correspond à la cible, −1 si elle boude, + les bonus de pièces et de meubles ({room:planque}, {furn:caisse}, {furn:fioles}, {furn:ratelier}…), − le risque de la cible.</li>
     <li>On lance tous les dés et on garde <b>le meilleur</b> : 6 = succès total ; 4-5 = succès avec une complication (puces, témoin, blessure) ; 1-3 = échec. Deux 6 = critique : butin ×1,5 et un sticker en prime. Sans dé : 2 dés, on garde le plus bas.</li>
     <li>Un succès rapporte le butin, de la notoriété et de la {c:menace|Menace}. L’équipe est absente pour la nuit.</li></ul>` },
 };
@@ -8021,8 +8023,13 @@ function wikiArticle(id) {
   if (kind === 'furn') {
     const f = FURN[key]; if (!f) return '<p>Article introuvable.</p>';
     const fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === key), l = LIGHTS[key] || LIGHTS[f.sprite];
-    return `<div class="whead">${fig(thumb('furn', key, true))}<div><h2>${esc(f.name)}</h2><p class="hint">${f.room === 'any' ? 'Déco, se pose partout' : `Meuble de la pièce {room:${f.room}}`} · ${costText(f.cost)}${f.tier ? ` · palier ${f.tier}` : ''}${f.unique ? ' · unique' : ''}</p></div></div>
-      ${statRows(f) ? `<h3>Effets</h3><div>${statRows(f)}</div>` : '<p>Pur plaisir des yeux.</p>'}${l ? `<p>Éclaire autour de lui (rayon ${l[0]} cases).</p>` : ''}
+    // ses cartes au combat (améliorées ✦ si c'est un meuble de qualité) et ce que les créatures y font
+    const cards = typeof CASTLE_CARDS !== 'undefined' ? Object.keys(CASTLE_CARDS).filter(k => CASTLE_CARDS[k].from.includes(key)) : [], up = typeof fineSrc === 'function' && fineSrc(key);
+    const acts = typeof ACTS !== 'undefined' ? [...new Set(Object.values(ACTS).filter(A => A.items && A.items.includes(key)).map(A => (A.verbs && A.verbs[key]) || A.verb))] : [];
+    return `<div class="whead">${fig(thumb('furn', key, true))}<div><h2>${esc(f.name)}</h2><p class="hint">${f.artefact ? 'Trésor, se pose partout' : f.room === 'any' ? 'Déco, se pose partout' : `Meuble de la pièce {room:${f.room}}`}${f.cost ? ` · ${costText(f.cost)}` : ''}${f.tier ? ` · palier ${f.tier}` : ''}${f.unique ? ' · unique' : ''}</p></div></div>
+      ${f.desc ? `<p>${esc(f.desc)}</p>` : ''}${statRows(f) ? `<h3>Effets</h3><div>${statRows(f)}</div>` : '<p>Pur plaisir des yeux.</p>'}${l ? `<p>Éclaire autour de lui (rayon ${l[0]} cases).</p>` : ''}
+      ${cards.length ? `<h3>Au combat</h3><ul>${cards.map(k => `<li>${CASTLE_CARDS[k].ico} <b>${esc(CASTLE_CARDS[k].name)}${up ? ' ✦' : ''}</b> : ${esc(cardText({ src: 'castle', key: k, up }))}</li>`).join('')}</ul><p class="hint">Dans le sac des {c:expeditions|expéditions}, et dans les combats d’{c:invasion|invasion} de sa pièce.${up ? ' Meuble de qualité : sa carte arrive déjà améliorée.' : ''}</p>` : ''}
+      ${acts.length ? `<h3>Les créatures y viennent</h3><p>${acts.map(esc).join(', ')}.</p>` : ''}
       ${fans.length ? `<h3>Adoré par</h3><p>${fans.map(s => `{sp:${s}}`).join(', ')} : +1 à leur humeur visée.</p>` : ''}${key === 'toile' ? '<p>Deux toiles attirent une {sp:araignee}.</p>' : ''}<p>Voir {c:meubler}.</p>`;
   }
   if (kind === 'def') {
@@ -8045,6 +8052,10 @@ function wikiArticle(id) {
   }
   if (kind === 'raid') {
     const r = RAIDS[key]; if (!r) return '<p>Article introuvable.</p>';
+    // le Siège de Mirebrume ne se joue plus aux dés : trois assauts aux cartes, un par quartier
+    if (r.siege && typeof SIEGE_Q !== 'undefined') return `<div class="whead"><figure class="wfig emoji"><span class="emo">${r.emo}</span></figure><div><h2>${esc(r.name)}</h2><p class="hint">Expédition en cartes · palier ${r.tier} · finale de la Victoire de Terreur</p></div></div>
+      <p>${esc(r.desc)}</p><ul>${SIEGE_Q.map((q, i) => `<li><b>Assaut ${i + 1} : ${esc(q.name)}</b>. ${esc(q.desc)}</li>`).join('')}</ul>
+      <ul><li>Chaque assaut est une expédition de 4 créatures : trois étages, puis le chef du quartier. Il ne compte que si le chef tombe ; les assauts réussis restent acquis.</li><li>Un assaut réussi : une rançon de ${costText(r.reward)}, +${r.hype} notoriété, +${r.menace} {c:menace|Menace}.</li></ul><p>Voir {c:v_terreur} et {c:expeditions}.</p>`;
     return `<div class="whead"><figure class="wfig emoji"><span class="emo">${r.emo}</span></figure><div><h2>${esc(r.name)}</h2><p class="hint">Cible de raid${r.tier ? ` · palier ${r.tier}` : ''} · spécialité ${TAGS[r.tag]}${r.risk ? ` · risque ${r.risk} (−${r.risk} dé)` : ''}</p></div></div>
       <p>${esc(r.desc)}</p><ul><li>Butin : ${costText(r.reward)}${r.bonus ? `, et un sticker {furn:${r.bonus}} en cas de succès total` : ''}.</li><li>+${r.hype} notoriété, +${r.menace} {c:menace|Menace}.</li></ul><p>Voir {c:raids}.</p>`;
   }
@@ -9699,7 +9710,7 @@ function discover(idx, why) {
 const discAround = (q, r, n) => world().list.filter(c => hdist(c.q, c.r, q, r) <= n).map(c => c.i);
 const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 // cibles de raid connues (il faut avoir découvert l'endroit sur la carte)
-function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
+function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c) && !(S.vic && S.vic.siege >= 3); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
 RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 5, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon ${deM(rv.master)} : une expédition de 4 créatures, trois étages et un boss. De quoi le soumettre, et en rapporter une relique.` }; });
 
 /* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */
@@ -10454,7 +10465,7 @@ function vicStages(id) {
   const v = vicState();
   if (id === 'legende') { const g = radiance(); return [st(`Rayonnement Illustre (${Math.min(g, 80)}/80 ✨)`, g >= 80 || v.croisade), st(`Rayonnement Légendaire (${Math.min(g, 130)}/130 ✨)`, g >= 130 || v.croisade), st(`Rayonnement Mythique (${Math.min(g, 200)}/200 ✨)`, g >= 200 || v.croisade),
     st(`Finale : repousser la Croisade des héros de Mirebrume (${v.croisade ? Math.min(3, v.croisade.done) : 0}/3)`, v.croisade && v.croisade.done >= 3, true)]; }
-  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage et 2 combats gagnés 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
+  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage et 2 combats gagnés 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume, aux cartes (${Math.min(3, v.siege)}/3 assauts réussis${v.siege < 3 ? `, prochain : ${siegeQ().name}` : ''})`, v.siege >= 3, true)];
   if (id === 'voisinage') return [5, 10, 15].map(n => st(`${n} voix au Conseil du Val (${Math.min(v.votes, n)}/${n})`, v.votes >= n)).concat([st(`Finale : 20 voix, et le Conseil te nomme Protecteur du Val (${Math.min(v.votes, 20)}/20)`, v.votes >= 20, true)]);
   if (id === 'menagerie') { const p = v.proj && v.proj.id === 'parade' ? v.proj : null; return [st(`Album complet (${albumN()}/${MENAGERIE_SP.length} espèces, rares comprises)`, albumN() >= MENAGERIE_SP.length || p), st(`5 légendes au château (${Math.min(5, legendsHome())}/5)`, legendsHome() >= 5 || p),
     st(`${Math.round(MEN_HAPPY * 100)} % de tes créatures installées épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
@@ -10554,8 +10565,6 @@ function victoryAfterRaid(target, roll, lines) {
     if (isVassal(tg.rival)) { lines.push(['🏳️', `Reddition ! ${r.name} : te voilà suzerain. Un tribut chaque nuit, et plus personne là-bas pour te disputer tes créatures.`, 'good']); addLog(`Vassal : ${r.name}.`, 'ev'); }
     else lines.push(['🏴', `Coup dur pour ${r.name} : ${v.vassals[tg.rival]}/3 vers la vassalité, et un recul dans la course.`, 'good']);
   }
-  if (tg.siege && roll.res === 'partial') lines.push(['🏰', 'Mirebrume tient bon : il faut un vrai succès (un 6) pour faire céder la cité.', '']);
-  if (tg.siege && ok && roll.res !== 'partial') { v.siege++; lines.push(['🏰', `Assaut réussi contre Mirebrume (${Math.min(3, v.siege)}/3) !`, 'good']); if (v.siege >= 3) winVictory('terreur', lines); }
   if (!tg.rival && !tg.siege) { const site = world().sites.find(x => x.raid === target), s = site && nearestSettlement(site); if (s) { addGw(s, ok ? -12 : -6); lines.push(['😠', `${s.name} n’apprécie pas : bonne volonté ${ok ? '−12' : '−6'}.`, 'bad']); } }
 }
 function victoryAfterInvasion(plan, outcome, lines) {
@@ -10564,7 +10573,53 @@ function victoryAfterInvasion(plan, outcome, lines) {
   openReqs().filter(q => REQ[q.req].kind === 'repel').forEach(q => { const s = siteById(q.site); if (s) lines.push(['🤝', reqReward(q, s), 'good']); });
   if (plan.origin && plan.origin.crusade && v.croisade && !v.won.legende) { v.croisade.done++; lines.push(['📯', `La croisade de Mirebrume est repoussée (${Math.min(3, v.croisade.done)}/3) !`, 'good']); if (v.croisade.done >= 3) winVictory('legende', lines); }
 }
-RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 4, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, desc: 'La grande cité. Trois assauts réussis et elle te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 0, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, dg: 'cite', desc: 'La grande cité, en trois assauts aux cartes : les Remparts, la Ville basse et sa Guilde des Héros, puis le Palais. Un assaut ne compte que si le chef du quartier tombe ; au troisième, la cité te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+
+/* ---------- le Siège de Mirebrume : trois assauts aux cartes ----------
+   Chaque assaut est une expédition (p35) dans un quartier de la cité, plus dur que le
+   précédent, avec son chef au bout. Seul le chef compte : rentrer avant, même du
+   troisième étage, ne vaut rien. Les assauts réussis restent acquis (S.vic.siege).
+   Les ennemis, les décors et la relique des quartiers : p73. */
+const SIEGE_Q = [
+  { id: 'remparts', name: 'les Remparts', hold: 'Les Remparts tiennent bon', fall: 'Les Remparts sont à toi', chef: 'la Capitaine Mâchicoulis', lvl: 0,
+    regs: ['m_garde', 'm_arbal', 'h_paysan'], elite: 'm_bastion', boss: 'm_capitaine', relic: null,
+    desc: 'Des créneaux, des arbalètes, des gardes qui comptent les moutons pour rester éveillés, et la Capitaine Mâchicoulis, qui n’a jamais dormi de sa vie. Elle le dit à tout le monde.' },
+  { id: 'guilde', name: 'la Ville basse', hold: 'La Ville basse tient bon', fall: 'La Guilde des Héros capitule', chef: 'Dame Guillemette', who: 'Dame Guillemette, la maîtresse de la Guilde des Héros', lvl: 0,
+    regs: ['h_voleuse', 'h_mage', 'm_crieur', 'h_paysan', 'm_crieur'], elite: 'm_heros', boss: 'm_guilde', relic: null,
+    desc: 'Des ruelles pavées, des tavernes pleines d’aventuriers, ton portrait sur chaque avis de recherche, et la Guilde des Héros, où Dame Guillemette distribue les quêtes… et les primes.' },
+  { id: 'palais', name: 'le Palais', hold: 'Le Palais tient bon', fall: 'Le Palais est à toi', chef: 'le Bourgmestre Grandécharpe', lvl: .5,
+    regs: ['m_palais', 'h_paladin', 'm_scribe'], elite: 'm_lustrin', boss: 'm_bourg', relic: 'cles',
+    desc: 'Des tapis rouges, des lustres, des gardes en culotte bouffante, et au fond de la salle du trône, le Bourgmestre Grandécharpe, qui prépare un très, très long discours.' },
+];
+// le quartier du prochain assaut (une vieille partie à 1 ou 2 assauts reprend au bon quartier)
+const siegeStep = () => Math.min(SIEGE_Q.length - 1, Math.max(0, Math.floor((S && S.vic && S.vic.siege) || 0)));
+const siegeQ = () => SIEGE_Q[siegeStep()];
+// le niveau d'un assaut : la renommée de tes champions (crawlLevel), plus celui du quartier (le Palais se prépare davantage ; la Ville basse, elle, compte sur les héros de la Guilde), et ton palier au-delà du 2
+const siegeLvl = () => .5 * Math.max(0, (S.tier || 0) - 2) + siegeQ().lvl;
+const siegeTitle = () => `Mirebrume, ${siegeQ().name} (assaut ${siegeStep() + 1}/3)`;
+// un assaut est rentré : seul le chef du quartier compte (appelé par crawlVictory, p36)
+function siegeAssault(R, lines) {
+  const v = vicState(), q = siegeQ(), tg = RAIDS.mirebrume;
+  if (v.siege >= 3) return;
+  if (R.done !== 'boss') {
+    const why = R.done === 'wipe' ? ' L’équipe a été repoussée jusqu’aux portes.' : R.fledBoss ? ` L’équipe a fui devant ${q.chef}.` : R.floor > CRAWL_FLOORS ? ' Arriver jusqu’à sa porte ne suffit pas.' : R.floor >= CRAWL_FLOORS ? ' Atteindre le troisième étage ne suffit pas.' : '';
+    lines.push(['🏰', `${q.hold} : à Mirebrume, un assaut ne compte que si ${q.chef} tombe.${why} Le quartier se reprépare pour le prochain assaut${v.siege ? ` ; ${v.siege > 1 ? `tes ${v.siege} assauts réussis restent acquis` : 'ton premier assaut réussi reste acquis'}` : ''}.`, 'bad']);
+    return;
+  }
+  v.siege++; S.gold += tg.reward.g || 0; S.mat += tg.reward.s || 0; S.hype += tg.hype; S.menace += tg.menace;
+  lines.push(['🏰', `${q.fall} : ${q.chef} rend les armes. Assaut réussi contre Mirebrume (${v.siege}/3) ! Rançon : ${costText(tg.reward)}, +${tg.hype} 🔥, +${tg.menace} Menace.`, 'good']);
+  addLog(`Mirebrume, assaut réussi (${v.siege}/3) : ${q.fall.toLowerCase()}.`, 'ev');
+  if (v.siege >= 3) winVictory('terreur', lines);
+  else { const n = SIEGE_Q[v.siege]; lines.push(['🗺️', `Prochain assaut : ${n.name}, où t’attend ${n.who || n.chef}.`, '']); }
+}
+// la fiche de l'assaut, dans l'écran des raids (p11)
+function siegeFiche() {
+  const v = vicState(), q = siegeQ(), B = (typeof CRAWL_EN !== 'undefined' && CRAWL_EN[q.boss]) || {}, tg = RAIDS.mirebrume;
+  const lvl = Math.round((crawlLevel() + siegeLvl()) * 10) / 10;
+  return `<h3>L’assaut ${siegeStep() + 1}/3 : ${esc(q.name[0].toUpperCase() + q.name.slice(1))}</h3><p>${esc(q.desc)}</p>
+    <p>Une expédition aux cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, puis ${esc(q.who || q.chef)}${B.p2 && BOSS_P2[B.p2] ? `, avec ses actions légendaires et sa fureur à mi-vie` : ''}. <b>L’assaut ne compte que si ${esc(q.chef)} tombe</b> : rentrer avant, même du troisième étage, ne vaut rien ici. Niveau de l’assaut : <b>${String(lvl).replace('.', ',')}</b> (il suit la renommée de tes champions, et chaque quartier se défend à sa façon). Elle se joue cette nuit.</p>
+    <p class="hint">Assauts réussis : ${v.siege}/3 (ils restent acquis). Chacun rapporte une rançon de ${costText(tg.reward)}, +${tg.hype} 🔥 et +${tg.menace} Menace${q.relic && typeof RELICS !== 'undefined' && RELICS[q.relic] ? ` ; le dernier, une relique : ${esc(RELICS[q.relic].name)}` : ''}.</p>`;
+}
 
 /* ---------- pastilles (notifications) ---------- */
 function victoryNotifs(add) {
@@ -10639,8 +10694,9 @@ function rivalHTML(rv) {
 }
 function citeHTML() {
   const v = vicState();
-  if (allVassals()) return `<p><b>⚔️ Le Siège de Mirebrume est possible</b> (${Math.min(3, v.siege)}/3 assauts réussis).</p><div class="btnrow"><button class="sbtn" type="button" data-m="siege" ${S.tier >= 2 ? '' : 'disabled'}>🏰 Préparer un assaut${S.tier >= 2 ? '' : ' (Palier 2)'}</button></div>`;
-  return '<p class="hint">Quand les quatre donjons rivaux seront tes vassaux, tu pourras assiéger la cité (victoire de Terreur).</p>';
+  if (v.siege >= 3) return '<p><b>🗝️ Mirebrume t’a remis ses clés.</b> Les trois quartiers ont rendu les armes ; la cité se tient tranquille, et le Bourgmestre prépare un discours sur le sujet.</p>';
+  if (allVassals()) { const q = siegeQ(); return `<p><b>⚔️ Le Siège de Mirebrume est possible</b> (${v.siege}/3 assauts réussis).</p><p class="hint">Prochain assaut : <b>${esc(q.name)}</b>, où t’attend ${esc(q.who || q.chef)}. Une expédition aux cartes de 4 créatures : trois étages, puis le chef du quartier. L’assaut ne compte que si le chef tombe.</p><div class="btnrow"><button class="sbtn" type="button" data-m="siege" ${S.tier >= 2 ? '' : 'disabled'}>🏰 Préparer l’assaut${S.tier >= 2 ? '' : ' (Palier 2)'}</button></div>`; }
+  return '<p class="hint">Quand les quatre donjons rivaux seront tes vassaux, tu pourras assiéger la cité, quartier par quartier (victoire de Terreur).</p>';
 }
 
 /* ---------- Grimoire et conseil ---------- */
@@ -10652,7 +10708,7 @@ Object.assign(WIKI, {
     <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
     <li>Si un rival gagne avant toi, il devient <b>Grand Maître</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti (moins un tribut, si c’est un donjon rival). Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
   v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
-  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
+  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume (Palier 2, une fois les quatre rivaux soumis : bouton Raid, ou la cité sur la carte). Trois assauts, un par quartier, chacun plus dur que le précédent : ${SIEGE_Q.map((q, i) => `${i + 1}. ${q.name[0].toUpperCase() + q.name.slice(1)}, et ${q.who || q.chef}`).join(' ; ')}. Chaque assaut est une {c:expeditions|expédition} aux cartes de 4 créatures, avec le sac du château : trois étages, puis le chef du quartier, ses actions légendaires et sa fureur. <b>Un assaut ne compte que si le chef tombe</b> : rentrer avant, même du troisième étage, ne vaut rien ici, et le quartier se reprépare. Les assauts réussis restent acquis ; chacun rapporte une rançon (${costText(RAIDS.mirebrume.reward)}), +${RAIDS.mirebrume.hype} 🔥 et +${RAIDS.mirebrume.menace} Menace. Au troisième, la cité te remet ses clés${typeof RELICS !== 'undefined' && RELICS.cles ? ` (et une relique : ${RELICS.cles.ico} ${RELICS.cles.name}, ${RELICS.cles.desc.replace(/\.$/, '').replace(/^./, c => c.toLowerCase())})` : ''}.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
   v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
     <ul><li>À 60, le lieu vote pour toi au <b>Conseil du Val</b>, qui se réunit toutes les 10 nuits : 1 voix par village, 2 pour la ville, 3 pour la cité.</li><li>À 70, ses aventuriers ne viennent plus t’attaquer.</li></ul><p><b>Victoire :</b> 20 voix cumulées. Les voix que tu n’as pas vont au Baron Pâlichon, qui brigue le même titre.</p>` },
   v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et 85 % de tes créatures installées (5 nuits au château) <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins : un nouveau venu ne casse pas la série.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },
@@ -10695,10 +10751,10 @@ const SP_TRAITS = { diablotin: ['farceur', 'maniaque', 'bavard'], gobelin: ['rad
   fee: ['bucolique', 'artiste', 'farceur'], liche: ['frileux', 'studieux', 'radin'], harpie: ['artiste', 'bavard', 'fetard'], cocatrice: ['gourmand', 'farceur', 'curieux'],
   mandragore: ['bucolique', 'bavard', 'marmotte'], nixe: ['solitaire', 'bucolique', 'artiste'], goule: ['gourmand', 'frileux', 'studieux'], nainsombre: ['maniaque', 'radin', 'bagarreur'] };
 // et les occupations de son métier
-const SP_ACTS = { diablotin: ['chantier', 'nettoyer'], gobelin: ['dormir', 'compter'], kobold: ['forger', 'chantier'], crapaud: ['jardiner', 'pecher'], gargouille: ['garde'], menestrel: ['musique', 'fete'],
+const SP_ACTS = { diablotin: ['chantier', 'nettoyer'], gobelin: ['dormir', 'compter'], kobold: ['bricoler', 'chantier'], crapaud: ['jardiner', 'pecher'], gargouille: ['garde'], menestrel: ['musique', 'fete'],
   troll: ['manger', 'dormir'], fantome: ['lire', 'explorer'], sorciere: ['potion', 'jardiner'], squelette: ['garde', 'recueil'], orque: ['forger', 'entrainer', 'chantier'], araignee: ['nettoyer', 'rever'],
-  dragonnet: ['compter', 'chauffer'], mimique: ['compter', 'rever'], vampire: ['musique', 'admirer'], golem: ['chantier', 'forger'], fee: ['jardiner', 'admirer'], liche: ['lire', 'chauffer'],
-  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'], nainsombre: ['forger', 'chantier'] };
+  dragonnet: ['compter', 'chauffer'], mimique: ['compter', 'rever'], vampire: ['musique', 'admirer'], golem: ['chantier', 'miner'], fee: ['jardiner', 'admirer'], liche: ['lire', 'chauffer'],
+  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'], nainsombre: ['forger', 'miner', 'chantier'] };
 const QUIRKS = ['Ronfle comme une forge.', 'A peur des poules.', 'Collectionne les dents (pas les siennes).', 'Parle à l’épouvantail.', 'Chante faux sous la pluie.', 'Mange les bougies quand personne ne regarde.',
   'Écrit des poèmes sur les rats.', 'Ne marche jamais sur les fissures.', 'Croit que le Cœur l’écoute.', 'Se brosse les dents avec un hérisson.', 'Range ses chaussettes par couleur de moisissure.',
   'Dit « bonjour » aux pièges.', 'Garde un caillou porte-bonheur. Il en a perdu quatre.', 'Rêve d’ouvrir une crêperie.', 'Compte les moutons, puis les mange.', 'Fait des grimaces aux portraits.',
@@ -10801,24 +10857,28 @@ epaFactors = function (c, hungry = hungrySet()) { const r = _epaFactors0(c, hung
 function persHTML(c) {
   if (!c.pers) return '';
   const a = ACT.get(c.id), L = a && a.life, A = L && L.act && L.phase !== 'idle' ? ACTS[L.act] : null;
-  return `<dt>Caractère</dt><dd>${c.pers.map(k => `<span class="tag2" title="${esc(TRAITS[k].desc)}">${TRAITS[k].ico} ${esc(TRAITS[k].name)}</span>`).join('')}<br><span class="hint">${esc(QUIRKS[c.quirk] || '')}${A ? ` En ce moment : ${esc(A.verb)}${L.where ? ' (' + esc(L.where) + ')' : ''}.` : ''}</span></dd>`;
+  return `<dt>Caractère</dt><dd>${c.pers.map(k => `<span class="tag2" title="${esc(TRAITS[k].desc)}">${TRAITS[k].ico} ${esc(TRAITS[k].name)}</span>`).join('')}<br><span class="hint">${esc(QUIRKS[c.quirk] || '')}${A ? ` En ce moment : ${esc(actVerb(L.act, L.goal && L.goal.t))}${L.where ? ' (' + esc(L.where) + ')' : ''}.` : ''}</span></dd>`;
 }
 
 /* ---------- occupations ---------- */
-// need : le besoin comblé ; items : les meubles dont on se sert ; fx : petits effets ; pose : attitude ; dur : secondes
+// need : le besoin comblé ; items : les meubles dont on se sert (verbs : le verbe propre à un meuble, sinon verb) ; fx : petits effets ; pose : attitude ; dur : secondes
 const ACTS = {
-  dormir:    { verb: 'fait la sieste', need: 'energie', items: ['paillasse', 'litsup', 'baldaquin', 'cercueil', 'canape', 'nid', 'mausolee'], fx: 'z', pose: 'sleep', dur: [16, 28], onIt: true },
-  manger:    { verb: 'grignote', need: 'faim', items: ['chaudron', 'tonneau', 'jambons', 'tablee', 'choux', 'champis', 'barque', 'ruche', 'mangeoire', 'melon', 'nichoir', 'grain'], fx: 'miam', pose: 'eat', dur: [6, 11] },
-  fete:      { verb: 'trinque', need: 'fun', items: ['biere', 'tablee', 'scene'], fx: 'note', pose: 'dance', dur: [8, 14] },
+  dormir:    { verb: 'fait la sieste', need: 'energie', items: ['paillasse', 'litsup', 'baldaquin', 'grandlit', 'cercueil', 'sarcophage', 'canape', 'nid', 'mausolee'], verbs: { nid: 'se blottit dans le nid géant', cercueil: 'fait la sieste dans son cercueil', sarcophage: 'fait la sieste dans le sarcophage' }, fx: 'z', pose: 'sleep', dur: [16, 28], onIt: true },
+  manger:    { verb: 'grignote', need: 'faim', items: ['chaudron', 'tonneau', 'jambons', 'tablee', 'broche', 'banquet', 'choux', 'champis', 'serre', 'barque', 'ruche', 'mangeoire', 'melon', 'nichoir', 'grain'],
+              verbs: { chaudron: 'se ressert de ragoût', broche: 'tourne la broche (et goûte)', banquet: 'festoie au banquet', barque: 'grignote un poisson séché', ruche: 'chipe un peu de miel', mangeoire: 'picore à la mangeoire', nichoir: 'gobe un œuf', grain: 'picore du grain' }, fx: 'miam', pose: 'eat', dur: [6, 11] },
+  fete:      { verb: 'trinque', need: 'fun', items: ['biere', 'tablee', 'comptoir', 'scene', 'piste'], verbs: { scene: 'chante sur l’estrade', piste: 'danse sur la piste' }, fx: 'note', pose: 'dance', dur: [8, 14] },
   musique:   { verb: 'joue de la musique', need: 'fun', items: ['orgue', 'scene', 'harpe'], fx: 'note', pose: 'dance', dur: [8, 13] },
-  lire:      { verb: 'lit un grimoire', need: 'fun', items: ['etagere', 'pupitre', 'fauteuil', 'grimoire'], fx: 'page', pose: 'read', dur: [10, 18] },
+  lire:      { verb: 'lit un grimoire', need: 'fun', items: ['etagere', 'rayonnage', 'pupitre', 'fauteuil', 'globe', 'grimoire'], verbs: { globe: 'fait tourner le globe céleste' }, fx: 'page', pose: 'read', dur: [10, 18] },
   entrainer: { verb: 's’entraîne', need: 'travail', items: ['ratelier', 'armure', 'chaines', 'heaume', 'epeefaux'], fx: 'hit', pose: 'work', dur: [6, 11] },
-  forger:    { verb: 'tape sur l’enclume', need: 'travail', items: ['enclume', 'fourneau', 'etabli', 'caisse', 'wagonnet', 'filon', 'etai'], fx: 'spark', pose: 'work', dur: [8, 13] },
-  potion:    { verb: 'touille une potion', need: 'travail', items: ['alambic', 'marmite', 'fioles'], fx: 'bubble', pose: 'work', dur: [8, 13] },
-  compter:   { verb: 'compte les pièces d’or', need: 'fun', items: ['tasdor', 'coffreor', 'coffre', 'trone', 'sablier'], fx: 'coin', pose: 'read', dur: [6, 11] },
+  // trois métiers des mains : la forge, l'atelier, la mine (chacun son geste, selon le meuble)
+  forger:    { verb: 'travaille à la forge', need: 'travail', items: ['enclume', 'fourneau', 'hautfourneau', 'pilon'], verbs: { enclume: 'tape sur l’enclume', fourneau: 'attise le fourneau', hautfourneau: 'charge le haut fourneau', pilon: 'fait tomber le marteau-pilon' }, fx: 'spark', pose: 'work', dur: [8, 13] },
+  bricoler:  { verb: 'bricole à l’atelier', need: 'travail', items: ['etabli', 'pedale', 'caisse'], verbs: { etabli: 'rabote à l’établi', pedale: 'pédale à l’établi', caisse: 'range la caisse à outils' }, fx: 'hammer', pose: 'work', dur: [8, 13] },
+  miner:     { verb: 'travaille à la mine', need: 'travail', items: ['wagonnet', 'filon', 'etai'], verbs: { wagonnet: 'pousse le wagonnet', filon: 'pioche le filon', etai: 'consolide les étais' }, fx: 'dust', pose: 'work', dur: [8, 13] },
+  potion:    { verb: 'touille une potion', need: 'travail', items: ['alambic', 'marmite', 'fioles', 'athanor'], verbs: { alambic: 'surveille l’alambic', fioles: 'range les fioles', athanor: 'garde le feu de l’athanor' }, fx: 'bubble', pose: 'work', dur: [8, 13] },
+  compter:   { verb: 'compte les pièces d’or', need: 'fun', items: ['tasdor', 'coffreor', 'montagnedor', 'coffre', 'trone', 'sablier'], verbs: { coffre: 'compte ses chaussettes', trone: 'essaie le trône (chut !)', sablier: 'regarde le sable remonter' }, fx: 'coin', pose: 'read', dur: [6, 11] },
   admirer:   { verb: 'admire les belles choses', need: 'fun', items: ['tableau', 'cristal', 'tonnelle', 'fontaine', 'vitrine', 'socle', 'nenuphar', 'saule', 'puits', 'nain', 'banniere', ...ARTEFACTS], fx: 'sparkle', dur: [5, 9] },
-  chauffer:  { verb: 'se réchauffe près du feu', need: 'confort', items: ['torche', 'fourneau', 'candelabre', 'chaudron', 'etai', 'lanterne'], fx: 'ember', dur: [6, 11] },
-  jardiner:  { verb: 'jardine', need: 'travail', items: ['choux', 'champis', 'epouvantail', 'herbes', 'melon', 'arrosoir', 'ruche', 'tonnelle'], fx: 'leaf', pose: 'work', dur: [8, 13] },
+  chauffer:  { verb: 'se réchauffe près du feu', need: 'confort', items: ['torche', 'fourneau', 'hautfourneau', 'candelabre', 'chaudron', 'etai', 'lanterne'], verbs: { etai: 'se réchauffe près de la lanterne', lanterne: 'se réchauffe près de la lanterne' }, fx: 'ember', dur: [6, 11] },
+  jardiner:  { verb: 'jardine', need: 'travail', items: ['choux', 'champis', 'serre', 'epouvantail', 'herbes', 'melon', 'arrosoir', 'ruche', 'tonnelle'], verbs: { epouvantail: 'rhabille l’épouvantail', ruche: 's’occupe des abeilles', arrosoir: 'arrose les plates-bandes', tonnelle: 'taille la tonnelle' }, fx: 'leaf', pose: 'work', dur: [8, 13] },
   pecher:    { verb: 'pêche', need: 'fun', items: ['ponton', 'barque', 'roseaux', 'nenuphar'], fx: 'drop', pose: 'read', dur: [12, 20] },
   poules:    { verb: 'court après les poules', need: 'fun', rooms: ['poulailler'], fx: 'feather', pose: 'dance', dur: [5, 9] },
   recueil:   { verb: 'se recueille', need: 'confort', items: ['tombe', 'mausolee', 'cercueil', 'ossuaire'], fx: 'wisp', pose: 'read', dur: [8, 13] },
@@ -10836,6 +10896,8 @@ const ACTS = {
   paie:      { verb: 'vient chercher sa paie', need: 'fun', pay: true, fx: 'coin', pose: 'eat', dur: [4, 7] },
   grogne:    { verb: 'réclame sa paie', need: 'social', pay: true, fx: 'puff', pose: 'shake', dur: [3, 5] },
 };
+// le geste d'une créature : celui du meuble dont elle se sert, sinon celui de l'occupation
+const actVerb = (k, t) => { const A = ACTS[k]; return !A ? '' : (A.verbs && t && A.verbs[t]) || A.verb; };
 const NEEDS = { energie: .2, faim: .28, fun: .33, travail: .26, confort: .2, social: .28 };   // usure par seconde
 const NEED_TRAIT = { marmotte: { energie: 1.5 }, gourmand: { faim: 1.6 }, fetard: { fun: 1.4, social: 1.2 }, bavard: { social: 1.7 }, solitaire: { social: .4, confort: 1.3 }, bagarreur: { travail: 1.3 }, maniaque: { travail: 1.5 }, frileux: { confort: 1.6 }, curieux: { fun: 1.3 }, studieux: { fun: 1.2 } };
 function lifeOf(a) {
@@ -10862,7 +10924,7 @@ function findTarget(c, a, k, post) {
   const A = ACTS[k], here = a.z || 0;
   if (A.items) {
     const set = new Set(A.items), list = S.furn.filter(f => set.has(f.t) && usable(f) && !taken(spotKey(zOf(f), f.x, f.y)) && (!post || inRoomZ(post, f)))
-      .map(f => ({ z: zOf(f), x: f.x, y: f.y, px: f.x + (A.onIt ? .55 : .5 + .32), py: f.y + (A.onIt ? .55 : .5 + .32), where: roomLabel(roomAt(f.x, f.y, zOf(f))) || 'les Jardins', key: spotKey(zOf(f), f.x, f.y) }));
+      .map(f => ({ z: zOf(f), x: f.x, y: f.y, px: f.x + (A.onIt ? .55 : .5 + .32), py: f.y + (A.onIt ? .55 : .5 + .32), where: roomLabel(roomAt(f.x, f.y, zOf(f))) || 'les Jardins', key: spotKey(zOf(f), f.x, f.y), t: f.t }));
     return pickNear(a, list);
   }
   if (A.rooms) { const rs = S.rooms.filter(r => r.built && A.rooms.includes(r.t) && (!post || r === post)); const r = pick(rs); if (!r) return null; const [x, y] = randCell(r); return cellSpot(zOf(r), r, x, y); }
@@ -13148,8 +13210,9 @@ TIPS.push({ id: 'clash0', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t:
    prochaine action. Trois étages de salles au choix, le boss au
    bout, et après chaque salle le choix : continuer, ou rentrer
    avec le butin.
-   Les donjons rivaux, la Forêt enchantée et les Grottes se font
-   ainsi ; les raids aux dés restent pour les lieux des humains.
+   Les donjons rivaux, la Forêt enchantée, les Grottes et le Siège
+   de Mirebrume se font ainsi ; les raids aux dés restent pour les
+   villages, les fermes et les autres lieux des humains.
    Ce fichier : les règles (sans affichage), jouables par le
    simulateur ; l'écran est dans p36_crawl_ui.js.
    ========================================================= */
@@ -13160,7 +13223,8 @@ const CRAWL_TUNE = { hpL: .25, dmgL: .7, hpF: .65, dmgF: 3.5, boss: 1.2, p0: 220
 function crawlChampions() { return S.creatures.filter(c => !isOut(c)).map(c => crawler(c)).map(p => p.hp * p.atk).sort((a, b) => b - a).slice(0, 4).reduce((a, v) => a + v, 0); }
 const crawlLevel = () => Math.round((1 + Math.max(0, (crawlChampions() - CRAWL_TUNE.p0) / CRAWL_TUNE.pk)) * 10) / 10;
 // un donjon rival grandit avec toi (+0,5 niveau par palier), se prépare après chaque défaite (+0,25 par point de vassalité pris chez lui), et tous se méfient d'un suzerain (+0,25 par vassal)
-const crawlResist = dg => { if (typeof vicState !== 'function' || typeof RIVALS === 'undefined' || !RIVALS.some(r => r.id === dg)) return 0; const v = vicState().vassals || {}; return .5 * (S.tier || 0) + .25 * (v[dg] || 0) + .25 * Object.keys(v).filter(k => typeof isVassal === 'function' && isVassal(k)).length; };
+// le Siège de Mirebrume, lui, a son propre niveau, quartier par quartier (siegeLvl, p25)
+const crawlResist = dg => { if (dg === 'cite' && typeof siegeLvl === 'function') return siegeLvl(); if (typeof vicState !== 'function' || typeof RIVALS === 'undefined' || !RIVALS.some(r => r.id === dg)) return 0; const v = vicState().vassals || {}; return .5 * (S.tier || 0) + .25 * (v[dg] || 0) + .25 * Object.keys(v).filter(k => typeof isVassal === 'function' && isVassal(k)).length; };
 
 /* ---------- les ennemis : leurs actions tournent en boucle (on voit toujours la prochaine) ---------- */
 const CRAWL_EN = {
@@ -13291,7 +13355,7 @@ const CRAWL_SK = {
 const CASTLE_CARDS = {
   chou:      { name: 'Chou du potager', ico: '🥬', cost: 1, tgt: 'ally', heal: 6, from: ['choux'] },
   champi:    { name: 'Champignon douteux', ico: '🍄', cost: 0, tgt: 'ally', heal: 5, fx: 'risky', note: '1 fois sur 3, empoisonne (2)', from: ['champis'] },
-  navet:     { name: 'Navet', ico: '🥕', cost: 0, tgt: 'ally', heal: 3, from: ['tonneau', 'grain', 'nichoir'] },
+  navet:     { name: 'Navet', ico: '🥕', cost: 0, tgt: 'ally', heal: 3, from: ['tonneau'] },
   ragout:    { name: 'Ragoût', ico: '🍲', cost: 2, tgt: 'allies', heal: 4, from: ['chaudron', 'chaudronmamie'] },
   jambon:    { name: 'Jambon pendu', ico: '🍖', cost: 1, tgt: 'ally', heal: 4, calm: 2, from: ['jambons', 'broche'] },
   festin:    { name: 'Festin', ico: '🍗', cost: 2, tgt: 'allies', heal: 7, exhaust: 1, from: ['banquet'] },
@@ -13300,8 +13364,22 @@ const CASTLE_CARDS = {
   poisson:   { name: 'Poisson frais', ico: '🐟', cost: 1, tgt: 'ally', heal: 6, from: ['barque', 'ponton'] },
   recette:   { name: 'Recette interdite', ico: '📕', cost: 1, tgt: 'ally', heal: 11, fear: 2, from: ['grimoire'] },
   lits:      { name: 'Sieste réparatrice', ico: '🛏️', cost: 1, tgt: 'allies', heal: 3, from: ['paillasse', 'litsup', 'baldaquin', 'grandlit', 'nid'] },
+  // la basse-cour, le jardin des simples, la mare, le jardin suspendu, la volière
+  oeuf:      { name: 'Œuf du jour', ico: '🥚', cost: 0, tgt: 'ally', heal: 3, calm: 1, from: ['nichoir', 'juchoir'] },   // les poules qui pondent (les mêmes que les œufs de la cuisine)
+  poignee:   { name: 'Poignée de grain', ico: '🌾', cost: 0, tgt: 'enemy', weak: [2, 1], from: ['grain'] },   // en pleine figure
+  cataplasme:{ name: 'Cataplasme d’herbes', ico: '🌿', cost: 1, tgt: 'ally', heal: 4, cure: 1, from: ['herbes'] },
+  arrosage:  { el: 'froid', name: 'Douche froide', ico: '🚿', cost: 0, tgt: 'enemy', dmg: 2, weak: [1, 1], from: ['arrosoir'] },
+  sarbacane: { el: 'perforant', name: 'Sarbacane de roseau', ico: '🎋', cost: 1, tgt: 'enemy', dmg: 2, poison: 2, from: ['roseaux'] },
+  tonnelle:  { name: 'Sous la tonnelle', ico: '🌸', cost: 1, tgt: 'allies', heal: 1, calm: 2, from: ['tonnelle'] },
+  nuee:      { el: 'perforant', name: 'Nuée d’oiseaux', ico: '🐦', cost: 1, tgt: 'rnd', dmg: 2, hits: 3, from: ['mangeoire'] },
   hallebarde:{ el: 'tranchant', name: 'Hallebarde', ico: '🔱', cost: 1, tgt: 'enemy', dmg: 8, from: ['ratelier'] },
   affute:    { name: 'Lame affûtée', ico: '⚒️', cost: 0, tgt: 'ally', buff: 2, from: ['enclume'] },
+  // l'atelier : l'établi répare, la caisse à outils fournit de quoi taper ; la mine
+  bricolage: { name: 'Rafistolage', ico: '🩹', cost: 1, tgt: 'ally', blk: 6, heal: 3, from: ['etabli', 'pedale'] },   // l'établi à pédale (de qualité) la donne améliorée
+  cle:       { el: 'contondant', name: 'Clé à molette', ico: '🔧', cost: 0, tgt: 'enemy', dmg: 3, from: ['caisse'] },
+  wagonnet:  { el: 'contondant', name: 'Wagonnet fou', ico: '🛒', cost: 2, tgt: 'enemy', dmg: 10, splash: 3, from: ['wagonnet'] },
+  pioche:    { el: 'perforant', name: 'Coup de pioche', ico: '⛏️', cost: 1, tgt: 'enemy', dmg: 7, pierce: 1, from: ['filon'] },
+  etai:      { name: 'Étayer', ico: '🪵', cost: 1, tgt: 'allies', blk: 3, from: ['etai'] },
   braises:   { el: 'feu', name: 'Braises', ico: '🔥', cost: 1, tgt: 'allfoes', dmg: 4, from: ['fourneau', 'hautfourneau'] },
   pilon:     { el: 'contondant', name: 'Marteau-pilon', ico: '🔨', cost: 2, tgt: 'enemy', dmg: 16, from: ['pilon'] },
   armure:    { name: 'Armure', ico: '🛡️', cost: 1, tgt: 'ally', blk: 9, from: ['armure'] },
@@ -13311,13 +13389,18 @@ const CASTLE_CARDS = {
   cailloux:  { el: 'contondant', name: 'Volée de cailloux', ico: '🪨', cost: 1, tgt: 'rnd', dmg: 3, hits: 3, from: ['longuevue', 'perchoir'] },
   boulet:    { el: 'contondant', name: 'Boulet de catapulte', ico: '☄️', cost: 2, tgt: 'enemy', dmg: 11, splash: 4, from: ['catapulte'] },   // la catapulte, chère et encombrante, frappe fort et éclabousse
   vent:      { name: 'Vent tournant', ico: '🌬️', cost: 0, tgt: 'none', draw: 2, from: ['girouette'] },
-  flammes:   { el: 'feu', name: 'Sort de flammes', ico: '✨', cost: 2, tgt: 'allfoes', dmg: 6, from: ['etagere', 'pupitre', 'rayonnage'] },
+  flammes:   { el: 'feu', name: 'Sort de flammes', ico: '✨', cost: 2, tgt: 'allfoes', dmg: 6, from: ['etagere', 'rayonnage'] },
+  page:      { name: 'Page cornée', ico: '📖', cost: 0, tgt: 'none', draw: 1, from: ['pupitre'] },
   astro:     { name: 'Astrologie', ico: '🔭', cost: 0, tgt: 'none', draw: 1, nrg: 1, exhaust: 1, from: ['globe'] },
   sieste:    { name: 'Petite sieste', ico: '💤', cost: 1, tgt: 'allies', calm: 3, from: ['fauteuil', 'canape'] },
-  potion:    { name: 'Potion du labo', ico: '⚗️', cost: 1, tgt: 'ally', heal: 7, from: ['alambic', 'marmite'] },
+  potion:    { name: 'Potion du labo', ico: '⚗️', cost: 1, tgt: 'ally', heal: 7, from: ['alambic'] },
+  brouet:    { el: 'acide', name: 'Brouet toxique', ico: '🫕', cost: 1, tgt: 'enemy', dmg: 3, poison: 3, from: ['marmite'] },
   fiole:     { el: 'acide', name: 'Fiole explosive', ico: '💥', cost: 1, tgt: 'enemy', dmg: 7, splash: 3, from: ['fioles'] },
-  elixir:    { name: 'Élixir de vie', ico: '🧉', cost: 2, tgt: 'ko', revive: .5, exhaust: 1, from: ['athanor'] },
+  elixirvie: { name: 'Élixir de vie', ico: '🧉', cost: 1, tgt: 'ko', revive: .5, exhaust: 1, from: ['athanor'] },   // (la clé « elixir » est l'Élixir de bravoure du Labo, p71)
   chaines:   { name: 'Chaînes', ico: '⛓️', cost: 2, tgt: 'enemy', stun: 1, from: ['cage', 'chaines'] },
+  ossements: { el: 'contondant', name: 'Pluie d’ossements', ico: '🦴', cost: 1, tgt: 'allfoes', dmg: 2, from: ['ossuaire'] },
+  saule:     { name: 'Branches du saule', ico: '🌳', cost: 1, tgt: 'allfoes', weak: [1, 2], from: ['saule'] },
+  escalier:  { name: 'Tenir l’escalier', ico: '🪜', cost: 1, tgt: 'ally', blk: 6, taunt: 1, from: ['colimacon', 'montee'] },
   ordre:     { name: 'Ordre du Maître', ico: '👑', cost: 0, tgt: 'none', nrg: 1, draw: 1, exhaust: 1, from: ['trone'] },
   banniere:  { name: 'Bannière', ico: '🚩', cost: 1, tgt: 'allies', buff: 1, from: ['banniere'] },
   chanson:   { name: 'Chanson à boire', ico: '🎤', cost: 1, tgt: 'allies', calm: 3, draw: 1, from: ['scene', 'piste'] },
@@ -13333,7 +13416,6 @@ const CASTLE_CARDS = {
   epouvantail:{ name: 'Épouvantail', ico: '🎃', cost: 1, tgt: 'none', decoy: 1, from: ['epouvantail'] },
   chaussettes:{ name: 'Chaussettes propres', ico: '🧦', cost: 0, tgt: 'ally', calm: 2, draw: 1, from: ['coffre'] },
   cercueil:  { name: 'Faire le mort', ico: '⚰️', cost: 1, tgt: 'ally', blk: 11, from: ['cercueil', 'sarcophage', 'mausolee'] },
-  bricolage: { name: 'Barricade de fortune', ico: '🔧', cost: 2, tgt: 'allies', blk: 5, from: ['etabli', 'caisse', 'pedale'] },
   harpe:     { name: 'Harpe ensorcelée', ico: '🎼', cost: 2, tgt: 'allfoes', weak: [3, 2], exhaust: 1, from: ['harpe'] },
   baton:     { el: 'foudre', name: 'Éclair de l’archimage', ico: '⚡', cost: 2, tgt: 'enemy', dmg: 11, from: ['baton'] },
   violon:    { name: 'Violon d’os', ico: '🎻', cost: 1, tgt: 'allies', buff: 2, exhaust: 1, from: ['violon'] },
@@ -13343,6 +13425,11 @@ const CASTLE_CARDS = {
   pot:       { name: 'Saint Pot de Chambre', ico: '🏺', cost: 1, tgt: 'allies', heal: 4, calm: 2, exhaust: 1, from: ['potdechambre'] },
   nain:      { el: 'contondant', name: 'Nain de jardin maléfique', ico: '🧙', cost: 1, tgt: 'enemy', dmg: 5, weak: [2, 1], from: ['nain'] },
   the:       { name: 'Tasse de thé', ico: '🫖', cost: 1, tgt: 'allies', calm: 2, heal: 2, from: ['theiere'] },
+  tapis:     { name: 'Tirer le tapis', ico: '🧶', cost: 1, tgt: 'enemy', stun: 1, exhaust: 1, from: ['tapis'] },
+  plante:    { name: 'Coin de verdure', ico: '🪴', cost: 0, tgt: 'ally', calm: 3, from: ['plante'] },
+  tarte:     { name: 'Tarte à la citrouille', ico: '🥧', cost: 1, tgt: 'ally', heal: 6, calm: 1, from: ['citrouille'] },
+  portrait:  { name: 'Le portrait qui juge', ico: '🖼️', cost: 1, tgt: 'enemy', confuse: 1, from: ['tableau'] },
+  banc:      { name: 'Pause sur le banc', ico: '🪑', cost: 1, tgt: 'ally', heal: 4, calm: 2, from: ['banc'] },
   voeu:      { name: 'Vœu au puits', ico: '🪙', cost: 1, tgt: 'none', fx: 'wish', note: 'au hasard : 5 PV à toute l’équipe, 2 cartes, ou 2 énergie', from: ['puits', 'fontaine'] },
   relique:   { name: 'Relique bénite', ico: '⛪', cost: 1, tgt: 'enemy', dmg: 7, el: 'radiant', from: ['vitrine', 'socle'] },
   glace:     { name: 'Eau glacée du lac', ico: '🧊', cost: 1, tgt: 'enemy', dmg: 6, el: 'froid', weak: [1, 1], from: ['nenuphar', 'barque'] },
@@ -13430,7 +13517,7 @@ function cardValue(D) {
   const many = t => D.tgt === t ? 1 : 0, w = D.weak ? D.weak[0] * D.weak[1] : 0;
   const v = (D.dmg || 0) * (D.hits || 1) * (1 + 1.3 * many('allfoes')) + (D.atk ? 3 : 0) + (D.blk || 0) * (1 + 2 * many('allies')) + (D.heal || 0) * 1.1 * (1 + 2.5 * many('allies')) + (D.cure ? 3 : 0)
     + (D.calm || 0) * .7 * (1 + 1.5 * many('allies')) + (D.buff || 0) * (many('allies') ? 5 : 2.5) + (D.stun || 0) * 8 + w * 1.4 * (1 + many('allfoes')) + (D.poison || 0) * 1.5
-    + (D.trap || 0) * .8 + (D.draw || 0) * 3 + (D.nrg || 0) * 4 + (D.revive ? 12 : 0) + (D.evade || D.decoy ? 6 : 0) + (D.taunt ? 2 : 0) + (D.splash || 0) * 1.5 + (D.bribe ? 9 : 0) + (D.confuse ? 7 : 0) + (D.fx ? 4 : 0) - (D.fear || 0) * 1.5;
+    + (D.trap || 0) * .8 + (D.draw || 0) * 3 + (D.nrg || 0) * 4 + (D.revive ? 12 : 0) + (D.evade || D.decoy ? 6 : 0) + (D.taunt ? 2 : 0) + (D.splash || 0) * 1.5 + (D.bribe ? 9 : 0) + (D.confuse ? 7 : 0) + (D.fx ? (D.fx === 'risky' ? -1 : 4) : 0) - (D.fear || 0) * 1.5;   // un effet « risqué » (le champignon douteux) est un défaut, pas un bonus
   return v / ((D.cost || 0) + .7) * (D.exhaust ? .8 : 1);
 }
 // le sac automatique : les meilleures cartes du château, dont au moins un soin si possible
@@ -13512,7 +13599,7 @@ const SINGLE_K = ['atk', 'multi', 'drain', 'steal', 'execute', 'smash', 'grab', 
 // les actions d'élite (et légendaires) ont un nom, qu'on lit au-dessus de la tête de l'ennemi
 const ELITE_ACT = { execute: 'Exécution', smash: 'Coup de massue', cocoon: 'Cocon', serve: 'Le thé est servi', roots: 'Racines', shatter: 'Éclatement' };
 const LEG_ACT = { raise: 'Relever les morts', souldrain: 'Drain d’âme', round: 'Tournée générale', throw: 'Lancer de chopes', grab: 'Langue happeuse', spawn: 'Ponte', swarm: 'Nuée de chauves-souris', charm: 'Charme', blind: 'Lumière aveuglante', petrify: 'Regard pétrifiant', tailall: 'Queue fouettante', toxic: 'Marée toxique', mist: 'Brume', decree: 'Décret royal' };
-const actName = it => ELITE_ACT[it.k] || LEG_ACT[it.k] || ({ atk: 'attaque', multi: 'rafale', aoe: 'frappe tout le monde', drain: 'morsure', block: 'se protège', heal: 'soigne', buff: 'galvanise', fear: 'terrifie', fearall: 'terrifie l’équipe', stun: 'immobilise', poison: 'empoisonne', poisonall: 'nuage toxique', steal: 'chaparde', summon: 'appelle des renforts' }[it.k] || it.k);
+const actName = it => it.nm || ELITE_ACT[it.k] || LEG_ACT[it.k] || ({ atk: 'attaque', multi: 'rafale', aoe: 'frappe tout le monde', drain: 'morsure', block: 'se protège', heal: 'soigne', buff: 'galvanise', fear: 'terrifie', fearall: 'terrifie l’équipe', stun: 'immobilise', poison: 'empoisonne', poisonall: 'nuage toxique', steal: 'chaparde', summon: 'appelle des renforts' }[it.k] || it.k);
 // ce que fait une action : qui elle touche, et combien
 function intentHits(it, mates) {
   if (!it) return []; const v = it.v || 0;
@@ -13569,6 +13656,7 @@ function crawlBattle(R, foes) {
     d = Math.floor(d * mul);
     if (t.pow === 'cristal') d = Math.max(0, d - powV('cristal', 'v', 3));
     if (t.pow === 'sceau') d = Math.min(d, powV('sceau', 'v', 8));
+    if (t.pow === 'muraille' && B.foes().some(o => o !== t)) d = Math.ceil(d * powV('muraille', 'v', 50) / 100);
     const ab = opt.pierce ? 0 : Math.min(t.block || 0, d); t.block -= ab; d -= ab; t.hp -= d;
     say(`${me ? me.name : 'Le château'} → ${t.name} : ${d ? '−' + d : 'paré'}${ab ? ` (${ab} encaissés)` : ''}${eff === 'vuln' ? ' — vulnérable !' : eff === 'res' ? ' — il résiste' : eff === 'imm' ? ' — immunisé' : ''}`, 'good', { k: 'hit', from: me ? me.id : null, to: t.uid, v: d, ab, el: opt.el, eff });
     if (t.hp <= 0) {
@@ -13593,6 +13681,10 @@ function crawlBattle(R, foes) {
     else if (E.p2 === 'brume') { f.st.mist = 2; f.hp = Math.min(f.max, f.hp + 12); }
     else if (E.p2 === 'lucioles') { B.foes().forEach(o => { o.hp = Math.min(o.max, o.hp + 10); }); B.mates().forEach(c => B.fear(c, 2)); }
     else if (E.p2 === 'couronne') { f.buff += 1; add('armure'); B.mates().forEach(c => B.fear(c, 1)); }
+    // les chefs des quartiers de Mirebrume (p73)
+    else if (E.p2 === 'herse') { f.block += 15; B.nrgDebt = (B.nrgDebt || 0) + 1; }
+    else if (E.p2 === 'prime') { B.foes().forEach(o => { o.buff += 2; [o.int, o.lint].forEach(it => { if (it && DMG_K.includes(it.k)) it.v += 2; }); }); B.mates().forEach(c => B.fear(c, 1)); }
+    else if (E.p2 === 'tocsin') { const n0 = B.foesL.length; add('m_lustrin'); if (B.foesL.length > n0) { const ch = B.foesL[B.foesL.length - 1]; ch.hp = Math.ceil(ch.max / 2); ch.st.stun = 1; } }
     else if (typeof QBOSS_FX !== 'undefined' && QBOSS_FX[E.p2]) QBOSS_FX[E.p2](f, B, add);   // les boss des grandes quêtes
     else if (E.p2 === 'mue') { ['stun', 'weak', 'weakT', 'poison', 'confuse'].forEach(k => { delete f.st[k]; }); f.block += 20; }
     B.intent(f);
@@ -13640,7 +13732,8 @@ function crawlBattle(R, foes) {
     if (k === 'execute') tg = m.slice().sort((x, y) => x.hp - y.hp)[0];
     else if (k === 'petrify') tg = m.slice().sort((x, y) => y.atk * y.max - x.atk * x.max)[0];
     else if (TGT_K.includes(k)) tg = m.find(c => c.st.taunt) || pick(m);
-    return { k, v: typeof a[1] === 'number' ? a[1] + (DMG_K.includes(k) ? f.plus + f.buff : 0) : a[1], n: a[2] || 1, t: tg ? tg.id : null };
+    const nm = ((CRAWL_EN[f.k] || {}).names || {})[k];   // un ennemi peut donner son propre nom à une action (la volée de carreaux de la Capitaine est un « throw »)
+    return { k, v: typeof a[1] === 'number' ? a[1] + (DMG_K.includes(k) ? f.plus + f.buff : 0) : a[1], n: a[2] || 1, t: tg ? tg.id : null, ...(nm ? { nm } : {}) };
   };
   B.intent = f => {
     const E = CRAWL_EN[f.k], acts = f.phase === 2 && E.rage ? E.rage : E.acts; f.int = B.mkInt(f, acts[f.ai % acts.length]);
@@ -13716,6 +13809,7 @@ function crawlBattle(R, foes) {
     B.turn++; for (let p = 0; p < B.np; p++) B.nrg[p] = Math.max(1, ENERGY + (B.turn === 1 && hasRelic('pierre') ? 1 : 0) - (B.nrgDebt || 0)); if (B.nrgDebt) say(`−${B.nrgDebt} énergie ce tour-ci.`, 'bad', { k: 'trap' }); B.nrgDebt = 0;
     B.party.forEach(c => { c.block = 0; if (c.st.taunt) c.st.taunt = 0; if (c.st.poison && !c.ko) { const d = Math.floor(c.st.poison * elemMul('poison', c)); c.hp -= d; c.st.poison--; say(`${c.name} souffre du poison (−${d}).`, 'bad', { k: 'hurt', to: c.id, v: d, ab: 0 }); if (c.hp <= 0) { c.hp = 0; c.ko = true; say(`${c.name} est K.O.`, 'bad', { k: 'ko', to: c.id }); } } });
     if (B.turn === 1 && hasRelic('couronne')) B.mates().forEach(c => B.block(c, 5));
+    if (B.turn === 1 && hasRelic('cles') && B.foes().length) { B.foes().forEach(f => { f.st.weak = Math.max(f.st.weak || 0, 2); f.st.weakT = Math.max(f.st.weakT || 0, 1); }); say('Les Clés de Mirebrume tintent : les ennemis hésitent, et leur premier coup fait 2 de moins.', 'good', { k: 'trap' }); }
     for (let p = 0; p < B.np; p++) B.drawN(HAND_SIZE + (B.turn === 1 && hasRelic('gland') ? 2 : 0), p);
     B.check();
   };
@@ -13782,7 +13876,7 @@ function crawlBattle(R, foes) {
       case 'blind': B.dazzle = 3; B.mates().forEach(c => B.fear(c, 1)); say('Une lumière aveuglante : au prochain tour, tes coups font 3 de moins.', 'bad', { k: 'pstun', to: null }); break;
       case 'petrify': tg.st.stun = 2; say(`${tg.name} est pétrifié·e : 2 tours sans ses cartes.`, 'bad', { k: 'pstun', to: tg.id }); break;
       case 'mist': f.st.mist = 2; break;
-      case 'decree': B.nrgDebt = (B.nrgDebt || 0) + 1; B.mates().forEach(c => B.fear(c, 1)); say('« Qu’on se prosterne ! » : −1 énergie au prochain tour, et la peur monte.', 'bad', { k: 'pstun', to: null }); break;
+      case 'decree': B.nrgDebt = (B.nrgDebt || 0) + 1; B.mates().forEach(c => B.fear(c, 1)); say(`${it.nm ? `« ${it.nm} ! »` : '« Qu’on se prosterne ! »'} : −1 énergie au prochain tour, et la peur monte.`, 'bad', { k: 'pstun', to: null }); break;
     }
   };
   B.enemyEnd = () => { B.check(); };
@@ -13910,7 +14004,7 @@ function crawlAutoPick(B, p = 0) {
 }
 const crawlAutoDo = (B, o, p = 0) => o.env != null ? B.playEnv(o.env, o.t, p) : B.play(o.c, o.t, p);
 function crawlAutoTurn(B, p) { const ps = p == null ? [...Array(B.np).keys()] : [p]; for (const q of ps) for (let guard = 0; guard < 25 && !B.over; guard++) { const o = crawlAutoPick(B, q); if (!o) break; crawlAutoDo(B, o, q); } }
-// une expédition jouée sans affichage, avec une prudence donnée (seuil de PV moyen pour continuer)
+// une expédition jouée sans affichage, avec une prudence donnée (seuil de PV moyen pour continuer) ; push : seul le boss compte (le Siège), on y va même avec une créature à terre
 function crawlAuto(dg, team, opts = {}) {
   const R = crawlNew(dg, team, opts), prudence = opts.prudence == null ? .55 : opts.prudence, cautious = prudence >= .5;
   for (;;) {
@@ -13938,7 +14032,7 @@ function crawlAuto(dg, team, opts = {}) {
     crawlAdvance(R);
     const alive = R.party.filter(c => !c.ko), avg = alive.reduce((a, c) => a + c.hp / c.max, 0) / Math.max(1, R.party.length);
     const bossNext = R.floor > CRAWL_FLOORS;
-    if (alive.length < R.party.length * .5 || avg < prudence || (bossNext && (avg < (cautious ? .8 : .5) || alive.length < R.party.length))) { R.done = 'retreat'; break; }
+    if (alive.length < R.party.length * .5 || avg < prudence || (bossNext && !opts.push && (avg < (cautious ? .8 : .5) || alive.length < R.party.length))) { R.done = 'retreat'; break; }
   }
   return R;
 }
@@ -14005,7 +14099,7 @@ Object.keys(CRAWL_SK).forEach(k => { Object.defineProperty(CRAWL_SK[k], 'desc', 
    entre les salles, la carte du donjon, les repos, les mystères,
    les récompenses, et toujours le bouton pour rentrer.
    ========================================================= */
-// les cibles d'expédition : les donjons rivaux (bouton Raid), la Forêt enchantée et les Grottes (carte du Val)
+// les cibles d'expédition : les donjons rivaux et le Siège de Mirebrume (bouton Raid), la Forêt enchantée, les Grottes et les Ruines (carte du Val)
 const crawlDgOf = k => RAIDS[k] ? (RAIDS[k].dg || RAIDS[k].rival) : null;
 const CRAWL_SITES = ['foret', 'grotte', 'ruines'];
 function ensureCrawlSites() {
@@ -14017,6 +14111,7 @@ const isCrawlTarget = k => { if (!RAIDS[k] && /^x_/.test(k || '')) ensureCrawlSi
 // soumettre un rival : un boss vaincu vaut 2 points ; le troisième étage atteint, puis rentrer sans fuir, 1 point (3 points : vassal)
 function crawlVictory(dg, R, lines) {
   if (!CRAWL_DG[dg] || CRAWL_DG[dg].site) return;
+  if (dg === 'cite') return siegeAssault(R, lines);   // le Siège de Mirebrume (p25) : seul le chef du quartier compte, le 3e étage ne vaut rien
   const v = vicState(), door = R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
   if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
   if (S.world) S.world.hit[dg] = S.night + (pts ? 6 : 3);
@@ -14247,7 +14342,7 @@ let CRAWL_LIVE = null;
 // SCN : un autre scénario qui réutilise cet écran (les invasions du château, p69) : il fournit ses salles, ses combats et sa fin
 async function runCrawl(report, SCN) {
   if (!SCN && !S.raid) return;
-  const key = SCN ? null : S.raid.target, tg = SCN ? { name: SCN.name, emo: SCN.emo } : RAIDS[key], dg = SCN ? SCN.dg : crawlDgOf(key), team = SCN ? SCN.team : S.raid.team.map(critter).filter(Boolean), DG = SCN ? { desc: SCN.desc || '' } : CRAWL_DG[dg];
+  const key = SCN ? null : S.raid.target, dg = SCN ? SCN.dg : crawlDgOf(key), tg = SCN ? { name: SCN.name, emo: SCN.emo } : dg === 'cite' ? { ...RAIDS[key], name: siegeTitle() } : RAIDS[key], team = SCN ? SCN.team : S.raid.team.map(critter).filter(Boolean), DG = SCN ? { desc: SCN.desc || '' } : CRAWL_DG[dg];
   if (!SCN && (!team.length || !DG)) { S.raid = null; return; }
   const emo = tg.emo || DG.emo || '🏰', lines = [];
   // les Maîtres présents : l'hôte, puis les invités du château partagé
@@ -14313,7 +14408,7 @@ async function runCrawl(report, SCN) {
     head(); page.classList.remove('battle');
     const B0 = CRAWL_EN[DG.boss];
     body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${msg || esc(DG.desc)}</p>${partyRow()}
-      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(B0.name)} est redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? ', et compte déjà 1 point contre ce rival' : ''}.</p>` : ''}
+      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(B0.name)} est redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${R.dg === 'cite' ? ', mais l’assaut ne comptera pas : à Mirebrume, seul le chef du quartier compte' : CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? ', et compte déjà 1 point contre ce rival' : ''}.</p>` : ''}
       <div class="cnodes2">${R.choices.map((c, i) => `<button type="button" class="cnode2${c.k === 'boss' ? ' boss' : ''}" data-a="go" data-v="${i}">${gi(NODE_IK[c.k], 'big')}<b>${NODES[c.k].name}</b><small>${c.k === 'boss' ? `${esc(B0.name)}. Chaque tour, une action légendaire en plus ; à mi-vie, la fureur. Vaincu, il rapporte gros, et une relique.` : NODE_TXT[c.k]}</small></button>`).join('')}</div>
       <div class="btnrow cp-foot"><button type="button" class="sbtn" data-a="deck">${gi('cards')} Le deck (${R.deck.length})</button><button type="button" class="sbtn" data-a="retreat">${gi('door')} Rentrer au château avec le butin</button></div></div>`;
     waitCast(`${names[0] || 'L’hôte'} choisit la prochaine salle…`);
@@ -14551,15 +14646,16 @@ const renderAllCrawl = renderAll;
 renderAll = function () { if (typeof S !== 'undefined' && S && S.raid && S.raid.target && !RAIDS[S.raid.target]) ensureCrawlSites(); return renderAllCrawl(); };
 // pour le simulateur : une expédition jouée par le joueur automatique
 function simCrawlNight(report) {
-  const key = S.raid.target, tg = RAIDS[key], dg = crawlDgOf(key), team = S.raid.team.map(critter).filter(Boolean);
+  const key = S.raid.target, dg = crawlDgOf(key), tg = dg === 'cite' ? { ...RAIDS[key], name: siegeTitle() } : RAIDS[key], team = S.raid.team.map(critter).filter(Boolean);
   if (!team.length || !CRAWL_DG[dg]) return null;
-  const R = crawlAuto(dg, team, { prudence: .5 }), lines = []; crawlApply(R, team, lines); crawlVictory(dg, R, lines); crawlSiteResult(key, R, team, lines);
+  // au Siège, seul le chef compte : le joueur automatique pousse jusqu'à lui
+  const R = crawlAuto(dg, team, dg === 'cite' ? { prudence: .35, push: true } : { prudence: .5 }), lines = []; crawlApply(R, team, lines); crawlVictory(dg, R, lines); crawlSiteResult(key, R, team, lines);
   report.push(['🏰', `Expédition ${tg.name} (niv. ${R.lvl}) : ${R.done}`, R.done === 'wipe' ? 'bad' : 'good']); lines.forEach(l => report.push(l));
   return R.done;
 }
 
 /* ---------- le Grimoire ---------- */
-WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Les donjons rivaux, la Forêt enchantée, les Grottes et les Ruines ne se pillent pas aux dés : on y envoie une <b>expédition</b> de 4 créatures au plus (donjon rival : bouton Raid, dès le Palier 1 ; Forêt, Grottes et Ruines : depuis la carte du Val). Elle se joue pendant la nuit, sur un écran à part, comme Slay the Spire. Les raids aux dés restent pour les lieux des humains (fermes, moulins, auberges…).</p>
+WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Les donjons rivaux, la Forêt enchantée, les Grottes, les Ruines et le Siège de Mirebrume ne se pillent pas aux dés : on y envoie une <b>expédition</b> de 4 créatures au plus (donjon rival : bouton Raid, dès le Palier 1 ; Forêt, Grottes et Ruines : depuis la carte du Val ; Mirebrume : bouton Raid ou carte du Val, au Palier 2, une fois les quatre rivaux soumis, voir {c:v_terreur}). Elle se joue pendant la nuit, sur un écran à part, comme Slay the Spire. Les raids aux dés restent pour les lieux des humains (fermes, moulins, auberges…).</p>
   <ul><li><b>Le deck vient de ton château.</b> Chaque créature apporte deux Frappes, une Parade et la carte de son espèce (${Object.entries(CRAWL_SK).slice(0, 5).map(([k, s]) => `{sp:${k}} : ${s.ico} ${esc(s.name)}`).join(', ')}…), améliorée si elle est fidèle (70 de loyauté) ; une légende ou une créature évoluée ajoute un Coup de légende. Avant de partir, tu remplis le <b>sac</b> avec ${BAG_SIZE} cartes tirées de tes meubles et de tes pièges : le ${CASTLE_CARDS.chou.ico} Chou du potager soigne, la ${CASTLE_CARDS.hallebarde.ico} Hallebarde du râtelier frappe, la ${CASTLE_CARDS.trappe.ico} Trappe à pics mord le prochain ennemi qui attaque… Un <b>meuble de qualité</b> (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée ✦ : le grand lustre fait une meilleure torche que la simple torche, la catapulte lance de vrais boulets.</li>
   <li><b>Le combat</b> : ${ENERGY} énergie et ${HAND_SIZE} cartes par tour. Une carte de créature se joue par elle (sa force s’ajoute à ses coups) ; si elle est K.O., ses cartes sont mises de côté ; immobilisée, ses cartes attendent ; en panique, elles coûtent 1 de plus. Au-dessus de chaque ennemi, sa prochaine action et sa cible : protège-la, immobilise-le, ou tue-le d’abord.</li>
   <li><b>Trois étages</b> de 3 salles, puis le boss. À chaque pas, deux salles au choix : ${Object.entries(NODES).filter(([k]) => k !== 'boss').map(([, n]) => `${n.ico} ${n.name}`).join(', ')}. Après chaque combat gagné, une carte à ajouter au deck (ou pas). Au repos : se soigner, se calmer, ou aiguiser une carte.</li>
@@ -14570,11 +14666,11 @@ WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Le
   <li><b>Les éléments</b> : chaque coup a un type de dégâts, comme dans Donjons et Dragons ; voir {c:elements}.</li>
   <li><b>À plusieurs Maîtres</b> (château partagé) : chacun tire sa propre main et joue ses cartes depuis son écran ; les ennemis attendent que tout le monde ait fini. En contrepartie, les monstres sont plus coriaces, plus nombreux, frappent plus fort, et les boss ont une action légendaire de plus par Maître.</li>
   <li><b>Le niveau</b> suit la renommée de tes 4 meilleures créatures : le donjon se prépare à tes champions.</li>
-  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')}). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace.</li></ul>` };
+  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')} ; à Mirebrume, seul le dernier chef en laisse une). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace. À Mirebrume, rien de tout ça : un assaut ne compte que si le chef du quartier tombe.</li></ul>` };
 WIKI.elements = { cat: 'danger', t: 'Les éléments', x: () => `<p>En expédition, chaque coup a un <b>type de dégâts</b>, comme dans Donjons et Dragons : ${Object.values(ELEM).map(([i, n]) => `${i} ${n}`).join(', ')}.</p>
   <ul><li><b>Vulnérable</b> : les dégâts sont doublés (×2, et un « Vulnérable ! » s’affiche). <b>Résistant</b> : moitié moins. <b>Immunisé</b> : rien du tout. Sous chaque ennemi, ses faiblesses et ses résistances.</li>
   <li><b>La Frappe</b> prend l’arme naturelle de la créature qui la joue : le troll et le golem cognent (contondant), le squelette et l’orque tranchent, le gobelin et le vampire percent, le fantôme et la liche frappent nécrotique, la fée frappe de force. Les cartes du château ont leur propre type : Braises et Sort de flammes (feu), Fiole explosive (acide), Éclair de l’archimage (foudre), Épée qui chante faux (tonnerre), Relique bénite (radiant), Eau glacée du lac (froid), Malédiction de la tombe (nécrotique)…</li>
-  <li><b>Quelques repères</b> : les squelettes craignent le contondant et ignorent le poison ; les spectres résistent aux coups physiques et craignent le radiant ; les morts-vivants et les vampires craignent le radiant ; les plantes, les araignées et les loups-garous craignent le feu ; le Golem de cristal et les gargouilles craignent le tonnerre ; les crapauds et le Basilic craignent le froid ; dans les Ruines, les momies craignent le feu, les armures vides le contondant et la foudre, et le Roi sans Couronne le radiant (son Gardien du sceau, lui, n’encaisse jamais plus de 8 par coup : mieux vaut beaucoup de petits coups).</li>
+  <li><b>Quelques repères</b> : les squelettes craignent le contondant et ignorent le poison ; les spectres résistent aux coups physiques et craignent le radiant ; les morts-vivants et les vampires craignent le radiant ; les plantes, les araignées et les loups-garous craignent le feu ; le Golem de cristal et les gargouilles craignent le tonnerre ; les crapauds et le Basilic craignent le froid ; dans les Ruines, les momies craignent le feu, les armures vides le contondant et la foudre, et le Roi sans Couronne le radiant (son Gardien du sceau, lui, n’encaisse jamais plus de 8 par coup : mieux vaut beaucoup de petits coups) ; à Mirebrume, les gardes en armure craignent le contondant et la foudre, les arbalétrières le froid (des doigts gelés sur les créneaux) et les percepteurs le feu (la paperasse, ça brûle).</li>
   <li><b>Tes créatures aussi</b> : le squelette, le golem, la gargouille et la liche sont immunisés contre le poison et ne connaissent pas la peur ; le diablotin et le dragonnet ne craignent pas le feu ; le troll craint le feu et l’acide ; le fantôme et le vampire craignent le radiant.</li></ul>` };
 TIPS.push({ id: 'crawl0', when: () => S.tier >= 1 && !(S.stats.crawls) && !(S.tuto && S.tuto.on), t: 'Expéditions en cartes', x: 'Dès le Palier 1, le bouton Raid te propose une expédition dans un donjon rival, et la carte du Val t’envoie dans la Forêt enchantée, les Grottes ou les Ruines : un combat en cartes, avec un deck fait de tes créatures et de ton château.', wiki: 'expeditions' });
 
@@ -18089,7 +18185,7 @@ const raidVig = k => ((S.world && S.world.vig) || {})[k] || 0;
 // la réserve de dés : la vigilance de la cible
 const raidBreakdownVig = raidBreakdown;
 raidBreakdown = function (targetId, teamIds) {
-  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume, la finale, n'en tient pas compte
+  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume (une expédition aux cartes, comme les donjons rivaux) n'en tient pas compte
   if (v) { b.pool -= v; b.rows.push([`Cible sur ses gardes (vigilance ${v})`, -v]); }
   return b;
 };
@@ -19083,7 +19179,7 @@ crawlApply = function (R, team, lines) {
   try { if (S && S.book && R) { S.book.lastParty = (R.party || []).map(p => p.sp).filter(Boolean); if (R.done === 'boss' && CRAWL_DG[R.dg]) S.book.lastBoss = CRAWL_DG[R.dg].boss; } } catch (e) {}
   const r = crawlApplyBookUI(R, team, lines);
   try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
-  try { if (R && R.done === 'boss' && CRAWL_DG[R.dg]) { const E = CRAWL_EN[CRAWL_DG[R.dg].boss] || {}, key = S.raid && S.raid.target, place = (RAIDS[key] || {}).name || (typeof racer === 'function' && racer(R.dg) ? racer(R.dg).name : R.dg);
+  try { if (R && R.done === 'boss' && CRAWL_DG[R.dg]) { const E = CRAWL_EN[CRAWL_DG[R.dg].boss] || {}, key = S.raid && S.raid.target, place = R.dg === 'cite' ? 'Mirebrume' : (RAIDS[key] || {}).name || (typeof racer === 'function' && racer(R.dg) ? racer(R.dg).name : R.dg);
     bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
   return r;
 };
@@ -20832,6 +20928,126 @@ function musWatch() {
 }
 function musToggle() { MUS.on = !MUS.on; try { uiPrefs({ music: MUS.on }); } catch (e) {} musWatch(); return MUS.on; }
 if (typeof document !== 'undefined' && typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext) && typeof setInterval === 'function') setInterval(musWatch, 700);
+
+/* =========================================================
+   Le Siège de Mirebrume, aux cartes : la finale de la Terreur
+   Trois quartiers, un par assaut (les règles et les textes :
+   SIEGE_Q, p25). Leurs gardes, et les héros des croisades
+   (p69), qui viennent tous de là ; une élite et un chef par
+   quartier, avec action légendaire et fureur à mi-vie ; le
+   décor de la cité, ses secrets, et les Clés de Mirebrume, la
+   relique du dernier assaut. Le donjon « cite » prend le
+   visage du quartier juste avant chaque assaut.
+   ========================================================= */
+// les gens de Mirebrume (names : le nom qu'ils donnent à leurs actions)
+const MB_EN = {
+  m_garde:   { name: 'Garde des remparts', emo: '💂', hp: 15, acts: [['atk', 5], ['block', 6], ['atk', 4]], names: { atk: 'Coup de pique' } },
+  m_arbal:   { name: 'Arbalétrière des créneaux', emo: '🏹', hp: 10, acts: [['atk', 5], ['multi', 2, 2], ['block', 3]], names: { multi: 'Carreaux en rafale' } },
+  m_crieur:  { name: 'Crieur de la Guilde', emo: '📯', hp: 10, acts: [['fearall', 1], ['atk', 4], ['block', 4]], names: { fearall: '« Oyez, oyez ! »', atk: 'Coup de cloche' } },
+  m_palais:  { name: 'Garde du palais', emo: '💂', hp: 17, acts: [['block', 7], ['atk', 6], ['multi', 3, 2]], names: { multi: 'Moulinet de cérémonie' } },
+  m_scribe:  { name: 'Percepteur des impôts', emo: '📜', hp: 11, acts: [['steal', 5], ['fear', 2], ['atk', 4]], names: { steal: 'Impôt sur les monstres', fear: 'Formulaire en trois exemplaires' } },
+  // les élites : une par quartier
+  m_bastion: { name: 'Sergent Bastion', emo: '🛡️', hp: 34, elite: 1, pow: 'muraille', acts: [['atk', 8], ['block', 8], ['smash', 10], ['multi', 4, 2]], names: { smash: 'Coup de bouclier' } },
+  m_heros:   { name: 'Le Héros du Mois', emo: '🏅', hp: 32, elite: 1, pow: 'rage', acts: [['execute', 8], ['block', 6], ['atk', 8], ['multi', 3, 2]], names: { execute: 'Coup de grâce pour la gazette' } },
+  m_lustrin: { name: 'Sire Lustrin, le Champion', emo: '🏆', hp: 36, elite: 1, pow: 'riposte', acts: [['atk', 10], ['block', 8], ['execute', 11], ['multi', 4, 3]], names: { execute: 'Botte secrète' } },
+  // les chefs des quartiers
+  m_capitaine: { name: 'La Capitaine Mâchicoulis', emo: '🪖', hp: 72, boss: 1, acts: [['block', 8], ['multi', 4, 2], ['summon', 'm_garde'], ['smash', 10]], leg: [['throw', 3, 2], ['stun']], rage: [['multi', 5, 2], ['smash', 12], ['tailall', 5], ['block', 10]], p2: 'herse',
+    names: { smash: 'Coup de hallebarde', summon: 'Sonner le cor', throw: 'Volée de carreaux', stun: 'Filet lesté', tailall: 'Charge de la garde' } },
+  m_guilde:  { name: 'Dame Guillemette', emo: '📋', hp: 52, boss: 1, acts: [['summon', 'h_voleuse'], ['multi', 3, 2], ['buff', 1], ['atk', 11]], leg: [['charm'], ['throw', 3, 2]], rage: [['multi', 4, 2], ['summon', 'h_barbare'], ['charm'], ['atk', 14]], p2: 'prime',
+    names: { summon: 'Recruter un héros', buff: 'Prime de risque', charm: 'Contrat d’embauche', throw: 'Avalanche de parchemins' } },
+  m_bourg:   { name: 'Le Bourgmestre Grandécharpe', emo: '🎖️', hp: 54, boss: 1, acts: [['fearall', 1], ['atk', 12], ['steal', 6], ['block', 8]], leg: [['decree'], ['throw', 3, 2]], rage: [['atk', 15], ['aoe', 5], ['steal', 8], ['drain', 9]], p2: 'tocsin',
+    names: { fearall: 'Discours interminable', steal: 'Taxe exceptionnelle', decree: 'Arrêté municipal', throw: 'Médailles commémoratives', aoe: 'Feu d’artifice municipal', drain: 'Banquet aux frais de la cité' } },
+};
+const MB_ELEM = {
+  m_garde: { el: 'tranchant', res: ['perforant', 'tranchant'], vuln: ['contondant', 'foudre'] }, m_arbal: { el: 'perforant', vuln: ['froid'] },   // des doigts gelés sur les créneaux
+  m_crieur: { el: 'tonnerre', res: ['tonnerre'], vuln: ['psychique'] }, m_palais: { el: 'tranchant', res: ['perforant', 'tranchant'], vuln: ['contondant', 'foudre'] }, m_scribe: { el: 'psychique', vuln: ['feu'] },   // la paperasse, ça brûle
+  m_bastion: { el: 'contondant', res: ['perforant'], vuln: ['acide', 'foudre'] }, m_heros: { el: 'tranchant', res: ['radiant'], vuln: ['psychique'] }, m_lustrin: { el: 'tranchant', res: ['tranchant', 'radiant'], vuln: ['necrotique'] },
+  m_capitaine: { el: 'tranchant', res: ['perforant'], vuln: ['psychique'] }, m_guilde: { el: 'force', res: ['psychique'], vuln: ['necrotique'] }, m_bourg: { el: 'contondant', res: ['tonnerre'], vuln: ['psychique', 'acide'] },
+};
+// la capacité du Sergent Bastion (p35, B.hit)
+const MB_POW = { muraille: { ico: '🧱', name: 'Muraille', v: 50, desc: 'Tant qu’un autre ennemi tient debout, il ne prend que {v} % des coups.' } };
+// les secrets du décor de la cité
+const MB_ENV = {
+  poix:    { name: 'Renverser la poix bouillante', ico: '🫕', cost: 1, tgt: 'allfoes', dmg: 6, el: 'feu', prop: ['furn', 'chaudron'] },
+  boulet:  { name: 'Tirer la catapulte des remparts', ico: '🪨', cost: 1, tgt: 'enemy', dmg: 12, el: 'contondant', prop: ['furn', 'catapulte'] },
+  drapeau: { name: 'Faire tomber la bannière sur leurs têtes', ico: '🚩', cost: 0, tgt: 'enemy', stun: 1, prop: ['furn', 'banniere'] },
+  affiche: { name: 'Coller un avis de recherche dans son dos', ico: '📜', cost: 0, tgt: 'enemy', confuse: 1, prop: ['furn', 'tableau'] },
+  bassin:  { name: 'Pousser un garde dans la fontaine', ico: '⛲', cost: 0, tgt: 'enemy', dmg: 4, el: 'froid', stun: 1, prop: ['furn', 'fontaine'] },
+};
+Object.assign(CRAWL_EN, MB_EN); Object.assign(FOE_ELEM, MB_ELEM); Object.assign(ELITE_POW, MB_POW); Object.assign(ENV_CARDS, MB_ENV);
+Object.assign(BOSS_P2, {
+  herse:  'La herse s’abat derrière l’équipe : la Capitaine se retranche (+15 de parade), et l’équipe, coincée, a 1 énergie de moins au prochain tour.',
+  prime:  'Dame Guillemette affiche ta tête au tableau des primes : tous les héros frappent plus fort (+2), et l’équipe a peur (+1).',
+  tocsin: 'Le Bourgmestre fait sonner le tocsin : Sire Lustrin, le champion de la cité, accourt à son secours, tout essoufflé (à moitié de ses PV, et il lui faut un tour pour reprendre son souffle).',
+});
+Object.assign(RELICS, { cles: { ico: '🗝️', name: 'Clés de Mirebrume', desc: 'Au premier tour de chaque combat, les ennemis hésitent : leur premier coup fait 2 de moins.' } });
+Object.assign(RELIC_IK, { cles: 'key' }); Object.assign(POW_IK, { muraille: 'bricks' }); Object.assign(DG_IK, { cite: 'castle' });
+// le donjon de la cité : il prend le visage du quartier avant chaque assaut (citeSync)
+CRAWL_DG.cite = { regs: SIEGE_Q[0].regs.slice(), elite: SIEGE_Q[0].elite, boss: SIEGE_Q[0].boss, relic: null, emo: '🏰', desc: SIEGE_Q[0].desc };
+// l'Atelier les règle comme les autres (et les retrouve quand il réapplique ses réglages)
+if (typeof BASE !== 'undefined' && BASE.CRAWL_EN) [['CRAWL_EN', MB_EN], ['FOE_ELEM', MB_ELEM], ['ELITE_POW', MB_POW], ['ENV_CARDS', MB_ENV], ['CRAWL_DG', { cite: CRAWL_DG.cite }]].forEach(([t, o]) => { if (BASE[t]) Object.assign(BASE[t], structuredClone(o)); });
+
+/* ---------- leur allure : dessinés avec les pinceaux des héros (bleu brume et or, les couleurs de la cité) ---------- */
+Object.assign(FOE_ART, {
+  m_garde:     { sc: 1.04, skin: '#efc49b', body: '#3d5a8a', belly: '#e2b44a', legs: '#2a3d5e', hat: 'helmet', hatc: '#9aa2b4', item: 'axe', eyes: 'derp', iris: '#4a6ab0', mouth: 'o', nose: 'big' },
+  m_arbal:     { sc: .98, skin: '#e5b38a', body: '#3d5a8a', legs: '#2a3d5e', hat: 'feather', hatc: '#e2b44a', hair: '#6a3a1e', hairStyle: 'long', item: 'bow', eyes: 'normal', iris: '#3a5a8a', mouth: 'smug', nose: 'small' },
+  m_crieur:    { sc: .92, skin: '#f0c8a0', body: '#a83a3a', belly: '#e2b44a', hat: 'feather', hatc: '#a83a3a', hair: '#8a5a2a', item: 'scarfstaff', eyes: 'derp', iris: '#6a4a2a', mouth: 'o', nose: 'big' },
+  m_palais:    { sc: 1.04, skin: '#edbd8c', body: '#a83a3a', belly: '#e2b44a', legs: '#efe6d2', hat: 'helmet', hatc: '#e2b44a', item: 'axe', eyes: 'derp', iris: '#4a6ab0', mouth: 'o', nose: 'big' },
+  m_scribe:    { sc: .9, skin: '#e9e3d6', body: '#3a3a44', legs: '#26262e', collar: true, hair: '#cfcfd8', hairStyle: 'slick', item: 'sack', eyes: 'normal', iris: '#4a4a5a', brow: true, mouth: 'smug', nose: 'long' },
+  m_bastion:   { sc: 1.26, skin: '#e2a274', body: '#9aa2b4', belly: '#3d5a8a', legs: '#6c7486', hat: 'bucket', hatc: '#8a92a4', beard: '#5a3a1e', item: 'hammer', eyes: 'derp', iris: '#3a5a8a', mouth: 'grin', nose: 'big' },
+  m_heros:     { sc: 1.1, skin: '#f4d4b2', body: '#e2b44a', belly: '#fff0c0', legs: '#b8902a', cape: '#a83a3a', hair: '#ffd86a', hairStyle: 'slick', item: 'sword', eyes: 'normal', iris: '#3a8ab0', brow: true, mouth: 'grin', nose: 'small' },
+  m_lustrin:   { sc: 1.18, skin: '#f4d4b2', body: '#cfd6e4', belly: '#e2b44a', legs: '#9aa2b4', cape: '#3d5a8a', hat: 'helmet', hatc: '#eef2fa', item: 'sword', eyes: 'normal', iris: '#3a8ab0', brow: true, mouth: 'grin', nose: 'small' },
+  m_capitaine: { sc: 1.12, skin: '#efc49b', body: '#2a3d5e', belly: '#e2b44a', legs: '#1c2a42', cape: '#8a1f2a', hat: 'feather', hatc: '#2a3d5e', hair: '#b8b8c0', hairStyle: 'long', item: 'axe', eyes: 'normal', iris: '#3a5a8a', brow: true, mouth: 'smug', nose: 'long' },
+  m_guilde:    { sc: 1.08, skin: '#efc49b', body: '#5a2a6a', belly: '#e2b44a', legs: '#3a1a4a', cape: '#3d5a8a', collar: true, hair: '#c8502a', hairStyle: 'long', item: 'staff', eyes: 'normal', iris: '#6a4a2a', brow: true, mouth: 'smug', nose: 'long' },
+  m_bourg:     { sc: 1.16, skin: '#f0c0a0', body: '#3d5a8a', belly: '#e2b44a', legs: '#2a3d5e', cape: '#a83a3a', collar: true, hat: 'feather', hatc: '#1c2a42', hair: '#d8d8e0', beard: '#d8d8e0', item: 'staff', eyes: 'derp', iris: '#4a4a5a', mouth: 'smug', nose: 'huge' },
+});
+
+/* ---------- les décors des trois quartiers ---------- */
+// une rangée de créneaux, de x0 à x1, posée en y
+const mbCrenels = (x0, x1, y, w = 28, gap = 18, h = 22) => { let d = ''; for (let x = x0; x < x1; x += w + gap) d += ` H${x} V${y - h} H${Math.min(x1, x + w)} V${y}`; return d + ` H${x1}`; };
+const mbTower = (x, w, top, roof) => `<path d="M${x} 380 V${top}${mbCrenels(x, x + w, top, 14, 10, 14).replace(/^ H\d+/, '')} V380Z"/>${roof ? `<path d="M${x - 8} ${top - 13} L${x + w / 2} ${top - 13 - roof} L${x + w + 8} ${top - 13}Z" fill="#2a2140"/>` : ''}<rect x="${x + w / 2 - 8}" y="${top + 40}" width="16" height="26" rx="8" fill="#f2c86a" opacity=".5"/>`;
+const mbHouse = (x, w, top, peak) => `<path d="M${x} 400 V${top} L${x + w / 2} ${top - peak} L${x + w} ${top} V400Z"/>` + [.28, .62].map(k => `<rect x="${Math.round(x + w * k)}" y="${top + 26}" width="14" height="18" rx="2" fill="#f2c86a" opacity="${(.3 + (x % 7) / 20).toFixed(2)}"/>`).join('');
+const SIEGE_ART = {
+  remparts: {
+    sky: `<g fill="#1b2232">${mbTower(90, 110, 170, 82)}${mbTower(445, 110, 140, 80)}${mbTower(800, 110, 170, 82)}</g><path d="M0 600 V310${mbCrenels(0, 1000, 310)} V600Z" fill="#141a26"/><g fill="#a83a3a"><path d="M145 75 V40 L172 48 L145 56Z"/><path d="M500 47 V12 L527 20 L500 28Z"/><path d="M855 75 V40 L882 48 L855 56Z"/></g>`,
+    decor: { props: [['furn', 'banniere', 7, 52, 1, 1], ['furn', 'lanterne', 21, 50, .9, 1], ['furn', 'catapulte', 80, 49, 1.05, 1], ['furn', 'banniere', 93, 52, 1, 1], ['def', 'barricade', 3, 10, 1.05, 2], ['furn', 'ratelier', 97, 9, 1, 2], ['furn', 'torche', 35, 46, .8, 1], ['furn', 'torche', 65, 46, .8, 1]], fx: { fog: 3, embers: 6 }, lights: [[35, 66, '255,170,80'], [65, 66, '255,170,80']], moon: true },
+    env: ['poix', 'boulet', 'drapeau', 'torche'],
+  },
+  guilde: {
+    sky: `<g fill="#1a1f2e">${[[0, 120, 250, 60], [110, 110, 205, 54], [215, 150, 235, 70], [360, 120, 190, 58], [640, 130, 200, 62], [765, 120, 240, 60], [880, 120, 210, 56]].map(h => mbHouse(...h)).join('')}</g><g fill="#232a3c"><path d="M470 400 V170 L560 110 L650 170 V400Z"/><rect x="505" y="196" width="110" height="34" rx="4" fill="#3a2a1a"/><text x="560" y="219" text-anchor="middle" font-size="17" font-family="Georgia,serif" fill="#e2b44a" opacity=".85">GUILDE</text><rect x="540" y="250" width="40" height="60" rx="20" fill="#f2c86a" opacity=".55"/></g>`,
+    decor: { props: [['furn', 'tablee', 9, 50, 1.05, 1], ['furn', 'biere', 22, 52, .95, 1], ['furn', 'tableau', 70, 62, .85, 1], ['furn', 'scene', 85, 49, 1, 1], ['furn', 'tonneau', 3, 10, 1.05, 2], ['furn', 'comptoir', 97, 9, 1.05, 2], ['furn', 'lanterne', 35, 46, .8, 1], ['furn', 'lanterne', 65, 46, .8, 1]], fx: { dust: 8, embers: 4 }, lights: [[35, 66, '255,200,120'], [65, 66, '255,200,120']] },
+    env: ['tonneau', 'tablee', 'comptoir', 'affiche'],
+  },
+  palais: {
+    sky: `<g fill="#1d1a2c"><rect x="0" y="96" width="1000" height="30"/><path d="M360 96 L500 30 L640 96Z"/>${[40, 150, 260, 370, 600, 710, 820, 930].map(x => `<rect x="${x}" y="126" width="34" height="260"/><rect x="${x - 6}" y="120" width="46" height="12" rx="3"/>`).join('')}</g><g fill="none" stroke="#2c2646" stroke-width="5">${[75, 185, 295, 635, 745, 855].map(x => `<path d="M${x + 6} 380 V200 Q${x + 40} 150 ${x + 74} 200 V380"/>`).join('')}</g><path d="M430 380 V230 Q500 150 570 230 V380Z" fill="#2a1f34"/><path d="M455 380 V245 Q500 190 545 245 V380Z" fill="#a83a3a" opacity=".55"/>`,
+    decor: { props: [['furn', 'banniere', 6, 52, 1, 1], ['furn', 'armure', 19, 51, 1, 1], ['furn', 'trone', 82, 49, 1.1, 1], ['furn', 'banniere', 94, 52, 1, 1], ['furn', 'fontaine', 3, 9, 1, 2], ['furn', 'candelabre', 97, 9, 1.05, 2], ['furn', 'lustre', 35, 64, .8, 1], ['furn', 'lustre', 65, 64, .8, 1]], fx: { sparkles: 8, dust: 6 }, lights: [[35, 72, '255,215,140'], [65, 72, '255,215,140']], windows: true },
+    env: ['lustre', 'trone', 'bassin', 'portrait'],
+  },
+};
+// l'ambiance de la cité la nuit : une cloche au loin, une patrouille qui passe, un cor sur les remparts
+CAMB.cite = { drone: [65.4, 98], noise: ['bandpass', 700, .014], wet: .35, ev: [[.06, () => { cTone(392, 390, 2.6, 'sine', .022); cTone(784, 780, 1.8, 'sine', .01); }], [.1, () => { for (let i = 0; i < 3; i++) cNoise(.05, 900, 500, .025, i * .32, 'bandpass', 3); }], [.03, () => { cTone(196, 196, .5, 'sawtooth', .012); cTone(294, 294, .7, 'sawtooth', .01, .3); }]] };
+// le donjon « cite » prend le visage du quartier : ses ennemis, son chef, sa relique, son décor et ses secrets
+function citeSync() {
+  const q = siegeQ(), A = SIEGE_ART[q.id];
+  Object.assign(CRAWL_DG.cite, { regs: q.regs.slice(), elite: q.elite, boss: q.boss, relic: q.relic, desc: q.desc });
+  CRAWL_DECOR.cite = A.decor; CRAWL_SKY.cite = A.sky; CRAWL_ENV.cite = A.env.slice();
+}
+citeSync();
+const crawlNewSiege = crawlNew;
+crawlNew = function (dg, team, opts) { if (dg === 'cite') citeSync(); return crawlNewSiege(dg, team, opts); };
+const openCrawlPageSiege = openCrawlPage;
+openCrawlPage = function (dg) { if (dg === 'cite') citeSync(); return openCrawlPageSiege(dg); };
+
+/* ---------- préparer un assaut ---------- */
+const raidPlanSiege = CMD.raidPlan;
+CMD.raidPlan = function (a) {
+  const tg = a && RAIDS[a.target];
+  if (tg && tg.siege) { if (vicState().siege >= 3) return 'Mirebrume t’a déjà remis ses clés'; if (!raidKnown(a.target)) return 'Il faut d’abord soumettre les quatre donjons rivaux, et trouver la cité sur la carte'; }
+  return raidPlanSiege.call(this, a);
+};
+// une partie reprise avec un assaut prévu du temps des dés : il se joue désormais aux cartes
+const runRaidSiege = runRaid;
+runRaid = async function (report) { if (S.raid && RAIDS[S.raid.target] && RAIDS[S.raid.target].siege) S.raid.crawl = true; return runRaidSiege(report); };
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}

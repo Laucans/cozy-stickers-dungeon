@@ -158,7 +158,7 @@ function discover(idx, why) {
 const discAround = (q, r, n) => world().list.filter(c => hdist(c.q, c.r, q, r) <= n).map(c => c.i);
 const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 // cibles de raid connues (il faut avoir découvert l'endroit sur la carte)
-function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
+function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c) && !(S.vic && S.vic.siege >= 3); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
 RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 5, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon ${deM(rv.master)} : une expédition de 4 créatures, trois étages et un boss. De quoi le soumettre, et en rapporter une relique.` }; });
 
 /* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */

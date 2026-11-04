@@ -102,8 +102,9 @@ function tipHTML(kind, t) {
     html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : f.out ? 'déco des Jardins' : f.artefact ? 'trésor, partout' : 'déco, partout'}</span>${f.desc ? `<p>${esc(f.desc)}</p>` : ''}<div>${statTags(f)}</div>`;
     if (fans.length) li.push(`💛 Adoré par : ${fans.join(', ')} (humeur +1).`);
     if (t === 'toile') li.push('🕸️ Deux toiles attirent une Araignée.');
-    if (typeof ACTS !== 'undefined') { const acts = Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => A.verb); if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
-    if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
+    if (typeof ACTS !== 'undefined') { const acts = [...new Set(Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => (A.verbs && A.verbs[t]) || A.verb))]; if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
+    // sa carte (ou ses cartes) au combat : le sac des expéditions, et les combats d'invasion dans sa pièce ; un meuble de qualité la donne améliorée
+    if (typeof CASTLE_CARDS !== 'undefined') { const up = typeof fineSrc === 'function' && fineSrc(t); Object.keys(CASTLE_CARDS).filter(x => CASTLE_CARDS[x].from.includes(t)).forEach(k => li.push(`🃏 Sa carte au combat (expéditions, invasions dans sa pièce) : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name}${up ? ' ✦' : ''} (${cardText({ src: 'castle', key: k, up })}${up ? ' Meuble de qualité : la carte arrive déjà améliorée.' : ''})`)); }
     if (f.unique) li.push('⭐ Unique.');
   }
   if (li.length) html += `<ul class="tipl">${li.map(x => `<li>${iconize(esc(x))}</li>`).join('')}</ul>`;

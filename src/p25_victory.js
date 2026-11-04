@@ -93,7 +93,7 @@ function vicStages(id) {
   const v = vicState();
   if (id === 'legende') { const g = radiance(); return [st(`Rayonnement Illustre (${Math.min(g, 80)}/80 ✨)`, g >= 80 || v.croisade), st(`Rayonnement Légendaire (${Math.min(g, 130)}/130 ✨)`, g >= 130 || v.croisade), st(`Rayonnement Mythique (${Math.min(g, 200)}/200 ✨)`, g >= 200 || v.croisade),
     st(`Finale : repousser la Croisade des héros de Mirebrume (${v.croisade ? Math.min(3, v.croisade.done) : 0}/3)`, v.croisade && v.croisade.done >= 3, true)]; }
-  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage et 2 combats gagnés 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
+  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage et 2 combats gagnés 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume, aux cartes (${Math.min(3, v.siege)}/3 assauts réussis${v.siege < 3 ? `, prochain : ${siegeQ().name}` : ''})`, v.siege >= 3, true)];
   if (id === 'voisinage') return [5, 10, 15].map(n => st(`${n} voix au Conseil du Val (${Math.min(v.votes, n)}/${n})`, v.votes >= n)).concat([st(`Finale : 20 voix, et le Conseil te nomme Protecteur du Val (${Math.min(v.votes, 20)}/20)`, v.votes >= 20, true)]);
   if (id === 'menagerie') { const p = v.proj && v.proj.id === 'parade' ? v.proj : null; return [st(`Album complet (${albumN()}/${MENAGERIE_SP.length} espèces, rares comprises)`, albumN() >= MENAGERIE_SP.length || p), st(`5 légendes au château (${Math.min(5, legendsHome())}/5)`, legendsHome() >= 5 || p),
     st(`${Math.round(MEN_HAPPY * 100)} % de tes créatures installées épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
@@ -193,8 +193,6 @@ function victoryAfterRaid(target, roll, lines) {
     if (isVassal(tg.rival)) { lines.push(['🏳️', `Reddition ! ${r.name} : te voilà suzerain. Un tribut chaque nuit, et plus personne là-bas pour te disputer tes créatures.`, 'good']); addLog(`Vassal : ${r.name}.`, 'ev'); }
     else lines.push(['🏴', `Coup dur pour ${r.name} : ${v.vassals[tg.rival]}/3 vers la vassalité, et un recul dans la course.`, 'good']);
   }
-  if (tg.siege && roll.res === 'partial') lines.push(['🏰', 'Mirebrume tient bon : il faut un vrai succès (un 6) pour faire céder la cité.', '']);
-  if (tg.siege && ok && roll.res !== 'partial') { v.siege++; lines.push(['🏰', `Assaut réussi contre Mirebrume (${Math.min(3, v.siege)}/3) !`, 'good']); if (v.siege >= 3) winVictory('terreur', lines); }
   if (!tg.rival && !tg.siege) { const site = world().sites.find(x => x.raid === target), s = site && nearestSettlement(site); if (s) { addGw(s, ok ? -12 : -6); lines.push(['😠', `${s.name} n’apprécie pas : bonne volonté ${ok ? '−12' : '−6'}.`, 'bad']); } }
 }
 function victoryAfterInvasion(plan, outcome, lines) {
@@ -203,7 +201,53 @@ function victoryAfterInvasion(plan, outcome, lines) {
   openReqs().filter(q => REQ[q.req].kind === 'repel').forEach(q => { const s = siteById(q.site); if (s) lines.push(['🤝', reqReward(q, s), 'good']); });
   if (plan.origin && plan.origin.crusade && v.croisade && !v.won.legende) { v.croisade.done++; lines.push(['📯', `La croisade de Mirebrume est repoussée (${Math.min(3, v.croisade.done)}/3) !`, 'good']); if (v.croisade.done >= 3) winVictory('legende', lines); }
 }
-RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 4, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, desc: 'La grande cité. Trois assauts réussis et elle te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 0, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, dg: 'cite', desc: 'La grande cité, en trois assauts aux cartes : les Remparts, la Ville basse et sa Guilde des Héros, puis le Palais. Un assaut ne compte que si le chef du quartier tombe ; au troisième, la cité te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+
+/* ---------- le Siège de Mirebrume : trois assauts aux cartes ----------
+   Chaque assaut est une expédition (p35) dans un quartier de la cité, plus dur que le
+   précédent, avec son chef au bout. Seul le chef compte : rentrer avant, même du
+   troisième étage, ne vaut rien. Les assauts réussis restent acquis (S.vic.siege).
+   Les ennemis, les décors et la relique des quartiers : p73. */
+const SIEGE_Q = [
+  { id: 'remparts', name: 'les Remparts', hold: 'Les Remparts tiennent bon', fall: 'Les Remparts sont à toi', chef: 'la Capitaine Mâchicoulis', lvl: 0,
+    regs: ['m_garde', 'm_arbal', 'h_paysan'], elite: 'm_bastion', boss: 'm_capitaine', relic: null,
+    desc: 'Des créneaux, des arbalètes, des gardes qui comptent les moutons pour rester éveillés, et la Capitaine Mâchicoulis, qui n’a jamais dormi de sa vie. Elle le dit à tout le monde.' },
+  { id: 'guilde', name: 'la Ville basse', hold: 'La Ville basse tient bon', fall: 'La Guilde des Héros capitule', chef: 'Dame Guillemette', who: 'Dame Guillemette, la maîtresse de la Guilde des Héros', lvl: 0,
+    regs: ['h_voleuse', 'h_mage', 'm_crieur', 'h_paysan', 'm_crieur'], elite: 'm_heros', boss: 'm_guilde', relic: null,
+    desc: 'Des ruelles pavées, des tavernes pleines d’aventuriers, ton portrait sur chaque avis de recherche, et la Guilde des Héros, où Dame Guillemette distribue les quêtes… et les primes.' },
+  { id: 'palais', name: 'le Palais', hold: 'Le Palais tient bon', fall: 'Le Palais est à toi', chef: 'le Bourgmestre Grandécharpe', lvl: .5,
+    regs: ['m_palais', 'h_paladin', 'm_scribe'], elite: 'm_lustrin', boss: 'm_bourg', relic: 'cles',
+    desc: 'Des tapis rouges, des lustres, des gardes en culotte bouffante, et au fond de la salle du trône, le Bourgmestre Grandécharpe, qui prépare un très, très long discours.' },
+];
+// le quartier du prochain assaut (une vieille partie à 1 ou 2 assauts reprend au bon quartier)
+const siegeStep = () => Math.min(SIEGE_Q.length - 1, Math.max(0, Math.floor((S && S.vic && S.vic.siege) || 0)));
+const siegeQ = () => SIEGE_Q[siegeStep()];
+// le niveau d'un assaut : la renommée de tes champions (crawlLevel), plus celui du quartier (le Palais se prépare davantage ; la Ville basse, elle, compte sur les héros de la Guilde), et ton palier au-delà du 2
+const siegeLvl = () => .5 * Math.max(0, (S.tier || 0) - 2) + siegeQ().lvl;
+const siegeTitle = () => `Mirebrume, ${siegeQ().name} (assaut ${siegeStep() + 1}/3)`;
+// un assaut est rentré : seul le chef du quartier compte (appelé par crawlVictory, p36)
+function siegeAssault(R, lines) {
+  const v = vicState(), q = siegeQ(), tg = RAIDS.mirebrume;
+  if (v.siege >= 3) return;
+  if (R.done !== 'boss') {
+    const why = R.done === 'wipe' ? ' L’équipe a été repoussée jusqu’aux portes.' : R.fledBoss ? ` L’équipe a fui devant ${q.chef}.` : R.floor > CRAWL_FLOORS ? ' Arriver jusqu’à sa porte ne suffit pas.' : R.floor >= CRAWL_FLOORS ? ' Atteindre le troisième étage ne suffit pas.' : '';
+    lines.push(['🏰', `${q.hold} : à Mirebrume, un assaut ne compte que si ${q.chef} tombe.${why} Le quartier se reprépare pour le prochain assaut${v.siege ? ` ; ${v.siege > 1 ? `tes ${v.siege} assauts réussis restent acquis` : 'ton premier assaut réussi reste acquis'}` : ''}.`, 'bad']);
+    return;
+  }
+  v.siege++; S.gold += tg.reward.g || 0; S.mat += tg.reward.s || 0; S.hype += tg.hype; S.menace += tg.menace;
+  lines.push(['🏰', `${q.fall} : ${q.chef} rend les armes. Assaut réussi contre Mirebrume (${v.siege}/3) ! Rançon : ${costText(tg.reward)}, +${tg.hype} 🔥, +${tg.menace} Menace.`, 'good']);
+  addLog(`Mirebrume, assaut réussi (${v.siege}/3) : ${q.fall.toLowerCase()}.`, 'ev');
+  if (v.siege >= 3) winVictory('terreur', lines);
+  else { const n = SIEGE_Q[v.siege]; lines.push(['🗺️', `Prochain assaut : ${n.name}, où t’attend ${n.who || n.chef}.`, '']); }
+}
+// la fiche de l'assaut, dans l'écran des raids (p11)
+function siegeFiche() {
+  const v = vicState(), q = siegeQ(), B = (typeof CRAWL_EN !== 'undefined' && CRAWL_EN[q.boss]) || {}, tg = RAIDS.mirebrume;
+  const lvl = Math.round((crawlLevel() + siegeLvl()) * 10) / 10;
+  return `<h3>L’assaut ${siegeStep() + 1}/3 : ${esc(q.name[0].toUpperCase() + q.name.slice(1))}</h3><p>${esc(q.desc)}</p>
+    <p>Une expédition aux cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, puis ${esc(q.who || q.chef)}${B.p2 && BOSS_P2[B.p2] ? `, avec ses actions légendaires et sa fureur à mi-vie` : ''}. <b>L’assaut ne compte que si ${esc(q.chef)} tombe</b> : rentrer avant, même du troisième étage, ne vaut rien ici. Niveau de l’assaut : <b>${String(lvl).replace('.', ',')}</b> (il suit la renommée de tes champions, et chaque quartier se défend à sa façon). Elle se joue cette nuit.</p>
+    <p class="hint">Assauts réussis : ${v.siege}/3 (ils restent acquis). Chacun rapporte une rançon de ${costText(tg.reward)}, +${tg.hype} 🔥 et +${tg.menace} Menace${q.relic && typeof RELICS !== 'undefined' && RELICS[q.relic] ? ` ; le dernier, une relique : ${esc(RELICS[q.relic].name)}` : ''}.</p>`;
+}
 
 /* ---------- pastilles (notifications) ---------- */
 function victoryNotifs(add) {
@@ -278,8 +322,9 @@ function rivalHTML(rv) {
 }
 function citeHTML() {
   const v = vicState();
-  if (allVassals()) return `<p><b>⚔️ Le Siège de Mirebrume est possible</b> (${Math.min(3, v.siege)}/3 assauts réussis).</p><div class="btnrow"><button class="sbtn" type="button" data-m="siege" ${S.tier >= 2 ? '' : 'disabled'}>🏰 Préparer un assaut${S.tier >= 2 ? '' : ' (Palier 2)'}</button></div>`;
-  return '<p class="hint">Quand les quatre donjons rivaux seront tes vassaux, tu pourras assiéger la cité (victoire de Terreur).</p>';
+  if (v.siege >= 3) return '<p><b>🗝️ Mirebrume t’a remis ses clés.</b> Les trois quartiers ont rendu les armes ; la cité se tient tranquille, et le Bourgmestre prépare un discours sur le sujet.</p>';
+  if (allVassals()) { const q = siegeQ(); return `<p><b>⚔️ Le Siège de Mirebrume est possible</b> (${v.siege}/3 assauts réussis).</p><p class="hint">Prochain assaut : <b>${esc(q.name)}</b>, où t’attend ${esc(q.who || q.chef)}. Une expédition aux cartes de 4 créatures : trois étages, puis le chef du quartier. L’assaut ne compte que si le chef tombe.</p><div class="btnrow"><button class="sbtn" type="button" data-m="siege" ${S.tier >= 2 ? '' : 'disabled'}>🏰 Préparer l’assaut${S.tier >= 2 ? '' : ' (Palier 2)'}</button></div>`; }
+  return '<p class="hint">Quand les quatre donjons rivaux seront tes vassaux, tu pourras assiéger la cité, quartier par quartier (victoire de Terreur).</p>';
 }
 
 /* ---------- Grimoire et conseil ---------- */
@@ -291,7 +336,7 @@ Object.assign(WIKI, {
     <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
     <li>Si un rival gagne avant toi, il devient <b>Grand Maître</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti (moins un tribut, si c’est un donjon rival). Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
   v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
-  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
+  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume (Palier 2, une fois les quatre rivaux soumis : bouton Raid, ou la cité sur la carte). Trois assauts, un par quartier, chacun plus dur que le précédent : ${SIEGE_Q.map((q, i) => `${i + 1}. ${q.name[0].toUpperCase() + q.name.slice(1)}, et ${q.who || q.chef}`).join(' ; ')}. Chaque assaut est une {c:expeditions|expédition} aux cartes de 4 créatures, avec le sac du château : trois étages, puis le chef du quartier, ses actions légendaires et sa fureur. <b>Un assaut ne compte que si le chef tombe</b> : rentrer avant, même du troisième étage, ne vaut rien ici, et le quartier se reprépare. Les assauts réussis restent acquis ; chacun rapporte une rançon (${costText(RAIDS.mirebrume.reward)}), +${RAIDS.mirebrume.hype} 🔥 et +${RAIDS.mirebrume.menace} Menace. Au troisième, la cité te remet ses clés${typeof RELICS !== 'undefined' && RELICS.cles ? ` (et une relique : ${RELICS.cles.ico} ${RELICS.cles.name}, ${RELICS.cles.desc.replace(/\.$/, '').replace(/^./, c => c.toLowerCase())})` : ''}.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
   v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
     <ul><li>À 60, le lieu vote pour toi au <b>Conseil du Val</b>, qui se réunit toutes les 10 nuits : 1 voix par village, 2 pour la ville, 3 pour la cité.</li><li>À 70, ses aventuriers ne viennent plus t’attaquer.</li></ul><p><b>Victoire :</b> 20 voix cumulées. Les voix que tu n’as pas vont au Baron Pâlichon, qui brigue le même titre.</p>` },
   v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et 85 % de tes créatures installées (5 nuits au château) <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins : un nouveau venu ne casse pas la série.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },

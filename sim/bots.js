@@ -84,8 +84,10 @@ const BOTS = {
   terreur() {
     common({ trap: 12 }); A.caravan('pille'); grow(['dortoir', 'potager', 'atelier', 'cuisine', 'tour', 'forge', 'labo', 'caveau', 'taverne', 'oubliettes', 'bibli', 'salon', 'tresor', 'trone'], { reserve: 2 });
     ['forge', 'labo'].forEach(t => roomsOf(t).forEach(r => A.furnish(r, S.gold)));
+    // le Siège de Mirebrume : une expédition par nuit (les dés n'y comptent plus), avec les 4 créatures les plus solides qui ne sont pas blessées
+    if (!S.raid && raidKnown('mirebrume') && S.tier >= RAIDS.mirebrume.tier) { const crew = A.free().filter(c => !injured(c)).map(c => [c, crawler(c)]).sort((a, b) => b[1].hp * b[1].atk - a[1].hp * a[1].atk).slice(0, 4).map(x => x[0].id); if (crew.length >= 4) cmd('raidPlan', { target: 'mirebrume', team: crew }); }
     const rivals = RIVALS.filter(r => !isVassal(r.id)).map(r => 'r_' + r.id).sort((a, b) => A.raidPool(b) - A.raidPool(a));
-    raidFor(['mirebrume', ...rivals], 4); raidFor(['mirebrume', ...rivals, 'chateau', 'auberge', 'ferme', 'moulin'], 3);
+    raidFor(rivals, 4); raidFor([...rivals, 'chateau', 'auberge', 'ferme', 'moulin'], 3);
     if (allVassals()) { const c = world().sites.find(s => s.kind === 'cite'); if (c && !siteKnown(c)) A.scout(); }
     else if (S.night % 5 === 0) A.scout();
   },

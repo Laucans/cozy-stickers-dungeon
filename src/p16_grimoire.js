@@ -32,10 +32,11 @@ const WIKI = {
     <p>Créatures et aventuriers ne passent que par les portes. En {c:invasion|invasion}, la bande ne cherche pas le plus court chemin : elle traverse quelques pièces tirées au hasard, puis le Cœur. Colle tes {c:pieges|pièges} dans les couloirs qui bordent tes pièces : ils frappent la bande quand elle y entre.</p>` },
   meubler: { cat: 'build', t: 'Meubler', x: () => `<p>Les meubles donnent ses effets à une pièce : {furn:paillasse|lits}, {furn:chaudron|repas}, {furn:fourneau|or}, {furn:etagere|notoriété}… Chaque meuble va dans sa pièce : <b>touche la pièce</b>, sa fiche liste tout ce qu’on peut y coller, avec ses effets (grisé, avec la raison, s’il ne se pose pas encore), puis « Coller ici ». La {cat:decor|déco} et les trésors, eux, sont dans le bouton Construire et se posent partout, même dans les couloirs.</p>
     <ul><li>Une pièce <b>meublée</b> attire son espèce ({c:creatures}).</li><li>Une pièce se meuble <b>une fois terminée</b> : on la bâtit, on laisse passer la nuit, puis on l’aménage.</li><li>Décoller un meuble est <b>gratuit</b> : il reste offert (×N dans la fiche de la pièce) et se recolle sans rien payer.</li>
-    <li>Bougies, torches, fourneaux et cristaux <b>éclairent</b> la pièce.</li><li>La déco préférée d’une espèce rend ses membres plus heureux ({c:humeur}).</li></ul>` },
+    <li>Bougies, torches, fourneaux et cristaux <b>éclairent</b> la pièce.</li><li>La déco préférée d’une espèce rend ses membres plus heureux ({c:humeur}).</li>
+    <li>Chaque meuble et chaque déco donne aussi sa <b>carte</b> au combat : dans le sac des {c:expeditions|expéditions}, et dans les combats d’{c:invasion|invasion} de sa pièce (une bibliothèque fait piocher, une marmite empoisonne, un établi rafistole…). Un meuble <b>de qualité</b> (au moins 6 💰+🪵, ou de palier 2) la donne déjà améliorée ✦. Sa fiche dit laquelle.</li></ul>` },
   themes: { cat: 'build', t: 'Thèmes de château', x: () => `<p>Choisi au début de la partie, le thème donne un bonus permanent et une pièce unique livrée meublée :</p><ul>${Object.entries(THEMES).map(([k, t]) => `<li><b>${esc(t.name)}</b> : ${esc(t.desc)} Pièce : {room:${t.room}}.</li>`).join('')}</ul>` },
   ressources: { cat: 'eco', t: 'Or, matériaux, notoriété', x: () => `<ul><li><b>Or</b> : pièces, meubles, paliers, achats en ville. Vient du {room:coeur} (+2 par nuit), des {c:raids|raids}, de la {room:forge}, du {room:tresor}, des rançons ({c:prisonniers}).</li>
-    <li><b>Matériaux</b> : surtout pour bâtir. Viennent de la {room:atelier|l’Atelier}, des gobelins chapardeurs et des raids sur les fermes.</li>
+    <li><b>Matériaux</b> : surtout pour bâtir. Viennent de l’{room:atelier|Atelier} (ses {furn:etabli|établis}), de la {room:forge}, de la {room:mine} (ses {furn:wagonnet|wagonnets}), des gobelins chapardeurs et des raids sur les fermes.</li>
     <li><b>Notoriété</b> : ta réputation maléfique. Elle débloque les {c:paliers|paliers}, mais au-delà de 3 elle remplit la {c:menace|Menace} de 1 chaque nuit, et elle renforce les aventuriers.</li></ul>` },
   ambiance: { cat: 'eco', t: 'Ambiance', x: () => `<p>L’Ambiance additionne la déco, certains meubles, certaines pièces et le bonus de quelques créatures.</p>
     <ul><li>Si elle atteint le nombre de créatures : +1 à l’{c:humeur|humeur} visée de chacune.</li><li>Sous la moitié du nombre de créatures : +1 {c:calamite|Calamité} par nuit (château lugubre).</li>
@@ -73,7 +74,7 @@ const WIKI = {
     <li><b>Collants</b> : la {def:banane}, la {def:herse}, la {def:machoire} et le Grand Piège clouent leur victime au sol : elle perd son premier tour au combat suivant.</li></ul>` },
   prisonniers: { cat: 'danger', t: 'Oubliettes et rançons', x: () => `<p>Chaque {furn:cage} des {room:oubliettes} garde un prisonnier. Quand tu repousses une bande, un héros finit en cage s’il reste de la place. À l’aube suivante, chaque prisonnier rapporte 4 or de rançon, puis rentre chez lui.</p>` },
   raids: { cat: 'danger', t: 'Raids et dés', x: () => `<p>Pendant ton tour, le bouton <b>Raid</b> envoie jusqu’à 3 créatures piller une {cat:raid|cible}. Le résultat tombe pendant la nuit.</p>
-    <ul><li><b>Réserve de dés</b> : les dés de chaque créature, +1 si sa spécialité correspond à la cible, −1 si elle boude, + les bonus de pièces et de meubles ({room:planque}, {furn:fioles}, {furn:ratelier}…), − le risque de la cible.</li>
+    <ul><li><b>Réserve de dés</b> : les dés de chaque créature, +1 si sa spécialité correspond à la cible, −1 si elle boude, + les bonus de pièces et de meubles ({room:planque}, {furn:caisse}, {furn:fioles}, {furn:ratelier}…), − le risque de la cible.</li>
     <li>On lance tous les dés et on garde <b>le meilleur</b> : 6 = succès total ; 4-5 = succès avec une complication (puces, témoin, blessure) ; 1-3 = échec. Deux 6 = critique : butin ×1,5 et un sticker en prime. Sans dé : 2 dés, on garde le plus bas.</li>
     <li>Un succès rapporte le butin, de la notoriété et de la {c:menace|Menace}. L’équipe est absente pour la nuit.</li></ul>` },
 };
@@ -115,8 +116,13 @@ function wikiArticle(id) {
   if (kind === 'furn') {
     const f = FURN[key]; if (!f) return '<p>Article introuvable.</p>';
     const fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === key), l = LIGHTS[key] || LIGHTS[f.sprite];
-    return `<div class="whead">${fig(thumb('furn', key, true))}<div><h2>${esc(f.name)}</h2><p class="hint">${f.room === 'any' ? 'Déco, se pose partout' : `Meuble de la pièce {room:${f.room}}`} · ${costText(f.cost)}${f.tier ? ` · palier ${f.tier}` : ''}${f.unique ? ' · unique' : ''}</p></div></div>
-      ${statRows(f) ? `<h3>Effets</h3><div>${statRows(f)}</div>` : '<p>Pur plaisir des yeux.</p>'}${l ? `<p>Éclaire autour de lui (rayon ${l[0]} cases).</p>` : ''}
+    // ses cartes au combat (améliorées ✦ si c'est un meuble de qualité) et ce que les créatures y font
+    const cards = typeof CASTLE_CARDS !== 'undefined' ? Object.keys(CASTLE_CARDS).filter(k => CASTLE_CARDS[k].from.includes(key)) : [], up = typeof fineSrc === 'function' && fineSrc(key);
+    const acts = typeof ACTS !== 'undefined' ? [...new Set(Object.values(ACTS).filter(A => A.items && A.items.includes(key)).map(A => (A.verbs && A.verbs[key]) || A.verb))] : [];
+    return `<div class="whead">${fig(thumb('furn', key, true))}<div><h2>${esc(f.name)}</h2><p class="hint">${f.artefact ? 'Trésor, se pose partout' : f.room === 'any' ? 'Déco, se pose partout' : `Meuble de la pièce {room:${f.room}}`}${f.cost ? ` · ${costText(f.cost)}` : ''}${f.tier ? ` · palier ${f.tier}` : ''}${f.unique ? ' · unique' : ''}</p></div></div>
+      ${f.desc ? `<p>${esc(f.desc)}</p>` : ''}${statRows(f) ? `<h3>Effets</h3><div>${statRows(f)}</div>` : '<p>Pur plaisir des yeux.</p>'}${l ? `<p>Éclaire autour de lui (rayon ${l[0]} cases).</p>` : ''}
+      ${cards.length ? `<h3>Au combat</h3><ul>${cards.map(k => `<li>${CASTLE_CARDS[k].ico} <b>${esc(CASTLE_CARDS[k].name)}${up ? ' ✦' : ''}</b> : ${esc(cardText({ src: 'castle', key: k, up }))}</li>`).join('')}</ul><p class="hint">Dans le sac des {c:expeditions|expéditions}, et dans les combats d’{c:invasion|invasion} de sa pièce.${up ? ' Meuble de qualité : sa carte arrive déjà améliorée.' : ''}</p>` : ''}
+      ${acts.length ? `<h3>Les créatures y viennent</h3><p>${acts.map(esc).join(', ')}.</p>` : ''}
       ${fans.length ? `<h3>Adoré par</h3><p>${fans.map(s => `{sp:${s}}`).join(', ')} : +1 à leur humeur visée.</p>` : ''}${key === 'toile' ? '<p>Deux toiles attirent une {sp:araignee}.</p>' : ''}<p>Voir {c:meubler}.</p>`;
   }
   if (kind === 'def') {
@@ -139,6 +145,10 @@ function wikiArticle(id) {
   }
   if (kind === 'raid') {
     const r = RAIDS[key]; if (!r) return '<p>Article introuvable.</p>';
+    // le Siège de Mirebrume ne se joue plus aux dés : trois assauts aux cartes, un par quartier
+    if (r.siege && typeof SIEGE_Q !== 'undefined') return `<div class="whead"><figure class="wfig emoji"><span class="emo">${r.emo}</span></figure><div><h2>${esc(r.name)}</h2><p class="hint">Expédition en cartes · palier ${r.tier} · finale de la Victoire de Terreur</p></div></div>
+      <p>${esc(r.desc)}</p><ul>${SIEGE_Q.map((q, i) => `<li><b>Assaut ${i + 1} : ${esc(q.name)}</b>. ${esc(q.desc)}</li>`).join('')}</ul>
+      <ul><li>Chaque assaut est une expédition de 4 créatures : trois étages, puis le chef du quartier. Il ne compte que si le chef tombe ; les assauts réussis restent acquis.</li><li>Un assaut réussi : une rançon de ${costText(r.reward)}, +${r.hype} notoriété, +${r.menace} {c:menace|Menace}.</li></ul><p>Voir {c:v_terreur} et {c:expeditions}.</p>`;
     return `<div class="whead"><figure class="wfig emoji"><span class="emo">${r.emo}</span></figure><div><h2>${esc(r.name)}</h2><p class="hint">Cible de raid${r.tier ? ` · palier ${r.tier}` : ''} · spécialité ${TAGS[r.tag]}${r.risk ? ` · risque ${r.risk} (−${r.risk} dé)` : ''}</p></div></div>
       <p>${esc(r.desc)}</p><ul><li>Butin : ${costText(r.reward)}${r.bonus ? `, et un sticker {furn:${r.bonus}} en cas de succès total` : ''}.</li><li>+${r.hype} notoriété, +${r.menace} {c:menace|Menace}.</li></ul><p>Voir {c:raids}.</p>`;
   }

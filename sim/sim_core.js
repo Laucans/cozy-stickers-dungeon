@@ -49,6 +49,7 @@ function simNight() {
   V.parts.length = 0; V.fx.length = 0; V.flash.length = 0; V.born.clear(); S.log.length = Math.min(S.log.length, 20);
   const v = S.vic || {};
   if (v.justWon) { M.wins[v.justWon] = S.night; v.justWon = null; }
+  Object.keys(v.won || {}).forEach(k => { if (!M.wins[k]) M.wins[k] = S.night; });   // deux victoires la même nuit (un assaut, puis la croisade repoussée) : justWon ne gardait que la dernière
   if (v.eraNews) { M.eras.push([S.night, v.eraNews]); v.eraNews = null; }
   if (S.tier && !M.tierAt[S.tier]) M.tierAt[S.tier] = S.night;
   const fl = floorsDug(); if (fl && !M.floorsAt[fl]) M.floorsAt[fl] = S.night;

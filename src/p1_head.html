@@ -595,7 +595,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 @keyframes cpIn{from{opacity:0; transform:scale(1.03)}} @keyframes cpOut{to{opacity:0; transform:scale(.98)}}
 /* les invasions aux cartes : le château en décor, le parcours de la bande */
 .cpage.theme-chateau{--c1:#3d2c1f; --c2:#120b07; --acc:#ffcf7a; --wall:#2a1d14}
-.cpage.theme-chateau .fnm{display:block; max-width:112px; margin:0 auto} .cpage.theme-chateau .cparty{gap:8px 14px}
+.cpage.theme-chateau .fnm, .cpage.theme-cite .fnm{display:block; max-width:112px; margin:0 auto} .cpage.theme-chateau .cparty{gap:8px 14px}
 #btnPath, #btnGuards{display:none !important}   /* plus de chemin à afficher, plus de gardes à poster : les défenseurs sont tirés au sort */
 .invtrack{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px 2px; margin:4px auto 8px; max-width:900px}
 .invtrack .it{display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; background:rgba(255,240,210,.12); border:1.5px solid rgba(255,220,160,.35); color:#f3e2c2; font-size:13px; opacity:.7}
@@ -606,7 +606,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 .modal.invintro .hcards{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
 .cpage.theme-morgrave{--c1:#20393a; --c2:#081011; --acc:#86e0d4; --wall:#11201f} .cpage.theme-septbieres{--c1:#4a2c14; --c2:#140b05; --acc:#f6b85a; --wall:#2b1a0d}
 .cpage.theme-moussues{--c1:#22402a; --c2:#08120a; --acc:#a6e88a; --wall:#0f2214} .cpage.theme-ombrelune{--c1:#33204a; --c2:#0c0714; --acc:#cfa8ff; --wall:#1d1230}
-.cpage.theme-ruines{--c1:#3b3226; --c2:#0e0b08; --acc:#f2d48a; --wall:#1d1812} .cpage.theme-foret{--c1:#17482c; --c2:#06140b; --acc:#c4f5a6; --wall:#0c2716} .cpage.theme-grotte{--c1:#1f2a3e; --c2:#070a12; --acc:#a6d4ff; --wall:#111a2a}
+.cpage.theme-ruines{--c1:#3b3226; --c2:#0e0b08; --acc:#f2d48a; --wall:#1d1812} .cpage.theme-foret{--c1:#17482c; --c2:#06140b; --acc:#c4f5a6; --wall:#0c2716} .cpage.theme-grotte{--c1:#1f2a3e; --c2:#070a12; --acc:#a6d4ff; --wall:#111a2a} .cpage.theme-cite{--c1:#2b3550; --c2:#0a0d16; --acc:#f2c86a; --wall:#161d2e}
 .cpage.quake{animation:quake .35s} .cpage.quake2{animation:quake2 .45s}
 @keyframes quake{20%{transform:translate(-4px,2px)} 40%{transform:translate(4px,-2px)} 60%{transform:translate(-3px,1px)} 80%{transform:translate(2px,-1px)}}
 @keyframes quake2{15%{transform:translate(-9px,4px)} 30%{transform:translate(8px,-5px)} 45%{transform:translate(-6px,3px)} 60%{transform:translate(5px,-2px)} 80%{transform:translate(-2px,1px)}}
@@ -682,7 +682,7 @@ button, .card, .pt, .choice, .sbtn, .mini, .act, .res, .dial, [role=button]{touc
 .side{position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:flex-end; max-width:44%}
 .side.party{justify-content:flex-start} .side.foes{justify-content:flex-end}
 .fig{position:relative; width:100px; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 2px; border-radius:14px; transition:transform .18s ease-out, filter .3s, opacity .3s; outline:none}
-.fspr{position:relative; width:84px; height:84px; display:grid; place-items:end center}
+.fspr{position:relative; width:84px; height:84px; display:grid; grid-template:minmax(0,1fr) / minmax(0,1fr); place-items:end center}   /* la piste reste à la taille du cadre : un dessin en hauteur (héros) ne déborde pas */
 .fspr img{position:relative; z-index:1; width:100%; height:100%; object-fit:contain; object-position:50% 100%; filter:drop-shadow(0 5px 4px rgba(0,0,0,.55))}
 .fspr.idle{animation:breathe 3.2s ease-in-out infinite}
 @keyframes breathe{50%{transform:translateY(-3px) scale(1.015, .99)}}

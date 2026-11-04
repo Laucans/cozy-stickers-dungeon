@@ -15,7 +15,7 @@ const raidVig = k => ((S.world && S.world.vig) || {})[k] || 0;
 // la réserve de dés : la vigilance de la cible
 const raidBreakdownVig = raidBreakdown;
 raidBreakdown = function (targetId, teamIds) {
-  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume, la finale, n'en tient pas compte
+  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume (une expédition aux cartes, comme les donjons rivaux) n'en tient pas compte
   if (v) { b.pool -= v; b.rows.push([`Cible sur ses gardes (vigilance ${v})`, -v]); }
   return b;
 };

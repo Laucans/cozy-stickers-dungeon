@@ -34,10 +34,10 @@ const SP_TRAITS = { diablotin: ['farceur', 'maniaque', 'bavard'], gobelin: ['rad
   fee: ['bucolique', 'artiste', 'farceur'], liche: ['frileux', 'studieux', 'radin'], harpie: ['artiste', 'bavard', 'fetard'], cocatrice: ['gourmand', 'farceur', 'curieux'],
   mandragore: ['bucolique', 'bavard', 'marmotte'], nixe: ['solitaire', 'bucolique', 'artiste'], goule: ['gourmand', 'frileux', 'studieux'], nainsombre: ['maniaque', 'radin', 'bagarreur'] };
 // et les occupations de son métier
-const SP_ACTS = { diablotin: ['chantier', 'nettoyer'], gobelin: ['dormir', 'compter'], kobold: ['forger', 'chantier'], crapaud: ['jardiner', 'pecher'], gargouille: ['garde'], menestrel: ['musique', 'fete'],
+const SP_ACTS = { diablotin: ['chantier', 'nettoyer'], gobelin: ['dormir', 'compter'], kobold: ['bricoler', 'chantier'], crapaud: ['jardiner', 'pecher'], gargouille: ['garde'], menestrel: ['musique', 'fete'],
   troll: ['manger', 'dormir'], fantome: ['lire', 'explorer'], sorciere: ['potion', 'jardiner'], squelette: ['garde', 'recueil'], orque: ['forger', 'entrainer', 'chantier'], araignee: ['nettoyer', 'rever'],
-  dragonnet: ['compter', 'chauffer'], mimique: ['compter', 'rever'], vampire: ['musique', 'admirer'], golem: ['chantier', 'forger'], fee: ['jardiner', 'admirer'], liche: ['lire', 'chauffer'],
-  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'], nainsombre: ['forger', 'chantier'] };
+  dragonnet: ['compter', 'chauffer'], mimique: ['compter', 'rever'], vampire: ['musique', 'admirer'], golem: ['chantier', 'miner'], fee: ['jardiner', 'admirer'], liche: ['lire', 'chauffer'],
+  harpie: ['musique'], cocatrice: ['poules', 'manger'], mandragore: ['jardiner'], nixe: ['pecher'], goule: ['manger', 'recueil'], nainsombre: ['forger', 'miner', 'chantier'] };
 const QUIRKS = ['Ronfle comme une forge.', 'A peur des poules.', 'Collectionne les dents (pas les siennes).', 'Parle à l’épouvantail.', 'Chante faux sous la pluie.', 'Mange les bougies quand personne ne regarde.',
   'Écrit des poèmes sur les rats.', 'Ne marche jamais sur les fissures.', 'Croit que le Cœur l’écoute.', 'Se brosse les dents avec un hérisson.', 'Range ses chaussettes par couleur de moisissure.',
   'Dit « bonjour » aux pièges.', 'Garde un caillou porte-bonheur. Il en a perdu quatre.', 'Rêve d’ouvrir une crêperie.', 'Compte les moutons, puis les mange.', 'Fait des grimaces aux portraits.',
@@ -140,24 +140,28 @@ epaFactors = function (c, hungry = hungrySet()) { const r = _epaFactors0(c, hung
 function persHTML(c) {
   if (!c.pers) return '';
   const a = ACT.get(c.id), L = a && a.life, A = L && L.act && L.phase !== 'idle' ? ACTS[L.act] : null;
-  return `<dt>Caractère</dt><dd>${c.pers.map(k => `<span class="tag2" title="${esc(TRAITS[k].desc)}">${TRAITS[k].ico} ${esc(TRAITS[k].name)}</span>`).join('')}<br><span class="hint">${esc(QUIRKS[c.quirk] || '')}${A ? ` En ce moment : ${esc(A.verb)}${L.where ? ' (' + esc(L.where) + ')' : ''}.` : ''}</span></dd>`;
+  return `<dt>Caractère</dt><dd>${c.pers.map(k => `<span class="tag2" title="${esc(TRAITS[k].desc)}">${TRAITS[k].ico} ${esc(TRAITS[k].name)}</span>`).join('')}<br><span class="hint">${esc(QUIRKS[c.quirk] || '')}${A ? ` En ce moment : ${esc(actVerb(L.act, L.goal && L.goal.t))}${L.where ? ' (' + esc(L.where) + ')' : ''}.` : ''}</span></dd>`;
 }
 
 /* ---------- occupations ---------- */
-// need : le besoin comblé ; items : les meubles dont on se sert ; fx : petits effets ; pose : attitude ; dur : secondes
+// need : le besoin comblé ; items : les meubles dont on se sert (verbs : le verbe propre à un meuble, sinon verb) ; fx : petits effets ; pose : attitude ; dur : secondes
 const ACTS = {
-  dormir:    { verb: 'fait la sieste', need: 'energie', items: ['paillasse', 'litsup', 'baldaquin', 'cercueil', 'canape', 'nid', 'mausolee'], fx: 'z', pose: 'sleep', dur: [16, 28], onIt: true },
-  manger:    { verb: 'grignote', need: 'faim', items: ['chaudron', 'tonneau', 'jambons', 'tablee', 'choux', 'champis', 'barque', 'ruche', 'mangeoire', 'melon', 'nichoir', 'grain'], fx: 'miam', pose: 'eat', dur: [6, 11] },
-  fete:      { verb: 'trinque', need: 'fun', items: ['biere', 'tablee', 'scene'], fx: 'note', pose: 'dance', dur: [8, 14] },
+  dormir:    { verb: 'fait la sieste', need: 'energie', items: ['paillasse', 'litsup', 'baldaquin', 'grandlit', 'cercueil', 'sarcophage', 'canape', 'nid', 'mausolee'], verbs: { nid: 'se blottit dans le nid géant', cercueil: 'fait la sieste dans son cercueil', sarcophage: 'fait la sieste dans le sarcophage' }, fx: 'z', pose: 'sleep', dur: [16, 28], onIt: true },
+  manger:    { verb: 'grignote', need: 'faim', items: ['chaudron', 'tonneau', 'jambons', 'tablee', 'broche', 'banquet', 'choux', 'champis', 'serre', 'barque', 'ruche', 'mangeoire', 'melon', 'nichoir', 'grain'],
+              verbs: { chaudron: 'se ressert de ragoût', broche: 'tourne la broche (et goûte)', banquet: 'festoie au banquet', barque: 'grignote un poisson séché', ruche: 'chipe un peu de miel', mangeoire: 'picore à la mangeoire', nichoir: 'gobe un œuf', grain: 'picore du grain' }, fx: 'miam', pose: 'eat', dur: [6, 11] },
+  fete:      { verb: 'trinque', need: 'fun', items: ['biere', 'tablee', 'comptoir', 'scene', 'piste'], verbs: { scene: 'chante sur l’estrade', piste: 'danse sur la piste' }, fx: 'note', pose: 'dance', dur: [8, 14] },
   musique:   { verb: 'joue de la musique', need: 'fun', items: ['orgue', 'scene', 'harpe'], fx: 'note', pose: 'dance', dur: [8, 13] },
-  lire:      { verb: 'lit un grimoire', need: 'fun', items: ['etagere', 'pupitre', 'fauteuil', 'grimoire'], fx: 'page', pose: 'read', dur: [10, 18] },
+  lire:      { verb: 'lit un grimoire', need: 'fun', items: ['etagere', 'rayonnage', 'pupitre', 'fauteuil', 'globe', 'grimoire'], verbs: { globe: 'fait tourner le globe céleste' }, fx: 'page', pose: 'read', dur: [10, 18] },
   entrainer: { verb: 's’entraîne', need: 'travail', items: ['ratelier', 'armure', 'chaines', 'heaume', 'epeefaux'], fx: 'hit', pose: 'work', dur: [6, 11] },
-  forger:    { verb: 'tape sur l’enclume', need: 'travail', items: ['enclume', 'fourneau', 'etabli', 'caisse', 'wagonnet', 'filon', 'etai'], fx: 'spark', pose: 'work', dur: [8, 13] },
-  potion:    { verb: 'touille une potion', need: 'travail', items: ['alambic', 'marmite', 'fioles'], fx: 'bubble', pose: 'work', dur: [8, 13] },
-  compter:   { verb: 'compte les pièces d’or', need: 'fun', items: ['tasdor', 'coffreor', 'coffre', 'trone', 'sablier'], fx: 'coin', pose: 'read', dur: [6, 11] },
+  // trois métiers des mains : la forge, l'atelier, la mine (chacun son geste, selon le meuble)
+  forger:    { verb: 'travaille à la forge', need: 'travail', items: ['enclume', 'fourneau', 'hautfourneau', 'pilon'], verbs: { enclume: 'tape sur l’enclume', fourneau: 'attise le fourneau', hautfourneau: 'charge le haut fourneau', pilon: 'fait tomber le marteau-pilon' }, fx: 'spark', pose: 'work', dur: [8, 13] },
+  bricoler:  { verb: 'bricole à l’atelier', need: 'travail', items: ['etabli', 'pedale', 'caisse'], verbs: { etabli: 'rabote à l’établi', pedale: 'pédale à l’établi', caisse: 'range la caisse à outils' }, fx: 'hammer', pose: 'work', dur: [8, 13] },
+  miner:     { verb: 'travaille à la mine', need: 'travail', items: ['wagonnet', 'filon', 'etai'], verbs: { wagonnet: 'pousse le wagonnet', filon: 'pioche le filon', etai: 'consolide les étais' }, fx: 'dust', pose: 'work', dur: [8, 13] },
+  potion:    { verb: 'touille une potion', need: 'travail', items: ['alambic', 'marmite', 'fioles', 'athanor'], verbs: { alambic: 'surveille l’alambic', fioles: 'range les fioles', athanor: 'garde le feu de l’athanor' }, fx: 'bubble', pose: 'work', dur: [8, 13] },
+  compter:   { verb: 'compte les pièces d’or', need: 'fun', items: ['tasdor', 'coffreor', 'montagnedor', 'coffre', 'trone', 'sablier'], verbs: { coffre: 'compte ses chaussettes', trone: 'essaie le trône (chut !)', sablier: 'regarde le sable remonter' }, fx: 'coin', pose: 'read', dur: [6, 11] },
   admirer:   { verb: 'admire les belles choses', need: 'fun', items: ['tableau', 'cristal', 'tonnelle', 'fontaine', 'vitrine', 'socle', 'nenuphar', 'saule', 'puits', 'nain', 'banniere', ...ARTEFACTS], fx: 'sparkle', dur: [5, 9] },
-  chauffer:  { verb: 'se réchauffe près du feu', need: 'confort', items: ['torche', 'fourneau', 'candelabre', 'chaudron', 'etai', 'lanterne'], fx: 'ember', dur: [6, 11] },
-  jardiner:  { verb: 'jardine', need: 'travail', items: ['choux', 'champis', 'epouvantail', 'herbes', 'melon', 'arrosoir', 'ruche', 'tonnelle'], fx: 'leaf', pose: 'work', dur: [8, 13] },
+  chauffer:  { verb: 'se réchauffe près du feu', need: 'confort', items: ['torche', 'fourneau', 'hautfourneau', 'candelabre', 'chaudron', 'etai', 'lanterne'], verbs: { etai: 'se réchauffe près de la lanterne', lanterne: 'se réchauffe près de la lanterne' }, fx: 'ember', dur: [6, 11] },
+  jardiner:  { verb: 'jardine', need: 'travail', items: ['choux', 'champis', 'serre', 'epouvantail', 'herbes', 'melon', 'arrosoir', 'ruche', 'tonnelle'], verbs: { epouvantail: 'rhabille l’épouvantail', ruche: 's’occupe des abeilles', arrosoir: 'arrose les plates-bandes', tonnelle: 'taille la tonnelle' }, fx: 'leaf', pose: 'work', dur: [8, 13] },
   pecher:    { verb: 'pêche', need: 'fun', items: ['ponton', 'barque', 'roseaux', 'nenuphar'], fx: 'drop', pose: 'read', dur: [12, 20] },
   poules:    { verb: 'court après les poules', need: 'fun', rooms: ['poulailler'], fx: 'feather', pose: 'dance', dur: [5, 9] },
   recueil:   { verb: 'se recueille', need: 'confort', items: ['tombe', 'mausolee', 'cercueil', 'ossuaire'], fx: 'wisp', pose: 'read', dur: [8, 13] },
@@ -175,6 +179,8 @@ const ACTS = {
   paie:      { verb: 'vient chercher sa paie', need: 'fun', pay: true, fx: 'coin', pose: 'eat', dur: [4, 7] },
   grogne:    { verb: 'réclame sa paie', need: 'social', pay: true, fx: 'puff', pose: 'shake', dur: [3, 5] },
 };
+// le geste d'une créature : celui du meuble dont elle se sert, sinon celui de l'occupation
+const actVerb = (k, t) => { const A = ACTS[k]; return !A ? '' : (A.verbs && t && A.verbs[t]) || A.verb; };
 const NEEDS = { energie: .2, faim: .28, fun: .33, travail: .26, confort: .2, social: .28 };   // usure par seconde
 const NEED_TRAIT = { marmotte: { energie: 1.5 }, gourmand: { faim: 1.6 }, fetard: { fun: 1.4, social: 1.2 }, bavard: { social: 1.7 }, solitaire: { social: .4, confort: 1.3 }, bagarreur: { travail: 1.3 }, maniaque: { travail: 1.5 }, frileux: { confort: 1.6 }, curieux: { fun: 1.3 }, studieux: { fun: 1.2 } };
 function lifeOf(a) {
@@ -201,7 +207,7 @@ function findTarget(c, a, k, post) {
   const A = ACTS[k], here = a.z || 0;
   if (A.items) {
     const set = new Set(A.items), list = S.furn.filter(f => set.has(f.t) && usable(f) && !taken(spotKey(zOf(f), f.x, f.y)) && (!post || inRoomZ(post, f)))
-      .map(f => ({ z: zOf(f), x: f.x, y: f.y, px: f.x + (A.onIt ? .55 : .5 + .32), py: f.y + (A.onIt ? .55 : .5 + .32), where: roomLabel(roomAt(f.x, f.y, zOf(f))) || 'les Jardins', key: spotKey(zOf(f), f.x, f.y) }));
+      .map(f => ({ z: zOf(f), x: f.x, y: f.y, px: f.x + (A.onIt ? .55 : .5 + .32), py: f.y + (A.onIt ? .55 : .5 + .32), where: roomLabel(roomAt(f.x, f.y, zOf(f))) || 'les Jardins', key: spotKey(zOf(f), f.x, f.y), t: f.t }));
     return pickNear(a, list);
   }
   if (A.rooms) { const rs = S.rooms.filter(r => r.built && A.rooms.includes(r.t) && (!post || r === post)); const r = pick(rs); if (!r) return null; const [x, y] = randCell(r); return cellSpot(zOf(r), r, x, y); }
