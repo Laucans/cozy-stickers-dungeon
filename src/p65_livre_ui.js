@@ -95,6 +95,8 @@ function lvLayout(single, W, H) {
 }
 // chaque sticker a sa petite inclinaison et son décalage, toujours les mêmes
 const lvJit = (x, d) => { const h = [...String(x.id || 'x')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); return { r: (h % 11) - 5, dx: ((h >> 4) % 17) - 8, dy: ((h >> 9) % 13) - 6, d }; };
+// des stickers retirés du jeu, qu'on ne montre plus dans les parties déjà commencées (« Nouvelle page d'album », le premier d'une espèce du départ)
+const lvHidden = id => id === 'r_album' || (/^espece:/.test(id || '') && ((S && S.book && S.book.startSp) || ['diablotin']).includes(id.slice(7)));
 function livrePages(fresh, L, nu) {
   L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
   const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
@@ -105,7 +107,7 @@ function livrePages(fresh, L, nu) {
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
-    const all = c.mine.filter(x => x.stuck !== false).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
+    const all = c.mine.filter(x => x.stuck !== false && !lvHidden(x.id)).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
     for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
       P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
@@ -195,7 +197,9 @@ function openBook(n, where) {
 openAch = function () { openBook(); };
 /* ---------- le livre s'ouvre de lui-même quand un sticker est gagné, dès que le joueur a les mains libres ---------- */
 const LVA = { t: 0 };
-const lvBusy = () => !S || !S.started || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
+// une nouvelle espèce attend d'être présentée (p37) : son sticker ne doit pas la dévoiler avant
+const lvArrivalPending = () => !!(S && S.spotted && S.creatures.some(o => !S.spotted.includes(o.sp) && !isOut(o) && !injured(o)));
+const lvBusy = () => !S || !S.started || lvArrivalPending() || (typeof V !== 'undefined' && V.spotOn) || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
 function lvAutoSoon(ms = 900) { if (typeof headless === 'function' && headless()) return; clearTimeout(LVA.t); LVA.t = setTimeout(lvAutoTry, ms); }
 function lvAutoTry() { if (!S || !S.book || !lvPending().length) return; if (lvBusy()) { LVA.t = setTimeout(lvAutoTry, 1200); return; } openBook(); }
 const bookAddLv = bookAdd;

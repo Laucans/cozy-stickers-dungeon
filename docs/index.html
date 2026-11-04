@@ -18735,7 +18735,6 @@ const RECUR = [
   { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
   { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
   { id: 'r_expe', cat: 'Profondeurs', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
-  { id: 'r_album', cat: 'Éleveur', ico: '📒', t: 'Nouvelle page d’album', pts: 1, cap: 3, v: s => Object.keys(s.album || {}).length },
   { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
   { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
   { id: 'r_envies', cat: 'Éleveur', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
@@ -18922,8 +18921,8 @@ wrapEvB('cage', 0, (R, f0) => { const t = f0(R); if (!hasM('epopee')) return t; 
 /* ---------- le livre : dessiné et feuilleté dans p65_livre_ui.js (openBook) ---------- */
 // le Livre s'ouvre de lui-même sur un nouveau chapitre (et sur le pacte à choisir), dès que la voie est libre
 if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => {
-  try { if (!S || !S.started || !S.book || !S.book.pending || UI.busy || (typeof V !== 'undefined' && V.spotOn) || $('#modalRoot').children.length || (document.getElementById('world') && !document.getElementById('world').hidden) || document.body.classList.contains('crawling')) return;
-    const P = S.book.pending; S.book.pending = P.pact ? { pact: P.pact } : null; save();
+  try { if (!S || !S.started || !S.book || !S.book.pending || UI.busy || (typeof V !== 'undefined' && V.spotOn) || (typeof lvArrivalPending === 'function' && lvArrivalPending()) || $('#modalRoot').children.length || (document.getElementById('world') && !document.getElementById('world').hidden) || document.body.classList.contains('crawling')) return;
+    const P = S.book.pending; S.book.pending = null; save();   // une seule fois : ensuite, la pastille « choisis ton pacte » attend
     if (P.pact) openBook(P.pact); else if (P.open) { sfx('chime'); openBook(P.open); }
   } catch (e) {} }, 900);
 // le pacte attend dans une pastille tant qu'il n'est pas choisi
@@ -19134,6 +19133,8 @@ function lvLayout(single, W, H) {
 }
 // chaque sticker a sa petite inclinaison et son décalage, toujours les mêmes
 const lvJit = (x, d) => { const h = [...String(x.id || 'x')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); return { r: (h % 11) - 5, dx: ((h >> 4) % 17) - 8, dy: ((h >> 9) % 13) - 6, d }; };
+// des stickers retirés du jeu, qu'on ne montre plus dans les parties déjà commencées (« Nouvelle page d'album », le premier d'une espèce du départ)
+const lvHidden = id => id === 'r_album' || (/^espece:/.test(id || '') && ((S && S.book && S.book.startSp) || ['diablotin']).includes(id.slice(7)));
 function livrePages(fresh, L, nu) {
   L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
   const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
@@ -19144,7 +19145,7 @@ function livrePages(fresh, L, nu) {
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
-    const all = c.mine.filter(x => x.stuck !== false).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
+    const all = c.mine.filter(x => x.stuck !== false && !lvHidden(x.id)).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
     for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
       P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
@@ -19234,7 +19235,9 @@ function openBook(n, where) {
 openAch = function () { openBook(); };
 /* ---------- le livre s'ouvre de lui-même quand un sticker est gagné, dès que le joueur a les mains libres ---------- */
 const LVA = { t: 0 };
-const lvBusy = () => !S || !S.started || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
+// une nouvelle espèce attend d'être présentée (p37) : son sticker ne doit pas la dévoiler avant
+const lvArrivalPending = () => !!(S && S.spotted && S.creatures.some(o => !S.spotted.includes(o.sp) && !isOut(o) && !injured(o)));
+const lvBusy = () => !S || !S.started || lvArrivalPending() || (typeof V !== 'undefined' && V.spotOn) || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
 function lvAutoSoon(ms = 900) { if (typeof headless === 'function' && headless()) return; clearTimeout(LVA.t); LVA.t = setTimeout(lvAutoTry, ms); }
 function lvAutoTry() { if (!S || !S.book || !lvPending().length) return; if (lvBusy()) { LVA.t = setTimeout(lvAutoTry, 1200); return; } openBook(); }
 const bookAddLv = bookAdd;
@@ -19279,8 +19282,9 @@ const spName = sp => (SPECIES[sp] || {}).name || sp;
 // à l'aube : premiers arrivants, légendes, reliques, Merveilles
 function stkDawn(report) {
   if (!S.book) return;
+  const B0 = S.book; if (!B0.startSp) B0.startSp = S.night <= 2 ? [...new Set(S.creatures.map(c => c.sp))] : ['diablotin'];   // les espèces du départ ne comptent pas comme une « première »
   S.creatures.forEach(c => {
-    stk('espece:' + c.sp, `Le premier ${spName(c.sp).toLowerCase()}`, '🐾', 'Éleveur', 1, `Accueillir pour la première fois un·e ${spName(c.sp).toLowerCase()}.`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
+    if (!B0.startSp.includes(c.sp)) stk('espece:' + c.sp, `Le premier ${spName(c.sp).toLowerCase()}`, '🐾', 'Éleveur', 1, `Accueillir pour la première fois un·e ${spName(c.sp).toLowerCase()}.`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
     if (c.legend || c.evo || (c.lvl || 1) >= 5) stk('legende:' + c.sp, `La légende des ${spName(c.sp).toLowerCase()}s`, '🗿', 'Missions', 2, `Faire d’un·e ${spName(c.sp).toLowerCase()} une légende (niveau 5).`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
   });
   (S.book.relics || []).forEach(r => { const R = RELIC_BY[r.id]; if (R) stk('relique:' + r.id, R.name, R.ico, 'Château', 2, `Finir un chapitre en âge d’or et recevoir cette relique d’ère.`, { sub: `de l’Ère ${r.era}`, lines: report }); });
@@ -19350,7 +19354,7 @@ function stkCatalogSize() {
   return MOMENTS.filter(m => !m.online).length + RECUR.length + sp * 3 + el * 2 + bo + Object.keys(CRAWL_DG).length + 12 + 3 + Object.values(EV_STK).reduce((a, v) => a + v.filter(Boolean).length, 0) + VICTORIES.length + RELICS_ERA.length + PACTS.length + 8 + ERA_NAMES.length + 3;
 }
 function openStickerBook() {
-  const M = metaLoad(), got = Object.entries(M.got || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
+  const M = metaLoad(), got = Object.entries(M.got || {}).filter(([id]) => id !== 'r_album' && id !== 'espece:diablotin').sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
   const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
   for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const x = { id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);

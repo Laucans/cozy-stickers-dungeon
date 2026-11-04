@@ -36,8 +36,9 @@ const spName = sp => (SPECIES[sp] || {}).name || sp;
 // à l'aube : premiers arrivants, légendes, reliques, Merveilles
 function stkDawn(report) {
   if (!S.book) return;
+  const B0 = S.book; if (!B0.startSp) B0.startSp = S.night <= 2 ? [...new Set(S.creatures.map(c => c.sp))] : ['diablotin'];   // les espèces du départ ne comptent pas comme une « première »
   S.creatures.forEach(c => {
-    stk('espece:' + c.sp, `Le premier ${spName(c.sp).toLowerCase()}`, '🐾', 'Éleveur', 1, `Accueillir pour la première fois un·e ${spName(c.sp).toLowerCase()}.`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
+    if (!B0.startSp.includes(c.sp)) stk('espece:' + c.sp, `Le premier ${spName(c.sp).toLowerCase()}`, '🐾', 'Éleveur', 1, `Accueillir pour la première fois un·e ${spName(c.sp).toLowerCase()}.`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
     if (c.legend || c.evo || (c.lvl || 1) >= 5) stk('legende:' + c.sp, `La légende des ${spName(c.sp).toLowerCase()}s`, '🗿', 'Missions', 2, `Faire d’un·e ${spName(c.sp).toLowerCase()} une légende (niveau 5).`, { art: { k: 'sp', key: c.sp }, sub: c.name, lines: report });
   });
   (S.book.relics || []).forEach(r => { const R = RELIC_BY[r.id]; if (R) stk('relique:' + r.id, R.name, R.ico, 'Château', 2, `Finir un chapitre en âge d’or et recevoir cette relique d’ère.`, { sub: `de l’Ère ${r.era}`, lines: report }); });
@@ -107,7 +108,7 @@ function stkCatalogSize() {
   return MOMENTS.filter(m => !m.online).length + RECUR.length + sp * 3 + el * 2 + bo + Object.keys(CRAWL_DG).length + 12 + 3 + Object.values(EV_STK).reduce((a, v) => a + v.filter(Boolean).length, 0) + VICTORIES.length + RELICS_ERA.length + PACTS.length + 8 + ERA_NAMES.length + 3;
 }
 function openStickerBook() {
-  const M = metaLoad(), got = Object.entries(M.got || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
+  const M = metaLoad(), got = Object.entries(M.got || {}).filter(([id]) => id !== 'r_album' && id !== 'espece:diablotin').sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
   const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
   for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const x = { id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);

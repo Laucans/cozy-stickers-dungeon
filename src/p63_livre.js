@@ -53,7 +53,6 @@ const RECUR = [
   { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
   { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
   { id: 'r_expe', cat: 'Profondeurs', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
-  { id: 'r_album', cat: 'Éleveur', ico: '📒', t: 'Nouvelle page d’album', pts: 1, cap: 3, v: s => Object.keys(s.album || {}).length },
   { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
   { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
   { id: 'r_envies', cat: 'Éleveur', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
@@ -240,8 +239,8 @@ wrapEvB('cage', 0, (R, f0) => { const t = f0(R); if (!hasM('epopee')) return t; 
 /* ---------- le livre : dessiné et feuilleté dans p65_livre_ui.js (openBook) ---------- */
 // le Livre s'ouvre de lui-même sur un nouveau chapitre (et sur le pacte à choisir), dès que la voie est libre
 if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => {
-  try { if (!S || !S.started || !S.book || !S.book.pending || UI.busy || (typeof V !== 'undefined' && V.spotOn) || $('#modalRoot').children.length || (document.getElementById('world') && !document.getElementById('world').hidden) || document.body.classList.contains('crawling')) return;
-    const P = S.book.pending; S.book.pending = P.pact ? { pact: P.pact } : null; save();
+  try { if (!S || !S.started || !S.book || !S.book.pending || UI.busy || (typeof V !== 'undefined' && V.spotOn) || (typeof lvArrivalPending === 'function' && lvArrivalPending()) || $('#modalRoot').children.length || (document.getElementById('world') && !document.getElementById('world').hidden) || document.body.classList.contains('crawling')) return;
+    const P = S.book.pending; S.book.pending = null; save();   // une seule fois : ensuite, la pastille « choisis ton pacte » attend
     if (P.pact) openBook(P.pact); else if (P.open) { sfx('chime'); openBook(P.open); }
   } catch (e) {} }, 900);
 // le pacte attend dans une pastille tant qu'il n'est pas choisi
