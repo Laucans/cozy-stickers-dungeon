@@ -217,7 +217,7 @@ CMD.pact = a => bookPact(a && a.id);
 const dawnBook = dawn;
 dawn = function (report) { const r = dawnBook(report); try { bookTick(report); bookCheck(report); } catch (e) { console.error(e); } return r; };
 const afterChangeBook = afterChange;
-afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck().forEach((r, i) => setTimeout(() => { toast(`📖 Un sticker à coller : ${r.m.t}${r.by ? ` (après ${racer(r.by).master})` : ''}`); sfx('chime'); }, i * 900)); } catch (e) { console.error(e); } return afterChangeBook(); };
+afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck(); } catch (e) { console.error(e); } return afterChangeBook(); };
 // les hauts faits n'existent plus à part : ce sont des stickers
 checkAch = function () { return []; };
 announceAch = function () {};
@@ -248,7 +248,7 @@ if (typeof setInterval === 'function' && typeof document !== 'undefined') setInt
 const victoryNotifsBook = victoryNotifs;
 victoryNotifs = function (add) {
   victoryNotifsBook(add); if (!S.started || !S.book) return;
-  { const cur = bookCur(), n = cur ? cur.mine.filter(x => x.stuck === false).length : 0; if (n) add('coller', '📖', `${n} sticker${n > 1 ? 's' : ''} à coller dans le Livre`, () => openBook(), 4, 'goal'); }
+
   const c = S.book.ch.find(x => x.age === 'sombre' && x.choices && !x.pact); if (c) add('pacte', '🌑', 'Âge sombre : choisis ton pacte dans le Livre', () => openBook(c.n), 6, 'bad');
   const cur = bookCur(); if (cur && cur.to - S.night <= 2) { const mine = chapScore(cur), best = Math.max(0, ...Object.values(cur.rivals)); add('chap', '📖', `Fin du chapitre dans ${Math.max(0, cur.to - S.night)} nuit(s) : ${Math.round(mine)} pts contre ${Math.round(best)} pour le meilleur rival`, () => openBook(), 3, mine > best ? '' : 'bad'); }
 };

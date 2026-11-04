@@ -143,7 +143,7 @@ img.ico{width:26px; height:26px; object-fit:contain; flex:none}
 .banner small{display:block; font-family:var(--f-hand); font-weight:400; font-size:18px; line-height:1.2; color:var(--ink-soft); margin-top:6px}
 @keyframes pop{from{transform:translate(-50%,-50%) scale(.4) rotate(-12deg)}}
 .toasts{position:absolute; top:calc(var(--gt) + 64px); left:50%; transform:translateX(-50%); z-index:40; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:min(470px, calc(100vw - 32px))}
-.toast{padding:8px 14px; font-weight:700; font-size:14px; border-radius:12px; background:linear-gradient(180deg, rgba(43,31,23,.97), rgba(26,18,14,.97)); border:2px solid var(--gold-2); box-shadow:0 8px 20px rgba(0,0,0,.6); animation:tin .35s cubic-bezier(.2,1.4,.4,1)}
+.toast{pointer-events:auto; cursor:pointer; padding:8px 14px; font-weight:700; font-size:14px; border-radius:12px; background:linear-gradient(180deg, rgba(43,31,23,.97), rgba(26,18,14,.97)); border:2px solid var(--gold-2); box-shadow:0 8px 20px rgba(0,0,0,.6); animation:tin .35s cubic-bezier(.2,1.4,.4,1)}
 .toast.bad{border-color:var(--red)}
 @keyframes tin{from{transform:translateY(-16px) scale(.92); opacity:0}}
 
@@ -1322,6 +1322,13 @@ button, .card, .notif, .res, .dial, .pt, .mini, .act{-webkit-touch-callout:none;
 body.touchy #crawlPage [data-a="auto"], body.touchy #crawlPage [data-a="flee"]{flex-direction:column; gap:1px; line-height:1}
 body.touchy #crawlPage [data-a="auto"]::after, body.touchy #crawlPage [data-a="flee"]::after{content:attr(aria-label); font:800 9px/1 var(--f-body); white-space:nowrap}
 }
+/* l'aide : le « ? » qui ouvre le Grimoire, et la pastille au survol des boutons */
+.aideq{display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; margin:0 0 0 6px; padding:0; border-radius:50%; border:2px solid var(--gold-2); background:#3a2416; color:#ffe08a; font:700 12px/1 Georgia, serif; cursor:pointer; vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.35); flex:none; transition:transform .12s, background .12s}
+.aideq:hover, .aideq:focus-visible{background:#6a4220; transform:scale(1.12)}
+.gtoback{display:block; margin:0 0 8px}
+.hovtip{position:fixed; z-index:96; max-width:250px; padding:4px 13px 5px; border-radius:999px; background:var(--parch); color:var(--ink); border:2px solid var(--ink); box-shadow:0 0 0 2.5px var(--gold-2), 0 8px 18px rgba(0,0,0,.5); text-align:center; pointer-events:none; animation:mpop .14s ease-out; line-height:1.2}
+.hovtip.long{border-radius:14px; padding:5px 12px 7px} .hovtip b{display:block; font-family:var(--f-display); font-size:14.5px; font-weight:700} .hovtip small{display:block; font-size:12.5px; opacity:.85; margin-top:2px}
+.hovtip[hidden]{display:none}
 .lptip{position:fixed; z-index:95; padding:8px 11px; border-radius:12px; background:var(--parch); color:var(--ink); border:2.5px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 10px 24px rgba(0,0,0,.55); font-size:13.5px; line-height:1.3; pointer-events:none; animation:mpop .2s ease-out}
 .touchhelp{position:fixed; z-index:96; left:50%; transform:translateX(-50%); bottom:calc(var(--gb, 0px) + 190px); width:min(340px, calc(100vw - 32px)); padding:10px 14px; border-radius:16px; background:var(--parch); color:var(--ink); border:3px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 14px 30px rgba(0,0,0,.6); font-size:13.5px; animation:mpop .3s ease-out}
 .touchhelp ul{margin:6px 0 8px; padding-left:18px} .touchhelp li{margin:3px 0} .touchhelp b{font-family:var(--f-display); font-size:18px; color:var(--red-2)}
@@ -1445,25 +1452,22 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
 .lv-relics{display:flex; flex-wrap:wrap; gap:6px; justify-content:center} .lv-relics .lvs-die{width:clamp(80px, 12vh, 110px)}
 .lvp-prev{background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%); border-radius:12px; padding:18px 12px 10px; display:flex; justify-content:center}
 .lvp.st.free{display:block}
+/* les pages de stickers : une grille dont la taille vient de l'écran, chaque sticker un peu de travers */
+.lvp.st.grid{display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); grid-template-rows:auto repeat(var(--rows), minmax(0, 1fr)); justify-items:center; align-items:center; gap:0 6px}
+.lvp.st.grid .lv-runhead{grid-column:1 / -1; justify-self:stretch}
+.lvp.st.grid .lvs{margin:0; max-width:100%} .lvp.st.grid .lvs-die{width:var(--stw)}
+.lvp.st.grid figcaption{max-width:calc(var(--stw) + 46px); margin-top:3px; line-height:1.1} .lvp.st.grid figcaption small, .lvp.st.grid .lvs-night{font-size:13px}
+.lvp.st.grid .lvs-how{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 .lvs.free{position:absolute; margin:0; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)); max-width:none}
 .lvs.free.fresh{animation:lvStickFree .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:.15s}
 @keyframes lvStickFree{0%{opacity:0; transform:translate(-50%, -62%) rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45)} 60%{opacity:1} 100%{opacity:1; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1)}}
 .lvp.st.free .lvs-die{width:clamp(96px, 19vh, 176px)}
-.lv-here{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) rotate(-4deg); border:3px dashed #d2bf98; border-radius:24px; padding:30px 22px; color:#b8a27a !important}
 .lvp.st.hover{box-shadow:inset 0 0 0 4px rgba(233,185,73,.8); background:rgba(255,236,170,.25)}
 .lv-notes{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px} .lv-notes .lv-note{margin-top:0}
-.lv-planche{width:min(980px, 96vw); display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 12px 10px; border-radius:14px; background:repeating-linear-gradient(45deg, #e9f2f7 0 10px, #dfeaf1 10px 20px); box-shadow:0 0 0 2px #fff, 0 6px 16px rgba(0,0,0,.45)}
-.lv-planche .lv-hand{margin:0; font-size:16px; color:#3a2416}
-.lv-sheet{display:flex; gap:14px; overflow-x:auto; max-width:100%; padding:10px 6px 4px; scrollbar-width:thin}
-.lv-peel{flex:none; cursor:grab; touch-action:none; transition:transform .15s} .lv-peel:hover{transform:translateY(-4px) rotate(-2deg)} .lv-peel.lifting{opacity:.35}
-.lv-peel .lvs{margin:0} .lv-peel .lvs-die{width:clamp(70px, 11vh, 96px); border-width:6px; border-radius:20px} .lv-peel figcaption{max-width:120px} .lv-peel figcaption b{font-size:14px} .lv-peel figcaption small, .lv-peel .lvs-night{font-size:12px}
-.lv-ghost{position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%, -50%) rotate(-6deg) scale(1.15); filter:drop-shadow(0 18px 14px rgba(0,0,0,.35))} .lv-ghost .lvs{margin:0} .lv-ghost .lvs-die{width:110px; border-width:6px}
 .lvs-how{font-size:12px !important; color:#8a7a5e !important; margin-top:2px; max-width:220px}
-.modal.livrebook.withsheet .lvbook:not(.single){width:min(1100px, 96vw, calc((84vh - 210px) * 1.48))}
-.modal.livrebook.withsheet .lvbook.single{width:min(470px, 94vw, calc((80vh - 200px) * .74))}
 /* les stickers du Livre : découpés autour du dessin (liseré blanc qui suit la forme, ombre portée), sans carré ni ruban */
-.lvs-die, .lvp.st.free .lvs-die, .lvbook.single .lvs-die, .lv-peel .lvs-die, .lv-ghost .lvs-die, .lv-relics .lvs-die, .lvs.relic .lvs-die{background:none; border:0; border-radius:0; box-shadow:none; overflow:visible}
-.lvs-die{width:clamp(130px, 25vh, 220px)} .lv-peel .lvs-die{width:clamp(74px, 11vh, 100px)} .lv-ghost .lvs-die{width:120px}
+.lvs-die, .lvp.st.free .lvs-die, .lvbook.single .lvs-die, .lv-relics .lvs-die, .lvs.relic .lvs-die{background:none; border:0; border-radius:0; box-shadow:none; overflow:visible}
+.lvs-die{width:clamp(130px, 25vh, 220px)}
 .lvs-art img, .lvs-emo{filter:drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff) drop-shadow(0 0 1px rgba(90,60,30,.55)) drop-shadow(0 7px 7px rgba(60,35,10,.38))}
 .lvs-art img{width:100%; height:100%; object-fit:contain} .lvs-art img.room{width:92%; height:92%; border-radius:0}
 .lvs-emo{font-size:clamp(70px, 13vh, 124px)} .lvs-emo .gi{width:1.05em; height:1.05em}

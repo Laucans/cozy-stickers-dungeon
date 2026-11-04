@@ -179,8 +179,8 @@ function lpText(el) {
   if (el.classList.contains('notif')) { const n = el.querySelector('.nl'); return n ? n.textContent : ''; }
   if (el.id && LP_HELP[el.id]) return LP_HELP[el.id];
   if (el.closest('.minimap')) return 'Carte du Val : villages, villes, lieux à explorer et donjons rivaux.';
-  const al = (el.getAttribute('aria-label') || '').trim(), ti = (el.getAttribute('title') || '').trim(), s = ti.length > al.length ? ti : al;   // le texte le plus complet
-  const res = el.closest('.res, .dial'); if (res && res.title) return res.title;
+  const al = (el.getAttribute('aria-label') || '').trim(), ti = (el.getAttribute('title') || (el.dataset && el.dataset.tip) || '').trim(), s = ti.length > al.length ? ti : al;   // le texte le plus complet
+  const res = el.closest('.res, .dial'); if (res && (res.title || res.dataset.tip)) return res.title || res.dataset.tip;
   return s;
 }
 function lpShow(el) {

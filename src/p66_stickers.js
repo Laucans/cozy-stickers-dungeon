@@ -28,7 +28,7 @@ function stk(id, t, ico, cat, pts, d, o = {}) {
   if (!S || !S.started || !S.book) return null; const B = S.book; B.closed = B.closed || {};
   if (o.excl && B.closed[o.excl] && B.closed[o.excl] !== id) return null;   // un choix exclusif a déjà été fait dans cette partie
   const x = bookEarnDyn(id, { t, ico, cat, pts, sub: o.sub || '', art: o.art || null, d }, o.lines);
-  if (x) { x.d = d; if (o.excl) B.closed[o.excl] = id; if (!o.lines && typeof toast === 'function' && !(typeof headless === 'function' && headless())) { toast(`📖 Un sticker à coller : ${t}`); sfx('chime'); } }
+  if (x) { x.d = d; if (o.excl) B.closed[o.excl] = id;  }
   return x;
 }
 const spName = sp => (SPECIES[sp] || {}).name || sp;
@@ -109,7 +109,8 @@ function stkCatalogSize() {
 function openStickerBook() {
   const M = metaLoad(), got = Object.entries(M.got || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
-  for (let i = 0; i < got.length; i += 2) P.push(`<div class="lvp st free">${got.slice(i, i + 2).map(([id, g], j) => lvSticker({ id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night, pos: { x: j ? 66 : 33, y: j ? 70 : 31, r: j ? 3 : -4 } }, j, false, true)).join('')}</div>`);
+  const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
+  for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const x = { id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
   const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
   P.push(`<div class="lvp blanc"><p class="lv-hand big">Encore ${Math.max(0, total - got.length)} stickers à découvrir…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand small">Personne ne sait vraiment ce qui les fait apparaître. Essaie des choses.</p></div>`);
   if (P.length % 2) P.push('<div class="lvp blanc"></div>'); P.push('<div class="lvp garde"></div>');

@@ -34,16 +34,16 @@ function renderHUD() {
   const box = $('#res');
   if (box.children.length !== res.length) { box.innerHTML = ''; res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); }); }
   res.forEach(([k, label, val, tip, warn]) => {
-    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.title = `${label} : ${tip}`;
+    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.dataset.tip = `${label} : ${tip}`;
     c.innerHTML = `${ico(k)}<span><b class="num">${val}</b><small>${label}</small></span>`;
     if (UI.prev[k] !== undefined && UI.prev[k] !== val) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
     UI.prev[k] = val;
   });
   $('#clocks').innerHTML =
-    `<div class="dial" title="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
-    `<div class="dial" title="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
+    `<div class="dial" data-tip="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
+    `<div class="dial" data-tip="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
   const lau = S.vic ? Object.keys(S.vic.won).length : 0;
-  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').title = 'Les victoires du Val (et la nuit en cours)';
+  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').dataset.tip = 'Les victoires du Val (et la nuit en cours)';
   $('#phases').innerHTML = PHASES.map(([k, l], i) => (i ? '<i>›</i>' : '') + `<span class="${UI.phase === k ? 'on' : ''}">${l}</span>`).join('');
 }
 

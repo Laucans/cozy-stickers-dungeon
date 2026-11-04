@@ -357,6 +357,19 @@ function bindEvents() {
   $('#btnHelp').addEventListener('click', () => openGrimoire());
   $('#btnMenu').addEventListener('click', () => { if (!UI.busy) openMenu(); });
   $('#btnSound').addEventListener('click', toggleSound);
+  // clic droit : chasse une notification, ou annule ce que tient le curseur (sticker en main, garde qu'on glisse, carte choisie)
+  addEventListener('contextmenu', e => {
+    const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+    const stop = () => { e.preventDefault(); e.stopPropagation(); };
+    const ts = t.closest('.toast'); if (ts) { stop(); ts.remove(); return; }
+    const nt = t.closest('#notifs .notif'); if (nt) { stop(); const x = nt.querySelector('[data-nx]'); if (x) { x.click(); sfx('tick'); } return; }
+    if (UI.hand) { stop(); dropSticker(); showTip(null); sfx('tick'); return; }
+    if (typeof GM !== 'undefined' && GM.drag) { stop(); if (GM.drag.ghost) GM.drag.ghost.remove(); GM.drag = null; GM.hover = null; sfx('tick'); return; }
+    const cancel = [...document.querySelectorAll('[data-a="cancel"]')].find(b => b.offsetParent && !b.disabled);   // une carte choisie : expédition, combat, duel
+    if (cancel) { stop(); cancel.click(); return; }
+  }, true);
+  // une notification éphémère s'efface aussi d'un clic
+  $('#toasts').addEventListener('click', e => { const ts = e.target.closest('.toast'); if (ts) ts.remove(); });
   document.addEventListener('keydown', e => {
     if (e.target.matches && e.target.matches('input, select, textarea')) return;
     if (e.key === 'Escape') { if ($('#modalRoot').children.length && !UI.modalNoClose) closeModal(); else if (UI.hand) dropSticker(); else if (UI.build) closeBuild(); }

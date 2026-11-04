@@ -78,15 +78,26 @@ function lvArt(x, m) {
 // la rareté d'un sticker : commun, rare (reflet holographique), légendaire (or et éclats)
 const lvRarity = (x, m) => { const id = x.id || '', p = m.pts || x.pts || 1; return /^(vic:|heroique|or:|legende:)/.test(id) || p >= 4 ? 'leg' : /^(elite:.*:5|heros:.*:10|merveille:.*:5|donjon:|relique:|inv:redoutable|inv:croisade|boss:)/.test(id) || p >= 3 ? 'rare' : 'com'; };
 const LV_SHAPES = ['ecu', 'rond', 'etoile', 'blason'];
-function lvSticker(x, i, fresh, free) {
+function lvSticker(x, i, fresh, free, J) {
   const m = lvMeta(x), col = m.cat ? (LVCOL[m.cat] || '#a08a70') : '#8fa6b8', P = free && x.pos, rar = lvRarity(x, m), shape = LV_SHAPES[[...(x.id || 'x')].reduce((a, ch) => a + ch.charCodeAt(0), 0) % LV_SHAPES.length];
   const spark = rar === 'leg' ? '<i class="lvx-spark s1">✦</i><i class="lvx-spark s2">✦</i><i class="lvx-spark s3">✧</i>' : '';
-  return `<figure class="lvs ${rar}${fresh ? ' fresh' : ''}${P ? ' free' : ''}" style="--rot:${P ? x.pos.r : [-4, 3, -2, 4, -3][i % 5]}deg; --col:${col}; --d:${.25 + i * .25}s${P ? `; left:${x.pos.x}%; top:${x.pos.y}%` : ''}"><div class="lvs-hold"><div class="lvs-die"><div class="lvx-cut"><div class="lvx-badge ${shape}"><i class="lvx-rays"></i><i class="lvx-foil"></i></div><div class="lvs-art">${lvArt(x, m)}</div><div class="lvx-ribbon"><span>${esc(m.t)}</span></div></div>${spark}</div>${x.n > 1 ? `<span class="lvs-count">×${x.n}</span>` : ''}</div>
+  return `<figure class="lvs ${rar}${fresh ? ' fresh' : ''}${P ? ' free' : ''}" style="--rot:${P ? x.pos.r : J ? J.r : [-4, 3, -2, 4, -3][i % 5]}deg; --col:${col}; --d:${J && J.d != null ? J.d : .25 + i * .25}s${P ? `; left:${x.pos.x}%; top:${x.pos.y}%` : ''}${J ? `; translate:${J.dx}px ${J.dy}px` : ''}"><div class="lvs-hold"><div class="lvs-die"><div class="lvx-cut"><div class="lvx-badge ${shape}"><i class="lvx-rays"></i><i class="lvx-foil"></i></div><div class="lvs-art">${lvArt(x, m)}</div><div class="lvx-ribbon"><span>${esc(m.t)}</span></div></div>${spark}</div>${x.n > 1 ? `<span class="lvs-count">×${x.n}</span>` : ''}</div>
     <figcaption><span class="lvs-night">Nuit ${x.night}${x.n > 1 && x.last !== x.night ? ` à ${x.last}` : ''}${rar !== 'com' ? ` · <b class="lvx-rar ${rar}">${rar === 'leg' ? 'légendaire' : 'rare'}</b>` : ''}</span>${x.sub ? `<small>${esc(x.sub)}</small>` : ''}${x.after ? `<small class="lvs-after">après ${esc(racer(x.after).master)}</small>` : ''}${(x.d || m.d) ? `<small class="lvs-how">🔓 ${esc(x.d || m.d)}</small>` : ''}</figcaption></figure>`;
 }
 const lvRelic = (id, i, fresh) => { const r = RELIC_BY[id]; return r ? `<figure class="lvs relic${fresh ? ' fresh' : ''}" style="--rot:${i ? 3 : -3}deg; --col:#e9b949; --d:${.4 + i * .3}s"><div class="lvs-hold"><div class="lvs-die"><div class="lvs-art">${lvArt({ id: 'relique:' + id }, r)}</div></div></div><figcaption><span class="lvs-night">Relique d’ère</span><b>${esc(r.name)}</b><small>${esc(r.d)}</small></figcaption></figure>` : ''; };
-function livrePages(fresh) {
-  const B = bookState(), P = [], isNew = x => x.night > fresh;
+// combien de stickers tiennent sur une page : dépend de la taille de la page, donc de l'écran
+function lvLayout(single, W, H) {
+  if (!W) { W = single ? Math.min(470, innerWidth * .94) : Math.min(1100, innerWidth * .96) / 2; H = W * 1.36; }
+  const fit = w => { const cols = Math.max(1, Math.floor((W - (single ? 36 : 56)) / (w + 26))), rows = Math.max(1, Math.floor((H - 58) / (w + 86))); return { cols, rows, cap: Math.min(12, cols * rows), w }; };
+  let w = Math.round(Math.max(110, Math.min(200, innerHeight * .21))), L = fit(w);
+  while (L.cap < 2 && w > 104) { w -= 8; L = fit(w); }   // au moins deux par page quand c'est possible
+  return L;
+}
+// chaque sticker a sa petite inclinaison et son décalage, toujours les mêmes
+const lvJit = (x, d) => { const h = [...String(x.id || 'x')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); return { r: (h % 11) - 5, dx: ((h >> 4) % 17) - 8, dy: ((h >> 9) % 13) - 6, d }; };
+function livrePages(fresh, L, nu) {
+  L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
+  const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
   P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
   const stickers = B.ch.reduce((a, c) => a + c.mine.length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
@@ -94,10 +105,9 @@ function livrePages(fresh) {
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
-    const stuck = c.mine.filter(x => x.stuck !== false && x.pos), pend = c.mine.filter(x => x.stuck === false), maxPg = stuck.reduce((a, x) => Math.max(a, x.pos.pg), -1);
-    const nPg = maxPg + 1 + (live && pend.length ? 1 : 0);
-    for (let pgi = 0; pgi < nPg; pgi++) { const on = stuck.filter(x => x.pos.pg === pgi).sort((a, b) => a.night - b.night);
-      P.push({ k: 'st', n: c.n, pg: pgi, html: `<div class="lvp st free${on.length < 3 && live ? ' room' : ''}" data-ch="${c.n}" data-pg="${pgi}"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => lvSticker(x, q, isNew(x), true)).join('')}${!on.length ? '<p class="lv-hand small lv-here">Colle un sticker ici</p>' : ''}</div>` }); }
+    const all = c.mine.filter(x => x.stuck !== false).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
+    for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
+      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
     const mine = chapScore(c), rank = [['moi', mine], ...Object.entries(c.rivals)].sort((a, b) => b[1] - a[1]);
     const race = `<ol class="lv-race">${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? esc(S.name) : `${racer(w).emo} ${esc(racer(w).name)}`}<span>${Math.round(p)}</span></li>`).join('')}</ol>`;
@@ -124,33 +134,29 @@ const lvPending = () => { const c = bookCur(); return c ? c.mine.filter(x => x.s
 function openBook(n, where) {
   const B = bookState(); if (!B) return;
   const fresh = B.readNight == null ? 0 : B.readNight, single = innerWidth < 760;
-  let pages = livrePages(fresh);
+  // les stickers gagnés depuis la dernière fois se collent d'eux-mêmes, à la suite du chapitre
+  const nu = new Set(lvPending()); nu.forEach(x => { x.stuck = true; x.glued = S.night; });
+  let L = lvLayout(single); L.d0 = 1.05; let pages = livrePages(fresh, L, nu);
   const pick0 = () => {
-    if (lvPending().length) { const k = pages.map((p, i) => [p, i]).filter(([p]) => p.k === 'st' && p.n === bookCur().n); if (k.length) return k[k.length - 1][1]; }
+    if (nu.size) { const i = pages.findIndex(p => p.k === 'st' && p.on.some(x => nu.has(x))); if (i >= 0) return i; }
     const c = B.ch.find(x => x.n === n);
     if (c && (where === 'fin' || (c.age === 'sombre' && c.choices && !c.pact))) return pages.findIndex(p => p.k === 'fin' && p.n === n);
     if (n != null) return pages.findIndex(p => p.k === 'chap' && p.n === n);
     const live = pages.map((p, i) => [p, i]).filter(([p]) => p.n === bookCur().n && (p.k === 'st' || p.k === 'suite')); return live.length ? live[live.length - 1][1] : 1;
   };
-  let at = pick0(); if (at < 0) at = 1;
+  let at = pick0(); if (at < 0) at = 1; clearTimeout(LVA.t);
   const m = openModal(`<div class="lvbook${single ? ' single' : ''}"><div class="lv-spread"></div><div class="lv-cover"><div class="lv-cover-in"><span>📖</span><b>Le Livre du Maître</b><small>${esc(S.name)}</small></div></div><div class="lv-ribbon"></div></div>
-    <div class="lv-planche" hidden></div>
     <div class="lv-bar"><button type="button" class="lv-arrow" data-lvgo="-1" aria-label="Page précédente">◀</button><span class="lv-folio"></span><button type="button" class="lv-arrow" data-lvgo="1" aria-label="Page suivante">▶</button></div>`, { label: 'Le Livre du Maître', cls: 'livrebook', wide: true });
   LV = { idx: single ? at : at - (at % 2), single, m, anim: false, fresh };
-  const book = m.querySelector('.lvbook'), spread = m.querySelector('.lv-spread'), folio = m.querySelector('.lv-folio'), planche = m.querySelector('.lv-planche');
+  const book = m.querySelector('.lvbook'), spread = m.querySelector('.lv-spread'), folio = m.querySelector('.lv-folio');
   const pg = i => `<div class="lvpg-in">${(pages[i] || { html: '<div class="lvp blanc"></div>' }).html}</div>`;
   const last = () => LV.single ? pages.length - 1 : pages.length - 2;
-  const drawPlanche = () => {
-    const pend = lvPending(); planche.hidden = !pend.length; m.classList.toggle('withsheet', !!pend.length); if (!pend.length) return;
-    planche.innerHTML = `<p class="lv-hand">${pend.length > 1 ? `${pend.length} stickers à coller` : 'Un sticker à coller'} : fais-${pend.length > 1 ? 'les' : 'le'} glisser sur une page de l’ère en cours, ou touche-${pend.length > 1 ? 'les' : 'le'}.</p><div class="lv-sheet">${pend.map((x, i) => `<div class="lv-peel" data-peel="${i}">${lvSticker(x, i, false)}</div>`).join('')}</div>${pend.length > 2 ? '<button type="button" class="sbtn small" data-lvall="1">Tout coller</button>' : ''}`;
-  };
   const render = () => {
     spread.innerHTML = LV.single ? `<div class="lv-pg one">${pg(LV.idx)}</div>` : `<div class="lv-pg l">${pg(LV.idx)}</div><div class="lv-pg r">${pg(LV.idx + 1)}</div>`;
     m.querySelector('[data-lvgo="-1"]').disabled = LV.idx <= 0; m.querySelector('[data-lvgo="1"]').disabled = LV.idx >= last();
     folio.textContent = LV.single ? `page ${LV.idx + 1} sur ${pages.length}` : `pages ${LV.idx + 1}–${LV.idx + 2} sur ${pages.length}`;
-    drawPlanche();
   };
-  const rebuild = (focusPg) => { pages = livrePages(LV.fresh); if (focusPg != null) { const i = pages.findIndex(p => p.k === 'st' && p.n === bookCur().n && p.pg === focusPg); if (i >= 0) LV.idx = LV.single ? i : i - (i % 2); } LV.idx = Math.max(0, Math.min(LV.idx, last())); render(); };
+  const rebuild = () => { L.d0 = .25; pages = livrePages(LV.fresh, L); LV.idx = Math.max(0, Math.min(LV.idx, last())); render(); };
   const flip = (dir, to) => {
     if (LV.anim) return; const step = LV.single ? 1 : 2, nx = to != null ? to : LV.idx + dir * step; if (nx < 0 || nx > last() || nx === LV.idx) return;
     LV.anim = true; sfx('tick');
@@ -163,29 +169,11 @@ function openBook(n, where) {
     spread.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
     setTimeout(() => { LV.idx = nx; render(); LV.anim = false; }, 680);
   };
-  // coller : là où on lâche le sticker (une page de l'ère en cours, trois stickers au plus), ou à la prochaine place libre
-  const stickAt = (x, page, cx, cy) => {
-    const c = bookCur(), pgi = +page.dataset.pg, on = c.mine.filter(y => y.stuck !== false && y.pos && y.pos.pg === pgi).length;
-    if (+page.dataset.ch !== c.n) { toast(`Ce sticker va dans le chapitre en cours : l’Ère ${c.name}.`, true); return false; }
-    if (on >= 3) { toast('Cette page est pleine : tourne la page.', true); return false; }
-    const r = page.getBoundingClientRect(), px = Math.max(24, Math.min(76, (cx - r.left) / r.width * 100)), py = Math.max(24, Math.min(78, (cy - r.top) / r.height * 100));
-    x.pos = { pg: pgi, x: Math.round(px), y: Math.round(py), r: Math.round(Math.random() * 10 - 5) }; x.stuck = true; x.glued = S.night; return true;
-  };
-  const stuckFx = x => { sfx('pop'); save(); LV.fresh = Math.min(LV.fresh, x.night - 1); rebuild(x.pos.pg); setTimeout(() => sfx('chime'), 250); };
-  const autoStick = x => { bookPlace(bookCur(), x); stuckFx(x); };
-  let drag = null;
-  planche.addEventListener('pointerdown', e => {
-    const el = e.target.closest('[data-peel]'); if (!el || LV.anim) return; e.preventDefault();
-    const x = lvPending()[+el.dataset.peel]; if (!x) return; const ghost = el.cloneNode(true); ghost.className = 'lv-ghost'; document.body.appendChild(ghost);
-    drag = { x, el, ghost, sx: e.clientX, sy: e.clientY, moved: false }; el.classList.add('lifting');
-    const mv = ev => { if (!drag) return; if (Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 8) drag.moved = true; ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st')); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover')); if (pgEl) pgEl.classList.add('hover'); };
-    const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); const d = drag; drag = null; ghost.remove(); d.el.classList.remove('lifting'); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover'));
-      if (!d.moved) { autoStick(d.x); return; }   // un simple toucher : à la prochaine place libre
-      const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st') && !n.closest('.lv-leaf'));
-      if (pgEl && stickAt(d.x, pgEl, ev.clientX, ev.clientY)) stuckFx(d.x); else if (!pgEl) sfx('tick'); };
-    mv(e); addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
-  });
   render();
+  // la vraie taille de la page (sous la couverture encore fermée) : on remet en page si elle diffère de l'estimation
+  { const pe = spread.querySelector('.lvp'); if (pe && pe.clientWidth) { const L2 = lvLayout(LV.single, pe.clientWidth, pe.clientHeight); if (L2.cap !== L.cap || L2.cols !== L.cols || L2.w !== L.w) { L = Object.assign(L2, { d0: L.d0 }); pages = livrePages(fresh, L, nu); at = pick0(); if (at < 0) at = 1; LV.idx = LV.single ? at : at - (at % 2); render(); } } }
+  // le bruit des stickers qui se collent, un par un, une fois la couverture ouverte
+  [...nu].slice(0, 6).forEach((x, k) => setTimeout(() => { if (m.isConnected) sfx(k ? 'pop' : 'chime'); }, (L.d0 + k * .5 + .35) * 1000));
   // la couverture s'ouvre, puis on note ce qui a été lu
   requestAnimationFrame(() => requestAnimationFrame(() => book.classList.add('opened')));
   setTimeout(() => { const cv = m.querySelector('.lv-cover'); if (cv) cv.remove(); }, 1000);
@@ -193,7 +181,6 @@ function openBook(n, where) {
   m.addEventListener('click', e => {
     const g = e.target.closest('[data-lvgo]'); if (g) { flip(+g.dataset.lvgo); return; }
     if (e.target.closest('[data-allstk]')) { closeModal(true); if (typeof openStickerBook === 'function') openStickerBook(); return; }
-    if (e.target.closest('[data-lvall]')) { const c = bookCur(); lvPending().forEach(x => bookPlace(c, x)); sfx('pop'); save(); rebuild(); toast('📖 Tous les stickers sont collés.'); return; }
     const p = e.target.closest('[data-pact]');
     if (p) { if (!run('pact', { id: p.dataset.pact })) return; sfx('chime'); toast(`${PACT_BY[p.dataset.pact].ico} Pacte : ${PACT_BY[p.dataset.pact].name}.`); afterChange(); rebuild(); return; }
     // toucher le bord d'une page la tourne
@@ -206,3 +193,12 @@ function openBook(n, where) {
   addEventListener('keydown', key);
 }
 openAch = function () { openBook(); };
+/* ---------- le livre s'ouvre de lui-même quand un sticker est gagné, dès que le joueur a les mains libres ---------- */
+const LVA = { t: 0 };
+const lvBusy = () => !S || !S.started || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
+function lvAutoSoon(ms = 900) { if (typeof headless === 'function' && headless()) return; clearTimeout(LVA.t); LVA.t = setTimeout(lvAutoTry, ms); }
+function lvAutoTry() { if (!S || !S.book || !lvPending().length) return; if (lvBusy()) { LVA.t = setTimeout(lvAutoTry, 1200); return; } openBook(); }
+const bookAddLv = bookAdd;
+bookAdd = function (c, x) { const r = bookAddLv.apply(this, arguments); try { if (r && r.stuck === false) lvAutoSoon(); } catch (e) {} return r; };
+const closeModalLv = closeModal;
+closeModal = function () { const r = closeModalLv.apply(this, arguments); try { if (S && S.book && lvPending().length) lvAutoSoon(700); } catch (e) {} return r; };

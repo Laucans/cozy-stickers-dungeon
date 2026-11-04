@@ -144,7 +144,7 @@ img.ico{width:26px; height:26px; object-fit:contain; flex:none}
 .banner small{display:block; font-family:var(--f-hand); font-weight:400; font-size:18px; line-height:1.2; color:var(--ink-soft); margin-top:6px}
 @keyframes pop{from{transform:translate(-50%,-50%) scale(.4) rotate(-12deg)}}
 .toasts{position:absolute; top:calc(var(--gt) + 64px); left:50%; transform:translateX(-50%); z-index:40; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:min(470px, calc(100vw - 32px))}
-.toast{padding:8px 14px; font-weight:700; font-size:14px; border-radius:12px; background:linear-gradient(180deg, rgba(43,31,23,.97), rgba(26,18,14,.97)); border:2px solid var(--gold-2); box-shadow:0 8px 20px rgba(0,0,0,.6); animation:tin .35s cubic-bezier(.2,1.4,.4,1)}
+.toast{pointer-events:auto; cursor:pointer; padding:8px 14px; font-weight:700; font-size:14px; border-radius:12px; background:linear-gradient(180deg, rgba(43,31,23,.97), rgba(26,18,14,.97)); border:2px solid var(--gold-2); box-shadow:0 8px 20px rgba(0,0,0,.6); animation:tin .35s cubic-bezier(.2,1.4,.4,1)}
 .toast.bad{border-color:var(--red)}
 @keyframes tin{from{transform:translateY(-16px) scale(.92); opacity:0}}
 
@@ -1323,6 +1323,13 @@ button, .card, .notif, .res, .dial, .pt, .mini, .act{-webkit-touch-callout:none;
 body.touchy #crawlPage [data-a="auto"], body.touchy #crawlPage [data-a="flee"]{flex-direction:column; gap:1px; line-height:1}
 body.touchy #crawlPage [data-a="auto"]::after, body.touchy #crawlPage [data-a="flee"]::after{content:attr(aria-label); font:800 9px/1 var(--f-body); white-space:nowrap}
 }
+/* l'aide : le « ? » qui ouvre le Grimoire, et la pastille au survol des boutons */
+.aideq{display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; margin:0 0 0 6px; padding:0; border-radius:50%; border:2px solid var(--gold-2); background:#3a2416; color:#ffe08a; font:700 12px/1 Georgia, serif; cursor:pointer; vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.35); flex:none; transition:transform .12s, background .12s}
+.aideq:hover, .aideq:focus-visible{background:#6a4220; transform:scale(1.12)}
+.gtoback{display:block; margin:0 0 8px}
+.hovtip{position:fixed; z-index:96; max-width:250px; padding:4px 13px 5px; border-radius:999px; background:var(--parch); color:var(--ink); border:2px solid var(--ink); box-shadow:0 0 0 2.5px var(--gold-2), 0 8px 18px rgba(0,0,0,.5); text-align:center; pointer-events:none; animation:mpop .14s ease-out; line-height:1.2}
+.hovtip.long{border-radius:14px; padding:5px 12px 7px} .hovtip b{display:block; font-family:var(--f-display); font-size:14.5px; font-weight:700} .hovtip small{display:block; font-size:12.5px; opacity:.85; margin-top:2px}
+.hovtip[hidden]{display:none}
 .lptip{position:fixed; z-index:95; padding:8px 11px; border-radius:12px; background:var(--parch); color:var(--ink); border:2.5px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 10px 24px rgba(0,0,0,.55); font-size:13.5px; line-height:1.3; pointer-events:none; animation:mpop .2s ease-out}
 .touchhelp{position:fixed; z-index:96; left:50%; transform:translateX(-50%); bottom:calc(var(--gb, 0px) + 190px); width:min(340px, calc(100vw - 32px)); padding:10px 14px; border-radius:16px; background:var(--parch); color:var(--ink); border:3px solid var(--ink); box-shadow:0 0 0 3px var(--gold-2), 0 14px 30px rgba(0,0,0,.6); font-size:13.5px; animation:mpop .3s ease-out}
 .touchhelp ul{margin:6px 0 8px; padding-left:18px} .touchhelp li{margin:3px 0} .touchhelp b{font-family:var(--f-display); font-size:18px; color:var(--red-2)}
@@ -1446,25 +1453,22 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
 .lv-relics{display:flex; flex-wrap:wrap; gap:6px; justify-content:center} .lv-relics .lvs-die{width:clamp(80px, 12vh, 110px)}
 .lvp-prev{background:radial-gradient(circle at 50% 40%, #fbf4e3, #f1e4c6 85%); border-radius:12px; padding:18px 12px 10px; display:flex; justify-content:center}
 .lvp.st.free{display:block}
+/* les pages de stickers : une grille dont la taille vient de l'écran, chaque sticker un peu de travers */
+.lvp.st.grid{display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); grid-template-rows:auto repeat(var(--rows), minmax(0, 1fr)); justify-items:center; align-items:center; gap:0 6px}
+.lvp.st.grid .lv-runhead{grid-column:1 / -1; justify-self:stretch}
+.lvp.st.grid .lvs{margin:0; max-width:100%} .lvp.st.grid .lvs-die{width:var(--stw)}
+.lvp.st.grid figcaption{max-width:calc(var(--stw) + 46px); margin-top:3px; line-height:1.1} .lvp.st.grid figcaption small, .lvp.st.grid .lvs-night{font-size:13px}
+.lvp.st.grid .lvs-how{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 .lvs.free{position:absolute; margin:0; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)); max-width:none}
 .lvs.free.fresh{animation:lvStickFree .75s cubic-bezier(.3,1.4,.5,1) both; animation-delay:.15s}
 @keyframes lvStickFree{0%{opacity:0; transform:translate(-50%, -62%) rotate(calc(var(--rot, 0deg) - 16deg)) scale(1.45)} 60%{opacity:1} 100%{opacity:1; transform:translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1)}}
 .lvp.st.free .lvs-die{width:clamp(96px, 19vh, 176px)}
-.lv-here{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) rotate(-4deg); border:3px dashed #d2bf98; border-radius:24px; padding:30px 22px; color:#b8a27a !important}
 .lvp.st.hover{box-shadow:inset 0 0 0 4px rgba(233,185,73,.8); background:rgba(255,236,170,.25)}
 .lv-notes{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px} .lv-notes .lv-note{margin-top:0}
-.lv-planche{width:min(980px, 96vw); display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 12px 10px; border-radius:14px; background:repeating-linear-gradient(45deg, #e9f2f7 0 10px, #dfeaf1 10px 20px); box-shadow:0 0 0 2px #fff, 0 6px 16px rgba(0,0,0,.45)}
-.lv-planche .lv-hand{margin:0; font-size:16px; color:#3a2416}
-.lv-sheet{display:flex; gap:14px; overflow-x:auto; max-width:100%; padding:10px 6px 4px; scrollbar-width:thin}
-.lv-peel{flex:none; cursor:grab; touch-action:none; transition:transform .15s} .lv-peel:hover{transform:translateY(-4px) rotate(-2deg)} .lv-peel.lifting{opacity:.35}
-.lv-peel .lvs{margin:0} .lv-peel .lvs-die{width:clamp(70px, 11vh, 96px); border-width:6px; border-radius:20px} .lv-peel figcaption{max-width:120px} .lv-peel figcaption b{font-size:14px} .lv-peel figcaption small, .lv-peel .lvs-night{font-size:12px}
-.lv-ghost{position:fixed; z-index:9999; pointer-events:none; transform:translate(-50%, -50%) rotate(-6deg) scale(1.15); filter:drop-shadow(0 18px 14px rgba(0,0,0,.35))} .lv-ghost .lvs{margin:0} .lv-ghost .lvs-die{width:110px; border-width:6px}
 .lvs-how{font-size:12px !important; color:#8a7a5e !important; margin-top:2px; max-width:220px}
-.modal.livrebook.withsheet .lvbook:not(.single){width:min(1100px, 96vw, calc((84vh - 210px) * 1.48))}
-.modal.livrebook.withsheet .lvbook.single{width:min(470px, 94vw, calc((80vh - 200px) * .74))}
 /* les stickers du Livre : découpés autour du dessin (liseré blanc qui suit la forme, ombre portée), sans carré ni ruban */
-.lvs-die, .lvp.st.free .lvs-die, .lvbook.single .lvs-die, .lv-peel .lvs-die, .lv-ghost .lvs-die, .lv-relics .lvs-die, .lvs.relic .lvs-die{background:none; border:0; border-radius:0; box-shadow:none; overflow:visible}
-.lvs-die{width:clamp(130px, 25vh, 220px)} .lv-peel .lvs-die{width:clamp(74px, 11vh, 100px)} .lv-ghost .lvs-die{width:120px}
+.lvs-die, .lvp.st.free .lvs-die, .lvbook.single .lvs-die, .lv-relics .lvs-die, .lvs.relic .lvs-die{background:none; border:0; border-radius:0; box-shadow:none; overflow:visible}
+.lvs-die{width:clamp(130px, 25vh, 220px)}
 .lvs-art img, .lvs-emo{filter:drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff) drop-shadow(0 0 1px rgba(90,60,30,.55)) drop-shadow(0 7px 7px rgba(60,35,10,.38))}
 .lvs-art img{width:100%; height:100%; object-fit:contain} .lvs-art img.room{width:92%; height:92%; border-radius:0}
 .lvs-emo{font-size:clamp(70px, 13vh, 124px)} .lvs-emo .gi{width:1.05em; height:1.05em}
@@ -6524,16 +6528,16 @@ function renderHUD() {
   const box = $('#res');
   if (box.children.length !== res.length) { box.innerHTML = ''; res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); }); }
   res.forEach(([k, label, val, tip, warn]) => {
-    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.title = `${label} : ${tip}`;
+    const c = box.querySelector(`[data-k="${k}"]`); c.className = 'res' + (warn ? ' warn' : ''); c.dataset.tip = `${label} : ${tip}`;
     c.innerHTML = `${ico(k)}<span><b class="num">${val}</b><small>${label}</small></span>`;
     if (UI.prev[k] !== undefined && UI.prev[k] !== val) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
     UI.prev[k] = val;
   });
   $('#clocks').innerHTML =
-    `<div class="dial" title="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
-    `<div class="dial" title="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
+    `<div class="dial" data-tip="Calamité ${S.calamity}/${CAL_MAX} : la faim, la mauvaise humeur et la promiscuité la font monter. Pleine, une catastrophe arrive.">${clockSVG(CAL_MAX, Math.min(S.calamity, CAL_MAX), '#d9542f')}<span><small>Calamité</small><b class="num">${S.calamity}</b></span></div>` +
+    `<div class="dial" data-tip="Menace ${S.menace}/${MENACE_MAX} : tes raids et ta notoriété la font monter. Pleine, des aventuriers attaquent.">${clockSVG(MENACE_MAX, Math.min(S.menace, MENACE_MAX), '#5a86d0')}<span><small>Menace</small><b class="num">${S.menace}</b></span></div>`;
   const lau = S.vic ? Object.keys(S.vic.won).length : 0;
-  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').title = 'Les victoires du Val (et la nuit en cours)';
+  $('#turn').innerHTML = `<b>🏛️ Nuit ${S.night}</b><small>Palier ${S.tier}${Z ? ' · ' + FLOOR_SHORT[Z] : ''}${lau ? ' · ' + '🌿'.repeat(lau) : ''}</small>`; $('#turn').dataset.tip = 'Les victoires du Val (et la nuit en cours)';
   $('#phases').innerHTML = PHASES.map(([k, l], i) => (i ? '<i>›</i>' : '') + `<span class="${UI.phase === k ? 'on' : ''}">${l}</span>`).join('');
 }
 
@@ -7277,6 +7281,19 @@ function bindEvents() {
   $('#btnHelp').addEventListener('click', () => openGrimoire());
   $('#btnMenu').addEventListener('click', () => { if (!UI.busy) openMenu(); });
   $('#btnSound').addEventListener('click', toggleSound);
+  // clic droit : chasse une notification, ou annule ce que tient le curseur (sticker en main, garde qu'on glisse, carte choisie)
+  addEventListener('contextmenu', e => {
+    const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+    const stop = () => { e.preventDefault(); e.stopPropagation(); };
+    const ts = t.closest('.toast'); if (ts) { stop(); ts.remove(); return; }
+    const nt = t.closest('#notifs .notif'); if (nt) { stop(); const x = nt.querySelector('[data-nx]'); if (x) { x.click(); sfx('tick'); } return; }
+    if (UI.hand) { stop(); dropSticker(); showTip(null); sfx('tick'); return; }
+    if (typeof GM !== 'undefined' && GM.drag) { stop(); if (GM.drag.ghost) GM.drag.ghost.remove(); GM.drag = null; GM.hover = null; sfx('tick'); return; }
+    const cancel = [...document.querySelectorAll('[data-a="cancel"]')].find(b => b.offsetParent && !b.disabled);   // une carte choisie : expédition, combat, duel
+    if (cancel) { stop(); cancel.click(); return; }
+  }, true);
+  // une notification éphémère s'efface aussi d'un clic
+  $('#toasts').addEventListener('click', e => { const ts = e.target.closest('.toast'); if (ts) ts.remove(); });
   document.addEventListener('keydown', e => {
     if (e.target.matches && e.target.matches('input, select, textarea')) return;
     if (e.key === 'Escape') { if ($('#modalRoot').children.length && !UI.modalNoClose) closeModal(); else if (UI.hand) dropSticker(); else if (UI.build) closeBuild(); }
@@ -17264,8 +17281,8 @@ function lpText(el) {
   if (el.classList.contains('notif')) { const n = el.querySelector('.nl'); return n ? n.textContent : ''; }
   if (el.id && LP_HELP[el.id]) return LP_HELP[el.id];
   if (el.closest('.minimap')) return 'Carte du Val : villages, villes, lieux à explorer et donjons rivaux.';
-  const al = (el.getAttribute('aria-label') || '').trim(), ti = (el.getAttribute('title') || '').trim(), s = ti.length > al.length ? ti : al;   // le texte le plus complet
-  const res = el.closest('.res, .dial'); if (res && res.title) return res.title;
+  const al = (el.getAttribute('aria-label') || '').trim(), ti = (el.getAttribute('title') || (el.dataset && el.dataset.tip) || '').trim(), s = ti.length > al.length ? ti : al;   // le texte le plus complet
+  const res = el.closest('.res, .dial'); if (res && (res.title || res.dataset.tip)) return res.title || res.dataset.tip;
   return s;
 }
 function lpShow(el) {
@@ -18892,7 +18909,7 @@ CMD.pact = a => bookPact(a && a.id);
 const dawnBook = dawn;
 dawn = function (report) { const r = dawnBook(report); try { bookTick(report); bookCheck(report); } catch (e) { console.error(e); } return r; };
 const afterChangeBook = afterChange;
-afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck().forEach((r, i) => setTimeout(() => { toast(`📖 Un sticker à coller : ${r.m.t}${r.by ? ` (après ${racer(r.by).master})` : ''}`); sfx('chime'); }, i * 900)); } catch (e) { console.error(e); } return afterChangeBook(); };
+afterChange = function () { try { if (!(typeof VISIT !== 'undefined' && VISIT) && !(typeof COOP !== 'undefined' && COOP.role === 'guest')) bookCheck(); } catch (e) { console.error(e); } return afterChangeBook(); };
 // les hauts faits n'existent plus à part : ce sont des stickers
 checkAch = function () { return []; };
 announceAch = function () {};
@@ -18923,7 +18940,7 @@ if (typeof setInterval === 'function' && typeof document !== 'undefined') setInt
 const victoryNotifsBook = victoryNotifs;
 victoryNotifs = function (add) {
   victoryNotifsBook(add); if (!S.started || !S.book) return;
-  { const cur = bookCur(), n = cur ? cur.mine.filter(x => x.stuck === false).length : 0; if (n) add('coller', '📖', `${n} sticker${n > 1 ? 's' : ''} à coller dans le Livre`, () => openBook(), 4, 'goal'); }
+
   const c = S.book.ch.find(x => x.age === 'sombre' && x.choices && !x.pact); if (c) add('pacte', '🌑', 'Âge sombre : choisis ton pacte dans le Livre', () => openBook(c.n), 6, 'bad');
   const cur = bookCur(); if (cur && cur.to - S.night <= 2) { const mine = chapScore(cur), best = Math.max(0, ...Object.values(cur.rivals)); add('chap', '📖', `Fin du chapitre dans ${Math.max(0, cur.to - S.night)} nuit(s) : ${Math.round(mine)} pts contre ${Math.round(best)} pour le meilleur rival`, () => openBook(), 3, mine > best ? '' : 'bad'); }
 };
@@ -19110,15 +19127,26 @@ function lvArt(x, m) {
 // la rareté d'un sticker : commun, rare (reflet holographique), légendaire (or et éclats)
 const lvRarity = (x, m) => { const id = x.id || '', p = m.pts || x.pts || 1; return /^(vic:|heroique|or:|legende:)/.test(id) || p >= 4 ? 'leg' : /^(elite:.*:5|heros:.*:10|merveille:.*:5|donjon:|relique:|inv:redoutable|inv:croisade|boss:)/.test(id) || p >= 3 ? 'rare' : 'com'; };
 const LV_SHAPES = ['ecu', 'rond', 'etoile', 'blason'];
-function lvSticker(x, i, fresh, free) {
+function lvSticker(x, i, fresh, free, J) {
   const m = lvMeta(x), col = m.cat ? (LVCOL[m.cat] || '#a08a70') : '#8fa6b8', P = free && x.pos, rar = lvRarity(x, m), shape = LV_SHAPES[[...(x.id || 'x')].reduce((a, ch) => a + ch.charCodeAt(0), 0) % LV_SHAPES.length];
   const spark = rar === 'leg' ? '<i class="lvx-spark s1">✦</i><i class="lvx-spark s2">✦</i><i class="lvx-spark s3">✧</i>' : '';
-  return `<figure class="lvs ${rar}${fresh ? ' fresh' : ''}${P ? ' free' : ''}" style="--rot:${P ? x.pos.r : [-4, 3, -2, 4, -3][i % 5]}deg; --col:${col}; --d:${.25 + i * .25}s${P ? `; left:${x.pos.x}%; top:${x.pos.y}%` : ''}"><div class="lvs-hold"><div class="lvs-die"><div class="lvx-cut"><div class="lvx-badge ${shape}"><i class="lvx-rays"></i><i class="lvx-foil"></i></div><div class="lvs-art">${lvArt(x, m)}</div><div class="lvx-ribbon"><span>${esc(m.t)}</span></div></div>${spark}</div>${x.n > 1 ? `<span class="lvs-count">×${x.n}</span>` : ''}</div>
+  return `<figure class="lvs ${rar}${fresh ? ' fresh' : ''}${P ? ' free' : ''}" style="--rot:${P ? x.pos.r : J ? J.r : [-4, 3, -2, 4, -3][i % 5]}deg; --col:${col}; --d:${J && J.d != null ? J.d : .25 + i * .25}s${P ? `; left:${x.pos.x}%; top:${x.pos.y}%` : ''}${J ? `; translate:${J.dx}px ${J.dy}px` : ''}"><div class="lvs-hold"><div class="lvs-die"><div class="lvx-cut"><div class="lvx-badge ${shape}"><i class="lvx-rays"></i><i class="lvx-foil"></i></div><div class="lvs-art">${lvArt(x, m)}</div><div class="lvx-ribbon"><span>${esc(m.t)}</span></div></div>${spark}</div>${x.n > 1 ? `<span class="lvs-count">×${x.n}</span>` : ''}</div>
     <figcaption><span class="lvs-night">Nuit ${x.night}${x.n > 1 && x.last !== x.night ? ` à ${x.last}` : ''}${rar !== 'com' ? ` · <b class="lvx-rar ${rar}">${rar === 'leg' ? 'légendaire' : 'rare'}</b>` : ''}</span>${x.sub ? `<small>${esc(x.sub)}</small>` : ''}${x.after ? `<small class="lvs-after">après ${esc(racer(x.after).master)}</small>` : ''}${(x.d || m.d) ? `<small class="lvs-how">🔓 ${esc(x.d || m.d)}</small>` : ''}</figcaption></figure>`;
 }
 const lvRelic = (id, i, fresh) => { const r = RELIC_BY[id]; return r ? `<figure class="lvs relic${fresh ? ' fresh' : ''}" style="--rot:${i ? 3 : -3}deg; --col:#e9b949; --d:${.4 + i * .3}s"><div class="lvs-hold"><div class="lvs-die"><div class="lvs-art">${lvArt({ id: 'relique:' + id }, r)}</div></div></div><figcaption><span class="lvs-night">Relique d’ère</span><b>${esc(r.name)}</b><small>${esc(r.d)}</small></figcaption></figure>` : ''; };
-function livrePages(fresh) {
-  const B = bookState(), P = [], isNew = x => x.night > fresh;
+// combien de stickers tiennent sur une page : dépend de la taille de la page, donc de l'écran
+function lvLayout(single, W, H) {
+  if (!W) { W = single ? Math.min(470, innerWidth * .94) : Math.min(1100, innerWidth * .96) / 2; H = W * 1.36; }
+  const fit = w => { const cols = Math.max(1, Math.floor((W - (single ? 36 : 56)) / (w + 26))), rows = Math.max(1, Math.floor((H - 58) / (w + 86))); return { cols, rows, cap: Math.min(12, cols * rows), w }; };
+  let w = Math.round(Math.max(110, Math.min(200, innerHeight * .21))), L = fit(w);
+  while (L.cap < 2 && w > 104) { w -= 8; L = fit(w); }   // au moins deux par page quand c'est possible
+  return L;
+}
+// chaque sticker a sa petite inclinaison et son décalage, toujours les mêmes
+const lvJit = (x, d) => { const h = [...String(x.id || 'x')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); return { r: (h % 11) - 5, dx: ((h >> 4) % 17) - 8, dy: ((h >> 9) % 13) - 6, d }; };
+function livrePages(fresh, L, nu) {
+  L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
+  const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
   P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
   const stickers = B.ch.reduce((a, c) => a + c.mine.length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
@@ -19126,10 +19154,9 @@ function livrePages(fresh) {
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
-    const stuck = c.mine.filter(x => x.stuck !== false && x.pos), pend = c.mine.filter(x => x.stuck === false), maxPg = stuck.reduce((a, x) => Math.max(a, x.pos.pg), -1);
-    const nPg = maxPg + 1 + (live && pend.length ? 1 : 0);
-    for (let pgi = 0; pgi < nPg; pgi++) { const on = stuck.filter(x => x.pos.pg === pgi).sort((a, b) => a.night - b.night);
-      P.push({ k: 'st', n: c.n, pg: pgi, html: `<div class="lvp st free${on.length < 3 && live ? ' room' : ''}" data-ch="${c.n}" data-pg="${pgi}"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => lvSticker(x, q, isNew(x), true)).join('')}${!on.length ? '<p class="lv-hand small lv-here">Colle un sticker ici</p>' : ''}</div>` }); }
+    const all = c.mine.filter(x => x.stuck !== false).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
+    for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
+      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
     const mine = chapScore(c), rank = [['moi', mine], ...Object.entries(c.rivals)].sort((a, b) => b[1] - a[1]);
     const race = `<ol class="lv-race">${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? esc(S.name) : `${racer(w).emo} ${esc(racer(w).name)}`}<span>${Math.round(p)}</span></li>`).join('')}</ol>`;
@@ -19156,33 +19183,29 @@ const lvPending = () => { const c = bookCur(); return c ? c.mine.filter(x => x.s
 function openBook(n, where) {
   const B = bookState(); if (!B) return;
   const fresh = B.readNight == null ? 0 : B.readNight, single = innerWidth < 760;
-  let pages = livrePages(fresh);
+  // les stickers gagnés depuis la dernière fois se collent d'eux-mêmes, à la suite du chapitre
+  const nu = new Set(lvPending()); nu.forEach(x => { x.stuck = true; x.glued = S.night; });
+  let L = lvLayout(single); L.d0 = 1.05; let pages = livrePages(fresh, L, nu);
   const pick0 = () => {
-    if (lvPending().length) { const k = pages.map((p, i) => [p, i]).filter(([p]) => p.k === 'st' && p.n === bookCur().n); if (k.length) return k[k.length - 1][1]; }
+    if (nu.size) { const i = pages.findIndex(p => p.k === 'st' && p.on.some(x => nu.has(x))); if (i >= 0) return i; }
     const c = B.ch.find(x => x.n === n);
     if (c && (where === 'fin' || (c.age === 'sombre' && c.choices && !c.pact))) return pages.findIndex(p => p.k === 'fin' && p.n === n);
     if (n != null) return pages.findIndex(p => p.k === 'chap' && p.n === n);
     const live = pages.map((p, i) => [p, i]).filter(([p]) => p.n === bookCur().n && (p.k === 'st' || p.k === 'suite')); return live.length ? live[live.length - 1][1] : 1;
   };
-  let at = pick0(); if (at < 0) at = 1;
+  let at = pick0(); if (at < 0) at = 1; clearTimeout(LVA.t);
   const m = openModal(`<div class="lvbook${single ? ' single' : ''}"><div class="lv-spread"></div><div class="lv-cover"><div class="lv-cover-in"><span>📖</span><b>Le Livre du Maître</b><small>${esc(S.name)}</small></div></div><div class="lv-ribbon"></div></div>
-    <div class="lv-planche" hidden></div>
     <div class="lv-bar"><button type="button" class="lv-arrow" data-lvgo="-1" aria-label="Page précédente">◀</button><span class="lv-folio"></span><button type="button" class="lv-arrow" data-lvgo="1" aria-label="Page suivante">▶</button></div>`, { label: 'Le Livre du Maître', cls: 'livrebook', wide: true });
   LV = { idx: single ? at : at - (at % 2), single, m, anim: false, fresh };
-  const book = m.querySelector('.lvbook'), spread = m.querySelector('.lv-spread'), folio = m.querySelector('.lv-folio'), planche = m.querySelector('.lv-planche');
+  const book = m.querySelector('.lvbook'), spread = m.querySelector('.lv-spread'), folio = m.querySelector('.lv-folio');
   const pg = i => `<div class="lvpg-in">${(pages[i] || { html: '<div class="lvp blanc"></div>' }).html}</div>`;
   const last = () => LV.single ? pages.length - 1 : pages.length - 2;
-  const drawPlanche = () => {
-    const pend = lvPending(); planche.hidden = !pend.length; m.classList.toggle('withsheet', !!pend.length); if (!pend.length) return;
-    planche.innerHTML = `<p class="lv-hand">${pend.length > 1 ? `${pend.length} stickers à coller` : 'Un sticker à coller'} : fais-${pend.length > 1 ? 'les' : 'le'} glisser sur une page de l’ère en cours, ou touche-${pend.length > 1 ? 'les' : 'le'}.</p><div class="lv-sheet">${pend.map((x, i) => `<div class="lv-peel" data-peel="${i}">${lvSticker(x, i, false)}</div>`).join('')}</div>${pend.length > 2 ? '<button type="button" class="sbtn small" data-lvall="1">Tout coller</button>' : ''}`;
-  };
   const render = () => {
     spread.innerHTML = LV.single ? `<div class="lv-pg one">${pg(LV.idx)}</div>` : `<div class="lv-pg l">${pg(LV.idx)}</div><div class="lv-pg r">${pg(LV.idx + 1)}</div>`;
     m.querySelector('[data-lvgo="-1"]').disabled = LV.idx <= 0; m.querySelector('[data-lvgo="1"]').disabled = LV.idx >= last();
     folio.textContent = LV.single ? `page ${LV.idx + 1} sur ${pages.length}` : `pages ${LV.idx + 1}–${LV.idx + 2} sur ${pages.length}`;
-    drawPlanche();
   };
-  const rebuild = (focusPg) => { pages = livrePages(LV.fresh); if (focusPg != null) { const i = pages.findIndex(p => p.k === 'st' && p.n === bookCur().n && p.pg === focusPg); if (i >= 0) LV.idx = LV.single ? i : i - (i % 2); } LV.idx = Math.max(0, Math.min(LV.idx, last())); render(); };
+  const rebuild = () => { L.d0 = .25; pages = livrePages(LV.fresh, L); LV.idx = Math.max(0, Math.min(LV.idx, last())); render(); };
   const flip = (dir, to) => {
     if (LV.anim) return; const step = LV.single ? 1 : 2, nx = to != null ? to : LV.idx + dir * step; if (nx < 0 || nx > last() || nx === LV.idx) return;
     LV.anim = true; sfx('tick');
@@ -19195,29 +19218,11 @@ function openBook(n, where) {
     spread.appendChild(leaf); requestAnimationFrame(() => requestAnimationFrame(() => leaf.classList.add('go')));
     setTimeout(() => { LV.idx = nx; render(); LV.anim = false; }, 680);
   };
-  // coller : là où on lâche le sticker (une page de l'ère en cours, trois stickers au plus), ou à la prochaine place libre
-  const stickAt = (x, page, cx, cy) => {
-    const c = bookCur(), pgi = +page.dataset.pg, on = c.mine.filter(y => y.stuck !== false && y.pos && y.pos.pg === pgi).length;
-    if (+page.dataset.ch !== c.n) { toast(`Ce sticker va dans le chapitre en cours : l’Ère ${c.name}.`, true); return false; }
-    if (on >= 3) { toast('Cette page est pleine : tourne la page.', true); return false; }
-    const r = page.getBoundingClientRect(), px = Math.max(24, Math.min(76, (cx - r.left) / r.width * 100)), py = Math.max(24, Math.min(78, (cy - r.top) / r.height * 100));
-    x.pos = { pg: pgi, x: Math.round(px), y: Math.round(py), r: Math.round(Math.random() * 10 - 5) }; x.stuck = true; x.glued = S.night; return true;
-  };
-  const stuckFx = x => { sfx('pop'); save(); LV.fresh = Math.min(LV.fresh, x.night - 1); rebuild(x.pos.pg); setTimeout(() => sfx('chime'), 250); };
-  const autoStick = x => { bookPlace(bookCur(), x); stuckFx(x); };
-  let drag = null;
-  planche.addEventListener('pointerdown', e => {
-    const el = e.target.closest('[data-peel]'); if (!el || LV.anim) return; e.preventDefault();
-    const x = lvPending()[+el.dataset.peel]; if (!x) return; const ghost = el.cloneNode(true); ghost.className = 'lv-ghost'; document.body.appendChild(ghost);
-    drag = { x, el, ghost, sx: e.clientX, sy: e.clientY, moved: false }; el.classList.add('lifting');
-    const mv = ev => { if (!drag) return; if (Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 8) drag.moved = true; ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st')); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover')); if (pgEl) pgEl.classList.add('hover'); };
-    const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); const d = drag; drag = null; ghost.remove(); d.el.classList.remove('lifting'); spread.querySelectorAll('.lvp.hover').forEach(n => n.classList.remove('hover'));
-      if (!d.moved) { autoStick(d.x); return; }   // un simple toucher : à la prochaine place libre
-      const pgEl = document.elementsFromPoint(ev.clientX, ev.clientY).find(n => n.classList && n.classList.contains('lvp') && n.classList.contains('st') && !n.closest('.lv-leaf'));
-      if (pgEl && stickAt(d.x, pgEl, ev.clientX, ev.clientY)) stuckFx(d.x); else if (!pgEl) sfx('tick'); };
-    mv(e); addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
-  });
   render();
+  // la vraie taille de la page (sous la couverture encore fermée) : on remet en page si elle diffère de l'estimation
+  { const pe = spread.querySelector('.lvp'); if (pe && pe.clientWidth) { const L2 = lvLayout(LV.single, pe.clientWidth, pe.clientHeight); if (L2.cap !== L.cap || L2.cols !== L.cols || L2.w !== L.w) { L = Object.assign(L2, { d0: L.d0 }); pages = livrePages(fresh, L, nu); at = pick0(); if (at < 0) at = 1; LV.idx = LV.single ? at : at - (at % 2); render(); } } }
+  // le bruit des stickers qui se collent, un par un, une fois la couverture ouverte
+  [...nu].slice(0, 6).forEach((x, k) => setTimeout(() => { if (m.isConnected) sfx(k ? 'pop' : 'chime'); }, (L.d0 + k * .5 + .35) * 1000));
   // la couverture s'ouvre, puis on note ce qui a été lu
   requestAnimationFrame(() => requestAnimationFrame(() => book.classList.add('opened')));
   setTimeout(() => { const cv = m.querySelector('.lv-cover'); if (cv) cv.remove(); }, 1000);
@@ -19225,7 +19230,6 @@ function openBook(n, where) {
   m.addEventListener('click', e => {
     const g = e.target.closest('[data-lvgo]'); if (g) { flip(+g.dataset.lvgo); return; }
     if (e.target.closest('[data-allstk]')) { closeModal(true); if (typeof openStickerBook === 'function') openStickerBook(); return; }
-    if (e.target.closest('[data-lvall]')) { const c = bookCur(); lvPending().forEach(x => bookPlace(c, x)); sfx('pop'); save(); rebuild(); toast('📖 Tous les stickers sont collés.'); return; }
     const p = e.target.closest('[data-pact]');
     if (p) { if (!run('pact', { id: p.dataset.pact })) return; sfx('chime'); toast(`${PACT_BY[p.dataset.pact].ico} Pacte : ${PACT_BY[p.dataset.pact].name}.`); afterChange(); rebuild(); return; }
     // toucher le bord d'une page la tourne
@@ -19238,6 +19242,15 @@ function openBook(n, where) {
   addEventListener('keydown', key);
 }
 openAch = function () { openBook(); };
+/* ---------- le livre s'ouvre de lui-même quand un sticker est gagné, dès que le joueur a les mains libres ---------- */
+const LVA = { t: 0 };
+const lvBusy = () => !S || !S.started || $('#modalRoot').children.length || UI.hand || UI.busy || UI.dragging || document.querySelector('.cpage') || (typeof MAPV !== 'undefined' && MAPV.open) || (typeof ADMIN !== 'undefined' && ADMIN.open) || (typeof VISIT !== 'undefined' && VISIT) || (typeof COOP !== 'undefined' && COOP.role === 'guest') || document.hidden;
+function lvAutoSoon(ms = 900) { if (typeof headless === 'function' && headless()) return; clearTimeout(LVA.t); LVA.t = setTimeout(lvAutoTry, ms); }
+function lvAutoTry() { if (!S || !S.book || !lvPending().length) return; if (lvBusy()) { LVA.t = setTimeout(lvAutoTry, 1200); return; } openBook(); }
+const bookAddLv = bookAdd;
+bookAdd = function (c, x) { const r = bookAddLv.apply(this, arguments); try { if (r && r.stuck === false) lvAutoSoon(); } catch (e) {} return r; };
+const closeModalLv = closeModal;
+closeModal = function () { const r = closeModalLv.apply(this, arguments); try { if (S && S.book && lvPending().length) lvAutoSoon(700); } catch (e) {} return r; };
 /* =========================================================
    Des stickers en abondance, et le Livre des stickers
    Bien plus de stickers qu'une partie ne peut en offrir, pour
@@ -19268,7 +19281,7 @@ function stk(id, t, ico, cat, pts, d, o = {}) {
   if (!S || !S.started || !S.book) return null; const B = S.book; B.closed = B.closed || {};
   if (o.excl && B.closed[o.excl] && B.closed[o.excl] !== id) return null;   // un choix exclusif a déjà été fait dans cette partie
   const x = bookEarnDyn(id, { t, ico, cat, pts, sub: o.sub || '', art: o.art || null, d }, o.lines);
-  if (x) { x.d = d; if (o.excl) B.closed[o.excl] = id; if (!o.lines && typeof toast === 'function' && !(typeof headless === 'function' && headless())) { toast(`📖 Un sticker à coller : ${t}`); sfx('chime'); } }
+  if (x) { x.d = d; if (o.excl) B.closed[o.excl] = id;  }
   return x;
 }
 const spName = sp => (SPECIES[sp] || {}).name || sp;
@@ -19349,7 +19362,8 @@ function stkCatalogSize() {
 function openStickerBook() {
   const M = metaLoad(), got = Object.entries(M.got || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
-  for (let i = 0; i < got.length; i += 2) P.push(`<div class="lvp st free">${got.slice(i, i + 2).map(([id, g], j) => lvSticker({ id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night, pos: { x: j ? 66 : 33, y: j ? 70 : 31, r: j ? 3 : -4 } }, j, false, true)).join('')}</div>`);
+  const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
+  for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const x = { id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
   const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
   P.push(`<div class="lvp blanc"><p class="lv-hand big">Encore ${Math.max(0, total - got.length)} stickers à découvrir…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand small">Personne ne sait vraiment ce qui les fait apparaître. Essaie des choses.</p></div>`);
   if (P.length % 2) P.push('<div class="lvp blanc"></div>'); P.push('<div class="lvp garde"></div>');
@@ -20099,6 +20113,98 @@ function lvAgeArt(c) { const k = c.age === 'or' ? 'or_' + eraArtKey(c.name) : 'a
 const STK_FALLBACK = { f_boss: 'age_heroique', r_boss: 'age_heroique', boss3: 'age_heroique', f_rare: 'vic_menagerie', f_dragon: 'vic_menagerie' };
 const lvArtSka2 = lvArt;
 lvArt = function (x, m) { const h = lvArtSka2(x, m); if (!/lvs-emo/.test(h)) return h; const u = stkArt(STK_FALLBACK[x.id] || 'vic_any'); return u ? `<img alt="" src="${u}">` : h; };
+/* =========================================================
+   L'aide en jeu
+   - un « ? » à côté des mots des fiches (loyauté, humeur,
+     salaire, réputation…) qui ouvre le Grimoire à la bonne page,
+     avec un retour à la fiche d'où l'on vient ;
+   - à la souris, une pastille qui nomme le bouton survolé.
+   ========================================================= */
+// les mots des fiches, et l'article du Grimoire qui les explique
+const AIDE_TERMS = [
+  [/^loyaute/, 'loyaute', 'la loyauté'], [/^epanouissement|epanouit/, 'loyaute', 'l’épanouissement'], [/^humeur/, 'humeur', 'l’humeur'],
+  [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie/, 'paie', 'le salaire'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et les gardes'],
+  [/^combat/, 'combat', 'le combat'], [/^competence/, 'creatures', 'les compétences'], [/^caractere|^occupation/, 'caracteres', 'le caractère'],
+  [/^reves? secrets?|^envies?\b/, 'missions', 'les envies et les rêves secrets'], [/^reputation/, 'reputation', 'la réputation'], [/^renommee/, 'renommee', 'la renommée'],
+  [/^ambiance/, 'ambiance', 'l’ambiance'], [/^lits?\b|^repas/, 'lits_repas', 'les lits et les repas'], [/^calamite/, 'calamite', 'la Calamité'], [/^menace/, 'menace', 'la Menace'],
+  [/^notoriete/, 'ressources', 'la notoriété'], [/^rayonnement|^eclat/, 'rayonnement', 'le rayonnement'], [/^emotions?\b/, 'emotions', 'les émotions'], [/^saisons?\b/, 'saisons', 'les saisons'],
+  [/^artefacts?\b/, 'artefacts', 'les artefacts'], [/^paliers?\b/, 'paliers', 'les paliers'], [/^elements?\b/, 'elements', 'les éléments'], [/^merveilles?\b/, 'merveilles', 'les Merveilles'],
+  [/^(grands? )?chantiers?\b/, 'chantiers', 'les grands chantiers'], [/^etages?\b/, 'etages', 'les étages'], [/^remparts?\b/, 'remparts', 'les remparts'], [/^quetes?\b/, 'quetes', 'les quêtes'],
+  [/^factions?\b|^territoires?\b/, 'factions', 'les factions'], [/^oeufs?\b/, 'oeufs', 'les œufs'], [/^metiers?\b|^artisanat/, 'artisanat', 'les métiers'], [/^risques?\b/, 'risques', 'les risques'],
+  [/^raids?\b/, 'raids', 'les raids'], [/^pieges?\b|^verrous?\b/, 'pieges', 'les pièges'], [/^invasions?\b/, 'invasion', 'les invasions'], [/^prisonniers?\b|^oubliettes?\b/, 'prisonniers', 'les prisonniers'],
+  [/^intrigues?\b/, 'intrigues', 'les intrigues'], [/^cuisine|^garde-manger/, 'cuisine', 'la cuisine'],
+];
+const aideNorm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/^[^a-z]+/, '').trim();
+const aideTerm = t => { const n = aideNorm(t); return AIDE_TERMS.find(([re]) => re.test(n)); };
+const aideQ = (key, what) => `<button type="button" class="aideq" data-wiki-open="${key}" data-tip="Comprendre ${what}" aria-label="Comprendre ${what}, dans le Grimoire">?</button>`;
+// les intitulés des fiches ouvertes reçoivent leur « ? » (une fois chacun)
+function aideScan() {
+  const m = document.querySelector('#modalRoot .modal'); if (!m || m.matches('.grimoire, .livrebook, .titlem')) return;
+  m.querySelectorAll('dt, h3, summary').forEach(e => {
+    if (e.dataset.aide) return; e.dataset.aide = '1';
+    if (e.querySelector('[data-wiki-open]') || e.closest('.grim, .lvbook')) return;
+    const T = aideTerm(e.textContent); if (T) e.insertAdjacentHTML('beforeend', aideQ(T[1], T[2]));
+  });
+}
+// le Grimoire ouvert depuis une fiche garde un bouton pour y revenir
+const openGrimoireAide = openGrimoire;
+openGrimoire = function () {
+  const ctx = typeof UI !== 'undefined' && UI.mctx && document.querySelector('#modalRoot .modal') ? UI.mctx.slice() : null;
+  const r = openGrimoireAide.apply(this, arguments);
+  try {
+    let label = null, back = null;
+    if (ctx && ctx[0] === 'creature') { const c = S.creatures.find(x => x.id === ctx[1]); if (c) { label = c.name; back = () => openCreature(c.id); } }
+    else if (ctx && ctx[0] === 'room') { const rm = S.rooms.find(x => x.id === ctx[1]); if (rm && ROOMS[rm.t]) { label = ROOMS[rm.t].name; back = () => openRoom(rm.id); } }
+    const g = document.querySelector('#modalRoot .grim');
+    if (back && g) { const b = document.createElement('button'); b.type = 'button'; b.className = 'sbtn gtoback'; b.textContent = `← Retour à la fiche : ${label}`; b.addEventListener('click', () => { sfx('tick'); back(); }); g.insertAdjacentElement('beforebegin', b); }
+  } catch (e) {}
+  return r;
+};
+
+/* ---------- la pastille au survol (souris seulement ; au doigt, c'est l'appui long) ---------- */
+const HOVER_NAMES = {
+  btnMenu: 'Partie et sauvegardes', turn: 'Les victoires du Val', btnAdmin: 'L’Atelier du Maître', adminFab: 'L’Atelier du Maître', btnSound: 'Le son', btnHelp: 'Le Grimoire des règles',
+  btnCrit: 'Tes créatures', btnBest: 'L’album des espèces', btnRen: 'La renommée', btnAch: 'Le Livre du Maître', btnQuests: 'Le journal des quêtes',
+  btnBuild: 'Construire', btnBuildClose: 'Fermer la construction', minimap: 'La carte du Val', zfit: 'Recadrer la vue', btnPath: 'Le chemin des héros',
+  btnGuards: 'Les gardes', btnRaid: 'Raid et expéditions', btnTier: 'Le Cœur du donjon', btnVal: 'Le Val des Maîtres', btnNight: 'Finir la nuit',
+};
+const HV = { t: 0, el: null, tip: null };
+const hvCap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+function hvText(el) {
+  const nm = HOVER_NAMES[el.id];
+  if (nm) { const h = (typeof LP_HELP !== 'undefined' && LP_HELP[el.id]) || '', i = h.indexOf(' : '); return [nm, i > 0 ? hvCap(h.slice(i + 3)) : '']; }
+  const t = ((el.dataset && el.dataset.tip) || el.getAttribute('aria-label') || '').trim(); if (!t) return null;
+  const i = t.indexOf(' : '); return i > 0 && i < 40 ? [t.slice(0, i), hvCap(t.slice(i + 3))] : [t, ''];
+}
+// le bouton ou la pastille de ressource survolé, s'il mérite une étiquette
+function hvTarget(n) {
+  const el = n && n.closest && n.closest('[id], .res, .dial, .aideq, [data-tip], [title], button, [role=button]'); if (!el || el.tagName === 'CANVAS' || el.closest('.card, .notif, .lvbook')) return null;
+  if (el.hasAttribute('title')) { if (!el.dataset.tip) el.dataset.tip = el.getAttribute('title'); el.removeAttribute('title'); }   // pas de double infobulle
+  if (HOVER_NAMES[el.id] || el.dataset.tip) return el;
+  if ((el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') && el.getAttribute('aria-label') && (el.textContent || '').replace(/[^A-Za-zÀ-ÿ]/g, '').length < 2) return el;   // un bouton sans texte : juste une icône
+  return el.parentElement && el.parentElement !== document.body ? hvTarget(el.parentElement) : null;
+}
+function hvShow(el) {
+  const T = hvText(el); if (!T || !el.isConnected) return;
+  let b = HV.tip; if (!b) { b = HV.tip = document.createElement('div'); b.className = 'hovtip'; b.setAttribute('role', 'tooltip'); document.body.appendChild(b); }
+  b.innerHTML = `<b>${esc(T[0])}</b>${T[1] ? `<small>${esc(T[1])}</small>` : ''}`; b.classList.toggle('long', !!T[1]); b.hidden = false;
+  const r = el.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight, below = r.top < 140 || r.top - bh - 10 < 8;
+  b.style.left = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8)) + 'px'; b.style.top = (below ? r.bottom + 9 : r.top - bh - 9) + 'px';
+}
+function hvHide() { clearTimeout(HV.t); HV.el = null; if (HV.tip) HV.tip.hidden = true; }
+function aideInit() {
+  const mr = document.getElementById('modalRoot');
+  if (mr && typeof MutationObserver !== 'undefined') { let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; aideScan(); }); }).observe(mr, { childList: true, subtree: true }); }
+  // un « ? » dans un titre repliable ouvre le Grimoire sans replier le titre
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.aideq')) e.preventDefault(); }, true);
+  addEventListener('pointerover', e => {
+    if (e.pointerType !== 'mouse') return; const el = hvTarget(e.target); if (el === HV.el) return;
+    hvHide(); if (!el) return; HV.el = el; HV.t = setTimeout(() => { if (HV.el === el) hvShow(el); }, 260);
+  }, true);
+  addEventListener('pointerout', e => { if (HV.el && !(e.relatedTarget && HV.el.contains(e.relatedTarget))) hvHide(); }, true);
+  addEventListener('pointerdown', hvHide, true); addEventListener('wheel', hvHide, { passive: true, capture: true }); addEventListener('keydown', hvHide, true);
+}
+if (typeof document !== 'undefined' && typeof addEventListener === 'function' && typeof MutationObserver !== 'undefined') { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aideInit); else aideInit(); }
 
 /* ---------- lancement (en dernier : tout le code est chargé) ---------- */
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ S })); } catch (e) {}
