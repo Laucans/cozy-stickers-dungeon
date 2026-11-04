@@ -11,7 +11,7 @@ const SHOP = {
   humeur: { name: 'Potion de bonne humeur', ico: '🧪', price: 6, per: 1, desc: 'Toutes tes créatures gagnent 1 ❤️. Goût framboise-soufre.' },
   fidelite: { name: 'Élixir de fidélité', ico: '💞', price: 8, per: 1, desc: '+12 loyauté pour toutes tes créatures. Ne surtout pas en boire soi-même.' },
   tisane: { name: 'Tisane anti-calamité', ico: '🌿', price: 6, per: 1, desc: '−3 Calamité. Camomille, valériane et une pincée de bave de crapaud.' },
-  oubli: { name: 'Sirop d’oubli', ico: '🫗', price: 8, per: 1, desc: '−2 Menace : on en verse discrètement dans le puits du village.' },
+  oubli: { name: 'Sirop d’oubli', ico: '🫗', price: 8, per: 3, desc: '−2 Menace : on en verse discrètement dans le puits du village.' },
   tournee: { name: 'Tournée générale', ico: '🍻', price: 6, per: 1, desc: '+2 🔥 : tout le monde boit à ta santé, sans savoir qui tu es.' },
   merco: { name: 'Mercenaire à la semaine', ico: '🗡️', price: 10, per: 3, desc: 'Un garde du corps défend ton Cœur pendant 3 nuits (+4 garde). Il ne pose aucune question, et ne répond à aucune non plus.' },
   tableau: { name: 'Consulter le tableau des quêtes', ico: '📋', price: 0, desc: 'Gratuit : qui part bientôt à l’assaut d’un château… comme le tien ?' },
@@ -52,7 +52,7 @@ function shopStock(site) {
 function shopPrice(site, item, arg) {
   const m = townMarkup(site).k;
   if (item === 'deco') return Math.ceil(Math.max(2, (FURN[arg].cost.g || 1) * 1.5) * m);
-  if (item === 'artefact') return Math.ceil((24 + FURN[arg].glow * 2) * m);
+  if (item === 'artefact') return Math.ceil((24 + FURN[arg].glow * 2) * m * (1 + .25 * ((S.stats && S.stats.artBought) || 0)));   // chaque artefact acheté renchérit les suivants (+25 %)
   if (item === 'rachat') return Math.ceil(20 * m);
   if (item === 'vendre') return -(12 + FURN[arg].glow);
   if (item === 'recrue') return Math.ceil((8 + ((SPECIES[arg] || {}).tier || 0) * 4) * m);
@@ -93,7 +93,7 @@ function shopBuy(a) {
   }
   else if (item === 'carte') discover([...discAround(site.q, site.r, 2), ...(w.roads.get(site.id) || [])], 'carte du cartographe');
   else if (item === 'deco') S.free[arg] = (S.free[arg] || 0) + 1;
-  else if (item === 'artefact') giveArtefact(arg, 'acheté en ville');
+  else if (item === 'artefact') { giveArtefact(arg, 'acheté en ville'); S.stats.artBought = (S.stats.artBought || 0) + 1; }
   else if (item === 'rachat') { S.world.stolen = S.world.stolen.filter(k => k !== arg); giveArtefact(arg, 'racheté au brocanteur'); }
   else if (item === 'vendre') { S.free[arg]--; addLog(`${FURN[arg].name} vendu au brocanteur.`); }
   else if (item === 'voyance') a.found = revealSecret(hidden[0], 'voyance');

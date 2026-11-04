@@ -195,12 +195,12 @@ function mapDom() {
   let box = $('#world'); if (box) return box;
   box = el('div', 'world'); box.id = 'world'; box.hidden = true;
   box.innerHTML = `<canvas id="wcv" aria-label="Carte du Val"></canvas>
-    <div class="wtop panel"><b>🗺️ La carte du Val</b><span id="wglow"></span><span class="wbtns"><button class="pill" type="button" data-w="center">⌂ Mon château</button><button class="pill" type="button" data-w="in" aria-label="Zoomer sur la carte">+</button><button class="pill" type="button" data-w="out" aria-label="Dézoomer la carte">−</button><button class="pill" type="button" data-w="help" aria-label="Le Grimoire : comment lire la carte du Val">📖</button><button class="pill on" type="button" data-w="close">↩ Retour au château</button></span></div>
+    <div class="wtop panel"><b>🗺️ La carte du Val</b><span id="wglow"></span><span class="wbtns"><button class="pill" type="button" data-w="center">⌂ Mon château</button><button class="pill" type="button" data-w="in" aria-label="Zoomer sur la carte">+</button><button class="pill" type="button" data-w="out" aria-label="Dézoomer la carte">−</button><button class="pill" type="button" data-w="tuto" aria-label="Visite guidée de la carte" title="Visite guidée de la carte">🎓</button><button class="pill" type="button" data-w="help" aria-label="Le Grimoire : comment lire la carte du Val">📖</button><button class="pill on" type="button" data-w="close">↩ Retour au château</button></span></div>
     <aside class="wpanel panel" id="wpanel"></aside>`;
   $('#game').appendChild(box);
   const wcv = box.querySelector('#wcv');
   box.querySelector('.wtop').addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; const k = b.dataset.w;
-    if (k === 'close') closeWorld(); else if (k === 'center') { MAPV.sel = siteById('home'); mapCenter(0, 0); renderMapPanel(); } else if (k === 'in') mapZoom(1.25); else if (k === 'out') mapZoom(.8); else if (k === 'help') openGrimoire('carte'); });
+    if (k === 'close') closeWorld(); else if (k === 'center') { MAPV.sel = siteById('home'); mapCenter(0, 0); renderMapPanel(); } else if (k === 'in') mapZoom(1.25); else if (k === 'out') mapZoom(.8); else if (k === 'help') openGrimoire('carte'); else if (k === 'tuto' && typeof mapTutoStart === 'function') mapTutoStart(true); });
   box.querySelector('#wpanel').addEventListener('click', mapPanelClick);
   // reprend le geste avec les doigts encore posés : un doigt déplace, deux pincent (sans ça, relever un doigt après un pincement cassait la vue)
   const grip = moved => { const p = [...MAPV.ptr.values()]; if (!p.length) MAPV.drag = null; else if (p.length === 1) MAPV.drag = { x: p[0].x, y: p[0].y, cx: MAPV.cam.x, cy: MAPV.cam.y, moved }; else MAPV.drag = { pinch: Math.max(1, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), s: MAPV.cam.s, moved: true }; };
@@ -215,7 +215,7 @@ function mapDom() {
   wcv.addEventListener('pointerup', up); wcv.addEventListener('pointercancel', up);
   wcv.addEventListener('wheel', e => { e.preventDefault(); mapZoomTo(MAPV.cam.s * Math.exp(-e.deltaY * .0016), e.clientX, e.clientY); }, { passive: false });
   // le panneau de droite se cale sous la barre du haut, même quand elle passe sur deux lignes (téléphone couché)
-  const wtop = box.querySelector('.wtop'), fitPanel = () => { const b = wtop.getBoundingClientRect().bottom; if (b > 0) box.style.setProperty('--wtopB', Math.round(b) + 'px'); };
+  const wtop = box.querySelector('.wtop'), fitPanel = () => { const b = wtop.getBoundingClientRect().bottom; if (b > 0) document.documentElement.style.setProperty('--wtopB', Math.round(b) + 'px'); };   // aussi pour le conseiller, hors de la carte
   MAPV.fit = fitPanel; try { new ResizeObserver(fitPanel).observe(wtop); } catch (x) {} addEventListener('resize', fitPanel);
   document.addEventListener('keydown', e => { if (MAPV.open && e.key === 'Escape' && !$('#modalRoot').children.length) closeWorld(); });
   return box;

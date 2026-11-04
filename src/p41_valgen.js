@@ -157,7 +157,7 @@ function genWorld2(seed) {
 }
 
 // une phrase pour présenter le Val tiré au sort (sans rien dévoiler des lieux à découvrir)
-function valSummary(w) {
+function valWorldSummary(w) {   // (s'appelait valSummary : même nom que le résumé du château publié dans le Val, qu'elle remplaçait, et la publication plantait)
   const dir = L => { if (!L.length) return ''; const x = L.reduce((a, c) => a + SQ3 * (c.q + c.r / 2), 0) / L.length, y = L.reduce((a, c) => a + 1.5 * c.r, 0) / L.length, a = Math.atan2(-y, x); return ['à l’est', 'au nord-est', 'au nord', 'au nord-ouest', 'à l’ouest', 'au sud-ouest', 'au sud', 'au sud-est'][((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]; };
   const n = t => w.list.filter(c => c.t === t).length, sea = w.list.filter(c => c.t === 'mer'), mts = w.list.filter(c => c.t === 'montagne'), tot = w.list.length;
   const parts = [];

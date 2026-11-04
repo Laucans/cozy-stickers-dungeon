@@ -93,6 +93,7 @@ node sim/play.mjs wiki v_menagerie
 ```
 
 - `furnish <pièce|all> [or]` accepte un plafond de dépense ; `build <pièce> 9` construit dans les Jardins (dehors) et `foret` rachète une parcelle de forêt pour les agrandir.
+- `new partie.json 4242 fil` crée une partie avec le fil rouge des nouveaux joueurs (chapitres et objectifs, affichés dans l'état ; pas d'aventuriers au chapitre 1, première bande forcée au chapitre 2). Actions ajoutées : `journal` (quêtes du Val), `wonder <remparts|cave|galerie|archives>`, `fete`, `victoires`, `fil`, `drill` (répétition de défense aux cartes, jouée par l'ordinateur).
 - `state` réaffiche l'état ; `help` liste les actions (build, furnish, decor, traps, posts, raid, expe, scout, shop, stock, request, tier, expand, floorup, floordown, project, power, care, quests).
 - `night` fait d'abord les soins et les missions, rappelle les gardes si des héros arrivent, joue jusqu'à 10 nuits et s'arrête plus tôt si un raid est prévu.
 - `wiki` sans argument liste les articles du Grimoire.
@@ -158,6 +159,8 @@ Version 20 (les métiers : forgerons, mécaniciens, érudits, conteurs, cuisinie
 Version 21 (journal des quêtes, `src/p52_quetes.js`) : `A.questStep()` (dans `common()`) accepte les offres (3 en cours au plus), livre, choisit la première option, cuisine les plats demandés et lance raids et expéditions de quête avec `A.raid`. Sur 120 nuits, les IA accomplissent 3 à 9 quêtes ; la grande quête bloque surtout à l'étape 2 (il faut Forge, Laboratoire et Cuisine) ou au boss. Grondefer (90 PV) : une équipe qui bat le Basilic 57 % du temps en `crawlAuto` bat Grondefer environ 30 % du temps. Depuis, les quêtes sont tirées au sort (`genMain` : une grande quête parmi cinq boss, `QBOSSES` ; `genSide` : huit modèles, `QGEN`) et enregistrées telles quelles dans `S.quests` ; sur 120 nuits, les IA accomplissent 15 à 24 quêtes secondaires.
 
 Joueurs Sonnet (version 10, une partie chacun) : la victoire la plus rapide a été la Terreur à la nuit 30 (un raid de donjon par nuit, 12 réussites sur 12) ; la Ménagerie a été gagnée à la nuit 75, freinée surtout par les 5 légendes (21 nuits bloquée à 25 %). Leurs remarques : l'or déborde après la nuit 40, aucune menace sérieuse, missions imposées et impossibles à échanger.
+
+Boucles d'amélioration de novembre 2026 (voir `sim/BOUCLES.md`) : joueurs Sonnet et lots `node sim/run.mjs 12 120` après chaque boucle (`results_l1/2/3.json` gardés dans le dossier temporaire seulement). Repères IA après la boucle 3 : Légende 100 % · 57, Voisinage 100 % · 40, Secrets 100 % · 44, Ménagerie 17 %, Terreur voir BOUCLES.md. Joueurs Sonnet : Voisinage 39 (plancher des Conseils), Secrets 29 → 36, Légende 43 → 49, Terreur 25 → 33-35. Nouvelles actions en ligne de commande : `post`, `renvoyer`, `journal`, `wonder`, `merveilles`, `fete`, `victoires`, `fil`, `drill` ; `decor <objet> [pièce]` ; `expe x_lieu` ou `expe r_rival`. Pour essayer une règle sans toucher au jeu : copie `src` dans `sim/src_a`, modifie, et `CSD_SRC=sim/src_a node …` (supprime la copie ensuite).
 
 ## Limites à garder en tête
 

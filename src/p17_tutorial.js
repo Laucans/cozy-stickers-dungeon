@@ -17,7 +17,7 @@ function suggestRoom(t) {
 const cellsOfType = t => { const r = S.rooms.find(x => x.t === t); return r ? cellsOf(r) : null; };
 const hasFood = () => S.furn.some(f => FURN[f.t] && FURN[f.t].food && FURN[f.t].room !== 'any');
 const TUTO_STEPS = [
-  { id: 'intro', t: 'Bienvenue, Maître !', x: 'Je suis Gribouille, ton vieux conseiller. Je vais t’apprendre à transformer ce vieux château en repaire douillet et redouté. Tu peux passer le tutoriel quand tu veux.', btn: 'next' },
+  { id: 'intro', t: 'Bienvenue, Maître !', x: 'Je suis Gribouille, ton vieux conseiller. Je vais t’apprendre à transformer ce vieux château en repaire douillet et redouté. Tu peux passer le tutoriel quand tu veux. Et si je cache quelque chose, prends-moi par le visage et fais-moi glisser !', btn: 'next' },
   { id: 'camera', t: 'Regarde autour de toi', x: 'Fais glisser le château pour te déplacer, zoome avec la molette ou en pinçant l’écran. Le bouton ⤢, en bas à droite, recadre tout le château.', target: '#zfit', enter: () => { TUTO.flags.cam = false; TUTO.cam0 = { x: CAM.x, y: CAM.y, s: CAM.s }; }, until: () => { const c = TUTO.cam0; return !!TUTO.flags.cam || !!(c && (Math.abs(CAM.x - c.x) > 30 || Math.abs(CAM.y - c.y) > 30 || Math.abs(CAM.s - c.s) > .05)); }, btn: 'next' },
   { id: 'dortoir', t: 'Ta première pièce', x: 'Tes créatures ont besoin de lits. Le bouton Construire (en bas à gauche) ouvre tes stickers : onglet Pièces, prends le {room:dortoir} et colle-le sur les cases qui brillent, contre le couloir.', target: '.card[data-kind="room"][data-t="dortoir"]', enter: () => setTab('room'), cells: () => suggestRoom('dortoir'), until: () => S.rooms.some(r => r.t === 'dortoir') },
   { id: 'chantier', t: 'Un chantier', x: 'La pièce démarre en chantier : l’horloge rouge au-dessus se remplit pendant la nuit. Tes ouvriers posent quelques segments par nuit, plus encore avec des diablotins. On ne meuble une pièce qu’une fois terminée : il faut laisser passer la nuit. Voir {c:construire}.', btn: 'next' },
@@ -50,8 +50,21 @@ const TIPS = [
 ];
 function advisorShow(o) {
   const a = $('#advisor'); a.hidden = false; a.className = 'advisor' + (o.cls ? ' ' + o.cls : '');
-  a.innerHTML = `<div class="adv-pic"><img alt="" src="${portrait('diablotin')}"></div><div class="adv-box"><div class="adv-head"><b>${esc(o.title)}</b>${o.step ? `<small>${o.step}/${o.total}</small>` : ''}</div>
+  a.innerHTML = `<div class="adv-pic" title="Fais-moi glisser pour voir ce que je cache (deux touchers : je reviens)"><img alt="" src="${portrait('diablotin')}"></div><span class="adv-grip" aria-hidden="true">✥</span><div class="adv-box"><div class="adv-head"><b>${esc(o.title)}</b>${o.step ? `<small>${o.step}/${o.total}</small>` : ''}</div>
     <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
+  advPlace();
+}
+// Gribouille se déplace : on le prend par le visage, avec sa bulle, pour voir ce qu'il cache (deux touchers rapides le remettent à sa place)
+const ADVM = { x: 0, y: 0, drag: null, tap: 0 };
+function advPlace() {
+  const a = $('#advisor'); if (!a) return;
+  a.style.translate = ADVM.x || ADVM.y ? `${ADVM.x}px ${ADVM.y}px` : '';
+  if (a.hidden || (!ADVM.x && !ADVM.y)) return;
+  const p = a.querySelector('.adv-pic'), r = p && p.getBoundingClientRect(); if (!r || !r.width) return;
+  const m = 6; let dx = 0, dy = 0;   // son visage reste toujours à l'écran, pour pouvoir le reprendre
+  if (r.left < m) dx = m - r.left; else if (r.right > innerWidth - m) dx = innerWidth - m - r.right;
+  if (r.top < m) dy = m - r.top; else if (r.bottom > innerHeight - m) dy = innerHeight - m - r.bottom;
+  if (dx || dy) { ADVM.x += dx; ADVM.y += dy; a.style.translate = `${ADVM.x}px ${ADVM.y}px`; }
 }
 function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.tip = null; TUTO.tipObj = null; }
 function showStep(st) {
@@ -65,10 +78,10 @@ function showStep(st) {
 function nextStep() { if (!S.tuto) return; const hid = !!S.tuto.hid; S.tuto.i++; delete S.tuto.hid; delete S.tuto.n0; if (hid && TUTO_STEPS[S.tuto.i]) S.tuto.hid = TUTO_STEPS[S.tuto.i].id; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
 function startTutorial() { S.tuto = { on: true, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; save(); tutoTick(); }
 function tutoTick() {
-  document.querySelectorAll('.tuto-glow').forEach(e => e.classList.remove('tuto-glow'));
+  document.querySelectorAll('.tuto-glow').forEach(e => { if (!(typeof MAPT !== 'undefined' && MAPT.on && e.closest('#wpanel'))) e.classList.remove('tuto-glow'); });   // la visite de la carte garde son éclairage
   V.tutoCells = null;
   const wv = document.getElementById('world');
-  if (!S || !S.started || UI.busy || ADMIN.open || VISIT || COOP.role === 'guest' || (wv && !wv.hidden) || document.body.classList.contains('crawling')) { const a = $('#advisor'); if (a) a.hidden = true; return; }
+  if (!S || !S.started || UI.busy || ADMIN.open || VISIT || COOP.role === 'guest' || (wv && !wv.hidden) || document.body.classList.contains('crawling')) { const a = $('#advisor'); if (a && !(typeof MAPT !== 'undefined' && MAPT.on && wv && !wv.hidden)) a.hidden = true; return; }   // sur la carte, seule sa visite guidée parle
   if (TUTO.of !== S) { TUTO.of = S; TUTO.pending = null; TUTO.shown = null; TUTO.flags = {}; TUTO.tip = null; TUTO.tipObj = null; TUTO.cam0 = null; }
   const T = S.tuto;
   if (T && T.on) {
@@ -98,6 +111,12 @@ function tutoTick() {
   if (tip) { TUTO.pending = tip; renderGoals(); }
 }
 function bindTutorial() {
+  { const adv = $('#advisor');
+    adv.addEventListener('pointerdown', e => { const p = e.target.closest('.adv-pic'); if (!p) return; e.preventDefault(); try { p.setPointerCapture(e.pointerId); } catch (x) {} ADVM.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: ADVM.x, y0: ADVM.y, moved: false }; });
+    adv.addEventListener('pointermove', e => { const d = ADVM.drag; if (!d || e.pointerId !== d.id) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) > 6) { d.moved = true; adv.classList.add('moving'); } if (d.moved) { ADVM.x = d.x0 + dx; ADVM.y = d.y0 + dy; advPlace(); } });
+    const up = e => { const d = ADVM.drag; if (!d || e.pointerId !== d.id) return; ADVM.drag = null; adv.classList.remove('moving'); if (d.moved || e.type !== 'pointerup') return; const now = performance.now(); if (now - ADVM.tap < 380) { ADVM.x = ADVM.y = 0; ADVM.tap = 0; advPlace(); sfx('tick'); } else ADVM.tap = now; };
+    adv.addEventListener('pointerup', up); adv.addEventListener('pointercancel', up);
+    addEventListener('resize', () => requestAnimationFrame(advPlace)); }
   $('#advisor').addEventListener('click', e => {
     const a = e.target.closest('[data-wiki]'); if (a) { e.preventDefault(); openGrimoire(a.dataset.wiki); return; }
     const b = e.target.closest('[data-adv]'); if (!b) return;
@@ -116,6 +135,7 @@ function bindTutorial() {
   $('#sheet').addEventListener('contextmenu', e => { const c = e.target.closest('.card'); if (!c) return; e.preventDefault(); if (typeof TOUCHUI !== 'undefined' && TOUCHUI.on) return; openGrimoire(`${c.dataset.kind}:${c.dataset.t}`); });
   $('#modalRoot').addEventListener('click', e => { const b = e.target.closest('[data-wiki-open]'); if (b) openGrimoire(b.dataset.wikiOpen); });
   $('#zfit').addEventListener('click', () => { TUTO.flags.cam = true; });
+  setInterval(() => { if (ADVM.x || ADVM.y) advPlace(); }, 700);
   setInterval(tutoTick, 700);
 }
 function showPendingTip() {

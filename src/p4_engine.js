@@ -280,7 +280,7 @@ function availability(kind, t) {
     }
     if (d.tier && S.tier < d.tier) return { lock: true, reason: 'Palier ' + d.tier };
     if (d.unique && S.rooms.some(r => r.t === t)) return { lock: true, reason: 'Unique' };
-    { const cl = clashOn(t, Z); if (cl) return { lock: true, reason: `Pas avec : ${ROOMS[cl.t].name}`, clash: true }; }
+    { const cl = clashOn(t, Z); if (cl) return { lock: true, reason: `Pas au même étage que : ${ROOMS[cl.t].name}`, clash: true }; }
   } else if (kind === 'def') {
     const d = DEFS[t];
     if (d.saga && !(S.sagas && S.sagas.defs.includes(t))) return { hide: true };
@@ -455,17 +455,18 @@ function raidBreakdown(targetId, teamIds) {
   });
   if (S.theme === 'repaire') { pool++; rows.push(['Repaire de brigands', 1]); }
   if (PW('epopee')) { pool++; rows.push(['Ballade héroïque', 1]); }
-  const rd = sumRooms('dice'); if (rd) { pool += rd; rows.push(['Préparatifs (meubles et pièces)', rd]); }
+  const rd0 = sumRooms('dice'), rd = Math.min(rd0, 1 + (S.tier || 0)); if (rd) { pool += rd; rows.push([`Préparatifs (meubles et pièces${rd0 > rd ? `, ${rd} au plus au palier ${S.tier || 0}` : ''})`, rd]); }
   if (tg.risk) { pool -= tg.risk; rows.push(['Cible bien gardée', -tg.risk]); }
   return { pool, rows };
 }
 function oddsText(pool) {
   if (pool <= 0) return 'Aucun dé : on lance 2 dés et on garde le plus bas.';
-  const six = 1 - Math.pow(5 / 6, pool), fail = Math.pow(1 / 2, pool);
-  return `${pool} dé${pool > 1 ? 's' : ''} : ${Math.round(six * 100)} % de succès total, ${Math.round(fail * 100)} % d’échec.`;
+  const k = Math.min(RAID_DICE_MAX, pool), six = 1 - Math.pow(5 / 6, k), fail = Math.pow(1 / 2, k);
+  return `${pool} dé${pool > 1 ? 's' : ''}${pool > k ? ` (${k} lancés au plus)` : ''} : ${Math.round(six * 100)} % de succès total, ${Math.round(fail * 100)} % d’échec.`;
 }
+const RAID_DICE_MAX = 6;   // on ne lance jamais plus de 6 dés : au-delà, la réserve ne fait que garantir le minimum
 function rollPool(pool) {
-  const zero = pool <= 0, n = zero ? 2 : pool;
+  const zero = pool <= 0, n = zero ? 2 : Math.min(RAID_DICE_MAX, pool);
   const dice = Array.from({ length: n }, () => 1 + rnd(6));
   const best = zero ? Math.min(...dice) : Math.max(...dice);
   const sixes = dice.filter(d => d === 6).length;
@@ -632,17 +633,22 @@ function dawn(report) {
   const cands = () => SPECIES_ORDER.filter(sp => !(SPECIES[sp].tier && S.tier < SPECIES[sp].tier) && rareOK(sp) && countSp(sp) < capOf(sp));
   let free = (typeof homeCap === 'function' ? homeCap() : beds()) - S.creatures.length; const arrived = [];
   const c0 = cands();
+  // une espèce commune jamais vue, sa pièce prête : elle vient au bout de 4 nuits au plus, même si la renommée est au plafond (il lui faut un lit)
+  const fresh = c0.filter(sp => !S.album[sp] && !SPECIES[sp].rare); S.albumWait = fresh.length ? (S.albumWait || 0) + 1 : 0;
+  const pity = S.albumWait >= 4; if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
   else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’est pas encore assez renommé pour les attirer (${fameCap()} créatures au plus). Accomplis de grandes choses !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
     // une arrivée de temps en temps (une espèce nouvelle se laisse tenter un peu plus vite), rarement deux
-    let chance = c0.some(sp => !S.album[sp]) ? .38 : Math.min(.3, .12 + amb * .004 + (S.theme === 'enclave' ? .06 : 0) + (PW('nuit20') ? .05 : 0));
+    let chance = pity ? 1 : c0.some(sp => !S.album[sp]) ? .38 : Math.min(.3, .12 + amb * .004 + (S.theme === 'enclave' ? .06 : 0) + (PW('nuit20') ? .05 : 0));
     let tries = amb >= 40 ? 2 : 1;
     while (tries-- > 0 && free > 0) {
       if (Math.random() > chance) continue;
       chance = Math.min(chance, .15);
       const pool = cands(); if (!pool.length) break;
-      const sp = wpick(pool, s => (S.album[s] ? 1 : 3) * (.4 + repOf(s) / 100));
+      const pn = pity && arrived.length === 0 ? pool.filter(s => !S.album[s] && !SPECIES[s].rare) : [];
+      const sp = wpick(pn.length ? pn : pool, s => (S.album[s] ? 1 : 3) * (.4 + repOf(s) / 100));
+      if (!S.album[sp]) S.albumWait = 0;
       if (typeof nemSnatch === 'function' && nemSnatch(sp, report)) continue;   // le rival l'a attirée chez lui
       const c = addCreature(sp), d = SPECIES[sp]; c.isNew = true; free--; arrived.push(c);
       const why = d.rare ? 'est attiré·e par le rayonnement de ton château' : repOf(sp) >= 70 ? `a entendu vanter ta réputation chez les ${d.name.toLowerCase()}s` : d.from === 'coeur' ? 'sort du Cœur en baillant' : d.fromDecor ? 'a suivi les toiles d’araignée' : `a entendu parler de ta pièce « ${ROOMS[d.from].name} »`;

@@ -17,7 +17,7 @@ const FLOOR_SHORT = { 9: 'Dehors', 2: 'Cimes', 1: 'Hauteurs', 0: 'Rez', '-1': 'C
 const zOK = z => Number.isInteger(z) && ((z >= -DEPTH_MAX && z <= HEIGHT_MAX) || z === EXT);
 const HEART = { x: 5, y: 1, w: 2, h: 2 };
 let CAL_MAX = 8, MENACE_MAX = 6;
-const CONSTS = { START_GOLD: 10, START_MAT: 8, WORK: 2 };
+const CONSTS = { START_GOLD: 16, START_MAT: 12, WORK: 2 };
 
 // stats : gold 💰, mat 🪵, hype 🔥, food repas, beds lits, amb ambiance, cal calamité en moins,
 // guard garde, harass harcèlement, dice dés de raid, cells places de prison
@@ -327,10 +327,10 @@ const SPECIES_ORDER = Object.keys(SPECIES);
 const NAMES = ['Grumelot','Pustule','Brindille','Croûton','Mirabelle','Ronce','Gédéon','Biscotte','Moisi','Patafix','Ortie','Bougnette','Fripouille','Pétoche','Gribouille','Tartiflette','Navet','Chiffon','Grisou','Mélusine','Barnabé','Poussière','Clafoutis','Rillette','Zéphyrine','Bubulle','Torchon','Myrtille','Fourchette','Glouglou','Pistache','Caramel','Soupière','Vermicelle','Noisette','Grelot','Pompon','Cornichon','Praline','Tison'];
 
 const RAIDS = {
-  ferme:     { name: 'Ferme des Pommiers', emo: '🍎', tier: 0, risk: 0, tag: 'pillage', reward: { s: 3, g: 1 }, hype: 1, menace: 1, desc: 'Des sacs de grain et un chien qui dort.' },
-  moulin:    { name: 'Moulin de la Bise', emo: '🌾', tier: 0, risk: 0, tag: 'ruse', reward: { g: 2, s: 1 }, hype: 1, menace: 2, desc: 'Le meunier cache sa cagnotte sous la meule.' },
-  auberge:   { name: 'Auberge du Sanglier Ronchon', emo: '🍺', tier: 1, risk: 1, tag: 'combat', reward: { g: 4, s: 1 }, hype: 2, menace: 2, desc: 'Pleine d’aventuriers éméchés. Gare aux bagarres.' },
-  monastere: { name: 'Monastère des Tisanes', emo: '⛪', tier: 1, risk: 1, tag: 'magie', reward: { g: 3, s: 2 }, hype: 3, menace: 3, bonus: 'theiere', desc: 'Des moines, des herbes et un service à thé légendaire.' },
+  ferme:     { name: 'Ferme des Pommiers', emo: '🍎', tier: 0, risk: 0, tag: 'pillage', reward: { s: 4, g: 2 }, hype: 1, menace: 1, desc: 'Des sacs de grain et un chien qui dort.' },
+  moulin:    { name: 'Moulin de la Bise', emo: '🌾', tier: 0, risk: 0, tag: 'ruse', reward: { g: 4, s: 1 }, hype: 1, menace: 2, desc: 'Le meunier cache sa cagnotte sous la meule.' },
+  auberge:   { name: 'Auberge du Sanglier Ronchon', emo: '🍺', tier: 1, risk: 1, tag: 'combat', reward: { g: 6, s: 2 }, hype: 2, menace: 2, desc: 'Pleine d’aventuriers éméchés. Gare aux bagarres.' },
+  monastere: { name: 'Monastère des Tisanes', emo: '⛪', tier: 1, risk: 1, tag: 'magie', reward: { g: 5, s: 2 }, hype: 3, menace: 3, bonus: 'theiere', desc: 'Des moines, des herbes et un service à thé légendaire.' },
   chateau:   { name: 'Château du Baron Pâlichon', emo: '🏰', tier: 2, risk: 2, tag: 'combat', reward: { g: 8, s: 4 }, hype: 4, menace: 3, bonus: 'tableau', desc: 'Le gros lot. Le baron a très peur du noir.' },
 };
 const TAGS = { pillage: 'Pillage', ruse: 'Ruse', combat: 'Combat', magie: 'Magie' };

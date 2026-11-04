@@ -199,7 +199,7 @@ if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
   addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse') return; lpHide(); LP.fired = false;   // un nouveau geste : le click à venir est le sien
     const el = e.target && e.target.closest && e.target.closest('.card, .notif, button, [role=button], .res, .dial, [title], [aria-label]');
-    if (!el || el === cv || el.tagName === 'CANVAS' || (typeof GM !== 'undefined' && GM.on && el.closest('#portraits'))) return;
+    if (!el || el === cv || el.tagName === 'CANVAS' || (typeof GM !== 'undefined' && GM.on && el.closest('#portraits')) || el.closest('#crawlPage .hand')) return;   // la main d'expédition a son propre appui : la carte grandit
     clearTimeout(LP.t); LP.x = e.clientX; LP.y = e.clientY;
     LP.t = setTimeout(() => { LP.t = null; if (!lpText(el) && !el.classList.contains('card')) return; lpShow(el); LP.fired = true; }, 480);
   }, true);
@@ -252,3 +252,43 @@ guardHud = function () {
   const q = document.createElement('button'); q.type = 'button'; q.className = 'sbtn'; q.textContent = GM.help ? '✕ Aide' : '? Aide'; q.setAttribute('aria-expanded', String(!!GM.help));
   q.addEventListener('click', () => { GM.help = !GM.help; guardHud(); }); top.insertBefore(q, top.querySelector('[data-gm="clear"]'));
 };
+// la main d'une expédition : sur grand écran, les cartes se resserrent pour tenir toutes (la carte survolée remonte) ;
+// au doigt, la main défile et un repère dit combien de cartes attendent à droite
+function fitHand() {
+  const page = document.getElementById('crawlPage'), h = page && page.querySelector('.hand'); if (!h) return;
+  const cards = [...h.querySelectorAll('.kcard')], small = innerWidth <= 760 || innerHeight <= 500;
+  // les cartes se recouvrent juste ce qu'il faut pour que toute la main tienne (au doigt, l'écart reste de 8 px si elles tiennent déjà)
+  if (cards.length > 1) { const cw = cards[0].offsetWidth, n = cards.length, gap = small ? 4 : -6, avail = h.clientWidth - (small ? 20 : 28), m = n * cw + (n - 1) * 2 * gap > avail ? Math.max(-(cw - (small ? 22 : 40)) / 2, Math.floor((avail - n * cw) / (n - 1) / 2)) : gap; page.style.setProperty('--hm', m + 'px'); }
+  let tag = page.querySelector(':scope > .hmore'); const hr = h.getBoundingClientRect(), hidden = small ? cards.filter(c => c.getBoundingClientRect().left > hr.right - 24).length : 0;
+  if (!hidden) { if (tag) tag.remove(); return; }
+  if (!tag) { tag = document.createElement('span'); tag.className = 'hmore'; tag.setAttribute('aria-hidden', 'true'); page.appendChild(tag); }
+  tag.textContent = `+${hidden} ▸`; tag.style.left = Math.round(hr.right - 46) + 'px'; tag.style.top = Math.round(hr.top + 6) + 'px';
+}
+if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => { if (!document.hidden && document.getElementById('crawlPage')) try { fitHand(); } catch (e) {} }, 300);
+if (typeof addEventListener === 'function') addEventListener('scroll', e => { if (e.target && e.target.classList && e.target.classList.contains('hand')) try { fitHand(); } catch (x) {} }, true);
+
+// au doigt, comme à une table de cartes : le doigt posé sur la main fait grandir la carte dessous ; on glisse pour passer d'une carte à l'autre,
+// on lève le doigt pour la choisir (comme un toucher) ; lever le doigt loin au-dessus de la main annule
+const HP = { id: null, card: null, rects: null, swallow: 0 };
+function handPeek(card) {
+  if (HP.card === card) return; if (HP.card) HP.card.classList.remove('peek', 'pl', 'pr'); HP.card = card || null;
+  if (card) { const r = card.getBoundingClientRect(); card.classList.add('peek'); if (r.left < 70) card.classList.add('pl'); else if (r.right > innerWidth - 70) card.classList.add('pr'); }
+}
+// la carte sous le doigt, d'après la place des cartes au moment du toucher (la carte agrandie ne cache pas ses voisines)
+const handCardAt = x => { const R = HP.rects || []; for (let i = R.length - 1; i >= 0; i--) if (x >= R[i].l && x <= R[i].r) return R[i].c; return null; };
+if (typeof addEventListener === 'function' && typeof document !== 'undefined') {
+  addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return; const c = e.target && e.target.closest && e.target.closest('#crawlPage .hand .kcard'); if (!c) return;
+    const h = c.closest('.hand'); HP.id = e.pointerId; HP.top = h.getBoundingClientRect().top;
+    HP.rects = [...h.querySelectorAll('.kcard')].map(k => { const r = k.getBoundingClientRect(); return { c: k, l: r.left, r: r.right }; });
+    handPeek(c);
+  }, true);
+  addEventListener('pointermove', e => { if (HP.id !== e.pointerId) return; const c = handCardAt(e.clientX); if (c) handPeek(c); if (HP.card) HP.card.classList.toggle('drop', e.clientY < HP.top - 110); }, true);
+  const hpEnd = e => {
+    if (HP.id !== e.pointerId) return; HP.id = null; const c = HP.card, far = e.clientY < HP.top - 110; handPeek(null); HP.rects = null;
+    HP.swallow = performance.now() + 700;   // le click du navigateur qui suit est ignoré : c'est nous qui choisissons la carte
+    if (e.type === 'pointerup' && c && c.isConnected && !far && !c.disabled) c.click();
+  };
+  addEventListener('pointerup', hpEnd, true); addEventListener('pointercancel', hpEnd, true);
+  addEventListener('click', e => { if (e.isTrusted && performance.now() < HP.swallow && e.target && e.target.closest && e.target.closest('#crawlPage .hand')) { HP.swallow = 0; e.stopPropagation(); e.preventDefault(); } }, true);
+}

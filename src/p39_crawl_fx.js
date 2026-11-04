@@ -156,7 +156,7 @@ function stopCrawlAmbience() {
 
 /* ---------- les cartes : leur illustration ---------- */
 const CARD_TYPE = { atk: 'Attaque', def: 'Défense', heal: 'Soin', skill: 'Ruse' };
-const castleKey = k => { const D = CASTLE_CARDS[k]; return D.from.find(x => hasItem(x) || S.defs.some(d => d.t === x)) || D.from[0]; };
+const castleKey = k => { const D = CASTLE_CARDS[k]; return D.from.find(x => ownsSrc(x) && fineSrc(x)) || D.from.find(ownsSrc) || D.from[0]; };   // l'illustration : le meuble de qualité s'il y en a un
 function cardArt(c, me) {
   const D = cardDef(c);
   if (c.src === 'castle') { const k = castleKey(c.key); return `<img class="kimg" alt="" src="${thumb(FURN[k] ? 'furn' : 'def', k, true)}"><span class="kbadge emo">${D.ico}</span>`; }

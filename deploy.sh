@@ -13,7 +13,7 @@ cp -R src docs "$TMP/repo/"
 cp README.md build.sh deploy.sh "$TMP/repo/"
 # le banc d'essai (sans les copies figées ni les résultats bruts) et son mode d'emploi
 mkdir -p "$TMP/repo/sim" "$TMP/repo/.claude/skills"
-cp sim/*.mjs sim/*.js sim/RAPPORT*.md "$TMP/repo/sim/"
+cp sim/*.mjs sim/*.js sim/RAPPORT*.md sim/BOUCLES.md "$TMP/repo/sim/"
 cp -R .claude/skills/simulation-equilibrage "$TMP/repo/.claude/skills/"
 cd "$TMP/repo"
 git add -A

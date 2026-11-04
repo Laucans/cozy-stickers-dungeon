@@ -244,7 +244,7 @@ function openMenu() {
     <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSave">Renommer</button>'}<button class="sbtn" type="button" id="mLog">Chronique</button><button class="sbtn" type="button" id="mAch">🏆 Hauts faits</button><button class="sbtn" type="button" id="mRen">⭐ Renommée</button><button class="sbtn" type="button" id="mVal">🌐 Val des Maîtres</button></div>
     ${guest ? '' : `<h3>Désertions</h3><p class="hint">Une créature peu loyale peut partir pour un château qui reçoit mieux son espèce. Elle prévient toujours une nuit avant.</p>
     <div class="choices three" id="mDes">${[['on', '🧳 Activées', 'Les créatures délaissées peuvent partir.'], ['soft', '🍃 Douces', 'Deux fois moins de départs.'], ['off', '🛌 Désactivées', 'Personne ne part pour un autre château.']].map(([k, t, d]) => `<button type="button" class="choice" data-des="${k}" aria-pressed="${des === k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`}
-    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button>${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
+    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button><button class="sbtn" type="button" id="mCardDef">${(S.opts || {}).cardDef === 'auto' ? '🃏 Défense du Cœur : me demander' : '⚡ Défense du Cœur : toujours automatique'}</button>${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
   const q = s => m.querySelector(s);
   q('#mSave') && q('#mSave').addEventListener('click', () => { if (run('rename', { name: q('#mName').value })) { closeModal(); afterChange(); } });
   q('#mLog').addEventListener('click', openJournal);
@@ -253,6 +253,7 @@ function openMenu() {
   q('#mVal').addEventListener('click', () => openVal());
   q('#mDes') && q('#mDes').addEventListener('click', e => { const b = e.target.closest('[data-des]'); if (!b) return; S.opts.desert = b.dataset.des; sfx('tick'); save(); m.querySelectorAll('[data-des]').forEach(x => x.setAttribute('aria-pressed', x.dataset.des === S.opts.desert)); if (COOP.role === 'host') coopDirty(); });
   q('#mTuto') && q('#mTuto').addEventListener('click', () => { closeModal(); startTutorial(); });
+  q('#mCardDef').addEventListener('click', () => { S.opts = S.opts || {}; S.opts.cardDef = S.opts.cardDef === 'auto' ? 'ask' : 'auto'; save(); closeModal(); toast(S.opts.cardDef === 'auto' ? 'Tes créatures défendront le Cœur toutes seules.' : 'Quand la bande arrivera au Cœur, tu pourras la combattre aux cartes.'); });
   q('#mTips').addEventListener('click', () => { S.tipsOff = !S.tipsOff; save(); closeModal(); toast(S.tipsOff ? 'Gribouille gardera ses conseils pour lui.' : 'Gribouille te soufflera de nouveau des conseils.'); });
   q('#mNew') && q('#mNew').addEventListener('click', () => { if (slotIndex().list.length >= SLOTS_MAX) { closeModal(true); openTitle('load'); toast(`${SLOTS_MAX} parties au plus : supprimes-en une d’abord.`, true); return; } if (COOP.role) coopLeave(true); closeModal(true); openIntro(); });
   q('#mSaveNow') && q('#mSaveNow').addEventListener('click', () => { if (save()) { sfx('chime'); toast(`💾 « ${S.name} » sauvegardé (nuit ${S.night}).`); } });
@@ -268,19 +269,19 @@ function openIntro() {
     <div class="field"><label for="iName">Nom de ton château</label><input id="iName" maxlength="40" value="Le Château de Minuit"></div>
     <h3>Thème du château</h3><div class="choices" id="iThemes">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="choice" data-theme="${k}" aria-pressed="${k === theme}"><span class="emo">${t.emo}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span><span>Pièce unique : ${esc(ROOMS[t.room].name)}</span>${t.look ? `<span class="hint">🎨 ${esc(t.look)}</span>` : ''}</button>`).join('')}</div>
     <h3>Le Val</h3><div class="ival"><canvas id="iVal" aria-label="La carte du Val tirée au sort"></canvas><div class="ivaltxt"><p id="iValTxt"></p><p class="hint">Chaque partie tire son propre Val : relief, côtes, rivières, et des villages, des donjons et des lieux d’expédition à découvrir (la carte ne les montre pas encore).</p><div class="btnrow"><button class="sbtn" type="button" id="iReroll">🎲 Un autre Val</button><label class="iseed">Graine <input id="iSeed" inputmode="numeric" maxlength="9" value=""></label></div></div></div>
-    <label class="tutochk"><input type="checkbox" id="iTuto" checked> Suivre le tutoriel avec Gribouille, le conseiller (recommandé)</label>
+    <label class="tutochk"><input type="checkbox" id="iTuto" checked> Suivre le fil rouge avec Gribouille : des objectifs qui dévoilent le jeu peu à peu (recommandé)</label>
     <div class="mfoot"><button class="sbtn" type="button" id="iBack">← Retour</button><button class="sbtn" type="button" id="iHelp">📖 Le Grimoire</button><button class="sbtn pri" type="button" id="iGo" data-focus>🏰 Réveiller le château</button></div>`, { noClose: true, wide: true, label: 'Nouvelle partie' });
   m.querySelector('#iBack').addEventListener('click', () => { if (back != null) loadSlot(back); else openTitle(); });
   m.querySelector('#iThemes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (!b) return; theme = b.dataset.theme; S.theme = theme; V.dirty = true; sfx('tick'); m.querySelectorAll('[data-theme]').forEach(x => x.setAttribute('aria-pressed', x.dataset.theme === theme)); });
   m.querySelector('#iHelp').addEventListener('click', () => openGrimoire());
-  const showVal = () => { const w = genWorld2(vseed); m.querySelector('#iSeed').value = vseed; m.querySelector('#iValTxt').innerHTML = `<b>Graine ${vseed}</b> : ${esc(valSummary(w))}.`; drawValPreview(m.querySelector('#iVal'), w); };
+  const showVal = () => { const w = genWorld2(vseed); m.querySelector('#iSeed').value = vseed; m.querySelector('#iValTxt').innerHTML = `<b>Graine ${vseed}</b> : ${esc(valWorldSummary(w))}.`; drawValPreview(m.querySelector('#iVal'), w); };
   m.querySelector('#iReroll').addEventListener('click', () => { vseed = 1 + Math.floor(Math.random() * 99999); showVal(); sfx('tick'); });
   m.querySelector('#iSeed').addEventListener('change', e => { const v = parseInt(String(e.target.value).replace(/\D/g, ''), 10); if (v > 0) { vseed = v; showVal(); } else e.target.value = vseed; });
   requestAnimationFrame(showVal);
   m.querySelector('#iGo').addEventListener('click', () => {
     const name = m.querySelector('#iName').value.trim() || 'Le Château de Minuit';
     const tuto = m.querySelector('#iTuto').checked;
-    useSlot(newSlotId()); resetActors(); newState(name, theme); S.world = newWorldState(vseed); WORLD = null; mapDirty(); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
+    useSlot(newSlotId()); resetActors(); newState(name, theme); S.world = newWorldState(vseed); WORLD = null; mapDirty(); S.started = true; S.tuto = { on: tuto, i: 0, asked: true }; if (tuto && typeof filNew === 'function') S.fil = filNew(); TUTO.shown = null; TUTO.flags = {}; closeModal(true); renderAll(); save(); sfx('chime');
     banner(`🏰 ${esc(name)}`, `${THEMES[theme].emo} ${THEMES[theme].name}`, 1800);
     if (!tuto) setTimeout(() => toast('Commence par un Dortoir collé au couloir ; une fois terminé, touche-le pour y coller la Paillasse offerte.'), 1900);
   });

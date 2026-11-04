@@ -11,7 +11,7 @@ function glowParts() {
   const f = [], arts = S.furn.filter(x => FURN[x.t] && FURN[x.t].artefact);
   let a = 0; arts.forEach(x => { const r = roomAt(x.x, x.y, zOf(x)); a += FURN[x.t].glow * (r && r.t === 'reliquaire' ? 1.5 : 1); });
   if (arts.length) f.push([`${arts.length} artefact${arts.length > 1 ? 's' : ''} exposé${arts.length > 1 ? 's' : ''}`, Math.round(a)]);
-  const tre = countItem('tasdor') * 3 + countItem('coffreor') * 2 + Math.min(10, Math.floor(S.gold / 25)); if (tre) f.push(['Trésors (tas d’or, coffres, réserves)', tre]);
+  const tre = Math.min(20, countItem('tasdor') * 3 + countItem('coffreor') * 2) + Math.min(10, Math.floor(S.gold / 25)); if (tre) f.push(['Trésors (tas d’or, coffres, réserves)', tre]);
   let rare = 0; S.creatures.forEach(c => { const d = SPECIES[c.sp] || {}; rare += d.rare ? 10 : d.tier >= 2 ? 4 : 0; }); if (rare) f.push(['Créatures rares', rare]);
   const leg = S.creatures.filter(c => c.legend).length * 5 + S.creatures.filter(c => c.lvl >= 5).length * 3; if (leg) f.push(['Légendes vivantes', leg]);
   if (S.tier) f.push([`Palier ${S.tier}`, S.tier * 8]);

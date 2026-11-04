@@ -14,6 +14,8 @@ const VICTORIES = [
 ];
 const VIC_BY = Object.fromEntries(VICTORIES.map(v => [v.id, v]));
 const MENAGERIE_SP = SPECIES_ORDER.slice();
+// la Ménagerie compte les créatures installées (5 nuits au château) : 85 % d'entre elles épanouies suffisent, un nouveau venu ne casse pas la série
+const MEN_HAPPY = .85, menSettled = () => S.creatures.filter(c => !isOut(c) && S.night - (c.joined || 1) >= 5);
 const BARON = { id: 'baron', name: 'Le Baron Pâlichon', emo: '🎩' };
 const racer = id => id === 'baron' ? BARON : RIVALS.find(r => r.id === id);
 const raceGoal = id => (VICTORIES.find(v => v.rival === id) || {}).id;
@@ -91,10 +93,10 @@ function vicStages(id) {
   const v = vicState();
   if (id === 'legende') { const g = radiance(); return [st(`Rayonnement Illustre (${Math.min(g, 80)}/80 ✨)`, g >= 80 || v.croisade), st(`Rayonnement Légendaire (${Math.min(g, 130)}/130 ✨)`, g >= 130 || v.croisade), st(`Rayonnement Mythique (${Math.min(g, 200)}/200 ✨)`, g >= 200 || v.croisade),
     st(`Finale : repousser la Croisade des héros de Mirebrume (${v.croisade ? Math.min(3, v.croisade.done) : 0}/3)`, v.croisade && v.croisade.done >= 3, true)]; }
-  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 raids réussis)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
+  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage sans fuir 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
   if (id === 'voisinage') return [5, 10, 15].map(n => st(`${n} voix au Conseil du Val (${Math.min(v.votes, n)}/${n})`, v.votes >= n)).concat([st(`Finale : 20 voix, et le Conseil te nomme Protecteur du Val (${Math.min(v.votes, 20)}/20)`, v.votes >= 20, true)]);
   if (id === 'menagerie') { const p = v.proj && v.proj.id === 'parade' ? v.proj : null; return [st(`Album complet (${albumN()}/${MENAGERIE_SP.length} espèces, rares comprises)`, albumN() >= MENAGERIE_SP.length || p), st(`5 légendes au château (${Math.min(5, legendsHome())}/5)`, legendsHome() >= 5 || p),
-    st(`Toutes tes créatures épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
+    st(`${Math.round(MEN_HAPPY * 100)} % de tes créatures installées épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
   if (id === 'secrets') { const p = v.proj && v.proj.id === 'rituel' ? v.proj : null, m = mapPct(); return [st(`Dévoiler la carte (${Math.min(m, 90)}/90 %)`, m >= 90 || p), st(`Trouver les 12 artefacts (${Math.min(12, artFound())}/12)`, artFound() >= 12 || p),
     st(`Les exposer tous, avec un Reliquaire (${artPlaced()}/12${builtCount('reliquaire') ? '' : ', pas de Reliquaire'})`, (artPlaced() >= 12 && builtCount('reliquaire') > 0) || p), st(`Finale : le Rituel des Douze, 3 nuits sans perdre un artefact (${v.won.secrets ? 3 : p ? p.prog : 0}/3)`, !!v.won.secrets, true)]; }
   return [];
@@ -162,7 +164,7 @@ function victoryDawn(report) {
   if (S.night >= 4 && Math.random() < .35) newRequest(out);
   if (S.night % 10 === 0) council(out);
   // ménagerie : tout le monde épanoui ?
-  v.happy = S.creatures.length >= 8 && S.creatures.every(c => (c.epa == null ? 50 : c.epa) >= 70) ? v.happy + 1 : 0;
+  { const st = menSettled(); v.happy = st.length >= 8 && st.filter(c => (c.epa == null ? 50 : c.epa) >= 70).length >= Math.ceil(st.length * MEN_HAPPY) ? v.happy + 1 : 0; }
   // légende : à Mythique, la cité lève une croisade
   if (!v.croisade && !v.won.legende && radiance() >= 200) { v.croisade = { done: 0, n: S.night }; out.push(['📯', 'Mythique ! La cité de Mirebrume lève une croisade de héros légendaires contre ton château. Repousse-la trois fois pour entrer dans la légende.', 'ev']); }
   if (v.croisade && v.croisade.done < 3 && !v.won.legende) S.menace += 1;
@@ -190,7 +192,8 @@ function victoryAfterRaid(target, roll, lines) {
     if (isVassal(tg.rival)) { lines.push(['🏳️', `Reddition ! ${r.name} : te voilà suzerain. Un tribut chaque nuit, et plus personne là-bas pour te disputer tes créatures.`, 'good']); addLog(`Vassal : ${r.name}.`, 'ev'); }
     else lines.push(['🏴', `Coup dur pour ${r.name} : ${v.vassals[tg.rival]}/3 vers la vassalité, et un recul dans la course.`, 'good']);
   }
-  if (tg.siege && ok) { v.siege++; lines.push(['🏰', `Assaut réussi contre Mirebrume (${Math.min(3, v.siege)}/3) !`, 'good']); if (v.siege >= 3) winVictory('terreur', lines); }
+  if (tg.siege && roll.res === 'partial') lines.push(['🏰', 'Mirebrume tient bon : il faut un vrai succès (un 6) pour faire céder la cité.', '']);
+  if (tg.siege && ok && roll.res !== 'partial') { v.siege++; lines.push(['🏰', `Assaut réussi contre Mirebrume (${Math.min(3, v.siege)}/3) !`, 'good']); if (v.siege >= 3) winVictory('terreur', lines); }
   if (!tg.rival && !tg.siege) { const site = world().sites.find(x => x.raid === target), s = site && nearestSettlement(site); if (s) { addGw(s, ok ? -12 : -6); lines.push(['😠', `${s.name} n’apprécie pas : bonne volonté ${ok ? '−12' : '−6'}.`, 'bad']); } }
 }
 function victoryAfterInvasion(plan, outcome, lines) {
@@ -199,7 +202,7 @@ function victoryAfterInvasion(plan, outcome, lines) {
   openReqs().filter(q => REQ[q.req].kind === 'repel').forEach(q => { const s = siteById(q.site); if (s) lines.push(['🤝', reqReward(q, s), 'good']); });
   if (plan.origin && plan.origin.crusade && v.croisade && !v.won.legende) { v.croisade.done++; lines.push(['📯', `La croisade de Mirebrume est repoussée (${Math.min(3, v.croisade.done)}/3) !`, 'good']); if (v.croisade.done >= 3) winVictory('legende', lines); }
 }
-RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 3, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, desc: 'La grande cité. Trois assauts réussis et elle te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
+RAIDS.mirebrume = { name: 'Siège de Mirebrume', emo: '🏰', tier: 2, risk: 4, tag: 'combat', reward: { g: 15, s: 5 }, hype: 5, menace: 3, siege: true, desc: 'La grande cité. Trois assauts réussis et elle te remet ses clés. Il faut d’abord que les quatre donjons rivaux soient tes vassaux.' };
 
 /* ---------- pastilles (notifications) ---------- */
 function victoryNotifs(add) {
@@ -287,10 +290,10 @@ Object.assign(WIKI, {
     <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
     <li>Si un rival gagne avant toi, il devient Grand Maître et <b>une nouvelle ère commence</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti. Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
   v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
-  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Réussis <b>trois raids</b> contre chacun des quatre donjons rivaux (sur la carte) : chacun devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis et la cité te remet ses clés.</p><p class="hint">Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
+  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
   v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
     <ul><li>À 60, le lieu vote pour toi au <b>Conseil du Val</b>, qui se réunit toutes les 10 nuits : 1 voix par village, 2 pour la ville, 3 pour la cité.</li><li>À 70, ses aventuriers ne viennent plus t’attaquer.</li></ul><p><b>Victoire :</b> 20 voix cumulées. Les voix que tu n’as pas vont au Baron Pâlichon, qui brigue le même titre.</p>` },
-  v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et toutes tes créatures <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },
+  v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et 85 % de tes créatures installées (5 nuits au château) <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins : un nouveau venu ne casse pas la série.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },
   v_secrets: { cat: 'vic', t: 'Victoire des Secrets', x: () => `<p>Perce le mystère du Val : dévoile <b>90 % de la carte</b>, trouve les <b>12 artefacts</b>, puis expose-les tous, avec au moins un {room:reliquaire}.</p><p><b>Finale :</b> le Rituel des Douze (${costText(PROJ.rituel.cost)}), trois nuits pendant lesquelles aucun artefact ne doit disparaître. Garde-les aux étages : les héros qui pillent le Cœur en volent.</p>` },
 });
 TIPS.push({ id: 'vic0', when: () => S.night >= 6 && !(S.tuto && S.tuto.on), t: 'Cinq chemins vers la victoire', x: 'Comme dans Civilization, tu peux devenir le Grand Maître du Val de cinq façons : Légende, Terreur, Bon Voisinage, Grande Ménagerie ou Secrets. Les donjons rivaux font la course. Touche la nuit en cours (🏛️, en haut à droite) pour voir où tu en es.', wiki: 'victoires' });

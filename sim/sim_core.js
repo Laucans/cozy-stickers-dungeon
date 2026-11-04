@@ -31,6 +31,7 @@ function simInvasion(plan) {
 }
 function simNight() {
   const M = SIM.m, report = [];
+  if (typeof filNightStart === 'function') filNightStart();
   const cd = calamityDelta(); S.calamity = Math.max(0, S.calamity + cd.d);
   if (S.calamity >= CAL_MAX) { const ev = pick(CALAMITIES.filter(c => c.when())); ev.run(); S.calamity = 0; S.stats.calmNights = 0; M.calamities++; } else S.stats.calmNights++;
   if (S.raid && S.raid.crawl && typeof simCrawlNight === 'function') { const o = simCrawlNight(report); M.crawls = (M.crawls || 0) + 1; if (o) M['crawl_' + o] = (M['crawl_' + o] || 0) + 1; }
@@ -94,8 +95,8 @@ A.furnish = (r, budget = 99) => {
   }
   return n;
 };
-A.decorate = (t, budget = 6) => {   // pose un sticker de déco (ou un artefact en réserve) quelque part
-  const spots = []; S.rooms.filter(r => r.built && !ROOMS[r.t].fixed && !ROOMS[r.t].stairs).forEach(r => cellsOf(r).forEach(([x, y]) => { if (!furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r))) spots.push([x, y, zOf(r), r]); }));
+A.decorate = (t, budget = 6, roomT = null) => {   // pose un sticker de déco (ou un artefact en réserve) quelque part (dans une pièce de ce type si roomT)
+  const spots = []; S.rooms.filter(r => r.built && (!roomT || r.t === roomT) && !ROOMS[r.t].fixed && !ROOMS[r.t].stairs).forEach(r => cellsOf(r).forEach(([x, y]) => { if (!furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r))) spots.push([x, y, zOf(r), r]); }));
   const pref = FURN[t] && FURN[t].artefact ? spots.filter(s => s[3].t === 'reliquaire').concat(spots.filter(s => s[2] !== 0), spots) : spots.filter(s => !isHall(s[3])).concat(spots);
   for (const [x, y, z] of pref) { const c = costOf('furn', t); if ((c.g || 0) > budget) return 'trop cher'; const e = cmd('place', { kind: 'furn', t, x, y, z }); if (!e) return null; }
   return 'pas de place';
@@ -141,6 +142,9 @@ A.guards = () => {
   let k = 0; for (const c of crew.slice(0, n)) { for (let t = 0; t < route.length; t++) { const r = route[(k + t) % route.length]; if (!CMD.guard({ id: c.id, room: r.id })) { k = (k + t + 1) % route.length; break; } } }
 };
 // les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
+// les Merveilles : l'or et le bois en trop (au-delà d'une réserve) vont à la moins chère ; une fête quand quelqu'un se sent délaissé
+A.wonder = (reserve = 200) => { if (typeof WONDERS === 'undefined') return; const k = Object.keys(WONDERS).map(x => [x, wonderCost(x)]).sort((a, b) => (a[1].g + a[1].s) - (b[1].g + b[1].s))[0]; if (k && S.gold - k[1].g >= reserve && S.mat - k[1].s >= reserve / 2) cmd('wonder', { id: k[0] }); };
+A.fete = () => { if (typeof feteWhy === 'undefined' || feteWhy()) return; if (S.creatures.some(c => !isOut(c) && (c.loy == null ? 50 : c.loy) < 35) && S.gold - feteCost().g >= 40) cmd('fete'); };
 A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => !chantierWhy(x)).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve) cmd('chantier', { id: k }); };
 A.cook = () => { if (typeof RECIPES === 'undefined' || !hasKitchen()) return; const order = [eaters() > foodCap() ? 'tourte' : null, invasionSoon() ? 'gateau' : null, invasionSoon() ? 'poisson' : null, S.calamity >= CAL_MAX - 3 ? 'ragout' : null, 'soupe'].filter(Boolean); for (const k of order) if (canCook(k)) { cmd('cook', { id: k }); return; } };
 A.caravan = how => { if (typeof activeCaravans === 'undefined') return; const cv = activeCaravans().find(x => !x.done); if (cv && (how !== 'pille' || caravanOdds(cv) >= .5)) cmd('caravan', { id: cv.id, how }); };
@@ -233,7 +237,7 @@ function simState(full) {
   const crit = S.creatures.map(c => `${c.name}(${SPECIES[c.sp] ? SPECIES[c.sp].name : c.sp}, niv${c.lvl}, ❤${c.mood}, loy${c.loy}, épa${c.epa}${c.tempt ? ', TENTÉ' : ''}${c.legend ? ', légende' : ''}${c.away ? ', en mission' : c.raid ? ', en raid' : ''}${c.quest ? ', envie ' + c.quest.k + ':' + c.quest.st : ''}${c.secret && c.secret.known ? ', rêve ' + (c.secret.done ? 'réalisé' : c.secret.label) : ''})`);
   const rooms = {}; S.rooms.filter(r => !['couloir', 'porche'].includes(r.t)).forEach(r => { const k = ROOMS[r.t].name + (zOf(r) ? '@' + zOf(r) : '') + (r.built ? '' : ' (chantier ' + r.prog + '/' + ROOMS[r.t].clock + ')'); rooms[k] = (rooms[k] || 0) + 1; });
   const known = world().sites.filter(s => siteKnown(s) && s.kind !== 'chateau').map(s => `${s.id}:${s.name}[${s.kind}${s.expe ? ' expé' + (expeReady(s) ? '' : ' (recharge)') : ''}${SITE_KINDS[s.kind].rank ? ' bonne-volonté ' + gwOf(s) : ''}${s.raid && s.kind !== 'raid' ? ' raid' : ''}${s.rival ? ' raid r_' + s.rival + (isVassal(s.rival) ? ' VASSAL' : ' ' + (v.vassals[s.rival] || 0) + '/3') : ''}]`);
-  const raids = Object.keys(RAIDS).filter(k => raidKnown(k) && RAIDS[k].tier <= S.tier).map(k => `${k}(dés ${A.raidPool(k)})`);
+  const raids = Object.keys(RAIDS).filter(k => raidKnown(k) && RAIDS[k].tier <= S.tier && !(/^x_/.test(k) && RAIDS[k].site && !siteKnown(siteById(RAIDS[k].site)))).map(k => { if (typeof isCrawlTarget === 'function' && isCrawlTarget(k)) return `${k}(expédition en cartes)`; const p = A.raidPool(k); return `${k}(${p < 0 ? 'personne pour y aller' : 'dés ' + p})`; });
   const reqs = openReqs().map(q => `${q.id}:${siteById(q.site).name}:${q.req}(${REQ[q.req].kind}${q.st === 'sent' ? ', en cours' : ''})`);
   const lines = [
     `NUIT ${S.night} · palier ${S.tier} · or ${S.gold} · matériaux ${S.mat} · notoriété ${S.hype} · rayonnement ${radiance()} · ambiance ${ambiance()} · lits ${S.creatures.length}/${beds()} · repas ${eaters()}/${foodCap()} · calamité ${S.calamity}/${CAL_MAX} · menace ${S.menace}/${MENACE_MAX}`,
@@ -242,7 +246,7 @@ function simState(full) {
     `Pièces : ${Object.entries(rooms).map(([k, n]) => n > 1 ? k + '×' + n : k).join(', ') || 'aucune'}`,
     `Créatures (${S.creatures.length}) : ${crit.join(' ; ')}`,
     `Album ${Object.keys(S.album).length}/${MENAGERIE_SP.length} · artefacts en réserve : ${ARTEFACTS.filter(k => S.free[k] > 0).join(', ') || 'aucun'} · exposés ${artPlaced()}/12 · trouvés ${artFound()}/12 · carte ${mapPct()} %`,
-    `Victoires (%) : ${VICTORIES.map(x => x.id + ' ' + vicPct(x.id)).join(' · ')} · gagnées : ${Object.keys(v.won).join(', ') || 'aucune'} · ère ${v.era} · rivaux : ${Object.entries(v.race).map(([k, p]) => k + ' ' + Math.floor(p) + '%').join(', ')} · voix ${v.votes}/20 · prochain Conseil nuit ${Math.ceil((S.night + 1) / 10) * 10}`,
+    `Victoires (%) : ${VICTORIES.map(x => x.id + ' ' + vicPct(x.id)).join(' · ')} · gagnées : ${Object.keys(v.won).join(', ') || 'aucune'} · ère ${v.era} · rivaux : ${Object.entries(v.race).map(([k, p]) => k + ' ' + Math.floor(p) + '%').join(', ')} · voix ${v.votes}/20 · prochain Conseil à la fin de la nuit ${Math.ceil((S.night + 1) / 10) * 10 - 1}`,
     `Lieux connus : ${known.join(' ; ')}`,
     `Raids possibles : ${raids.join(', ') || 'aucun'} · requêtes : ${reqs.join(' ; ') || 'aucune'}${v.proj ? ' · projet en cours : ' + v.proj.id + ' ' + v.proj.prog + '/' + v.proj.need : ''}`,
   ];

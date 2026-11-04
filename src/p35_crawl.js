@@ -14,9 +14,12 @@
    ========================================================= */
 const CRAWL_FLOORS = 3, CRAWL_STEPS = 3, STRESS_MAX = 10, HAND_SIZE = 5, ENERGY = 3, BAG_SIZE = 4;
 // le niveau du donjon suit la renommée de tes champions (tes 4 meilleures créatures) : plus ils sont forts, plus le donjon se prépare
+const CRAWL_GOLD = .75;   // l'or des expéditions (combats, trésors, coffres)
 const CRAWL_TUNE = { hpL: .25, dmgL: .7, hpF: .65, dmgF: 3.5, boss: 1.2, p0: 220, pk: 160 };
 function crawlChampions() { return S.creatures.filter(c => !isOut(c)).map(c => crawler(c)).map(p => p.hp * p.atk).sort((a, b) => b - a).slice(0, 4).reduce((a, v) => a + v, 0); }
 const crawlLevel = () => Math.round((1 + Math.max(0, (crawlChampions() - CRAWL_TUNE.p0) / CRAWL_TUNE.pk)) * 10) / 10;
+// un donjon rival grandit avec toi (+0,5 niveau par palier), se prépare après chaque défaite (+0,25 par point de vassalité pris chez lui), et tous se méfient d'un suzerain (+0,25 par vassal)
+const crawlResist = dg => { if (typeof vicState !== 'function' || typeof RIVALS === 'undefined' || !RIVALS.some(r => r.id === dg)) return 0; const v = vicState().vassals || {}; return .5 * (S.tier || 0) + .25 * (v[dg] || 0) + .25 * Object.keys(v).filter(k => typeof isVassal === 'function' && isVassal(k)).length; };
 
 /* ---------- les ennemis : leurs actions tournent en boucle (on voit toujours la prochaine) ---------- */
 const CRAWL_EN = {
@@ -71,15 +74,17 @@ const CRAWL_DG = {
   ruines:     { regs: ['momie', 'armure', 'mimic', 'follet'], elite: 'gardien', boss: 'roi', relic: 'couronne', site: 1, emo: '🏛️', desc: 'Des pierres qui se souviennent, des armures sans personne dedans, et un roi qui cherche encore sa couronne.' },
 };
 // les élites : une capacité qui ne les quitte pas, et une action d'élite dans leur répertoire
-const ELITE_POW = {
-  riposte: { ico: '🦴', name: 'Riposte', desc: 'Qui le frappe prend 3 en retour.' },
-  rage:    { ico: '😡', name: 'Rage', desc: '+1 de force à chaque coup reçu.' },
-  venin:   { ico: '☠️', name: 'Venin', desc: 'Ses coups empoisonnent (1).' },
-  service: { ico: '🎩', name: 'Service', desc: 'Quand un allié tombe : +8 parade et +2 force.' },
-  ecorce:  { ico: '🌳', name: 'Écorce', desc: '+6 parade au début de chacun de ses tours.' },
-  cristal: { ico: '💎', name: 'Cristal', desc: 'Chaque coup reçu fait 3 de moins.' },
-  sceau:   { ico: '🗿', name: 'Sceau', desc: 'Aucun coup ne lui fait plus de 8 dégâts.' },
+const ELITE_POW = {   // v (et buff, max) : les chiffres de la capacité, réglables dans l'Atelier ; {v} dans la description est remplacé par sa valeur
+  riposte: { ico: '🦴', name: 'Riposte', v: 3, desc: 'Qui le frappe prend {v} en retour.' },
+  rage:    { ico: '😡', name: 'Rage', v: 1, max: 6, desc: '+{v} de force à chaque coup reçu (jusqu’à {max}).' },
+  venin:   { ico: '☠️', name: 'Venin', v: 1, desc: 'Ses coups empoisonnent ({v}).' },
+  service: { ico: '🎩', name: 'Service', v: 8, buff: 2, desc: 'Quand un allié tombe : +{v} parade et +{buff} force.' },
+  ecorce:  { ico: '🌳', name: 'Écorce', v: 6, desc: '+{v} parade au début de chacun de ses tours.' },
+  cristal: { ico: '💎', name: 'Cristal', v: 3, desc: 'Chaque coup reçu fait {v} de moins.' },
+  sceau:   { ico: '🗿', name: 'Sceau', v: 8, desc: 'Aucun coup ne lui fait plus de {v} dégâts.' },
 };
+const powV = (k, f = 'v', d = 0) => { const P = ELITE_POW[k]; return P && typeof P[f] === 'number' ? P[f] : d; };
+const powDesc = k => { const P = ELITE_POW[k]; return P ? String(P.desc || '').replace(/\{(\w+)\}/g, (m, f) => P[f] != null ? P[f] : m) : ''; };
 // les boss : une action légendaire en plus à chaque tour, annoncée d'avance, et la fureur à mi-vie (un répertoire plus dur)
 const BOSS_P2 = {
   necro:    'Ysolde relève deux squelettes et la peur gagne toute l’équipe (+2).',
@@ -162,7 +167,8 @@ const CASTLE_CARDS = {
   heaume:    { name: 'Heaume cabossé', ico: '⛑️', cost: 1, tgt: 'ally', blk: 7, taunt: 1, from: ['heaume'] },
   epeefaux:  { el: 'tonnerre', name: 'Épée qui chante faux', ico: '🎶', cost: 0, tgt: 'enemy', dmg: 5, weak: [1, 1], from: ['epeefaux'] },
   dent:      { el: 'perforant', name: 'Dent de dragon', ico: '🦷', cost: 2, tgt: 'enemy', dmg: 12, pierce: 1, from: ['dentdragon'] },
-  cailloux:  { el: 'contondant', name: 'Volée de cailloux', ico: '🪨', cost: 1, tgt: 'rnd', dmg: 3, hits: 3, from: ['catapulte', 'longuevue', 'perchoir'] },
+  cailloux:  { el: 'contondant', name: 'Volée de cailloux', ico: '🪨', cost: 1, tgt: 'rnd', dmg: 3, hits: 3, from: ['longuevue', 'perchoir'] },
+  boulet:    { el: 'contondant', name: 'Boulet de catapulte', ico: '☄️', cost: 2, tgt: 'enemy', dmg: 11, splash: 4, from: ['catapulte'] },   // la catapulte, chère et encombrante, frappe fort et éclabousse
   vent:      { name: 'Vent tournant', ico: '🌬️', cost: 0, tgt: 'none', draw: 2, from: ['girouette'] },
   flammes:   { el: 'feu', name: 'Sort de flammes', ico: '✨', cost: 2, tgt: 'allfoes', dmg: 6, from: ['etagere', 'pupitre', 'rayonnage'] },
   astro:     { name: 'Astrologie', ico: '🔭', cost: 0, tgt: 'none', draw: 1, nrg: 1, exhaust: 1, from: ['globe'] },
@@ -177,7 +183,7 @@ const CASTLE_CARDS = {
   chope:     { name: 'Chope', ico: '🍺', cost: 0, tgt: 'none', nrg: 1, fear: 1, from: ['biere', 'comptoir'] },
   tournee:   { name: 'Tournée générale', ico: '🍻', cost: 1, tgt: 'ally', calm: 4, draw: 1, from: ['tablee'] },
   orgue:     { name: 'Orgue lugubre', ico: '🎹', cost: 1, tgt: 'allfoes', weak: [2, 1], from: ['orgue'] },
-  torche:    { el: 'feu', name: 'Torche', ico: '🔦', cost: 0, tgt: 'enemy', dmg: 3, from: ['torche', 'candelabre', 'lustre'] },
+  torche:    { el: 'feu', name: 'Torche', ico: '🔦', cost: 0, tgt: 'enemy', dmg: 2, from: ['torche', 'candelabre', 'lustre'] },   // gratuite et facile à avoir : 2 ; le lustre (de qualité) la donne améliorée
   potdevin:  { name: 'Pot-de-vin', ico: '💰', cost: 1, tgt: 'enemy', bribe: 12, from: ['tasdor', 'coffreor', 'montagnedor'] },
   miroir:    { name: 'Miroir qui ment', ico: '🪞', cost: 1, tgt: 'enemy', confuse: 1, from: ['miroir'] },
   toile:     { name: 'Toile collante', ico: '🕸️', cost: 1, tgt: 'enemy', weak: [3, 1], from: ['toile'] },
@@ -248,7 +254,13 @@ const cardDef = c => c.src === 'sp' ? CRAWL_SK[c.key] : c.src === 'base' ? CARD_
 const cardKind = D => D.dmg != null || D.bribe ? 'atk' : D.blk != null || D.evade || D.decoy ? 'def' : D.heal != null || D.calm != null || D.revive ? 'heal' : 'skill';
 const cardName = c => cardDef(c).name + (c.up ? ' +' : '');
 // d'où vient une carte du château : le premier meuble ou piège qu'on a vraiment
-const castleSrc = k => { const D = CASTLE_CARDS[k], f = D.from.find(x => hasItem(x) || S.defs.some(d => d.t === x)) || D.from[0]; return FURN[f] ? FURN[f].name : DEFS[f] ? DEFS[f].name : ''; };
+// un meuble de qualité (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée (✦) : le grand lustre fait une meilleure torche que la torche
+const srcPrice = k => { const c = (FURN[k] || DEFS[k] || {}).cost || {}; return (c.g || 0) + (c.s || 0); };
+const srcTier = k => { const f = FURN[k], r = f && ROOMS[f.room]; return Math.max((f || DEFS[k] || {}).tier || 0, (r && r.tier) || 0); };
+const fineSrc = k => !(FURN[k] && FURN[k].artefact) && (srcPrice(k) >= 6 || srcTier(k) >= 2);
+const ownsSrc = k => hasItem(k) || S.defs.some(d => d.t === k);
+const castleUp = k => !!CASTLE_CARDS[k] && CASTLE_CARDS[k].from.some(x => ownsSrc(x) && fineSrc(x));
+const castleSrc = k => { const D = CASTLE_CARDS[k], f = D.from.find(x => ownsSrc(x) && fineSrc(x)) || D.from.find(ownsSrc) || D.from[0]; return FURN[f] ? FURN[f].name : DEFS[f] ? DEFS[f].name : ''; };
 // les cartes que ton château peut mettre dans le sac
 function castlePool() { return Object.keys(CASTLE_CARDS).filter(k => CASTLE_CARDS[k].from.some(f => hasItem(f) || S.defs.some(d => d.t === f))); }
 
@@ -269,7 +281,7 @@ function crawlDeck(team, bag) {
     out.push(CRAWL_SK[c.sp] ? newCard('sp', c.sp, c.id, (c.loy || 0) >= 70) : newCard('base', 'griffe', c.id));
     if (c.evo || c.legend) out.push(newCard('base', 'legende', c.id));
   });
-  (bag || []).forEach(k => CASTLE_CARDS[k] && out.push(newCard('castle', k)));
+  (bag || []).forEach(k => CASTLE_CARDS[k] && out.push(newCard('castle', k, null, castleUp(k))));
   return out;
 }
 // ce qu'une carte vaut « dans l'absolu » (le sac et les récompenses automatiques)
@@ -282,14 +294,14 @@ function cardValue(D) {
 }
 // le sac automatique : les meilleures cartes du château, dont au moins un soin si possible
 function crawlAutoBag(pool = castlePool()) {
-  const sorted = pool.slice().sort((a, b) => cardValue(CASTLE_CARDS[b]) - cardValue(CASTLE_CARDS[a])), bag = sorted.slice(0, BAG_SIZE);
+  const val = k => cardValue(CASTLE_CARDS[k]) * (castleUp(k) ? 1.35 : 1), sorted = pool.slice().sort((a, b) => val(b) - val(a)), bag = sorted.slice(0, BAG_SIZE);
   const heal = sorted.find(k => CASTLE_CARDS[k].heal); if (heal && !bag.some(k => CASTLE_CARDS[k].heal) && bag.length) bag[bag.length - 1] = heal;
   return bag;
 }
 
 /* ---------- l'expédition : la carte, les salles, le butin ---------- */
 function crawlNew(dg, team, opts = {}) {
-  const R = { dg, np: Math.max(1, Math.min(5, opts.np || 1)), lvl: crawlLevel(), floor: 1, step: 0, party: team.map(c => crawler(c)), deck: crawlDeck(team, opts.bag || crawlAutoBag()), loot: { g: 0, s: 0, items: [] }, log: [], done: null, relic: null, path: [], seed: Math.floor(Math.random() * 1e9) };
+  const R = { dg, np: Math.max(1, Math.min(5, opts.np || 1)), lvl: Math.round((crawlLevel() + crawlResist(dg) + (opts.lvlAdd || 0)) * 10) / 10, floor: 1, step: 0, party: team.map(c => crawler(c)), deck: crawlDeck(team, opts.bag || crawlAutoBag()), loot: { g: 0, s: 0, items: [] }, log: [], done: null, relic: null, path: [], seed: Math.floor(Math.random() * 1e9) };
   R.choices = crawlChoices(R); return R;
 }
 function crawlChoices(R) {
@@ -414,18 +426,18 @@ function crawlBattle(R, foes) {
     let d = Math.max(0, v); if (B.firstHit && !opt.aoe) { d += 3; B.firstHit = false; }
     const mul = elemMul(opt.el, t), eff = mul === 0 ? 'imm' : mul > 1 ? 'vuln' : mul < 1 ? 'res' : '';
     d = Math.floor(d * mul);
-    if (t.pow === 'cristal') d = Math.max(0, d - 3);
-    if (t.pow === 'sceau') d = Math.min(d, 8);
+    if (t.pow === 'cristal') d = Math.max(0, d - powV('cristal', 'v', 3));
+    if (t.pow === 'sceau') d = Math.min(d, powV('sceau', 'v', 8));
     const ab = opt.pierce ? 0 : Math.min(t.block || 0, d); t.block -= ab; d -= ab; t.hp -= d;
     say(`${me ? me.name : 'Le château'} → ${t.name} : ${d ? '−' + d : 'paré'}${ab ? ` (${ab} encaissés)` : ''}${eff === 'vuln' ? ' — vulnérable !' : eff === 'res' ? ' — il résiste' : eff === 'imm' ? ' — immunisé' : ''}`, 'good', { k: 'hit', from: me ? me.id : null, to: t.uid, v: d, ab, el: opt.el, eff });
     if (t.hp <= 0) {
       if (t.rise && !t.rose) { t.rose = true; t.hp = t.rise; say(`${t.name} se relève !`, 'bad', { k: 'rise', to: t.uid }); }
-      else { t.hp = 0; say(`${t.name} tombe.`, 'good', { k: 'down', to: t.uid }); B.foes().filter(o => o.pow === 'service').forEach(o => { o.block += 8; o.buff += 2; if (o.int && DMG_K.includes(o.int.k)) o.int.v += 2; say(`${o.name} venge son allié : +8 parade, +2 force.`, 'bad', { k: 'fbuff', to: o.uid }); }); }
+      else { t.hp = 0; say(`${t.name} tombe.`, 'good', { k: 'down', to: t.uid }); B.foes().filter(o => o.pow === 'service').forEach(o => { const sv = powV('service', 'v', 8), sb = powV('service', 'buff', 2); o.block += sv; o.buff += sb; if (o.int && DMG_K.includes(o.int.k)) o.int.v += sb; say(`${o.name} venge son allié : +8 parade, +2 force.`, 'bad', { k: 'fbuff', to: o.uid }); }); }
       return d;
     }
     // les capacités d'élite
-    if (d > 0 && t.pow === 'rage' && t.buff < 6) { t.buff++; if (t.int && DMG_K.includes(t.int.k)) t.int.v++; say(`${t.name} enrage : +1 de force.`, 'bad', { k: 'fbuff', to: t.uid }); }
-    if (d > 0 && t.pow === 'riposte' && me && !me.ko) { say(`${t.name} riposte !`, 'bad', { k: 'act', from: t.uid, to: me.id }); B.hurt(t, me, 3); }
+    if (d > 0 && t.pow === 'rage' && t.buff < powV('rage', 'max', 6)) { const rv = powV('rage', 'v', 1); t.buff += rv; if (t.int && DMG_K.includes(t.int.k)) t.int.v += rv; say(`${t.name} enrage : +${rv} de force.`, 'bad', { k: 'fbuff', to: t.uid }); }
+    if (d > 0 && t.pow === 'riposte' && me && !me.ko) { say(`${t.name} riposte !`, 'bad', { k: 'act', from: t.uid, to: me.id }); B.hurt(t, me, powV('riposte', 'v', 3)); }
     // la fureur légendaire : à mi-vie, le boss change de visage
     if (t.boss && t.phase !== 2 && t.hp <= t.max / 2) B.enrage(t);
     return d;
@@ -462,7 +474,7 @@ function crawlBattle(R, foes) {
     const mul = elemMul(el, t), eff = mul === 0 ? 'imm' : mul > 1 ? 'vuln' : mul < 1 ? 'res' : '';
     let d = Math.floor(Math.max(0, v - (f.st.weak || 0)) * mul); const ab = Math.min(t.block || 0, d); t.block -= ab; d -= ab; t.hp -= d;
     say(`${f.name} → ${t.name} : ${d ? '−' + d : 'paré'}${ab ? ` (${ab} encaissés)` : ''}${eff === 'vuln' ? ' — vulnérable !' : eff === 'res' ? ' — résiste' : eff === 'imm' ? ' — immunisé·e' : ''}`, d ? 'bad' : '', { k: 'hurt', from: f.uid, to: t.id, v: d, ab, el, eff });
-    if (d > 0 && f.pow === 'venin' && t.hp > 0) B.poisonP(t, 1);
+    if (d > 0 && f.pow === 'venin' && t.hp > 0) B.poisonP(t, powV('venin', 'v', 1));
     if (t.hp <= 0) {
       if (t.loyal && !t.saved) { t.saved = true; t.hp = 1; say(`${t.name}, fidèle jusqu’au bout, tient debout avec 1 PV !`, 'good', { k: 'loyal', to: t.id }); }
       else { t.hp = 0; t.ko = true; t.block = 0; say(`${t.name} est K.O. : ses cartes sont mises de côté.`, 'bad', { k: 'ko', to: t.id }); B.mates().forEach(c => B.fear(c, 2)); }
@@ -471,14 +483,15 @@ function crawlBattle(R, foes) {
   };
   // piocher : les cartes d'une créature K.O. sont mises de côté (on en pioche une autre)
   B.drawN = (n, p = B.cur) => {
-    const H = B.hands[p];
+    const H = B.hands[p]; let burnt = 0;
     for (let k = 0, tries = 0; k < n && tries < 60; tries++) {
       if (!B.draw.length) { if (!B.disc.length) break; B.draw = shuffle(B.disc); B.disc = []; say('La défausse est mélangée dans la pioche.', '', { k: 'shuffle' }); }
       const c = B.draw.pop(), me = B.owner(c);
       if (me && me.ko) { B.exh.push(c); continue; }
-      if (H.length >= 10) { B.disc.push(c); continue; }
+      if (H.length >= 10) { B.disc.push(c); burnt++; k++; continue; }   // main pleine : la carte piochée en trop part à la défausse (et compte comme piochée)
       H.push(c); k++;
     }
+    if (burnt) say(`Main pleine (10 cartes) : ${burnt > 1 ? `${burnt} cartes partent` : 'une carte part'} à la défausse.`, '', { k: 'shuffle' });
   };
   // la prochaine action de chaque ennemi, et sa cible
   B.mkInt = (f, a) => {
@@ -572,7 +585,7 @@ function crawlBattle(R, foes) {
   B.enemyAct = f => {
     if (B.over || f.hp <= 0) return;
     f.block = 0;
-    if (f.pow === 'ecorce') { f.block += 6; say(`L’écorce de ${f.name} durcit (+6).`, '', { k: 'fblock', to: f.uid, v: 6 }); }
+    if (f.pow === 'ecorce') { const ev = powV('ecorce', 'v', 6); f.block += ev; say(`L’écorce de ${f.name} durcit (+${ev}).`, '', { k: 'fblock', to: f.uid, v: ev }); }
     if (f.st.poison) { const d = Math.floor(f.st.poison * elemMul('poison', f)); f.hp -= d; say(`${f.name} souffre du poison (−${d}).`, 'good', { k: 'hit', from: null, to: f.uid, v: d, ab: 0, el: 'poison' }); f.st.poison = Math.max(0, f.st.poison - 1); if (f.hp <= 0) { f.hp = 0; say(`${f.name} tombe.`, 'good', { k: 'down', to: f.uid }); B.check(); return; } }
     if (f.st.stun) { f.st.stun--; say(`${f.name} ne peut pas agir${f.lint ? ', ni ses actions légendaires' : ''}.`, 'good', { k: 'stun', to: f.uid }); f.ai++; B.intent(f); return; }
     B.doAct(f, f.int, false);
@@ -647,14 +660,14 @@ function crawlBattle(R, foes) {
 /* ---------- les autres salles ---------- */
 const CRAWL_EVENTS = [
   { k: 'autel', t: 'Un autel poussiéreux, couvert de bougies noires.', a: [['Prier', R => { if (Math.random() < .55) { R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 6); }); return 'Une douce chaleur : +6 PV pour toute l’équipe.'; } R.party.forEach(c => { if (!c.ko) c.stress = Math.min(STRESS_MAX, c.stress + 3); }); return 'Une voix d’outre-tombe ricane : +3 de peur pour toute l’équipe.'; }], ['Passer son chemin', () => 'On ne touche pas aux autels des autres.']] },
-  { k: 'coffre', t: 'Un coffre fermé, un peu trop bien en évidence.', a: [['L’ouvrir', R => { if (Math.random() < .6) { const g = Math.round(6 * crawlDepthK(R)); R.loot.g += g; return `Il est plein : +${g} 💰.`; } const c = pick(R.party.filter(x => !x.ko)); if (c) c.hp = Math.max(1, c.hp - 6); return `C’était un piège : ${c ? c.name + ' perd 6 PV' : 'personne n’est touché'}.`; }], ['Le laisser', () => 'Trop beau pour être vrai.']] },
+  { k: 'coffre', t: 'Un coffre fermé, un peu trop bien en évidence.', a: [['L’ouvrir', R => { if (Math.random() < .6) { const g = Math.round(6 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; return `Il est plein : +${g} 💰.`; } const c = pick(R.party.filter(x => !x.ko)); if (c) c.hp = Math.max(1, c.hp - 6); return `C’était un piège : ${c ? c.name + ' perd 6 PV' : 'personne n’est touché'}.`; }], ['Le laisser', () => 'Trop beau pour être vrai.']] },
   { k: 'fontaine', t: 'Une fontaine qui glougloute dans le noir.', a: [['Boire', R => { const c = pick(R.party.filter(x => !x.ko)); if (!c) return 'Personne n’a soif.'; if (Math.random() < .65) { c.hp = c.max; return `${c.name} boit et se sent comme neuf (PV au maximum).`; } c.stress = Math.min(STRESS_MAX, c.stress + 3); return `${c.name} boit… et entend des voix (+3 de peur).`; }], ['Remplir les gourdes', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'L’eau fraîche apaise tout le monde (−2 de peur).'; }]] },
   { k: 'marchand', t: 'Un marchand ambulant, perdu depuis des semaines.', a: [['Acheter une potion (8 💰 du butin)', R => { if (R.loot.g < 8) return 'Pas assez dans le butin.'; R.loot.g -= 8; R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 8); }); return 'Une potion pour tous : +8 PV.'; }], ['Lui indiquer la sortie', R => { R.loot.g += 3; return 'Reconnaissant, il te laisse 3 💰.'; }]] },
   { k: 'cage', t: 'Une cage, et dedans, un prisonnier du donjon qui supplie.', a: [['Le libérer', R => { R.freed = (R.freed || 0) + 1; R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'Il file en jurant de chanter tes louanges au village (bonne volonté).'; }], ['Ignorer', R => { R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 1); }); return 'Ses cris vous suivent longtemps (+1 de peur).'; }]] },
   { k: 'forge', t: 'Une enclume abandonnée, encore tiède. Quelqu’un forgeait ici il y a peu.', a: [['Aiguiser une carte', R => { const c = crawlBestUpgrade(R); if (!c) return 'Rien à aiguiser.'; c.up = true; return `${cardName(c)} : la carte est améliorée.`; }], ['Se méfier', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'On ne touche à rien (−1 de peur).'; }]] },
   { k: 'colporteur', t: 'Un colporteur à la hotte pleine de bricoles, qui parle tout seul.', a: [['Lui donner 6 💰 du butin contre une carte', R => { if (R.loot.g < 6) return 'Pas assez dans le butin.'; const o = crawlRewards(R, 1)[0]; if (!o) return 'Il n’a rien qui te serve.'; R.loot.g -= 6; R.deck.push(o); return `Il te cède ${cardName(o)}.`; }], ['Le laisser parler', () => 'Il parle encore quand vous tournez au coin.']] },
 ];
-function crawlTreasure(R) { const k = crawlDepthK(R), g = Math.round((4 + Math.random() * 4) * k), s = Math.random() < .5 ? Math.round(2 * k) : 0; R.loot.g += g; R.loot.s += s; let item = null; if (Math.random() < .2) { item = pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && (FURN[t].cost.g || 0) <= 4)); if (item) R.loot.items.push(item); } return `Un trésor : +${g} 💰${s ? `, +${s} 🪵` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`; }
+function crawlTreasure(R) { const k = crawlDepthK(R), g = Math.round((4 + Math.random() * 4) * k * CRAWL_GOLD), s = Math.random() < .5 ? Math.round(2 * k) : 0; R.loot.g += g; R.loot.s += s; let item = null; if (Math.random() < .2) { item = pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && (FURN[t].cost.g || 0) <= 4)); if (item) R.loot.items.push(item); } return `Un trésor : +${g} 💰${s ? `, +${s} 🪵` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`; }
 // le repos : soigner, se calmer, ou aiguiser une carte
 function crawlRest(R, how, card) {
   if (how === 'calm') { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 4); }); return 'Un feu de camp, des histoires idiotes : −4 de peur pour tous.'; }
@@ -672,7 +685,7 @@ function crawlRewards(R, n = 3) {
 }
 // le butin d'un combat gagné
 function crawlWinLoot(R, kind) {
-  const k = crawlDepthK(R), g = Math.round((kind === 'boss' ? 18 : kind === 'elite' ? 8 : 3) * k * (.8 + Math.random() * .4)), s = kind === 'combat' ? 0 : Math.round((kind === 'boss' ? 5 : 2) * k);
+  const k = crawlDepthK(R), g = Math.round((kind === 'boss' ? 18 : kind === 'elite' ? 8 : 3) * k * (.8 + Math.random() * .4) * CRAWL_GOLD), s = kind === 'combat' ? 0 : Math.round((kind === 'boss' ? 5 : 2) * k);
   R.loot.g += g; R.loot.s += s;
   if (hasRelic('chope')) R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 3); });
   if (kind === 'boss') { const rl = CRAWL_DG[R.dg].relic; if (!hasRelic(rl)) R.relic = rl; }

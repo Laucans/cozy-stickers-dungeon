@@ -387,6 +387,23 @@ function* battleGen(plan, R) {
     if (opt.final && S.world && S.world.merc > S.night) defs.push({ id: 'merc', name: 'les Mercenaires', hp: 10, max: 10, atk: 2, merc: true, A: {} });
     if (opt.final && typeof nemAlly === 'function') { const al = nemAlly(); if (al) defs.push(al); }   // l'ancien héros némésis, passé de ton côté
     if (!defs.length) return null;
+    // le combat décisif, à l'écran : le Maître peut le jouer aux cartes (sinon, le combat automatique ci-dessous)
+    if (opt.final && R.live && typeof defenseCards === 'function') {
+      const front = defs.slice().sort((a, b) => (b.merc ? 1 : 0) - (a.merc ? 1 : 0) || b.atk - a.atk || b.hp - a.hp).slice(0, 2 * (e.heart ? 5 : 2 + 2 * e.rooms.length));   // le premier rang et sa relève, comme au combat automatique
+      const out = yield { ask: 'cards', e, label: e.label, defs: front, party: alive(), need: Math.max(1, need - (n - alive().length)) };
+      if (out && out.res) {
+        R.ev.push({ k: 'engage', i: e.i, final: true, heart: !!e.heart, label: e.label, cap: front.length, defs: front.map(d => ({ id: d.id, hp: d.hp, max: d.max, merc: !!d.merc })) });
+        const hits = [];
+        out.her.forEach(x => { const h = party[x.j]; if (!h || h.ko) return; if (x.ko) hurtHero(h, h.hp, hits, null); else if (h.hp > x.hp) { hits.push({ s: 'h', j: h.j, dmg: h.hp - x.hp }); h.hp = x.hp; } });
+        out.def.forEach(x => { const d = front.find(o => o.id === x.id); if (!d) return; if (d.c && !R.fought.includes(d.id)) R.fought.push(d.id);
+          if (x.ko) { hits.push({ s: 'c', id: d.id, dmg: d.hp, ko: 1 }); d.hp = 0; if (d.c && out.res !== 'flee' && !R.hurt.includes(d.id)) R.hurt.push(d.id); }
+          else if (d.hp > x.hp) { hits.push({ s: 'c', id: d.id, dmg: d.hp - x.hp }); d.hp = x.hp; } });
+        R.charges = 0; R.cards = true;
+        R.ev.push({ k: 'round', i: e.i, n: 1, hits, sk: 'Aux cartes' });
+        R.lines.push(['🃏', `${e.label} : défendu aux cartes. ${out.res === 'flee' ? 'La bande est repoussée !' : 'La bande l’emporte…'}`, out.res === 'flee' ? 'good' : 'bad']);
+        return out.res;
+      }
+    }
     let pw = null;
     if (R.charges > 0) {
       while (R.queue.length) doStep(R.queue.shift());   // un geste demandé pendant la balade passe avant le combat
@@ -442,7 +459,7 @@ function* battleGen(plan, R) {
           if (D.sticky) sticky = 1;
           R.ev.push({ k: 'trap', i, defId: d.id, hits }); R.lines.push(['⚔️', `${label} : −${dmg} PV à ${h.name}${h.ko ? ', K.O. !' : '.'}`, 'good']);
           if (broken()) return end('repelled', i);
-          if (D.lost && Math.random() < D.lost * (half ? .6 : 1)) { R.lines.push([D.kind === 'ruse' ? '🎭' : '🦁', D.lostLine || (D.kind === 'ruse' ? 'Ils filent avec le Faux trésor, ravis de leur butin.' : 'L’énigme du Sphinx les laisse secs : ils rentrent chez eux.'), 'good']); return end('lost', i); }
+          if (D.lost && Math.random() < D.lost * (half ? .6 : 1) * Math.pow(.4, R.lostN || 0)) { R.lines.push([D.kind === 'ruse' ? '🎭' : '🦁', D.lostLine || (D.kind === 'ruse' ? 'Ils filent avec le Faux trésor, ravis de leur butin.' : 'L’énigme du Sphinx les laisse secs : ils rentrent chez eux.'), 'good']); return end('lost', i); } if (D.lost) R.lostN = (R.lostN || 0) + 1;
         }
       }
     }
@@ -745,7 +762,7 @@ async function playInvasion(plan, tactic, report) {
     for (; k < R.ev.length; k++) await playBeat(R.ev[k]);
     if (r.done) break;
     if (r.value && r.value.tick) { await walkTo(R.walk.length - 1); bar.refresh(); r = step(null); continue; }   // un pas : tes gestes passent au suivant
-    bar.hide(true); const choice = r.value && r.value.ask === 'power' ? await askPower(r.value, R) : null; bar.hide(false);
+    bar.hide(true); const choice = r.value && r.value.ask === 'power' ? await askPower(r.value, R) : r.value && r.value.ask === 'cards' ? await defenseCards(r.value, R, plan) : null; bar.hide(false);
     r = step(choice); bar.refresh();
   }
   bar.remove();
