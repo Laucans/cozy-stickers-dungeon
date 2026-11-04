@@ -27,7 +27,7 @@ CMD.wonder = a => {
 const FETE_EVERY = 8, FETE_LAST = 5;
 const feteCost = () => { const n = S.creatures.filter(c => !isOut(c)).length; return { g: 10 + n, s: 12 + Math.round(1.5 * n) }; };   // or et bois ; le bois grandit plus vite avec le château (c'est lui qui s'entasse)
 const feteWhy = () => S.feteAt && S.night - S.feteAt < FETE_EVERY ? `La dernière fête est trop récente (encore ${FETE_EVERY - (S.night - S.feteAt)} nuit${FETE_EVERY - (S.night - S.feteAt) > 1 ? 's' : ''})` : !canAfford(feteCost()) ? 'Pas assez' : '';
-CMD.fete = () => { const w = feteWhy(); if (w) return w; pay(feteCost()); S.feteAt = S.night; const L = S.creatures.filter(c => !isOut(c)); L.forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); }); S.hype += Math.ceil(L.length / 3); addLog(`Grande fête au château : ${L.length} créatures en liesse.`, 'good'); return null; };
+CMD.fete = () => { const w = feteWhy(); if (w) return w; pay(feteCost()); S.feteAt = S.night; S.stats.fetes = (S.stats.fetes || 0) + 1; const L = S.creatures.filter(c => !isOut(c)); L.forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); }); S.hype += Math.ceil(L.length / 3); addLog(`Grande fête au château : ${L.length} créatures en liesse.`, 'good'); return null; };
 // les effets
 const heartTokensW = heartTokens;
 heartTokens = function () { return heartTokensW() + Math.ceil(wonderLv('remparts') / 2); };

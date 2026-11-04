@@ -18269,7 +18269,7 @@ CMD.wonder = a => {
 const FETE_EVERY = 8, FETE_LAST = 5;
 const feteCost = () => { const n = S.creatures.filter(c => !isOut(c)).length; return { g: 10 + n, s: 12 + Math.round(1.5 * n) }; };   // or et bois ; le bois grandit plus vite avec le château (c'est lui qui s'entasse)
 const feteWhy = () => S.feteAt && S.night - S.feteAt < FETE_EVERY ? `La dernière fête est trop récente (encore ${FETE_EVERY - (S.night - S.feteAt)} nuit${FETE_EVERY - (S.night - S.feteAt) > 1 ? 's' : ''})` : !canAfford(feteCost()) ? 'Pas assez' : '';
-CMD.fete = () => { const w = feteWhy(); if (w) return w; pay(feteCost()); S.feteAt = S.night; const L = S.creatures.filter(c => !isOut(c)); L.forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); }); S.hype += Math.ceil(L.length / 3); addLog(`Grande fête au château : ${L.length} créatures en liesse.`, 'good'); return null; };
+CMD.fete = () => { const w = feteWhy(); if (w) return w; pay(feteCost()); S.feteAt = S.night; S.stats.fetes = (S.stats.fetes || 0) + 1; const L = S.creatures.filter(c => !isOut(c)); L.forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); }); S.hype += Math.ceil(L.length / 3); addLog(`Grande fête au château : ${L.length} créatures en liesse.`, 'good'); return null; };
 // les effets
 const heartTokensW = heartTokens;
 heartTokens = function () { return heartTokensW() + Math.ceil(wonderLv('remparts') / 2); };
@@ -18732,19 +18732,19 @@ const MOMENTS = [
 ];
 // les moments récurrents : chaque fois que ça arrive (avec un plafond par chapitre), pour que la course reste ouverte toute la partie
 const RECUR = [
-  { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
-  { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
+  { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0, twins: ['repousse', 'rempart', 'forteresse'] },
+  { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0, twins: ['boss3'] },
   { id: 'r_expe', cat: 'Profondeurs', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
-  { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
-  { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
+  { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0, twins: ['palier1', 'palier2'] },
+  { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0, twins: ['crit', 'crit3'] },
   { id: 'r_envies', cat: 'Éleveur', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
-  { id: 'r_quete', cat: 'Val', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0 },
+  { id: 'r_quete', cat: 'Val', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0, twins: ['quete', 'grandequete'] },
   { id: 'r_merveille', cat: 'Bâtisseur', ico: '🏛️', t: 'Merveille agrandie', pts: 1, cap: 2, v: s => s.stats.wonders || 0 },
-  { id: 'r_coup', cat: 'Stratège', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0 },
-  { id: 'r_legende', cat: 'Missions', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length },
-  { id: 'r_artefact', cat: 'Château', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0 },
-  { id: 'r_vassal', cat: 'Val', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length },
-  { id: 'r_fete', cat: 'Éleveur', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => s.feteAt || 0 },
+  { id: 'r_coup', cat: 'Stratège', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0, twins: ['coup'] },
+  { id: 'r_legende', cat: 'Missions', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length, twins: ['epopee'] },
+  { id: 'r_artefact', cat: 'Château', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0, twins: ['collec'] },
+  { id: 'r_vassal', cat: 'Val', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length, twins: ['vassal'] },
+  { id: 'r_fete', cat: 'Éleveur', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => (s.stats && s.stats.fetes) || 0, twins: ['fete'] },
 ];
 const MOM_BY = Object.fromEntries([...MOMENTS, ...RECUR].map(m => [m.id, m]));
 // les reliques d'ère (le pouvoir d'un ancien haut fait, gagné en âge d'or)
@@ -18835,7 +18835,9 @@ function bookEarn(id, night) {
 function bookRecur() {
   const B = bookState(), c = bookCur(), out = []; B.cnt = B.cnt || {};
   RECUR.forEach(r => { let v = 0; try { v = r.v(S); } catch (e) {} const was = B.cnt[r.id]; B.cnt[r.id] = v; if (was == null || v <= was) return;
-    const had = c.mine.find(x => x.id === r.id), n = Math.min(v - was, Math.max(0, r.cap - (had ? had.n || 1 : 0)));
+    const had = c.mine.find(x => x.id === r.id); let n = Math.min(v - was, Math.max(0, r.cap - (had ? had.n || 1 : 0)));
+    // pas de doublon : le jour où son moment jumeau est gagné (le premier coup déjoué, la première fête…), le récurrent ne se colle pas
+    if (n > 0 && (r.twins || []).some(id => { if (B.got[id] === S.night) return true; const m = MOM_BY[id]; if (!m || B.got[id]) return false; try { return !!(m.test || m.v)(S); } catch (e) { return false; } })) n--;
     for (let i = 0; i < n; i++) { bookAdd(c, { id: r.id, night: S.night, pts: r.pts, ...(typeof bookCtx === 'function' ? bookCtx(r.id) : {}) }); out.push({ m: r, pts: r.pts }); } });
   return out;
 }
@@ -19139,9 +19141,10 @@ function livrePages(fresh, L, nu) {
   L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
   const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
   P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
-  const stickers = B.ch.reduce((a, c) => a + c.mine.length, 0);
+  const stickers = B.ch.reduce((a, c) => a + c.mine.filter(x => !lvHidden(x.id)).length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
-  if (B.prologue && B.prologue.length) for (let i = 0; i < B.prologue.length; i += 2) P.push({ k: 'prologue', html: `<div class="lvp st"><div class="lv-runhead">Prologue</div>${B.prologue.slice(i, i + 2).map((x, j) => lvSticker(x, i + j, false)).join('')}</div>` });
+  const pro = (B.prologue || []).filter(x => !lvHidden(x.id));
+  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(x, j, false, false, lvJit(x))).join('')}</div>` });
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });

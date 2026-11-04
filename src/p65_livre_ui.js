@@ -101,9 +101,10 @@ function livrePages(fresh, L, nu) {
   L = L || lvLayout(innerWidth < 760); nu = nu || new Set();
   const B = bookState(), P = [], isNew = x => nu.has(x) || x.night > fresh;
   P.push({ k: 'garde', html: '<div class="lvp garde"></div>' });
-  const stickers = B.ch.reduce((a, c) => a + c.mine.length, 0);
+  const stickers = B.ch.reduce((a, c) => a + c.mine.filter(x => !lvHidden(x.id)).length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
-  if (B.prologue && B.prologue.length) for (let i = 0; i < B.prologue.length; i += 2) P.push({ k: 'prologue', html: `<div class="lvp st"><div class="lv-runhead">Prologue</div>${B.prologue.slice(i, i + 2).map((x, j) => lvSticker(x, i + j, false)).join('')}</div>` });
+  const pro = (B.prologue || []).filter(x => !lvHidden(x.id));
+  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(x, j, false, false, lvJit(x))).join('')}</div>` });
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });

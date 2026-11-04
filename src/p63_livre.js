@@ -50,19 +50,19 @@ const MOMENTS = [
 ];
 // les moments récurrents : chaque fois que ça arrive (avec un plafond par chapitre), pour que la course reste ouverte toute la partie
 const RECUR = [
-  { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0 },
-  { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0 },
+  { id: 'r_invasion', cat: 'Stratège', ico: '⚔️', t: 'Bande repoussée', pts: 1, cap: 3, v: s => s.stats.repelled || 0, twins: ['repousse', 'rempart', 'forteresse'] },
+  { id: 'r_boss', cat: 'Profondeurs', ico: '💀', t: 'Boss terrassé', pts: 2, cap: 2, v: s => s.stats.crawlBoss || 0, twins: ['boss3'] },
   { id: 'r_expe', cat: 'Profondeurs', ico: '🏰', t: 'Expédition menée', pts: 1, cap: 2, v: s => s.stats.crawls || 0 },
-  { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0 },
-  { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0 },
+  { id: 'r_palier', cat: 'Château', ico: '⭐', t: 'Nouveau palier', pts: 2, cap: 1, v: s => s.tier || 0, twins: ['palier1', 'palier2'] },
+  { id: 'r_crit', cat: 'Stratège', ico: '🎲', t: 'Raid critique', pts: 1, cap: 2, v: s => s.stats.crits || 0, twins: ['crit', 'crit3'] },
   { id: 'r_envies', cat: 'Éleveur', ico: '✦', t: 'Cinq envies comblées', pts: 1, cap: 2, v: s => Math.floor((s.stats.quests || 0) / 5) },
-  { id: 'r_quete', cat: 'Val', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0 },
+  { id: 'r_quete', cat: 'Val', ico: '📜', t: 'Quête du Val accomplie', pts: 1, cap: 2, v: s => s.stats.questsRP || 0, twins: ['quete', 'grandequete'] },
   { id: 'r_merveille', cat: 'Bâtisseur', ico: '🏛️', t: 'Merveille agrandie', pts: 1, cap: 2, v: s => s.stats.wonders || 0 },
-  { id: 'r_coup', cat: 'Stratège', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0 },
-  { id: 'r_legende', cat: 'Missions', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length },
-  { id: 'r_artefact', cat: 'Château', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0 },
-  { id: 'r_vassal', cat: 'Val', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length },
-  { id: 'r_fete', cat: 'Éleveur', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => s.feteAt || 0 },
+  { id: 'r_coup', cat: 'Stratège', ico: '🛡️', t: 'Coup déjoué', pts: 2, cap: 2, v: s => s.stats.coupsFoiled || 0, twins: ['coup'] },
+  { id: 'r_legende', cat: 'Missions', ico: '🗿', t: 'Une légende de plus', pts: 2, cap: 2, v: s => s.creatures.filter(c => c.legend || c.evo).length, twins: ['epopee'] },
+  { id: 'r_artefact', cat: 'Château', ico: '🏺', t: 'Un artefact de plus', pts: 1, cap: 2, v: s => typeof artFound === 'function' ? artFound() : 0, twins: ['collec'] },
+  { id: 'r_vassal', cat: 'Val', ico: '🏳️', t: 'Un donjon soumis', pts: 3, cap: 2, v: () => RIVALS.filter(r => isVassal(r.id)).length, twins: ['vassal'] },
+  { id: 'r_fete', cat: 'Éleveur', ico: '🎉', t: 'Une grande fête', pts: 1, cap: 1, v: s => (s.stats && s.stats.fetes) || 0, twins: ['fete'] },
 ];
 const MOM_BY = Object.fromEntries([...MOMENTS, ...RECUR].map(m => [m.id, m]));
 // les reliques d'ère (le pouvoir d'un ancien haut fait, gagné en âge d'or)
@@ -153,7 +153,9 @@ function bookEarn(id, night) {
 function bookRecur() {
   const B = bookState(), c = bookCur(), out = []; B.cnt = B.cnt || {};
   RECUR.forEach(r => { let v = 0; try { v = r.v(S); } catch (e) {} const was = B.cnt[r.id]; B.cnt[r.id] = v; if (was == null || v <= was) return;
-    const had = c.mine.find(x => x.id === r.id), n = Math.min(v - was, Math.max(0, r.cap - (had ? had.n || 1 : 0)));
+    const had = c.mine.find(x => x.id === r.id); let n = Math.min(v - was, Math.max(0, r.cap - (had ? had.n || 1 : 0)));
+    // pas de doublon : le jour où son moment jumeau est gagné (le premier coup déjoué, la première fête…), le récurrent ne se colle pas
+    if (n > 0 && (r.twins || []).some(id => { if (B.got[id] === S.night) return true; const m = MOM_BY[id]; if (!m || B.got[id]) return false; try { return !!(m.test || m.v)(S); } catch (e) { return false; } })) n--;
     for (let i = 0; i < n; i++) { bookAdd(c, { id: r.id, night: S.night, pts: r.pts, ...(typeof bookCtx === 'function' ? bookCtx(r.id) : {}) }); out.push({ m: r, pts: r.pts }); } });
   return out;
 }
