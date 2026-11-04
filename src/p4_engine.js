@@ -635,7 +635,7 @@ function dawn(report) {
   const c0 = cands();
   // une espèce commune jamais vue, sa pièce prête : elle vient au bout de 4 nuits au plus, même si la renommée est au plafond (il lui faut un lit)
   const fresh = c0.filter(sp => !S.album[sp] && !SPECIES[sp].rare); S.albumWait = fresh.length ? (S.albumWait || 0) + 1 : 0;
-  const pity = S.albumWait >= 4; if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
+  const pity = S.albumWait >= (Object.keys(S.album || {}).length <= 2 ? 2 : 4); if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
   else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’est pas encore assez renommé pour les attirer (${fameCap()} créatures au plus). Accomplis de grandes choses !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
@@ -655,7 +655,7 @@ function dawn(report) {
       report.push(['🆕', `${c.name} (${d.name}) ${why} et s’installe !`, 'good']);
       addLog(`${c.name} (${d.name}) arrive.`, 'good');
     }
-    if (!arrived.length) report.push(['🌫️', 'Des bruits de pas devant le porche… mais personne n’est entré.', '']);
+    if (!arrived.length) report.push(['🌫️', `Des bruits de pas devant le porche… mais personne n’est entré (une arrivée n’est jamais garantie ; une espèce jamais vue finit toujours par venir${fresh.length ? `, dans ${Math.max(1, (Object.keys(S.album || {}).length <= 2 ? 2 : 4) - S.albumWait)} nuit(s) au plus` : ''}).`, '']);
   }
   S.night++;
   S.creatures.forEach(c => { c.pet = 0; c.treat = 0; });

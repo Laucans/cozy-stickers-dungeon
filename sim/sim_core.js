@@ -19,7 +19,8 @@ function simNewGame(seed, theme) {
 }
 // une nuit, comme endNight() mais sans fenêtres ni animations
 function simInvasion(plan) {
-  if (typeof resolveInvasion === 'function') { const R = resolveInvasion(plan, 'postes'); plan.res = R; return R.outcome; }   // les vrais combats
+  if (S.opts && S.opts.cliTac === 'rancon' && typeof payOff === 'function') { payOff(plan); SIM.m.inv_bought = SIM.m.inv_bought || 0; return 'bought'; }   // la tactique « rançon » de la ligne de commande
+  if (typeof resolveInvasion === 'function') { const R = resolveInvasion(plan, (S.opts && S.opts.cliTac) || 'postes'); plan.res = R; return R.outcome; }   // les vrais combats
   if (!plan.path) return 'lost';
   let courage = plan.courage;
   for (let idx = 0; idx < plan.path.length; idx++) for (const st of plan.steps.filter(s => s.i === idx)) {
@@ -34,7 +35,8 @@ function simNight() {
   if (typeof filNightStart === 'function') filNightStart();
   const cd = calamityDelta(); S.calamity = Math.max(0, S.calamity + cd.d);
   if (S.calamity >= CAL_MAX) { const ev = pick(CALAMITIES.filter(c => c.when())); ev.run(); S.calamity = 0; S.stats.calmNights = 0; M.calamities++; } else S.stats.calmNights++;
-  if (S.raid && S.raid.crawl && typeof simCrawlNight === 'function') { const o = simCrawlNight(report); M.crawls = (M.crawls || 0) + 1; if (o) M['crawl_' + o] = (M['crawl_' + o] || 0) + 1; }
+  if (S.raid && S.raid.played) { /* expédition déjà jouée à la main (sim/crawl_cli.js) */ }
+  else if (S.raid && S.raid.crawl && typeof simCrawlNight === 'function') { const o = simCrawlNight(report); M.crawls = (M.crawls || 0) + 1; if (o) M['crawl_' + o] = (M['crawl_' + o] || 0) + 1; }
   else if (S.raid) { const team = S.raid.team.map(critter).filter(Boolean); if (team.length) { const b = raidBreakdown(S.raid.target, S.raid.team), extra = typeof simRaidExtras === 'function' ? simRaidExtras(b, team, report) : 0, roll = rollPool(b.pool + extra), tg = RAIDS[S.raid.target]; report.push(['🎲', `Raid sur ${tg ? tg.name : S.raid.target} : ${b.pool} dés → ${roll.dice.join(', ')} (${roll.res === 'fail' ? 'échec' : roll.res === 'partial' ? 'réussite partielle' : roll.res === 'crit' ? 'critique' : 'réussite'})`, '']); applyRaid(roll).forEach(l => report.push(l)); M.raids++; if (roll.res !== 'fail') M.raidsWon++; } }
   if (S.hype >= 3) S.menace += 1;
   if (S.menace >= MENACE_MAX) { S.menace = 0; const plan = planInvasion(), out = simInvasion(plan); if (plan.res) { M.hurt = (M.hurt || 0) + plan.res.hurt.length; M.heroKO = (M.heroKO || 0) + plan.res.fallen.length; M.fought = (M.fought || 0) + plan.res.fought.length; } report.push(['⚔️', `Invasion : ${plan.party.length} héros (rang ${plan.rank || 1}), courage ${plan.courage} contre ${plan.steps.reduce((a, st) => a + st.dmg, 0)} de défense → ${out === 'repelled' ? 'repoussés' : out === 'lost' ? 'perdus en route' : 'le Cœur est pillé'}`, out === 'robbed' ? 'bad' : 'good']); applyInvasion(plan, out).forEach(l => report.push(l)); M.inv++; M['inv_' + out]++; M.invRank[plan.rank || 1]++; (M.invLog = M.invLog || []).push([S.night, plan.rank || 1, plan.courage, plan.steps.reduce((a, st) => a + st.dmg, 0), out, vicState().croisade && !vicState().won.legende ? 1 : 0]); }
@@ -237,7 +239,7 @@ function simState(full) {
   const crit = S.creatures.map(c => `${c.name}(${SPECIES[c.sp] ? SPECIES[c.sp].name : c.sp}, niv${c.lvl}, ❤${c.mood}, loy${c.loy}, épa${c.epa}${c.tempt ? ', TENTÉ' : ''}${c.legend ? ', légende' : ''}${c.away ? ', en mission' : c.raid ? ', en raid' : ''}${c.quest ? ', envie ' + c.quest.k + ':' + c.quest.st : ''}${c.secret && c.secret.known ? ', rêve ' + (c.secret.done ? 'réalisé' : c.secret.label) : ''})`);
   const rooms = {}; S.rooms.filter(r => !['couloir', 'porche'].includes(r.t)).forEach(r => { const k = ROOMS[r.t].name + (zOf(r) ? '@' + zOf(r) : '') + (r.built ? '' : ' (chantier ' + r.prog + '/' + ROOMS[r.t].clock + ')'); rooms[k] = (rooms[k] || 0) + 1; });
   const known = world().sites.filter(s => siteKnown(s) && s.kind !== 'chateau').map(s => `${s.id}:${s.name}[${s.kind}${s.expe ? ' expé' + (expeReady(s) ? '' : ' (recharge)') : ''}${SITE_KINDS[s.kind].rank ? ' bonne-volonté ' + gwOf(s) : ''}${s.raid && s.kind !== 'raid' ? ' raid' : ''}${s.rival ? ' raid r_' + s.rival + (isVassal(s.rival) ? ' VASSAL' : ' ' + (v.vassals[s.rival] || 0) + '/3') : ''}]`);
-  const raids = Object.keys(RAIDS).filter(k => raidKnown(k) && RAIDS[k].tier <= S.tier && !(/^x_/.test(k) && RAIDS[k].site && !siteKnown(siteById(RAIDS[k].site)))).map(k => { if (typeof isCrawlTarget === 'function' && isCrawlTarget(k)) return `${k}(expédition en cartes)`; const p = A.raidPool(k); return `${k}(${p < 0 ? 'personne pour y aller' : 'dés ' + p})`; });
+  const raids = Object.keys(RAIDS).filter(k => raidKnown(k) && RAIDS[k].tier <= S.tier && !(/^x_/.test(k) && RAIDS[k].site && !siteKnown(siteById(RAIDS[k].site)))).map(k => { if (typeof isCrawlTarget === 'function' && isCrawlTarget(k)) return `${k}(expédition en cartes)`; const p = A.raidPool(k); return `${k}(${p < 0 ? 'personne pour y aller' : 'dés ' + Math.min(6, p) + (p > 6 ? ' (réserve ' + p + ', 6 lancés au plus)' : '')})`; });
   const reqs = openReqs().map(q => `${q.id}:${siteById(q.site).name}:${q.req}(${REQ[q.req].kind}${q.st === 'sent' ? ', en cours' : ''})`);
   const lines = [
     `NUIT ${S.night} · palier ${S.tier} · or ${S.gold} · matériaux ${S.mat} · notoriété ${S.hype} · rayonnement ${radiance()} · ambiance ${ambiance()} · lits ${S.creatures.length}/${beds()} · repas ${eaters()}/${foodCap()} · calamité ${S.calamity}/${CAL_MAX} · menace ${S.menace}/${MENACE_MAX}`,

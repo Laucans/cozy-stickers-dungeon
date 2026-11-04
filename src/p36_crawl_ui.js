@@ -19,8 +19,8 @@ const isCrawlTarget = k => { if (!RAIDS[k] && /^x_/.test(k || '')) ensureCrawlSi
 // soumettre un rival : un boss vaincu vaut 2 points ; le troisième étage atteint, puis rentrer sans fuir, 1 point (3 points : vassal)
 function crawlVictory(dg, R, lines) {
   if (!CRAWL_DG[dg] || CRAWL_DG[dg].site) return;
-  const v = vicState(), door = R.floor >= CRAWL_FLOORS && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
-  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage et rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
+  const v = vicState(), door = R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
+  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
   if (S.world) S.world.hit[dg] = S.night + (pts ? 6 : 3);
   if (!pts || isVassal(dg)) return;
   v.vassals[dg] = Math.min(3, (v.vassals[dg] || 0) + pts); v.race[dg] = Math.max(0, (v.race[dg] || 0) - 6 * pts);
@@ -30,7 +30,7 @@ function crawlVictory(dg, R, lines) {
 }
 // la Forêt, les Grottes et les Ruines : leurs trésors (un artefact, une rencontre) et le temps qu'il faut pour y retourner
 function crawlSiteResult(key, R, team, lines) {
-  const tg = RAIDS[key]; if (!tg || !tg.site) return;
+  const tg = RAIDS[key]; if (!tg || !tg.site || !R.path || !R.path.length) return;   // rentré avant la première salle : rien ne se passe, le lieu reste ouvert
   const s = siteById(tg.site), X = EXPE_SITES[tg.dg] || {}; if (!s) return;
   S.world.cd[s.id] = S.night + 5; S.stats.expeditions = (S.stats.expeditions || 0) + 1;
   discover(discAround(s.q, s.r, 2), 'expédition');
@@ -314,7 +314,7 @@ async function runCrawl(report) {
     head(); page.classList.remove('battle');
     const B0 = CRAWL_EN[DG.boss];
     body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${msg || esc(DG.desc)}</p>${partyRow()}
-      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>
+      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(B0.name)} est redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? ', et compte déjà 1 point contre ce rival' : ''}.</p>` : ''}
       <div class="cnodes2">${R.choices.map((c, i) => `<button type="button" class="cnode2${c.k === 'boss' ? ' boss' : ''}" data-a="go" data-v="${i}">${gi(NODE_IK[c.k], 'big')}<b>${NODES[c.k].name}</b><small>${c.k === 'boss' ? `${esc(B0.name)}. Chaque tour, une action légendaire en plus ; à mi-vie, la fureur. Vaincu, il rapporte gros, et une relique.` : NODE_TXT[c.k]}</small></button>`).join('')}</div>
       <div class="btnrow cp-foot"><button type="button" class="sbtn" data-a="deck">${gi('cards')} Le deck (${R.deck.length})</button><button type="button" class="sbtn" data-a="retreat">${gi('door')} Rentrer au château avec le butin</button></div></div>`;
     waitCast(`${names[0] || 'L’hôte'} choisit la prochaine salle…`);
@@ -338,7 +338,7 @@ async function runCrawl(report) {
 
   // 3. le combat : l'arène en haut, les mains en bas
   const fight = async kind => {
-    const B = crawlBattle(R, crawlFoes(R, kind)); ui.auto = false; page.classList.add('battle');
+    const B = crawlBattle(R, crawlFoes(R, kind)); ui.auto = false; ui.autoWarned = false; page.classList.add('battle');
     const st = { sel: null, info: '', seen: new Set(), host: true, boss: kind === 'boss' }, ready = Array(B.np).fill(false);
     let sentEv = 0, castT = null;
     const vmNow = enemy => battleVM(B, { p: 0, ready, names });
@@ -357,6 +357,7 @@ async function runCrawl(report) {
     else if (B.foesL.some(f => f.elite)) { const e = B.foesL.find(f => f.elite), P = ELITE_POW[e.pow]; A.banner(`${gi('skull')} ${esc(e.name)}${P ? `<small>${gi(POW_IK[e.pow])} ${esc(P.name)} : ${esc(powDesc(e.pow))}</small>` : ''}`, 'elite big', 1700); sfx('horn'); await sleep(1000); }
     for (let turn = 0; turn < 60 && !B.over; turn++) {
       const n0 = B.ev.length; B.startTurn(); st.sel = null; ready.fill(false); ui.phase = 'players'; ui.secretReq = null;
+      if (ui.auto && !ui.autoWarned && B.party.reduce((a, c) => a + (c.ko ? 0 : c.hp / c.max), 0) / B.party.length < .45) { ui.auto = false; ui.autoWarned = true; st.info = '⚠️ Ça tourne mal : le combat auto te rend la main.'; }   // une fois par combat
       players.forEach((id, p) => { if (p > 0 && !COOP.peers.has(id)) ready[p] = true; });   // un Maître parti ne bloque personne
       render(); castBattle(false); A.banner(`${gi('swords')} Tour ${B.turn}${coop ? ' — à vous !' : ' — à toi !'}`, 'mine', 900); sfx('turn'); await A.play(B.ev.slice(n0), 1); if (B.over) break;
       // le tour des Maîtres : chacun joue sa main ; on passe aux ennemis quand tout le monde a fini
@@ -420,7 +421,7 @@ async function runCrawl(report) {
     if (['combat', 'elite', 'boss'].includes(node.k)) {
       const res = await fight(node.k);
       page.classList.remove('battle');
-      if (res === 'fled') { R.done = 'fled'; const k = R.fledBoss ? 0 : .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
+      if (res === 'fled') { R.done = 'fled'; const k = .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
       if (res !== 'won') { R.done = 'wipe'; break; }
       const t = crawlWinLoot(R, node.k); sfx('coin');
       if (node.k === 'boss') { R.done = 'boss'; break; }
@@ -432,7 +433,7 @@ async function runCrawl(report) {
       const c2 = await panel(`${gi('campfire')} Un coin tranquille pour souffler. Que faire ?`, [['rest', 'heal', `${gi('heart', 'big')} Se soigner`, '+30 % des PV pour toute l’équipe'], ['rest', 'calm', `${gi('calm', 'big')} Se calmer`, '−4 de peur pour toutes'], ['rest', 'up', `${gi('anvil', 'big')} Aiguiser une carte`, 'elle devient plus forte (+)']]);
       if (c2.v === 'up') { const c = await deckView(`${gi('anvil')} Quelle carte aiguiser ?`, true); msg = esc(c ? crawlRest(R, 'up', c) : 'On repart sans rien aiguiser.'); } else { msg = esc(crawlRest(R, c2.v)); sfx('heal'); }
     }
-    else { const E = pick(CRAWL_EVENTS); waitCast(E.t); const c2 = await panel(`${gi('question')} ${esc(E.t)}`, E.a.map((a, i) => ['ev', i, esc(a[0])])); msg = esc(E.a[+c2.v][1](R)); }
+    else { const E = pick(CRAWL_EVENTS); waitCast(E.t); const c2 = await panel(`${gi('question')} ${esc(E.t)}`, E.a.map((a, i) => ['ev', i, esc(a[0]), a[2] ? esc(a[2]) : ''])); msg = esc(E.a[+c2.v][1](R)); }
     crawlAdvance(R);
   }
   // 5. le retour
@@ -558,14 +559,14 @@ WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Le
   <ul><li><b>Le deck vient de ton château.</b> Chaque créature apporte deux Frappes, une Parade et la carte de son espèce (${Object.entries(CRAWL_SK).slice(0, 5).map(([k, s]) => `{sp:${k}} : ${s.ico} ${esc(s.name)}`).join(', ')}…), améliorée si elle est fidèle (70 de loyauté) ; une légende ou une créature évoluée ajoute un Coup de légende. Avant de partir, tu remplis le <b>sac</b> avec ${BAG_SIZE} cartes tirées de tes meubles et de tes pièges : le ${CASTLE_CARDS.chou.ico} Chou du potager soigne, la ${CASTLE_CARDS.hallebarde.ico} Hallebarde du râtelier frappe, la ${CASTLE_CARDS.trappe.ico} Trappe à pics mord le prochain ennemi qui attaque… Un <b>meuble de qualité</b> (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée ✦ : le grand lustre fait une meilleure torche que la simple torche, la catapulte lance de vrais boulets.</li>
   <li><b>Le combat</b> : ${ENERGY} énergie et ${HAND_SIZE} cartes par tour. Une carte de créature se joue par elle (sa force s’ajoute à ses coups) ; si elle est K.O., ses cartes sont mises de côté ; immobilisée, ses cartes attendent ; en panique, elles coûtent 1 de plus. Au-dessus de chaque ennemi, sa prochaine action et sa cible : protège-la, immobilise-le, ou tue-le d’abord.</li>
   <li><b>Trois étages</b> de 3 salles, puis le boss. À chaque pas, deux salles au choix : ${Object.entries(NODES).filter(([k]) => k !== 'boss').map(([, n]) => `${n.ico} ${n.name}`).join(', ')}. Après chaque combat gagné, une carte à ajouter au deck (ou pas). Au repos : se soigner, se calmer, ou aiguiser une carte.</li>
-  <li><b>Après chaque salle</b>, tu continues ou tu rentres avec le butin. En plein combat, tu peux fuir : la moitié du butin reste là-bas (tout le butin, si c’est le boss qu’on fuit). Si l’équipe est terrassée, tout est perdu et tout le monde rentre sonné.</li>
+  <li><b>Après chaque salle</b>, tu continues ou tu rentres avec le butin. En plein combat, tu peux fuir : la moitié du butin reste là-bas (et les stickers, si c’est le boss qu’on fuit). Si l’équipe est terrassée, tout est perdu et tout le monde rentre sonné.</li>
   <li><b>La peur</b> monte avec les spectres, les K.O. et les cris ; à ${STRESS_MAX}, une créature panique. Au retour, la peur se change en fatigue (et parfois en cicatrice).</li>
   <li><b>Les élites</b> ont une capacité qui ne les quitte pas (${Object.values(ELITE_POW).map(P => `${P.ico} ${esc(P.name)}`).join(', ')}) et une action d’élite redoutable dans leur répertoire. <b>Les boss</b> ont en plus une <b>action légendaire</b> à chaque tour, annoncée d’avance (⚡), et à mi-vie ils entrent en <b>fureur</b> : un coup d’éclat, et un répertoire plus dur. Un boss sonné perd aussi son action légendaire.</li>
   <li><b>Les secrets du décor</b> : de temps en temps (pas souvent !), un détail du décor cache quelque chose : un tonneau prêt à exploser, un chandelier mal accroché, un vieux puits à vœux… Rien ne le signale, sauf un petit reflet qui passe. Touche-le pendant le tour des Maîtres : il sert une fois, ne coûte pas d’énergie et vise tout seul au mieux. Le combat auto ne les cherche pas : c’est un coup de pouce pour les yeux attentifs, pas une carte sur laquelle compter.</li>
   <li><b>Les éléments</b> : chaque coup a un type de dégâts, comme dans Donjons et Dragons ; voir {c:elements}.</li>
   <li><b>À plusieurs Maîtres</b> (château partagé) : chacun tire sa propre main et joue ses cartes depuis son écran ; les ennemis attendent que tout le monde ait fini. En contrepartie, les monstres sont plus coriaces, plus nombreux, frappent plus fort, et les boss ont une action légendaire de plus par Maître.</li>
   <li><b>Le niveau</b> suit la renommée de tes 4 meilleures créatures : le donjon se prépare à tes champions.</li>
-  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')}). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace.</li></ul>` };
+  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')}). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace.</li></ul>` };
 WIKI.elements = { cat: 'danger', t: 'Les éléments', x: () => `<p>En expédition, chaque coup a un <b>type de dégâts</b>, comme dans Donjons et Dragons : ${Object.values(ELEM).map(([i, n]) => `${i} ${n}`).join(', ')}.</p>
   <ul><li><b>Vulnérable</b> : les dégâts sont doublés (×2, et un « Vulnérable ! » s’affiche). <b>Résistant</b> : moitié moins. <b>Immunisé</b> : rien du tout. Sous chaque ennemi, ses faiblesses et ses résistances.</li>
   <li><b>La Frappe</b> prend l’arme naturelle de la créature qui la joue : le troll et le golem cognent (contondant), le squelette et l’orque tranchent, le gobelin et le vampire percent, le fantôme et la liche frappent nécrotique, la fée frappe de force. Les cartes du château ont leur propre type : Braises et Sort de flammes (feu), Fiole explosive (acide), Éclair de l’archimage (foudre), Épée qui chante faux (tonnerre), Relique bénite (radiant), Eau glacée du lac (froid), Malédiction de la tombe (nécrotique)…</li>

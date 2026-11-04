@@ -1,5 +1,5 @@
 /* =========================================================
-   Le fil rouge : sept chapitres pour découvrir le château
+   Le fil rouge : huit chapitres pour découvrir le château
    Chaque chapitre a ses objectifs (une pastille 📜 à droite,
    son journal avec « Montre-moi ») et dévoile, une fois
    achevé, de nouveaux boutons : les pièges et les gardes,
@@ -28,11 +28,11 @@ const FIL = [
     goals: [
       { id: 'carte', t: 'Ouvre la carte du Val', ok: () => !!filFlag('map'), show: () => filGlow('#minimap'), wiki: 'carte' },
       { id: 'raid', t: 'Réussis un raid', ok: () => S.stats.raidsWon >= 1, show: () => filGlow('#btnRaid'), wiki: 'raids' },
-      { id: 'cibles', t: 'Pille deux lieux différents', ok: () => Object.keys((S.fil && S.fil.tg) || {}).length >= 2, n: () => [Object.keys((S.fil && S.fil.tg) || {}).length, 2], show: () => filGlow('#btnRaid'), wiki: 'risques' },
+      { id: 'cibles', t: 'Pille ou explore deux lieux différents (raid ou expédition)', ok: () => Object.keys((S.fil && S.fil.tg) || {}).length >= 2, n: () => [Object.keys((S.fil && S.fil.tg) || {}).length, 2], show: () => { openWorld(); toast('Sur la carte : un éclaireur ou une rumeur au village dévoile de nouvelles cibles.'); }, wiki: 'risques' },
     ], reward: { g: 15, s: 20 }, unlock: 'la renommée et les hauts faits' },
   { id: 'ames', t: 'Des âmes à choyer', intro: 'Tes créatures ne sont pas des meubles : chacune a ses envies, ses rêves, son humeur. Comble-les et elles te le rendront. Et un château heureux grandit : vise le Palier 1, puis offre-leur une fête.',
     goals: [
-      { id: 'envies', t: 'Comble 3 envies de tes créatures', ok: () => (S.stats.quests || 0) >= 3, n: () => [S.stats.quests || 0, 3], show: () => toggleLeft(true), wiki: 'missions' },
+      { id: 'envies', t: 'Comble 2 envies de tes créatures (leur fiche dit ce qu’elles veulent)', ok: () => (S.stats.quests || 0) >= 2, n: () => [S.stats.quests || 0, 2], show: () => toggleLeft(true), wiki: 'missions' },
       { id: 'palier', t: 'Atteins le Palier 1', ok: () => S.tier >= 1, show: () => openHeart(), wiki: 'paliers' },
       { id: 'fete', t: 'Donne une Grande fête (fiche du Cœur)', ok: () => !!S.feteAt, show: () => openHeart(), wiki: 'merveilles' },
     ], reward: { g: 20, s: 30 }, unlock: 'le journal des quêtes et le Val des Maîtres' },
@@ -52,7 +52,12 @@ const FIL = [
       { id: 'palier2', t: 'Atteins le Palier 2', ok: () => S.tier >= 2, show: () => openHeart(), wiki: 'paliers' },
       { id: 'merveille', t: 'Bâtis une Merveille (fiche du Cœur)', ok: () => (S.stats.wonders || 0) >= 1, show: () => openHeart(), wiki: 'merveilles' },
       { id: 'victoire', t: 'Regarde les cinq victoires', ok: () => !!filFlag('vic'), show: () => openVictories(), wiki: 'victoires' },
-    ], reward: { g: 50, s: 50 }, unlock: 'tout le reste : à toi d’écrire la suite' },
+    ], reward: { g: 50, s: 50 }, unlock: 'ta propre légende' },
+  { id: 'legende', t: 'Ta propre légende', intro: 'Tu connais tout le château. Choisis l’une des cinq victoires du Val et va jusqu’au bout : la nuit en cours (en haut à droite) montre où tu en es dans chacune. Les rivaux, eux, n’attendent pas.',
+    goals: [
+      { id: 'mi', t: 'Atteins 50 % dans une victoire du Val', ok: () => VICTORIES.some(v => vicPct(v.id) >= 50), n: () => [Math.max(...VICTORIES.map(v => vicPct(v.id))), 50], show: () => openVictories(), wiki: 'victoires' },
+      { id: 'vic', t: 'Remporte une victoire du Val', ok: () => (S.stats.victories || 0) >= 1, show: () => openVictories(), wiki: 'victoires' },
+    ], reward: { g: 100, s: 60 }, unlock: 'le Panthéon du Val' },
 ];
 // ce que chaque chapitre dévoile : la fonction est libre dès que le joueur a atteint ce chapitre
 const FIL_LOCKS = { def: 1, raid: 2, soc: 3, val: 4, cards: 5 };
@@ -108,6 +113,9 @@ const afterChangeFil = afterChange;
 afterChange = function () { try { filCheck(); } catch (e) { console.error(e); } return afterChangeFil(); };
 const applyRaidFil = applyRaid;
 applyRaid = function (roll) { const k = S.raid && S.raid.target, lines = applyRaidFil(roll); if (filOn() && k && roll.res !== 'fail') S.fil.tg[k] = 1; return lines; };
+// une expédition menée jusqu'à au moins une salle compte comme un lieu exploré
+const crawlApplyFil = crawlApply;
+crawlApply = function (R, team, lines) { const r = crawlApplyFil(R, team, lines); if (filOn() && R && R.path && R.path.length && R.done !== 'wipe' && S.raid && S.raid.target) S.fil.tg[S.raid.target] = 1; return r; };
 const openWorldFil = openWorld;
 openWorld = function (...a) { filSet('map'); return openWorldFil(...a); };
 const openVictoriesFil = openVictories;
@@ -166,7 +174,7 @@ function openFil() {
     return `<li class="fch cur"><b>Chapitre ${i + 1} · ${esc(c.t)}</b><p class="hint">${esc(c.intro)}</p><ul class="fgoals">${c.goals.map(g => { const ok = S.fil.ok[c.id + ':' + g.id]; return `<li class="${ok ? 'ok' : ''}"><span class="fck">${ok ? '✔' : '○'}</span><span class="ftx">${esc(g.t)}${ok ? '' : esc(filCount(g))}</span>${ok ? '' : `${g.show ? `<button type="button" class="sbtn small" data-fshow="${g.id}">${esc(g.showLabel || 'Montre-moi')}</button>` : ''}${g.wiki ? `<button type="button" class="sbtn small" data-fwiki="${g.wiki}" aria-label="Le Grimoire">📖</button>` : ''}`}</li>`; }).join('')}</ul>
       <p class="frw">Récompense : ${costText(c.reward)} · Débloque ${esc(c.unlock)}</p></li>`;
   }).join('');
-  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Sept chapitres pour découvrir le château. Chaque chapitre achevé rapporte une récompense et dévoile de nouveaux boutons.'}</p>
+  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Huit chapitres pour découvrir le château, jusqu’à ta première victoire. Chaque chapitre achevé rapporte une récompense et dévoile de nouveaux boutons.'}</p>
     <ol class="filj">${rows}</ol>${S.fil.done ? '' : '<div class="btnrow"><button type="button" class="sbtn" id="filAll">Je connais déjà le jeu : tout débloquer</button></div>'}`, { label: 'Le fil rouge', cls: 'film' });
   m.addEventListener('click', e => {
     const s = e.target.closest('[data-fshow]'), w = e.target.closest('[data-fwiki]');
@@ -191,7 +199,7 @@ function filDrill() {
 // Gribouille ouvre chaque chapitre ; il attend que la voie soit libre (pas de nuit, de fiche, de carte ni d'expédition en cours)
 function filFree() {
   const wv = document.getElementById('world');
-  return S && S.started && !UI.busy && !ADMIN.open && !VISIT && COOP.role !== 'guest' && !(wv && !wv.hidden) && !document.body.classList.contains('crawling') && !$('#modalRoot').children.length;
+  return S && S.started && !UI.busy && !V.spotOn && !ADMIN.open && !VISIT && COOP.role !== 'guest' && !(wv && !wv.hidden) && !document.body.classList.contains('crawling') && !$('#modalRoot').children.length;
 }
 function filIntro() {
   const i = S.fil.ch, c = FIL[i];
@@ -233,7 +241,7 @@ tutoTick = function () {
 // le premier mot de Gribouille annonce le fil
 { const st0 = TUTO_STEPS.find(s => s.id === 'intro'), x0 = st0 && st0.x;
   if (st0) Object.defineProperty(st0, 'x', { get: () => x0 + (filOn() ? ' Suis le fil rouge : la pastille 📜, à droite, donne tes objectifs ; chaque chapitre achevé dévoile une nouvelle partie du château.' : '') }); }
-WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>sept chapitres</b>. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
+WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>huit chapitres</b>, jusqu’à ta première victoire. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
 // le fil en texte (pour la partie en ligne de commande)
 function filText() {
   if (!S.fil) return '';

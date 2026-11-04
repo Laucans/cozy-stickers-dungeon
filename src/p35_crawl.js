@@ -659,14 +659,28 @@ function crawlBattle(R, foes) {
 
 /* ---------- les autres salles ---------- */
 const CRAWL_EVENTS = [
+  { k: 'champignons', t: 'Un cercle de champignons qui luisent doucement dans le noir.', a: [['Les goûter', R => { const c = pick(R.party.filter(x => !x.ko)); if (!c) return 'Personne n’a faim.'; if (Math.random() < .6) { c.max += 5; c.hp += 5; return `${c.name} se sent pousser des ailes : +5 PV max pour l’expédition.`; } c.hp = Math.max(1, c.hp - 6); c.stress = Math.min(STRESS_MAX, c.stress + 2); return `${c.name} voit des choses (−6 PV, +2 de peur).`; }], ['Les cueillir pour le château', R => { const s = Math.round(3 * crawlDepthK(R)); R.loot.s += s; return `Une pleine besace : +${s} 🪵 au butin.`; }]] },
+  { k: 'miroir', t: 'Un grand miroir qui montre ton château… en ruines.', a: [['Le briser', R => { const w = R.deck.slice().sort((a, b) => cardValue(cardDef(a)) - cardValue(cardDef(b)))[0]; if (w) R.deck.splice(R.deck.indexOf(w), 1); R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return `Mille éclats : −2 de peur pour tous${w ? `, et ${cardName(w)} quitte le deck (il s’allège)` : ''}.`; }], ['Le regarder longtemps', R => { const n = [crawlBestUpgrade(R), null].map(() => { const c = crawlBestUpgrade(R); if (c) c.up = true; return c; }).filter(Boolean); R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 3); }); return `Il vous montre comment faire mieux : ${n.map(cardName).join(' et ') || 'rien'} amélioré${n.length > 1 ? 'es' : 'e'}, mais +3 de peur pour tous.`; }]] },
+  { k: 'osselets', t: 'Un gobelin joueur, assis sur un tonneau, propose une partie d’osselets.', a: [['Parier jusqu’à 10 💰 du butin', R => { const b = Math.min(10, R.loot.g); if (!b) return 'Ton butin est vide : il ricane et range ses osselets.'; if (Math.random() < .5) { R.loot.g += b; return `Gagné ! +${b} 💰 au butin.`; } R.loot.g -= b; return `Perdu… −${b} 💰. Il a sûrement triché.`; }], ['Décliner poliment', () => 'Il hausse les épaules et relance les osselets tout seul.']] },
+  { k: 'blesse', t: 'Un aventurier blessé, adossé au mur, qui n’a plus la force de fuir.', a: [['Le soigner et le relâcher', R => { R.freed = (R.freed || 0) + 1; R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'Il bredouille un merci : on parlera de toi au village (bonne volonté), et −2 de peur pour tous.'; }], ['Lui prendre sa bourse', R => { const g = Math.round(8 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 2); }); return `+${g} 💰 au butin. Personne n’en est très fier (+2 de peur).`; }]] },
+  { k: 'grimoire', t: 'Une bibliothèque engloutie : des pages flottent dans l’eau noire.', a: [['Étudier une page', R => { const o = crawlRewards(R, 1)[0]; if (!o) return 'Rien de lisible.'; o.up = true; R.deck.push(o); R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 1); }); return `${cardName(o)} rejoint le deck, déjà améliorée (+1 de peur : il faisait très noir).`; }], ['Repêcher les reliures', R => { const g = Math.round(5 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; return `Du cuir et des fermoirs d’argent : +${g} 💰.`; }]] },
   { k: 'autel', t: 'Un autel poussiéreux, couvert de bougies noires.', a: [['Prier', R => { if (Math.random() < .55) { R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 6); }); return 'Une douce chaleur : +6 PV pour toute l’équipe.'; } R.party.forEach(c => { if (!c.ko) c.stress = Math.min(STRESS_MAX, c.stress + 3); }); return 'Une voix d’outre-tombe ricane : +3 de peur pour toute l’équipe.'; }], ['Passer son chemin', () => 'On ne touche pas aux autels des autres.']] },
   { k: 'coffre', t: 'Un coffre fermé, un peu trop bien en évidence.', a: [['L’ouvrir', R => { if (Math.random() < .6) { const g = Math.round(6 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; return `Il est plein : +${g} 💰.`; } const c = pick(R.party.filter(x => !x.ko)); if (c) c.hp = Math.max(1, c.hp - 6); return `C’était un piège : ${c ? c.name + ' perd 6 PV' : 'personne n’est touché'}.`; }], ['Le laisser', () => 'Trop beau pour être vrai.']] },
-  { k: 'fontaine', t: 'Une fontaine qui glougloute dans le noir.', a: [['Boire', R => { const c = pick(R.party.filter(x => !x.ko)); if (!c) return 'Personne n’a soif.'; if (Math.random() < .65) { c.hp = c.max; return `${c.name} boit et se sent comme neuf (PV au maximum).`; } c.stress = Math.min(STRESS_MAX, c.stress + 3); return `${c.name} boit… et entend des voix (+3 de peur).`; }], ['Remplir les gourdes', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'L’eau fraîche apaise tout le monde (−2 de peur).'; }]] },
+  { k: 'fontaine', t: 'Une fontaine qui glougloute dans le noir.', a: [['Boire', R => { const c = R.party.filter(x => !x.ko).sort((a, b) => a.hp / a.max - b.hp / b.max)[0]; if (!c) return 'Personne n’a soif.'; if (Math.random() < .65) { c.hp = c.max; return `${c.name} boit et se sent comme neuf (PV au maximum).`; } c.stress = Math.min(STRESS_MAX, c.stress + 3); return `${c.name} boit… et entend des voix (+3 de peur).`; }], ['Remplir les gourdes', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'L’eau fraîche apaise tout le monde (−2 de peur).'; }]] },
   { k: 'marchand', t: 'Un marchand ambulant, perdu depuis des semaines.', a: [['Acheter une potion (8 💰 du butin)', R => { if (R.loot.g < 8) return 'Pas assez dans le butin.'; R.loot.g -= 8; R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 8); }); return 'Une potion pour tous : +8 PV.'; }], ['Lui indiquer la sortie', R => { R.loot.g += 3; return 'Reconnaissant, il te laisse 3 💰.'; }]] },
   { k: 'cage', t: 'Une cage, et dedans, un prisonnier du donjon qui supplie.', a: [['Le libérer', R => { R.freed = (R.freed || 0) + 1; R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'Il file en jurant de chanter tes louanges au village (bonne volonté).'; }], ['Ignorer', R => { R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 1); }); return 'Ses cris vous suivent longtemps (+1 de peur).'; }]] },
   { k: 'forge', t: 'Une enclume abandonnée, encore tiède. Quelqu’un forgeait ici il y a peu.', a: [['Aiguiser une carte', R => { const c = crawlBestUpgrade(R); if (!c) return 'Rien à aiguiser.'; c.up = true; return `${cardName(c)} : la carte est améliorée.`; }], ['Se méfier', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'On ne touche à rien (−1 de peur).'; }]] },
   { k: 'colporteur', t: 'Un colporteur à la hotte pleine de bricoles, qui parle tout seul.', a: [['Lui donner 6 💰 du butin contre une carte', R => { if (R.loot.g < 6) return 'Pas assez dans le butin.'; const o = crawlRewards(R, 1)[0]; if (!o) return 'Il n’a rien qui te serve.'; R.loot.g -= 6; R.deck.push(o); return `Il te cède ${cardName(o)}.`; }], ['Le laisser parler', () => 'Il parle encore quand vous tournez au coin.']] },
 ];
+// ce que chaque choix risque ou promet (affiché sous le bouton)
+const EVENT_HINTS = {
+  champignons: ['+5 PV max pour l’un… ou −6 PV et de la peur', 'du bois au butin'], miroir: ['retire la pire carte du deck, −2 peur', 'améliore 2 cartes, +3 peur pour tous'],
+  osselets: ['double ou rien (10 💰 au plus)', 'rien'], blesse: ['bonne volonté au village, −2 peur', 'de l’or, +2 peur pour tous'], grimoire: ['une carte améliorée, +1 peur', 'de l’or'],
+  autel: ['soin pour tous… ou de la peur', 'rien'], coffre: ['de l’or… ou un piège (−6 PV)', 'rien'], fontaine: ['le plus blessé guérit… ou prend peur', '−2 peur pour tous'],
+  marchand: ['+8 PV pour tous (8 💰)', '+3 💰'], cage: ['bonne volonté au village, −1 peur', '+1 peur pour tous'], forge: ['améliore ta meilleure carte', '−1 peur pour tous'], colporteur: ['une carte au hasard (6 💰)', 'rien'],
+};
+CRAWL_EVENTS.forEach(E => (EVENT_HINTS[E.k] || []).forEach((h, i) => { if (E.a[i]) E.a[i][2] = h; }));
+
 function crawlTreasure(R) { const k = crawlDepthK(R), g = Math.round((4 + Math.random() * 4) * k * CRAWL_GOLD), s = Math.random() < .5 ? Math.round(2 * k) : 0; R.loot.g += g; R.loot.s += s; let item = null; if (Math.random() < .2) { item = pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && (FURN[t].cost.g || 0) <= 4)); if (item) R.loot.items.push(item); } return `Un trésor : +${g} 💰${s ? `, +${s} 🪵` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`; }
 // le repos : soigner, se calmer, ou aiguiser une carte
 function crawlRest(R, how, card) {
@@ -686,7 +700,7 @@ function crawlRewards(R, n = 3) {
 // le butin d'un combat gagné
 function crawlWinLoot(R, kind) {
   const k = crawlDepthK(R), g = Math.round((kind === 'boss' ? 18 : kind === 'elite' ? 8 : 3) * k * (.8 + Math.random() * .4) * CRAWL_GOLD), s = kind === 'combat' ? 0 : Math.round((kind === 'boss' ? 5 : 2) * k);
-  R.loot.g += g; R.loot.s += s;
+  R.loot.g += g; R.loot.s += s; R.won = (R.won || 0) + 1;
   if (hasRelic('chope')) R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 3); });
   if (kind === 'boss') { const rl = CRAWL_DG[R.dg].relic; if (!hasRelic(rl)) R.relic = rl; }
   return `Butin : +${g} 💰${s ? `, +${s} 🪵` : ''}.`;
@@ -771,7 +785,7 @@ function crawlAuto(dg, team, opts = {}) {
         B.endTurn(); B.enemyTurn();
       }
       if (!B.over) B.over = 'lost';
-      if (B.over === 'fled') { R.done = 'fled'; const k = R.fledBoss ? 0 : .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
+      if (B.over === 'fled') { R.done = 'fled'; const k = .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
       if (B.over !== 'won') { R.done = 'wipe'; break; }
       R.party.forEach(c => { c.block = 0; c.st = {}; });
       crawlWinLoot(R, node.k);
@@ -789,8 +803,8 @@ function crawlAuto(dg, team, opts = {}) {
 }
 // au retour : fatigue (la peur se paie), bosses, expérience, butin
 function crawlApply(R, team, lines) {
-  const kept = R.done === 'wipe' ? 0 : 1, g = Math.round(R.loot.g * kept), s = Math.round(R.loot.s * kept);
-  S.gold += g; S.mat += s; if (kept) R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
+  const kept = R.done === 'wipe' ? .25 : 1, g = Math.round(R.loot.g * kept), s = Math.round(R.loot.s * kept);   // terrassés : un quart du butin, ramassé dans la débandade
+  S.gold += g; S.mat += s; if (R.done !== 'wipe') R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
   const deep = (R.floor - 1) * CRAWL_STEPS + R.step;
   team.forEach(c => {
     const p = R.party.find(x => x.id === c.id); if (!p) return;
@@ -799,10 +813,10 @@ function crawlApply(R, team, lines) {
     gainXP(c, 1 + Math.floor(deep / 3) + (R.done === 'boss' ? 2 : 0), lines);
   });
   if (R.relic && R.done === 'boss') { (S.relics = S.relics || []).push(R.relic); lines.push([RELICS[R.relic].ico, `Relique : ${RELICS[R.relic].name}. ${RELICS[R.relic].desc}`, 'good']); }
-  if (kept && R.freed && typeof settlements === 'function') { const s0 = settlements().filter(siteKnown)[0]; if (s0) addGw(s0, 4 * R.freed); }
+  if (R.done !== 'wipe' && R.freed && typeof settlements === 'function') { const s0 = settlements().filter(siteKnown)[0]; if (s0) addGw(s0, 4 * R.freed); }
   S.stats.crawls = (S.stats.crawls || 0) + 1; if (R.done === 'boss') S.stats.crawlBoss = (S.stats.crawlBoss || 0) + 1;
-  if (R.done === 'fled') lines.push(['🏃', R.fledBoss ? 'Face au boss, l’équipe a tout abandonné pour sauver sa peau.' : 'Dans la fuite, la moitié du butin est restée au donjon.', 'bad']);
-  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? 'L’équipe est terrassée : tout le butin est perdu, et tout le monde rentre sonné.' : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} avec ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
+  if (R.done === 'fled') lines.push(['🏃', R.fledBoss ? 'Face au boss, l’équipe a fui en laissant la moitié du butin et tous les stickers.' : 'Dans la fuite, la moitié du butin est restée au donjon.', 'bad']);
+  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? `L’équipe est terrassée : elle ne rapporte qu’un quart du butin (${costText({ g, s })}), et tout le monde rentre sonné.` : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} ${g || s ? 'avec ' + costText({ g, s }) : 'les mains vides'}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
   return { deep, g, s };
 }
 // la description d'une carte, avec les valeurs qu'elle aurait jouée par « me » (ou dans l'absolu)

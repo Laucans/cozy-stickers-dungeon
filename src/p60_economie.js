@@ -16,9 +16,10 @@ const WONDERS = {
   archives: { ico: 'book', name: 'Les Archives', desc: L => `${L} créature${L > 1 ? 's' : ''} gagne${L > 1 ? 'nt' : ''} 1 d’expérience chaque nuit`, base: { g: 20, s: 55 }, k: 1.6 },
 };
 const wonderLv = k => ((S && S.wonders) || {})[k] || 0;
+const wonderGold = k => { const c = wonderCost(k); return { g: c.g + Math.ceil(c.s * 1.5), s: 0 }; };   // tout payer en or, quand c'est l'or qui dort
 const wonderCost = k => { const W = WONDERS[k], m = Math.pow(W.k, wonderLv(k)); return { g: Math.round(W.base.g * m), s: Math.round(W.base.s * m) }; };
 CMD.wonder = a => {
-  const W = WONDERS[a && a.id]; if (!W) return 'Merveille inconnue'; const cost = wonderCost(a.id); if (!canAfford(cost)) return 'Pas assez';
+  const W = WONDERS[a && a.id]; if (!W) return 'Merveille inconnue'; const cost = a.gold ? wonderGold(a.id) : wonderCost(a.id); if (!canAfford(cost)) return 'Pas assez';
   pay(cost); S.wonders = S.wonders || {}; S.wonders[a.id] = wonderLv(a.id) + 1; S.stats.wonders = (S.stats.wonders || 0) + 1;
   addLog(`${W.name} : niveau ${S.wonders[a.id]}.`, 'good'); return null;
 };
@@ -46,7 +47,7 @@ soulsDawn = function (report) {
 function wondersHTML() {
   const fw = feteWhy(), fc = feteCost();
   return `<div class="chsec"><h3>${gi('crown')} Les Merveilles</h3><p class="hint">De grands ouvrages qu’on agrandit sans fin, de plus en plus chers, payés surtout en bois : c’est là que dort le bois en trop.</p>
-    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costText(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button></div>`; }).join('')}</div>
+    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costText(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button>${(() => { const cg = wonderGold(k), okg = canAfford(cg); return okg && !ok || okg && S.gold > 200 ? ` <button type="button" class="sbtn small" data-wonder="${k}" data-gold="1">… ou tout en or (${cg.g} 💰)</button>` : ''; })()}</div>`; }).join('')}</div>
     <h3>${gi('music')} La Grande fête</h3><p class="hint">${costText(fc)} : toutes les créatures +1 de bonne humeur, et ${FETE_LAST} nuits d’épanouissement en plus (+12). Une fois toutes les ${FETE_EVERY} nuits.</p>
     <div class="btnrow"><button type="button" class="sbtn${fw ? '' : ' pri'}" data-fete="1" ${fw ? 'disabled' : ''}>${fw ? esc(fw) : '🎉 Donner une grande fête'}</button></div></div>`;
 }
@@ -57,8 +58,9 @@ openRoom = function (id) {
   const box = el('div', '', wondersHTML()), foot = m.querySelector('.mbody .btnrow:last-child'); (foot ? foot.parentNode.insertBefore(box, foot) : m.querySelector('.mbody').appendChild(box));
   box.addEventListener('click', e => {
     const w = e.target.closest('[data-wonder]'), f = e.target.closest('[data-fete]');
-    if (w && !w.disabled && run('wonder', { id: w.dataset.wonder })) { sfx('chime'); afterChange(); openRoom(id); }
-    if (f && !f.disabled && run('fete')) { sfx('victory'); afterChange(); toast('🎉 La fête bat son plein ! Tout le monde est de bonne humeur.'); openRoom(id); }
+    const keep = () => { const sc = m.scrollTop; openRoom(id); const m2 = document.querySelector('#modalRoot .modal'); if (m2) m2.scrollTop = sc; };
+    if (w && !w.disabled && run('wonder', { id: w.dataset.wonder, gold: !!w.dataset.gold })) { sfx('chime'); afterChange(); keep(); }
+    if (f && !f.disabled && run('fete')) { sfx('victory'); afterChange(); toast('🎉 La fête bat son plein ! Tout le monde est de bonne humeur.'); keep(); }
   });
 };
 // une pastille quand l'or et le bois dorment
@@ -67,13 +69,14 @@ valNotifs = function (add) {
   valNotifsW(add);
   if (S.night >= 12 && S.gold >= 250 && S.mat >= 250 && Object.keys(WONDERS).some(k => canAfford(wonderCost(k)))) add('wonder', '🏛️', 'Ton or dort : agrandis une Merveille (touche le Cœur)', () => { const h = heartRoom(); if (h) openRoom(h.id); }, 1);
 };
-WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
+WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent. On les paie surtout en bois, ou tout en or (1 bois = 1,5 or) quand c’est l’or qui dort.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
 
 /* ---------- la chronique de l'aube : d'abord ce qui compte ----------
    Les 1 à 3 événements marquants de la nuit en grand (« À la une »), le détail replié en dessous. */
 const UNE_RULES = [
   [10, /quitte|part vivre|est parti|pris·e par|retenu·e|capturé|désert|emport|filent avec|trahi/i],
   [9, /repouss|la bande|aux cartes|invasion|le Cœur/i],
+  [8, /^Expédition dans|Reddition|vers la vassalité/],
   [7, /critique|victoire|légende|palier|nouvelle créature|arrive au château|rejoint|chantier terminé|quête accomplie|niveau \d+ !|évolue/i],
 ];
 function uneOf(report) {

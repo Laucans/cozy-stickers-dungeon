@@ -17,7 +17,12 @@ const HELP = `Actions (séparées par des points-virgules) :
   state                     réaffiche l'état (commande à part : node sim/play.mjs state <fichier>)
   post <créature> <pièce>   poste une créature précise dans une pièce de ce type (ex. post Navet taverne ; « aucun » retire le poste)
   posts                     poste chaque créature dans sa pièce préférée
-  raid <cible>              prépare un raid (équipe automatique) ; cibles : voir « Raids possibles »
+  raid <cible> [approche] [Nom,Nom]  prépare un raid ; approche prudente | risquee | desesperee ; équipe au choix (noms séparés par des virgules), sinon automatique
+  tactique <postes|cible|harceler|rancon>  la tactique de tes créatures face aux prochaines invasions (voir l'estimation dans l'état)
+  (commande à part) node sim/play.mjs crawl <fichier> start <cible> [Nom,Nom]  → une expédition en cartes jouée À LA MAIN, carte par carte ;
+      puis node sim/play.mjs crawl <fichier> <action> : salle <n>, joue <n° carte> [n° cible], decor <n> [n° cible], fin, fuir, prendre <n>, passer, repos soin|calme|aiguiser, choix <n>, continuer, rentrer
+      (rentrer avant la première salle annule l'expédition sans délai sur le lieu ; « crawl <fichier> deck » montre le deck ; repos aiguiser <n° du deck>)
+  annuler                   annule le raid ou l'expédition prévu·e
   expe <lieu>               expédition vers un lieu (id du lieu connu, ou x_lieu ; r_rival = expédition dans un donjon rival). Une seule expédition ou un seul raid par nuit.
   scout                     envoie un éclaireur au bord du brouillard
   shop <lieu> <objet> [arg] achète en ville : rumeur, humeur, fidelite, tisane, oubli, tournee, merco, dossier, avis, carte, tresor, don, deco <clé>, artefact <clé>, rachat <clé>, recrue <espèce>
@@ -30,7 +35,7 @@ const HELP = `Actions (séparées par des points-virgules) :
   care | quests             pouvoirs (brume, festin, cloche) | envies et rêves connus : s'en occupe (et laisse partir à l'aventure)
   stock <lieu>              montre ce que vend un lieu
   journal                   quêtes du journal (le Val) : accepte les offres, livre, choisit, lance raids et expéditions demandés
-  wonder <remparts|cave|galerie|archives>  bâtit ou agrandit une Merveille (fiche du Cœur)
+  wonder <remparts|cave|galerie|archives> [or]  bâtit ou agrandit une Merveille (fiche du Cœur) ; « or » : tout payer en or (1 bois = 1,5 or)
   fete                      donne une Grande fête (toutes les 8 nuits)
   merveilles                montre les Merveilles, leur prochain niveau et leur coût (sans rien acheter), et le coût de la fête
   victoires                 montre l'avancée des cinq victoires
@@ -40,6 +45,7 @@ const HELP = `Actions (séparées par des points-virgules) :
 Chaque nuit lancée avec « night » fait d'abord « care » et « quests » (et rappelle les gardes si des héros arrivent).`;
 if (!cmd || cmd === 'help') { console.log(HELP); process.exit(0); }
 const g = createGame();
+g.run(fs.readFileSync(new URL('./crawl_cli.js', import.meta.url), 'utf8'));   // l'expédition jouée à la main
 if (cmd === 'wiki') {   // le Grimoire du jeu, en texte brut
   const key = file; g.ctx.__KEY = key || ''; g.run('simNewGame(1)');   // certains articles lisent la partie en cours
   const W = JSON.parse(g.run(`JSON.stringify(Object.fromEntries(Object.entries(WIKI).map(([k, w]) => [k, { cat: w.cat, t: w.t, x: k === __KEY ? w.x() : '' }])))`));
@@ -65,11 +71,14 @@ function act(line) {
     case 'traps': return run(`A.traps(${+args[0] || 8}) + ' pièges posés'`);
     case 'post': return run(`(() => { const nm = ${q(args.slice(0, -1).join(' ').toLowerCase())}, c = S.creatures.find(x => x.name.toLowerCase() === nm); if (!c) return 'créature inconnue : ' + nm; if (${q(args[args.length - 1] || '')} === 'aucun') return cmd('post', { id: c.id, post: null }) || c.name + ' sans poste'; const rs = S.rooms.filter(r => r.built && r.t === ${q(args[args.length - 1] || '')}); if (!rs.length) return 'aucune pièce terminée de ce type : ' + ${q(args[args.length - 1] || '')}; for (const r of rs) { const e = cmd('post', { id: c.id, post: r.id }); if (!e) return c.name + ' posté·e : ' + ROOMS[r.t].name; } return cmd('post', { id: c.id, post: rs[0].id }); })()`);
     case 'posts': return run(`A.posts(), 'ok'`);
-    case 'raid': return run(`A.raid(${q(args[0])}) || 'raid prévu : ' + S.raid.team.map(id => critter(id).name).join(', ') + ' (' + raidBreakdown(S.raid.target, S.raid.team).pool + ' dés)'`);
+    case 'raid': if (args.length > 1) { const app = args.find(x => ['prudente', 'risquee', 'desesperee'].includes(x)) || null, names = args.slice(1).filter(x => x !== app).join(' '); return run(`(() => { const ids = ${q(names)} ? ${q(names)}.split(',').map(s => s.trim().toLowerCase()).filter(Boolean).map(nm => (S.creatures.find(c => c.name.toLowerCase() === nm) || {}).id).filter(Boolean) : null; if (${q(names)} && !ids.length) return 'créatures inconnues : ' + ${q(names)}; if (!ids) { const e = A.raid(${q(args[0])}); if (e) return e; if (${q(app)} && S.raid) S.raid.app = ${q(app)}; return 'raid prévu (' + S.raid.app + ')'; } return cmd('raidPlan', { target: ${q(args[0])}, team: ids, app: ${q(app || 'risquee')} }) || 'prévu : ' + S.raid.team.map(id => critter(id).name).join(', ') + (S.raid.crawl ? ' (expédition)' : ' · approche ' + S.raid.app + ' · ' + Math.min(6, raidBreakdown(S.raid.target, S.raid.team).pool) + ' dés lancés') + (() => { const men = S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid.crawl ? 0 : RAIDS[S.raid.target].menace || 0); return men >= MENACE_MAX ? ' ⚠️ Menace ' + Math.min(men, MENACE_MAX) + '/' + MENACE_MAX + ' : une bande arrivera sans doute cette nuit, sans cette équipe pour défendre.' : ' · Menace après le raid : ' + men + '/' + MENACE_MAX; })(); })()`); }
+    return run(`A.raid(${q(args[0])}) || 'raid prévu : ' + S.raid.team.map(id => critter(id).name).join(', ') + ' (' + raidBreakdown(S.raid.target, S.raid.team).pool + ' dés)'`);
+    case 'annuler': return run(`S.raid ? (cancelRaid(), 'raid ou expédition annulé·e') : 'rien de prévu'`);
+    case 'tactique': { const t = { postes: 'postes', cible: 'cible', harceler: 'harceler', rancon: 'rancon', 'rançon': 'rancon' }[args[0]]; if (!t) return 'tactique postes | cible | harceler | rancon'; return run(`(S.opts = S.opts || {}, S.opts.cliTac = ${q(t)}, 'tactique des prochaines invasions : ' + TACTICS[${q(t)}].name)`); }
     case 'expe': { const id = (args[0] || '').replace(/^x_/, ''); if (/^r_/.test(id)) return run(`A.raid(${q(id)}) || 'expédition prévue contre le donjon rival'`); return run(`A.expedition(${q(id)}) || 'expédition partie'`); }
     case 'scout': return run(`A.scout() || 'éclaireur parti'`);
     case 'shop': return run(`A.shop(${q(args[0])}, ${q(args[1])}, ${q(args[2] || null)}) || 'acheté'`);
-    case 'stock': return run(`(() => { const s = siteById(${q(args[0])}); if (!s) return 'lieu inconnu'; const st = shopStock(s); return { objets: (SHOPS[s.kind] || []).flatMap(x => x.items).map(i => i + (SHOP[i].price ? ' ' + shopPrice(s, i) + 'po' : '')), deco: st.deco, artefacts: st.arts.map(k => k + ' ' + shopPrice(s, 'artefact', k) + 'po'), voles: st.stolen }; })()`);
+    case 'stock': return run(`(() => { const s = siteById(${q(args[0])}); if (!s) return 'lieu inconnu'; const st = shopStock(s); return { objets: (SHOPS[s.kind] || []).flatMap(x => x.items).map(i => i + (SHOP[i].price ? ' ' + shopPrice(s, i) + 'po' : '')), deco: st.deco, artefacts: (SHOPS[s.kind] || []).some(x => x.items.includes('artefact')) ? st.arts.map(k => k + ' ' + shopPrice(s, 'artefact', k) + 'po') : 'pas d’artefacts ici (seules les villes en vendent)', voles: st.stolen }; })()`);
     case 'request': return run(`(() => { const r = openReqs().find(x => x.id === ${q(args[0])}); return r ? (A.request(r) || 'fait') : 'requête inconnue'; })()`);
     case 'tier': return run(`cmd('tierUp') || 'palier ' + S.tier`);
     case 'expand': return run(`cmd('expand') || 'remparts ' + W + 'x' + H`);
@@ -81,9 +90,9 @@ function act(line) {
     case 'care': return run(`A.care(), 'ok'`);
     case 'quests': case 'accept': return run(`A.quests(), 'ok'`);
     case 'journal': return run(`A.questStep(), (() => { const Q = qState(); return 'en cours : ' + (Q.cur.map(q => q.def.title + ' (' + ((qStep(q) || {}).k || 'fini') + ')').join(', ') || 'aucune') + ' ; au tableau : ' + (Q.offers.map(o => o.def.title).join(', ') || 'rien'); })()`);
-    case 'wonder': return run(`cmd('wonder', { id: ${q(args[0])} }) || WONDERS[${q(args[0])}].name + ' niveau ' + wonderLv(${q(args[0])}) + ' (prochain : ' + costText(wonderCost(${q(args[0])})).replace(/<[^>]+>/g, '') + ')'`);
+    case 'wonder': return run(`cmd('wonder', { id: ${q(args[0])}, gold: ${args[1] === 'or'} }) || WONDERS[${q(args[0])}].name + ' niveau ' + wonderLv(${q(args[0])}) + ' (prochain : ' + costText(wonderCost(${q(args[0])})).replace(/<[^>]+>/g, '') + ')'`);
     case 'fete': return run(`cmd('fete') || 'la fête bat son plein'`);
-    case 'merveilles': return run(`Object.entries(WONDERS).map(([k, W]) => k + ' (' + W.name + ') niv. ' + wonderLv(k) + ' → ' + W.desc(wonderLv(k) + 1) + ' : ' + wonderCost(k).g + ' or ' + wonderCost(k).s + ' bois').join(' · ') + ' · fête : ' + feteCost().g + ' or ' + feteCost().s + ' bois' + (feteWhy() ? ' (' + feteWhy() + ')' : ' (possible)')`);
+    case 'merveilles': return run(`Object.entries(WONDERS).map(([k, W]) => k + ' (' + W.name + ') niv. ' + wonderLv(k) + ' → ' + W.desc(wonderLv(k) + 1) + ' : ' + wonderCost(k).g + ' or ' + wonderCost(k).s + ' bois (ou ' + wonderGold(k).g + ' or)').join(' · ') + ' · fête : ' + feteCost().g + ' or ' + feteCost().s + ' bois' + (feteWhy() ? ' (' + feteWhy() + ')' : ' (possible)')`);
     case 'victoires': return run(`(filSet('vic'), VICTORIES.map(v => v.name + ' ' + vicPct(v.id) + ' %').join(' · ') + ' · Ménagerie : ' + (() => { const st = menSettled(); return st.filter(c => (c.epa == null ? 50 : c.epa) >= 70).length + '/' + st.length + ' installées épanouies (il en faut ' + Math.ceil(st.length * MEN_HAPPY) + '), série ' + (S.vic ? S.vic.happy : 0) + '/3'; })())`);
     case 'fil': return run(`filText()`);
     case 'drill': return run(`(() => { const mine = duelMyGuard(); if (!mine.team.length) return 'personne en forme'; const avg = f => Math.round(mine.team.reduce((a, e) => a + e[f], 0) / mine.team.length);
@@ -93,8 +102,41 @@ function act(line) {
     default: return `action inconnue : ${a} (voir « help »)`;
   }
 }
-const ST = () => g.run('simState(true)') + g.run(`(typeof payroll === 'function' && payroll() ? '\\nJour de paie dans ' + nightsToPay() + ' nuit(s) : ' + payroll() + ' or (tu en as ' + S.gold + ')' : '') + (S.fil ? '\\n\\n' + filText() : '')`);
+const FORECAST = `(() => { const rm = S.raid && !S.raid.crawl && RAIDS[S.raid.target] ? (RAIDS[S.raid.target].menace || 0) : 0;
+  const due = S.menace + (S.hype >= 3 ? 1 : 0) + rm >= MENACE_MAX || (typeof filBandDue === 'function' && filBandDue()); if (!due) return '';
+  const snap = JSON.stringify(S), rnd = Math.random, out = []; Math.random = mulberry32(S.night * 7919 + 13);
+  const back = () => { Object.keys(S).forEach(k => delete S[k]); Object.assign(S, JSON.parse(snap)); WORLD = null; dirty(); };
+  try { for (const t of ['postes', 'cible', 'harceler']) { const o = { repelled: 0, lost: 0, robbed: 0 }; let n = 0; for (let i = 0; i < 24; i++) { back(); const plan = planInvasion(); if (!plan || !plan.party || !plan.party.length) continue; n++; const R = resolveInvasion(plan, t); o[R.outcome] = (o[R.outcome] || 0) + 1; }
+    if (n) out.push(TACTICS[t].name + ' : repoussée ' + Math.round(o.repelled / n * 100) + ' %, égarée ' + Math.round(o.lost / n * 100) + ' %, Cœur pillé ' + Math.round(o.robbed / n * 100) + ' %'); } } finally { back(); Math.random = rnd; }
+  return out.length ? '\\n⚔️ Une bande arrivera sans doute cette nuit. Estimation sur 24 essais, selon ta tactique (actuelle : ' + TACTICS[(S.opts && S.opts.cliTac) || 'postes'].name + ') : ' + out.join(' · ') + '. Acheter leur départ (rancon) évite le combat contre de l’or.' : ''; })()`;
+const ST = () => g.run('simState(true)') + g.run(FORECAST) + g.run(`(typeof payroll === 'function' && payroll() ? '\\nJour de paie dans ' + nightsToPay() + ' nuit(s) : ' + payroll() + ' or (tu en as ' + S.gold + ')' : '') + (S.fil ? '\\n\\n' + filText() : '')`);
 const KEY = /Raid sur|Invasion :|Butin|Complication|Trophée|détalent|abandonnent|expédition|Expédition|🧭|Victoire|Grand Maître|ère|vassal|Reddition|Conseil|croisade|Croisade|Parade|Rituel|déserté|Calamité !|pillé|Les aventuriers|Les héros touchent|repouss|Chantier terminé|Chapitre|Quête|quête|rôdent dehors|quitte|part vivre|délaissé|chez lui|chez elle|impayé|Caisse|arrive|s’installe|artefact|Artefact|rencontre|requête|Requête|Palier/;
+// l'expédition jouée à la main : la graine et les actions sont gardées dans le fichier de partie, le château ne change qu'à la fin
+if (cmd === 'crawl') {
+  const d = load(), words = rest.join(' ').trim();
+  const show = () => { g.ctx.__C = d.crawl; return g.run('cliCrawlText(cliCrawlRun(__C))'); };
+  if (words.startsWith('start')) {
+    if (d.crawl) { console.log('Une expédition est déjà en cours :\n' + show()); process.exit(0); }
+    const [, target0, ...names] = words.split(/\s+/); const nm = names.join(' ');
+    g.ctx.__T = target0 || ''; g.ctx.__N = nm;
+    const err = g.run(`(() => { let t = __T; if (!RAIDS[t] && RAIDS['x_' + t]) t = 'x_' + t; if (!RAIDS[t] && typeof ensureCrawlSites === 'function') { ensureCrawlSites(); if (!RAIDS[t] && RAIDS['x_' + t]) t = 'x_' + t; }
+      if (!RAIDS[t] || !isCrawlTarget(t)) return 'cible d’expédition inconnue : ' + __T + ' (un site de « Lieux connus », x_lieu ou r_rival)';
+      let ids = __N ? __N.split(',').map(s => s.trim().toLowerCase()).filter(Boolean).map(n => (S.creatures.find(c => c.name.toLowerCase() === n) || {}).id).filter(Boolean) : free().map(c => [c, crawler(c)]).sort((a, b) => b[1].hp * b[1].atk - a[1].hp * a[1].atk).slice(0, 4).map(x => x[0].id);
+      if (!ids.length) return 'personne ne peut partir';
+      return cmd('raidPlan', { target: t, team: ids }) || null; })()`);
+    if (err) { console.log('⚠️ ' + err); process.exit(0); }
+    d.crawl = { seed: Math.floor(Math.random() * 1e9), uid0: JSON.parse(g.run('CARD_UID')), actions: [] };
+    store(d); console.log(show()); process.exit(0);
+  }
+  if (!d.crawl) { console.log('Aucune expédition en cours. Lance-la avec : node sim/play.mjs crawl <fichier> start <cible> [Nom,Nom]'); process.exit(0); }
+  if (!words) { console.log(show()); process.exit(0); }
+  if (words === 'deck') { g.ctx.__C = d.crawl; console.log(g.run('cliCrawlDeck(cliCrawlRun(__C))')); process.exit(0); }
+  d.crawl.actions.push(words); g.ctx.__C = d.crawl;
+  const res = JSON.parse(g.run(`(() => { const X = cliCrawlRun(__C); const out = { err: X.err, text: cliCrawlText(X), done: X.phase === 'done' }; if (!X.err && X.phase === 'done') out.fin = cliCrawlFinish(X); return JSON.stringify(out); })()`));
+  if (res.err) { d.crawl.actions.pop(); fs.writeFileSync(file, JSON.stringify(d)); console.log(res.text); process.exit(0); }
+  if (res.done) { d.crawl = null; store(d); console.log(res.text + '\n\n' + res.fin + '\n\n(L’expédition est jouée : avance maintenant avec night.)'); process.exit(0); }
+  fs.writeFileSync(file, JSON.stringify(d)); console.log(res.text); process.exit(0);
+}
 if (cmd === 'new') {
   const seed = +rest[0] || Math.floor(Math.random() * 1e6);
   const fil = rest.includes('fil'), theme = rest[1] && rest[1] !== 'fil' ? rest[1] : null;
@@ -105,7 +147,9 @@ else if (cmd === 'do') {
   const d = load(); const out = rest.join(' ').split(';').map(l => l.trim()).filter(Boolean).map(l => `> ${l} → ${act(l)}`);
   g.run('checkGoals(); checkQuests(); checkAch(); if (typeof filCheck === "function") filCheck();'); store(d); console.log(out.join('\n') + '\n\n' + ST());
 } else if (cmd === 'night') {
-  const d = load(), n = Math.max(1, Math.min(10, +rest[0] || 1)), lines = [];
+  if (rest.slice(1).length || (rest[0] && isNaN(+rest[0]))) { console.log('⚠️ night ne prend qu’un nombre de nuits : les actions passent par « do <fichier> "…" ». Rien n’a été joué.'); process.exit(0); }
+  const d = load(); if (d.crawl) { console.log('Une expédition est en cours : finis-la (node sim/play.mjs crawl <fichier> <action>) ou rentre (crawl <fichier> rentrer).'); process.exit(0); }
+  const n = Math.max(1, Math.min(10, +rest[0] || 1)), lines = [];
   for (let i = 0; i < n; i++) {
     g.run(`A.care(); A.quests(); if (invasionSoon()) A.posts();`);
     const rep = JSON.parse(g.run('JSON.stringify(simNight())'));

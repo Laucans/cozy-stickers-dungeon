@@ -83,3 +83,59 @@ Décisions :
 IA scriptées, Terreur : 10/12 vers la nuit 80 (au lieu de 9/12 vers 105).
 
 Rapport complet des IA scriptées après les 4 boucles : `sim/RAPPORT_v12.md` (Légende 100 % · 57, Secrets 100 % · 44, Voisinage 100 % · 40, Terreur 83 % · 78, Ménagerie 17 %).
+
+# Boucles « plaisir de jeu »
+
+Les testeurs jouent désormais le vrai jeu dans Chrome (nouveau joueur, ou partie avancée chargée depuis `sim/_perf_state.json`), et en ligne de commande avec les vraies décisions : expéditions jouées carte par carte (`node sim/play.mjs crawl …`, rejouées depuis une graine), équipe et approche des raids, tactique des invasions avec estimation de l'issue.
+
+## Plaisir 1 — 2 testeurs Chrome, 2 en ligne de commande
+
+| Testeur | Notes d'amusement | Remarques principales |
+|---|---|---|
+| Chrome, nouveau joueur (7 nuits) | 3 → 4 → 3 | Tutoriel : « Suivant » devient « Plus tard » au même endroit ; bouton de palier tout en bas ; diablotins absents du raid sans explication ; capture de l'unique raideur en début de partie ; toasts empilés ; envie de continuer : oui |
+| Chrome, milieu de partie | expédition 4, défense aux cartes 4,5, tactique 2,5, global 4 | Boss : la défaite coûtait tout, sans avertissement ; le combat auto file à la défaite ; fiche du Cœur qui remonte ; aucune alerte quand l'invasion tombe le soir d'une expédition |
+| Ligne de commande, décisions (Légende n41) | 3 → 2,5 → 3,5 → 2,5 | La tactique d'invasion guidée par l'estimation est la décision qui compte ; ennui après la victoire ; le fil rouge s'arrête trop tôt |
+| Ligne de commande, expéditions (Terreur et Légende n68) | 2 → 3 → 4 → 3 → 4 → 4 (pic à 5) | 14 expéditions, 5 boss : les boss sont le meilleur du jeu ; le 3e étage s'atteint sans combat ; 4 rencontres qui reviennent en boucle ; le siège tombe en dés négatifs à cause de la vigilance |
+
+Décisions :
+- Tutoriel : « Passer cette étape » / « Ranger le conseil » à droite, à part du bouton principal ; bouton de palier en tête de la fiche du Cœur quand tout est prêt.
+- Raid : les créatures trop petites pour piller sont nommées ; alerte quand l'invasion tombera le soir même (Menace avant et après le raid) ; pied de fenêtre toujours visible ; pas de capture avant la nuit 10.
+- Premières arrivées : la garantie joue en 2 nuits tant que l'album est tout petit ; « personne n'est entré » dit pourquoi.
+- Toasts : trois au plus à l'écran ; panneau d'effets du sticker en main replié par défaut.
+- Expéditions : terrassée, l'équipe rapporte un quart du butin ; avertissement devant la porte du boss ; le combat auto rend la main quand l'équipe passe sous 45 % de PV ; rentrer avant la première salle n'impose aucun délai ; cinq nouvelles rencontres à choix (épurer le deck, parier, soigner ou détrousser, étudier…).
+- Vassalité : 1 point au 3e étage seulement avec au moins deux combats gagnés (trois rendaient la Terreur trop rare chez les IA : 7/12) ; le Siège de Mirebrume échappe à la vigilance.
+- Fil rouge : un 8e chapitre, « Ta propre légende », jusqu'à la première victoire.
+- Chronique : l'issue des expéditions et des redditions passe « À la une ».
+
+## Plaisir 2 — 1 testeur Chrome, 1 en ligne de commande
+
+| Testeur | Notes d'amusement | Remarques principales |
+|---|---|---|
+| Chrome, nouveau joueur (12 nuits) | 3 → 3 → 4 → 4 | Raid avec cotes et « Pousser / Pacte » : très bon ; invasion lisible ; chapitre 3 bloqué (les expéditions ne comptaient pas comme lieu pillé) ; palier presque invisible ; envie de continuer : oui |
+| Ligne de commande, Secrets (60 nuits, pas de victoire) | 3 → 3 → 2 → 3 → 2 → 3 | Barre des Secrets à 0 % malgré 88 % de carte ; boss qui gardaient tout le butin en cas de fuite ; résistances des ennemis invisibles en ligne de commande ; quelques rencontres sans vrai choix |
+
+Décisions :
+- Fil rouge : « Pille ou explore deux lieux différents » compte aussi les expéditions ; « Montre-moi » ouvre la carte.
+- Palier : une fiche de célébration (ce qui est débloqué, ce qu'il faut pour le suivant).
+- Victoires des Secrets et de la Ménagerie : la barre avance pas à pas (carte, artefacts, exposition ; album, légendes, série).
+- Fuir un boss : on garde la moitié du butin (les stickers restent là-bas).
+- Rencontres : la fontaine désaltère le plus blessé ; les osselets se jouent avec le butin qu'on a.
+- Ligne de commande : résistances et faiblesses des ennemis affichées ; le stock d'un village ne liste plus d'artefacts invendables.
+
+## Plaisir 3 — 1 testeur Chrome, 1 en ligne de commande
+
+| Testeur | Notes d'amusement | Remarques principales |
+|---|---|---|
+| Chrome, milieu de partie | expédition 4,5, invasion 4, défense aux cartes 4, gestion 3,5, global 4 | Le combat auto rend bien la main (« Ça tourne mal ») ; l'avertissement devant le boss est clair ; les rencontres n'annoncent pas leur effet ; le tableau des tactiques donnait parfois « pire avec jetons » ; envie de continuer : oui |
+| Ligne de commande, nouveau joueur (fil complet, Légende n42) | 3 → 2 → 3 → 4 → 5 | Le fil rouge porte jusqu'au chapitre 8 ; creux au chapitre 4 (« Comble 3 envies », 10 nuits) ; 650 💰 qui dorment en fin de partie ; la croisade est le meilleur moment |
+
+Décisions :
+- Rencontres : chaque choix annonce sa nature (« de l'or… ou un piège », « améliore 2 cartes, +3 peur »…).
+- Tactiques d'invasion : avec et sans jetons sur les mêmes tirages, l'écart mesure vraiment l'effet des jetons.
+- Fil rouge, chapitre 4 : 2 envies au lieu de 3.
+- Merveilles : on peut les payer tout en or (1 bois = 1,5 or) quand c'est l'or qui dort.
+- Ligne de commande : estimation d'invasion sur 24 essais ; `night` refuse des actions passées par erreur.
+
+Évolution des notes d'amusement sur les trois boucles « plaisir » : globales de 3 à 4 dans le vrai jeu (Chrome), et des testeurs qui veulent tous « continuer la partie ». Points qui restent ouverts : le creux du milieu de partie (nuits 15-30) quand rien ne presse, la course des rivaux qui ne fait pas peur, la main de cartes qui se chevauche sur ordinateur (voulu, façon Hearthstone, mais le texte des cartes y est coupé).
+
+Rapport des IA scriptées après les boucles « plaisir » : `sim/RAPPORT_v13.md` (Légende 100 % · 53, Secrets 100 % · 38, Voisinage 100 % · 40, Ménagerie 8 %, Terreur 7/12 avant le passage à deux combats gagnés, 11/12 · 71 après).

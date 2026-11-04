@@ -1352,6 +1352,9 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
 .filj .fgoals li.ok .ftx{text-decoration:line-through; color:var(--ink-soft)}
 .filj .fgoals .ftx{flex:1 1 160px}
 .filj .frw{margin:4px 0 0; font-size:13px; color:var(--ink-soft)}
+.adv-btns .sbtn.side{margin-left:auto; font-size:12px; opacity:.85}
+.modal .mfoot.sticky{position:sticky; bottom:-20px; margin:16px -20px -20px; padding:10px 20px; background:var(--parch); border-top:2px solid var(--parch-3); z-index:3}
+.cmsg2.warn, .modal .warnline{color:#8a2a18; font-weight:700}
 </style>
 <meta name="description" content="Un petit château maléfique mais douillet : colle des pièces et des meubles comme des stickers, accueille des créatures attachantes, repousse les aventuriers… et rends visite aux autres Maîtres du Val.">
 <meta name="theme-color" content="#0b0910">
@@ -2453,7 +2456,7 @@ function dawn(report) {
   const c0 = cands();
   // une espèce commune jamais vue, sa pièce prête : elle vient au bout de 4 nuits au plus, même si la renommée est au plafond (il lui faut un lit)
   const fresh = c0.filter(sp => !S.album[sp] && !SPECIES[sp].rare); S.albumWait = fresh.length ? (S.albumWait || 0) + 1 : 0;
-  const pity = S.albumWait >= 4; if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
+  const pity = S.albumWait >= (Object.keys(S.album || {}).length <= 2 ? 2 : 4); if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
   else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’est pas encore assez renommé pour les attirer (${fameCap()} créatures au plus). Accomplis de grandes choses !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
@@ -2473,7 +2476,7 @@ function dawn(report) {
       report.push(['🆕', `${c.name} (${d.name}) ${why} et s’installe !`, 'good']);
       addLog(`${c.name} (${d.name}) arrive.`, 'good');
     }
-    if (!arrived.length) report.push(['🌫️', 'Des bruits de pas devant le porche… mais personne n’est entré.', '']);
+    if (!arrived.length) report.push(['🌫️', `Des bruits de pas devant le porche… mais personne n’est entré (une arrivée n’est jamais garantie ; une espèce jamais vue finit toujours par venir${fresh.length ? `, dans ${Math.max(1, (Object.keys(S.album || {}).length <= 2 ? 2 : 4) - S.albumWait)} nuit(s) au plus` : ''}).`, '']);
   }
   S.night++;
   S.creatures.forEach(c => { c.pet = 0; c.treat = 0; });
@@ -6540,9 +6543,9 @@ function renderHand(msg, tone) {
   if (!UI.hand) { hb.hidden = true; return; }
   hb.hidden = false; const { kind, t } = UI.hand, rot = kind === 'room' && ROOMS[t].size[0] !== ROOMS[t].size[1];
   hb.innerHTML = `${imgThumb(kind, t, 'mini')}<span class="msg ${tone || ''}">${msg ? esc(msg) : `<b>${esc(itemName(t))}</b> en main (${costText(costOf(kind, t))}). Touche le château pour coller.`}</span>` +
-    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + `<button class="pill" id="btnInfo" type="button" aria-expanded="${UI.handInfo !== false}">${gi('info')} Effets</button>` + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>' +
-    (UI.handInfo !== false ? `<div class="hinfo">${tipHTML(kind, t)}</div>` : '');
-  const bi = hb.querySelector('#btnInfo'); if (bi) bi.onclick = () => { UI.handInfo = UI.handInfo === false; sfx('tick'); renderHand(msg, tone); };
+    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + `<button class="pill" id="btnInfo" type="button" aria-expanded="${UI.handInfo === true}">${gi('info')} Effets</button>` + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>' +
+    (UI.handInfo === true ? `<div class="hinfo">${tipHTML(kind, t)}</div>` : '');
+  const bi = hb.querySelector('#btnInfo'); if (bi) bi.onclick = () => { UI.handInfo = UI.handInfo !== true; sfx('tick'); renderHand(msg, tone); };
 }
 function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); if (typeof renderMinimap === 'function') renderMinimap(); }
 // sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit
@@ -6781,7 +6784,7 @@ ICON_DRAW.build = g => {
    ========================================================= */
 function setPhase(k) { UI.phase = k; renderHUD(); coopCast('phase', { k }); }
 function banner(text, sub, ms = 1300) { coopCast('banner', { text, sub, ms }); const b = el('div', 'banner', `${text}${sub ? `<small>${sub}</small>` : ''}`); $('#game').appendChild(b); return sleep(ms).then(() => b.remove()); }
-function toast(text, bad) { const t = el('div', 'toast' + (bad ? ' bad' : ''), esc(text)); $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3400); }
+function toast(text, bad) { const t = el('div', 'toast' + (bad ? ' bad' : ''), esc(text)), box = $('#toasts'); box.appendChild(t); while (box.children.length > 3) box.firstElementChild.remove(); setTimeout(() => t.remove(), 3400); }
 
 /* ---------- sons synthétisés ---------- */
 const SND = { on: false, ctx: null };
@@ -6823,11 +6826,12 @@ function openRaid(pre) {
     m.querySelector('#raidBody').innerHTML = `<h2>Raid sur le Val Douillet</h2>
       <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
       <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
-      <h3>Équipe (${sel.team.size}/${cap})</h3><div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); const K = CRAWL_SK[c.sp]; return `❤️ ${p.hp} · ⚔️ ${p.atk}${K ? ` · 🃏 ${K.ico} ${esc(K.name)}` : ''}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
-      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(crawlLevel()).replace('.', ',')}</b> (il suit la renommée de tes champions). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
+      <h3>Équipe (${sel.team.size}/${cap})</h3>${!crawl && S.creatures.some(c => diceOf(c) <= 0 && !isOut(c)) ? `<p class="hint">Pas dans la liste : ${esc(S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).slice(0, 4).map(c => c.name).join(', '))}${S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).length > 4 ? '…' : ''} (trop petits pour piller : ils bâtissent et gardent le château).</p>` : ''}<div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); const K = CRAWL_SK[c.sp]; return `❤️ ${p.hp} · ⚔️ ${p.atk}${K ? ` · 🃏 ${K.ico} ${esc(K.name)}` : ''}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
+      ${crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(Math.round((crawlLevel() + (typeof crawlResist === 'function' ? crawlResist(crawlDgOf(sel.target)) : 0)) * 10) / 10).replace('.', ',')}</b> (il suit la renommée de tes champions, et un donjon rival grandit avec ton palier). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
       ${!crawl && typeof RAID_APPS !== 'undefined' ? `<h3>Approche</h3><div class="choices">${Object.entries(RAID_APPS).map(([k, a]) => `<button type="button" class="choice" data-app="${k}" aria-pressed="${(sel.app || 'risquee') === k}"><span class="emo">${a.ico}</span><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></button>`).join('')}</div>` : ''}
       ${b && !crawl ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
-      <div class="mfoot">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
+      ${(() => { const add = sel.target && RAIDS[sel.target] && !crawl ? (RAIDS[sel.target].menace || 0) : 0, men = S.menace + (S.hype >= 3 ? 1 : 0) + add; return men >= MENACE_MAX ? `<p class="warnline">⚠️ Une bande arrivera sans doute cette nuit (Menace ${S.menace} → ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}${add ? ', dont +' + add + ' pour ce raid' : ''}) : ${crawl ? 'l’expédition' : 'l’équipe'} ne sera pas là pour défendre le Cœur.</p>` : add ? `<p class="hint">Menace après ce raid : ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}.</p>` : ''; })()}
+      <div class="mfoot sticky">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
   };
   draw();
   m.addEventListener('click', e => {
@@ -7954,7 +7958,7 @@ const TIPS = [
 function advisorShow(o) {
   const a = $('#advisor'); a.hidden = false; a.className = 'advisor' + (o.cls ? ' ' + o.cls : '');
   a.innerHTML = `<div class="adv-pic" title="Fais-moi glisser pour voir ce que je cache (deux touchers : je reviens)"><img alt="" src="${portrait('diablotin')}"></div><span class="adv-grip" aria-hidden="true">✥</span><div class="adv-box"><div class="adv-head"><b>${esc(o.title)}</b>${o.step ? `<small>${o.step}/${o.total}</small>` : ''}</div>
-    <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
+    <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}${b.side ? ' side' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
   advPlace();
 }
 // Gribouille se déplace : on le prend par le visage, avec sa bulle, pour voir ce qu'il cache (deux touchers rapides le remettent à sa place)
@@ -7973,9 +7977,9 @@ function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.t
 function showStep(st) {
   const i = TUTO_STEPS.indexOf(st), btns = [];
   if (st.btn === 'next') btns.push({ id: 'next', label: 'Suivant', pri: true });
-  if (st.btn === 'later') btns.push({ id: 'next', label: 'Plus tard' });
+  if (st.btn === 'later') btns.push({ id: 'next', label: 'Passer cette étape', side: true });
   if (st.btn === 'end') btns.push({ id: 'end', label: 'Terminer', pri: true }, { id: 'grim', label: '📖 Ouvrir le Grimoire' });
-  if (!st.btn) btns.push({ id: 'hide', label: 'Plus tard' });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
+  if (!st.btn) btns.push({ id: 'hide', label: 'Ranger le conseil', side: true });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
   advisorShow({ title: st.t, text: st.x, step: i + 1, total: TUTO_STEPS.length, buttons: btns, skip: st.btn !== 'end', cls: 'tuto' });
 }
 function nextStep() { if (!S.tuto) return; const hid = !!S.tuto.hid; S.tuto.i++; delete S.tuto.hid; delete S.tuto.n0; if (hid && TUTO_STEPS[S.tuto.i]) S.tuto.hid = TUTO_STEPS[S.tuto.i].id; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
@@ -10286,7 +10290,7 @@ function vicStages(id) {
   const v = vicState();
   if (id === 'legende') { const g = radiance(); return [st(`Rayonnement Illustre (${Math.min(g, 80)}/80 ✨)`, g >= 80 || v.croisade), st(`Rayonnement Légendaire (${Math.min(g, 130)}/130 ✨)`, g >= 130 || v.croisade), st(`Rayonnement Mythique (${Math.min(g, 200)}/200 ✨)`, g >= 200 || v.croisade),
     st(`Finale : repousser la Croisade des héros de Mirebrume (${v.croisade ? Math.min(3, v.croisade.done) : 0}/3)`, v.croisade && v.croisade.done >= 3, true)]; }
-  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage sans fuir 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
+  if (id === 'terreur') return [...RIVALS.map(r => st(`Soumettre ${r.name} (${Math.min(3, v.vassals[r.id] || 0)}/3 points : boss 2, 3e étage et 2 combats gagnés 1)`, isVassal(r.id))), st(`Finale : le Siège de Mirebrume (${Math.min(3, v.siege)}/3 assauts réussis)`, v.siege >= 3, true)];
   if (id === 'voisinage') return [5, 10, 15].map(n => st(`${n} voix au Conseil du Val (${Math.min(v.votes, n)}/${n})`, v.votes >= n)).concat([st(`Finale : 20 voix, et le Conseil te nomme Protecteur du Val (${Math.min(v.votes, 20)}/20)`, v.votes >= 20, true)]);
   if (id === 'menagerie') { const p = v.proj && v.proj.id === 'parade' ? v.proj : null; return [st(`Album complet (${albumN()}/${MENAGERIE_SP.length} espèces, rares comprises)`, albumN() >= MENAGERIE_SP.length || p), st(`5 légendes au château (${Math.min(5, legendsHome())}/5)`, legendsHome() >= 5 || p),
     st(`${Math.round(MEN_HAPPY * 100)} % de tes créatures installées épanouies (70 ou plus) trois nuits de suite, à 8 au moins (${Math.min(3, v.happy)}/3)`, v.happy >= 3 || p), st(`Finale : la Grande Parade, 4 nuits sans départ ni bouderie (${v.won.menagerie ? 4 : p ? p.prog : 0}/4)`, !!v.won.menagerie, true)]; }
@@ -10300,7 +10304,8 @@ function vicPct(id) {
   if (id === 'terreur') return Math.round(RIVALS.reduce((a, r) => a + Math.min(3, v.vassals[r.id] || 0), 0) / 12 * 75 + Math.min(3, v.siege) / 3 * 25);
   if (id === 'voisinage') return Math.round(Math.min(20, v.votes) / 20 * 100);
   const s = vicStages(id), p = v.proj && v.proj.id === (id === 'menagerie' ? 'parade' : 'rituel') ? v.proj : null;
-  return Math.round(s.slice(0, 3).filter(x => x.done).length / 3 * 75 + (p ? p.prog / p.need * 25 : 0));
+  const part = id === 'secrets' ? [Math.min(1, mapPct() / 90), Math.min(1, artFound() / 12), Math.min(1, artPlaced() / 12) * (builtCount('reliquaire') ? 1 : .9)] : [Math.min(1, albumN() / MENAGERIE_SP.length), Math.min(1, legendsHome() / 5), Math.min(1, v.happy / 3)];
+  return Math.round(s.slice(0, 3).reduce((a, x, i) => a + (x.done ? 1 : part[i] * .9), 0) / 3 * 75 + (p ? p.prog / p.need * 25 : 0));   // chaque étape compte déjà à moitié faite
 }
 // une grande finale qu'on lance soi-même : la Parade (ménagerie) ou le Rituel (secrets)
 const PROJ = { parade: { vic: 'menagerie', name: 'la Grande Parade', need: 4, cost: { g: 20, s: 10 } }, rituel: { vic: 'secrets', name: 'le Rituel des Douze', need: 3, cost: { g: 15, s: 5 } } };
@@ -10483,7 +10488,7 @@ Object.assign(WIKI, {
     <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
     <li>Si un rival gagne avant toi, il devient Grand Maître et <b>une nouvelle ère commence</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti. Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
   v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
-  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
+  v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
   v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
     <ul><li>À 60, le lieu vote pour toi au <b>Conseil du Val</b>, qui se réunit toutes les 10 nuits : 1 voix par village, 2 pour la ville, 3 pour la cité.</li><li>À 70, ses aventuriers ne viennent plus t’attaquer.</li></ul><p><b>Victoire :</b> 20 voix cumulées. Les voix que tu n’as pas vont au Baron Pâlichon, qui brigue le même titre.</p>` },
   v_menagerie: { cat: 'vic', t: 'Victoire de la Grande Ménagerie', x: () => `<p>Réunis le bestiaire le plus complet du Val : l’<b>album entier</b> (${MENAGERIE_SP.length} espèces, y compris les {c:rares|créatures rares}, donc des étages vers le haut ET vers le bas), <b>5 légendes</b> au château, et 85 % de tes créatures installées (5 nuits au château) <b>épanouies</b> (70 ou plus) trois nuits de suite, à 8 au moins : un nouveau venu ne casse pas la série.</p><p><b>Finale :</b> la Grande Parade (${costText(PROJ.parade.cost)}), quatre nuits pendant lesquelles aucune créature ne doit partir ni bouder.</p>` },
@@ -11694,7 +11699,9 @@ function defenseSummary(plan) {
 function goalLine(plan) { const g = plan.goal || { k: 'coeur', label: 'le Cœur' }, G = INV_GOALS[g.k]; return `${G.ico} <b>Leur but : ${esc(G.name.toLowerCase())}</b>${g.k === 'enlever' ? ` (${esc(g.label)})` : g.k === 'saccage' ? ` (${esc(g.label)})` : ''}. ${esc(G.desc)}`; }
 // combien de fois sur 20 la bande atteint son but, pour chaque tactique (tes pouvoirs lancés au bon moment)
 // leurs chances, tactique par tactique : si tu laisses faire, et si tu joues tes jetons du Cœur au bon moment
-function invOdds(plan, n = 20) { const out = {}; Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = f / n; out[k + '0'] = f0 / n; }); return out; }
+const oddsRand = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// les mêmes tirages avec et sans jetons : l'écart mesure vraiment l'effet des jetons
+function invOdds(plan, n = 20) { const out = {}, rnd = Math.random; try { Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = Math.min(f, f0) / n; out[k + '0'] = f0 / n; }); } finally { Math.random = rnd; } return out; }
 const oddsCls = v => v >= .45 ? 'bad' : v >= .2 ? 'mid' : 'good';
 function chooseTactic(plan, opts = {}) {
   if (typeof document === 'undefined' || !document.body || !document.body.appendChild) return Promise.resolve('postes');
@@ -13628,14 +13635,28 @@ function crawlBattle(R, foes) {
 
 /* ---------- les autres salles ---------- */
 const CRAWL_EVENTS = [
+  { k: 'champignons', t: 'Un cercle de champignons qui luisent doucement dans le noir.', a: [['Les goûter', R => { const c = pick(R.party.filter(x => !x.ko)); if (!c) return 'Personne n’a faim.'; if (Math.random() < .6) { c.max += 5; c.hp += 5; return `${c.name} se sent pousser des ailes : +5 PV max pour l’expédition.`; } c.hp = Math.max(1, c.hp - 6); c.stress = Math.min(STRESS_MAX, c.stress + 2); return `${c.name} voit des choses (−6 PV, +2 de peur).`; }], ['Les cueillir pour le château', R => { const s = Math.round(3 * crawlDepthK(R)); R.loot.s += s; return `Une pleine besace : +${s} 🪵 au butin.`; }]] },
+  { k: 'miroir', t: 'Un grand miroir qui montre ton château… en ruines.', a: [['Le briser', R => { const w = R.deck.slice().sort((a, b) => cardValue(cardDef(a)) - cardValue(cardDef(b)))[0]; if (w) R.deck.splice(R.deck.indexOf(w), 1); R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return `Mille éclats : −2 de peur pour tous${w ? `, et ${cardName(w)} quitte le deck (il s’allège)` : ''}.`; }], ['Le regarder longtemps', R => { const n = [crawlBestUpgrade(R), null].map(() => { const c = crawlBestUpgrade(R); if (c) c.up = true; return c; }).filter(Boolean); R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 3); }); return `Il vous montre comment faire mieux : ${n.map(cardName).join(' et ') || 'rien'} amélioré${n.length > 1 ? 'es' : 'e'}, mais +3 de peur pour tous.`; }]] },
+  { k: 'osselets', t: 'Un gobelin joueur, assis sur un tonneau, propose une partie d’osselets.', a: [['Parier jusqu’à 10 💰 du butin', R => { const b = Math.min(10, R.loot.g); if (!b) return 'Ton butin est vide : il ricane et range ses osselets.'; if (Math.random() < .5) { R.loot.g += b; return `Gagné ! +${b} 💰 au butin.`; } R.loot.g -= b; return `Perdu… −${b} 💰. Il a sûrement triché.`; }], ['Décliner poliment', () => 'Il hausse les épaules et relance les osselets tout seul.']] },
+  { k: 'blesse', t: 'Un aventurier blessé, adossé au mur, qui n’a plus la force de fuir.', a: [['Le soigner et le relâcher', R => { R.freed = (R.freed || 0) + 1; R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'Il bredouille un merci : on parlera de toi au village (bonne volonté), et −2 de peur pour tous.'; }], ['Lui prendre sa bourse', R => { const g = Math.round(8 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 2); }); return `+${g} 💰 au butin. Personne n’en est très fier (+2 de peur).`; }]] },
+  { k: 'grimoire', t: 'Une bibliothèque engloutie : des pages flottent dans l’eau noire.', a: [['Étudier une page', R => { const o = crawlRewards(R, 1)[0]; if (!o) return 'Rien de lisible.'; o.up = true; R.deck.push(o); R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 1); }); return `${cardName(o)} rejoint le deck, déjà améliorée (+1 de peur : il faisait très noir).`; }], ['Repêcher les reliures', R => { const g = Math.round(5 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; return `Du cuir et des fermoirs d’argent : +${g} 💰.`; }]] },
   { k: 'autel', t: 'Un autel poussiéreux, couvert de bougies noires.', a: [['Prier', R => { if (Math.random() < .55) { R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 6); }); return 'Une douce chaleur : +6 PV pour toute l’équipe.'; } R.party.forEach(c => { if (!c.ko) c.stress = Math.min(STRESS_MAX, c.stress + 3); }); return 'Une voix d’outre-tombe ricane : +3 de peur pour toute l’équipe.'; }], ['Passer son chemin', () => 'On ne touche pas aux autels des autres.']] },
   { k: 'coffre', t: 'Un coffre fermé, un peu trop bien en évidence.', a: [['L’ouvrir', R => { if (Math.random() < .6) { const g = Math.round(6 * crawlDepthK(R) * CRAWL_GOLD); R.loot.g += g; return `Il est plein : +${g} 💰.`; } const c = pick(R.party.filter(x => !x.ko)); if (c) c.hp = Math.max(1, c.hp - 6); return `C’était un piège : ${c ? c.name + ' perd 6 PV' : 'personne n’est touché'}.`; }], ['Le laisser', () => 'Trop beau pour être vrai.']] },
-  { k: 'fontaine', t: 'Une fontaine qui glougloute dans le noir.', a: [['Boire', R => { const c = pick(R.party.filter(x => !x.ko)); if (!c) return 'Personne n’a soif.'; if (Math.random() < .65) { c.hp = c.max; return `${c.name} boit et se sent comme neuf (PV au maximum).`; } c.stress = Math.min(STRESS_MAX, c.stress + 3); return `${c.name} boit… et entend des voix (+3 de peur).`; }], ['Remplir les gourdes', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'L’eau fraîche apaise tout le monde (−2 de peur).'; }]] },
+  { k: 'fontaine', t: 'Une fontaine qui glougloute dans le noir.', a: [['Boire', R => { const c = R.party.filter(x => !x.ko).sort((a, b) => a.hp / a.max - b.hp / b.max)[0]; if (!c) return 'Personne n’a soif.'; if (Math.random() < .65) { c.hp = c.max; return `${c.name} boit et se sent comme neuf (PV au maximum).`; } c.stress = Math.min(STRESS_MAX, c.stress + 3); return `${c.name} boit… et entend des voix (+3 de peur).`; }], ['Remplir les gourdes', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 2); }); return 'L’eau fraîche apaise tout le monde (−2 de peur).'; }]] },
   { k: 'marchand', t: 'Un marchand ambulant, perdu depuis des semaines.', a: [['Acheter une potion (8 💰 du butin)', R => { if (R.loot.g < 8) return 'Pas assez dans le butin.'; R.loot.g -= 8; R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 8); }); return 'Une potion pour tous : +8 PV.'; }], ['Lui indiquer la sortie', R => { R.loot.g += 3; return 'Reconnaissant, il te laisse 3 💰.'; }]] },
   { k: 'cage', t: 'Une cage, et dedans, un prisonnier du donjon qui supplie.', a: [['Le libérer', R => { R.freed = (R.freed || 0) + 1; R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'Il file en jurant de chanter tes louanges au village (bonne volonté).'; }], ['Ignorer', R => { R.party.forEach(c => { c.stress = Math.min(STRESS_MAX, c.stress + 1); }); return 'Ses cris vous suivent longtemps (+1 de peur).'; }]] },
   { k: 'forge', t: 'Une enclume abandonnée, encore tiède. Quelqu’un forgeait ici il y a peu.', a: [['Aiguiser une carte', R => { const c = crawlBestUpgrade(R); if (!c) return 'Rien à aiguiser.'; c.up = true; return `${cardName(c)} : la carte est améliorée.`; }], ['Se méfier', R => { R.party.forEach(c => { c.stress = Math.max(0, c.stress - 1); }); return 'On ne touche à rien (−1 de peur).'; }]] },
   { k: 'colporteur', t: 'Un colporteur à la hotte pleine de bricoles, qui parle tout seul.', a: [['Lui donner 6 💰 du butin contre une carte', R => { if (R.loot.g < 6) return 'Pas assez dans le butin.'; const o = crawlRewards(R, 1)[0]; if (!o) return 'Il n’a rien qui te serve.'; R.loot.g -= 6; R.deck.push(o); return `Il te cède ${cardName(o)}.`; }], ['Le laisser parler', () => 'Il parle encore quand vous tournez au coin.']] },
 ];
+// ce que chaque choix risque ou promet (affiché sous le bouton)
+const EVENT_HINTS = {
+  champignons: ['+5 PV max pour l’un… ou −6 PV et de la peur', 'du bois au butin'], miroir: ['retire la pire carte du deck, −2 peur', 'améliore 2 cartes, +3 peur pour tous'],
+  osselets: ['double ou rien (10 💰 au plus)', 'rien'], blesse: ['bonne volonté au village, −2 peur', 'de l’or, +2 peur pour tous'], grimoire: ['une carte améliorée, +1 peur', 'de l’or'],
+  autel: ['soin pour tous… ou de la peur', 'rien'], coffre: ['de l’or… ou un piège (−6 PV)', 'rien'], fontaine: ['le plus blessé guérit… ou prend peur', '−2 peur pour tous'],
+  marchand: ['+8 PV pour tous (8 💰)', '+3 💰'], cage: ['bonne volonté au village, −1 peur', '+1 peur pour tous'], forge: ['améliore ta meilleure carte', '−1 peur pour tous'], colporteur: ['une carte au hasard (6 💰)', 'rien'],
+};
+CRAWL_EVENTS.forEach(E => (EVENT_HINTS[E.k] || []).forEach((h, i) => { if (E.a[i]) E.a[i][2] = h; }));
+
 function crawlTreasure(R) { const k = crawlDepthK(R), g = Math.round((4 + Math.random() * 4) * k * CRAWL_GOLD), s = Math.random() < .5 ? Math.round(2 * k) : 0; R.loot.g += g; R.loot.s += s; let item = null; if (Math.random() < .2) { item = pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && (FURN[t].cost.g || 0) <= 4)); if (item) R.loot.items.push(item); } return `Un trésor : +${g} 💰${s ? `, +${s} 🪵` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`; }
 // le repos : soigner, se calmer, ou aiguiser une carte
 function crawlRest(R, how, card) {
@@ -13655,7 +13676,7 @@ function crawlRewards(R, n = 3) {
 // le butin d'un combat gagné
 function crawlWinLoot(R, kind) {
   const k = crawlDepthK(R), g = Math.round((kind === 'boss' ? 18 : kind === 'elite' ? 8 : 3) * k * (.8 + Math.random() * .4) * CRAWL_GOLD), s = kind === 'combat' ? 0 : Math.round((kind === 'boss' ? 5 : 2) * k);
-  R.loot.g += g; R.loot.s += s;
+  R.loot.g += g; R.loot.s += s; R.won = (R.won || 0) + 1;
   if (hasRelic('chope')) R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 3); });
   if (kind === 'boss') { const rl = CRAWL_DG[R.dg].relic; if (!hasRelic(rl)) R.relic = rl; }
   return `Butin : +${g} 💰${s ? `, +${s} 🪵` : ''}.`;
@@ -13740,7 +13761,7 @@ function crawlAuto(dg, team, opts = {}) {
         B.endTurn(); B.enemyTurn();
       }
       if (!B.over) B.over = 'lost';
-      if (B.over === 'fled') { R.done = 'fled'; const k = R.fledBoss ? 0 : .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
+      if (B.over === 'fled') { R.done = 'fled'; const k = .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
       if (B.over !== 'won') { R.done = 'wipe'; break; }
       R.party.forEach(c => { c.block = 0; c.st = {}; });
       crawlWinLoot(R, node.k);
@@ -13758,8 +13779,8 @@ function crawlAuto(dg, team, opts = {}) {
 }
 // au retour : fatigue (la peur se paie), bosses, expérience, butin
 function crawlApply(R, team, lines) {
-  const kept = R.done === 'wipe' ? 0 : 1, g = Math.round(R.loot.g * kept), s = Math.round(R.loot.s * kept);
-  S.gold += g; S.mat += s; if (kept) R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
+  const kept = R.done === 'wipe' ? .25 : 1, g = Math.round(R.loot.g * kept), s = Math.round(R.loot.s * kept);   // terrassés : un quart du butin, ramassé dans la débandade
+  S.gold += g; S.mat += s; if (R.done !== 'wipe') R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
   const deep = (R.floor - 1) * CRAWL_STEPS + R.step;
   team.forEach(c => {
     const p = R.party.find(x => x.id === c.id); if (!p) return;
@@ -13768,10 +13789,10 @@ function crawlApply(R, team, lines) {
     gainXP(c, 1 + Math.floor(deep / 3) + (R.done === 'boss' ? 2 : 0), lines);
   });
   if (R.relic && R.done === 'boss') { (S.relics = S.relics || []).push(R.relic); lines.push([RELICS[R.relic].ico, `Relique : ${RELICS[R.relic].name}. ${RELICS[R.relic].desc}`, 'good']); }
-  if (kept && R.freed && typeof settlements === 'function') { const s0 = settlements().filter(siteKnown)[0]; if (s0) addGw(s0, 4 * R.freed); }
+  if (R.done !== 'wipe' && R.freed && typeof settlements === 'function') { const s0 = settlements().filter(siteKnown)[0]; if (s0) addGw(s0, 4 * R.freed); }
   S.stats.crawls = (S.stats.crawls || 0) + 1; if (R.done === 'boss') S.stats.crawlBoss = (S.stats.crawlBoss || 0) + 1;
-  if (R.done === 'fled') lines.push(['🏃', R.fledBoss ? 'Face au boss, l’équipe a tout abandonné pour sauver sa peau.' : 'Dans la fuite, la moitié du butin est restée au donjon.', 'bad']);
-  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? 'L’équipe est terrassée : tout le butin est perdu, et tout le monde rentre sonné.' : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} avec ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
+  if (R.done === 'fled') lines.push(['🏃', R.fledBoss ? 'Face au boss, l’équipe a fui en laissant la moitié du butin et tous les stickers.' : 'Dans la fuite, la moitié du butin est restée au donjon.', 'bad']);
+  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? `L’équipe est terrassée : elle ne rapporte qu’un quart du butin (${costText({ g, s })}), et tout le monde rentre sonné.` : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} ${g || s ? 'avec ' + costText({ g, s }) : 'les mains vides'}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
   return { deep, g, s };
 }
 // la description d'une carte, avec les valeurs qu'elle aurait jouée par « me » (ou dans l'absolu)
@@ -13831,8 +13852,8 @@ const isCrawlTarget = k => { if (!RAIDS[k] && /^x_/.test(k || '')) ensureCrawlSi
 // soumettre un rival : un boss vaincu vaut 2 points ; le troisième étage atteint, puis rentrer sans fuir, 1 point (3 points : vassal)
 function crawlVictory(dg, R, lines) {
   if (!CRAWL_DG[dg] || CRAWL_DG[dg].site) return;
-  const v = vicState(), door = R.floor >= CRAWL_FLOORS && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
-  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage et rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
+  const v = vicState(), door = R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
+  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
   if (S.world) S.world.hit[dg] = S.night + (pts ? 6 : 3);
   if (!pts || isVassal(dg)) return;
   v.vassals[dg] = Math.min(3, (v.vassals[dg] || 0) + pts); v.race[dg] = Math.max(0, (v.race[dg] || 0) - 6 * pts);
@@ -13842,7 +13863,7 @@ function crawlVictory(dg, R, lines) {
 }
 // la Forêt, les Grottes et les Ruines : leurs trésors (un artefact, une rencontre) et le temps qu'il faut pour y retourner
 function crawlSiteResult(key, R, team, lines) {
-  const tg = RAIDS[key]; if (!tg || !tg.site) return;
+  const tg = RAIDS[key]; if (!tg || !tg.site || !R.path || !R.path.length) return;   // rentré avant la première salle : rien ne se passe, le lieu reste ouvert
   const s = siteById(tg.site), X = EXPE_SITES[tg.dg] || {}; if (!s) return;
   S.world.cd[s.id] = S.night + 5; S.stats.expeditions = (S.stats.expeditions || 0) + 1;
   discover(discAround(s.q, s.r, 2), 'expédition');
@@ -14126,7 +14147,7 @@ async function runCrawl(report) {
     head(); page.classList.remove('battle');
     const B0 = CRAWL_EN[DG.boss];
     body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${msg || esc(DG.desc)}</p>${partyRow()}
-      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>
+      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(B0.name)} est redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? ', et compte déjà 1 point contre ce rival' : ''}.</p>` : ''}
       <div class="cnodes2">${R.choices.map((c, i) => `<button type="button" class="cnode2${c.k === 'boss' ? ' boss' : ''}" data-a="go" data-v="${i}">${gi(NODE_IK[c.k], 'big')}<b>${NODES[c.k].name}</b><small>${c.k === 'boss' ? `${esc(B0.name)}. Chaque tour, une action légendaire en plus ; à mi-vie, la fureur. Vaincu, il rapporte gros, et une relique.` : NODE_TXT[c.k]}</small></button>`).join('')}</div>
       <div class="btnrow cp-foot"><button type="button" class="sbtn" data-a="deck">${gi('cards')} Le deck (${R.deck.length})</button><button type="button" class="sbtn" data-a="retreat">${gi('door')} Rentrer au château avec le butin</button></div></div>`;
     waitCast(`${names[0] || 'L’hôte'} choisit la prochaine salle…`);
@@ -14150,7 +14171,7 @@ async function runCrawl(report) {
 
   // 3. le combat : l'arène en haut, les mains en bas
   const fight = async kind => {
-    const B = crawlBattle(R, crawlFoes(R, kind)); ui.auto = false; page.classList.add('battle');
+    const B = crawlBattle(R, crawlFoes(R, kind)); ui.auto = false; ui.autoWarned = false; page.classList.add('battle');
     const st = { sel: null, info: '', seen: new Set(), host: true, boss: kind === 'boss' }, ready = Array(B.np).fill(false);
     let sentEv = 0, castT = null;
     const vmNow = enemy => battleVM(B, { p: 0, ready, names });
@@ -14169,6 +14190,7 @@ async function runCrawl(report) {
     else if (B.foesL.some(f => f.elite)) { const e = B.foesL.find(f => f.elite), P = ELITE_POW[e.pow]; A.banner(`${gi('skull')} ${esc(e.name)}${P ? `<small>${gi(POW_IK[e.pow])} ${esc(P.name)} : ${esc(powDesc(e.pow))}</small>` : ''}`, 'elite big', 1700); sfx('horn'); await sleep(1000); }
     for (let turn = 0; turn < 60 && !B.over; turn++) {
       const n0 = B.ev.length; B.startTurn(); st.sel = null; ready.fill(false); ui.phase = 'players'; ui.secretReq = null;
+      if (ui.auto && !ui.autoWarned && B.party.reduce((a, c) => a + (c.ko ? 0 : c.hp / c.max), 0) / B.party.length < .45) { ui.auto = false; ui.autoWarned = true; st.info = '⚠️ Ça tourne mal : le combat auto te rend la main.'; }   // une fois par combat
       players.forEach((id, p) => { if (p > 0 && !COOP.peers.has(id)) ready[p] = true; });   // un Maître parti ne bloque personne
       render(); castBattle(false); A.banner(`${gi('swords')} Tour ${B.turn}${coop ? ' — à vous !' : ' — à toi !'}`, 'mine', 900); sfx('turn'); await A.play(B.ev.slice(n0), 1); if (B.over) break;
       // le tour des Maîtres : chacun joue sa main ; on passe aux ennemis quand tout le monde a fini
@@ -14232,7 +14254,7 @@ async function runCrawl(report) {
     if (['combat', 'elite', 'boss'].includes(node.k)) {
       const res = await fight(node.k);
       page.classList.remove('battle');
-      if (res === 'fled') { R.done = 'fled'; const k = R.fledBoss ? 0 : .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
+      if (res === 'fled') { R.done = 'fled'; const k = .5; R.loot.g = Math.floor(R.loot.g * k); R.loot.s = Math.floor(R.loot.s * k); if (R.fledBoss) R.loot.items = []; break; }
       if (res !== 'won') { R.done = 'wipe'; break; }
       const t = crawlWinLoot(R, node.k); sfx('coin');
       if (node.k === 'boss') { R.done = 'boss'; break; }
@@ -14244,7 +14266,7 @@ async function runCrawl(report) {
       const c2 = await panel(`${gi('campfire')} Un coin tranquille pour souffler. Que faire ?`, [['rest', 'heal', `${gi('heart', 'big')} Se soigner`, '+30 % des PV pour toute l’équipe'], ['rest', 'calm', `${gi('calm', 'big')} Se calmer`, '−4 de peur pour toutes'], ['rest', 'up', `${gi('anvil', 'big')} Aiguiser une carte`, 'elle devient plus forte (+)']]);
       if (c2.v === 'up') { const c = await deckView(`${gi('anvil')} Quelle carte aiguiser ?`, true); msg = esc(c ? crawlRest(R, 'up', c) : 'On repart sans rien aiguiser.'); } else { msg = esc(crawlRest(R, c2.v)); sfx('heal'); }
     }
-    else { const E = pick(CRAWL_EVENTS); waitCast(E.t); const c2 = await panel(`${gi('question')} ${esc(E.t)}`, E.a.map((a, i) => ['ev', i, esc(a[0])])); msg = esc(E.a[+c2.v][1](R)); }
+    else { const E = pick(CRAWL_EVENTS); waitCast(E.t); const c2 = await panel(`${gi('question')} ${esc(E.t)}`, E.a.map((a, i) => ['ev', i, esc(a[0]), a[2] ? esc(a[2]) : ''])); msg = esc(E.a[+c2.v][1](R)); }
     crawlAdvance(R);
   }
   // 5. le retour
@@ -14370,14 +14392,14 @@ WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Le
   <ul><li><b>Le deck vient de ton château.</b> Chaque créature apporte deux Frappes, une Parade et la carte de son espèce (${Object.entries(CRAWL_SK).slice(0, 5).map(([k, s]) => `{sp:${k}} : ${s.ico} ${esc(s.name)}`).join(', ')}…), améliorée si elle est fidèle (70 de loyauté) ; une légende ou une créature évoluée ajoute un Coup de légende. Avant de partir, tu remplis le <b>sac</b> avec ${BAG_SIZE} cartes tirées de tes meubles et de tes pièges : le ${CASTLE_CARDS.chou.ico} Chou du potager soigne, la ${CASTLE_CARDS.hallebarde.ico} Hallebarde du râtelier frappe, la ${CASTLE_CARDS.trappe.ico} Trappe à pics mord le prochain ennemi qui attaque… Un <b>meuble de qualité</b> (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée ✦ : le grand lustre fait une meilleure torche que la simple torche, la catapulte lance de vrais boulets.</li>
   <li><b>Le combat</b> : ${ENERGY} énergie et ${HAND_SIZE} cartes par tour. Une carte de créature se joue par elle (sa force s’ajoute à ses coups) ; si elle est K.O., ses cartes sont mises de côté ; immobilisée, ses cartes attendent ; en panique, elles coûtent 1 de plus. Au-dessus de chaque ennemi, sa prochaine action et sa cible : protège-la, immobilise-le, ou tue-le d’abord.</li>
   <li><b>Trois étages</b> de 3 salles, puis le boss. À chaque pas, deux salles au choix : ${Object.entries(NODES).filter(([k]) => k !== 'boss').map(([, n]) => `${n.ico} ${n.name}`).join(', ')}. Après chaque combat gagné, une carte à ajouter au deck (ou pas). Au repos : se soigner, se calmer, ou aiguiser une carte.</li>
-  <li><b>Après chaque salle</b>, tu continues ou tu rentres avec le butin. En plein combat, tu peux fuir : la moitié du butin reste là-bas (tout le butin, si c’est le boss qu’on fuit). Si l’équipe est terrassée, tout est perdu et tout le monde rentre sonné.</li>
+  <li><b>Après chaque salle</b>, tu continues ou tu rentres avec le butin. En plein combat, tu peux fuir : la moitié du butin reste là-bas (et les stickers, si c’est le boss qu’on fuit). Si l’équipe est terrassée, tout est perdu et tout le monde rentre sonné.</li>
   <li><b>La peur</b> monte avec les spectres, les K.O. et les cris ; à ${STRESS_MAX}, une créature panique. Au retour, la peur se change en fatigue (et parfois en cicatrice).</li>
   <li><b>Les élites</b> ont une capacité qui ne les quitte pas (${Object.values(ELITE_POW).map(P => `${P.ico} ${esc(P.name)}`).join(', ')}) et une action d’élite redoutable dans leur répertoire. <b>Les boss</b> ont en plus une <b>action légendaire</b> à chaque tour, annoncée d’avance (⚡), et à mi-vie ils entrent en <b>fureur</b> : un coup d’éclat, et un répertoire plus dur. Un boss sonné perd aussi son action légendaire.</li>
   <li><b>Les secrets du décor</b> : de temps en temps (pas souvent !), un détail du décor cache quelque chose : un tonneau prêt à exploser, un chandelier mal accroché, un vieux puits à vœux… Rien ne le signale, sauf un petit reflet qui passe. Touche-le pendant le tour des Maîtres : il sert une fois, ne coûte pas d’énergie et vise tout seul au mieux. Le combat auto ne les cherche pas : c’est un coup de pouce pour les yeux attentifs, pas une carte sur laquelle compter.</li>
   <li><b>Les éléments</b> : chaque coup a un type de dégâts, comme dans Donjons et Dragons ; voir {c:elements}.</li>
   <li><b>À plusieurs Maîtres</b> (château partagé) : chacun tire sa propre main et joue ses cartes depuis son écran ; les ennemis attendent que tout le monde ait fini. En contrepartie, les monstres sont plus coriaces, plus nombreux, frappent plus fort, et les boss ont une action légendaire de plus par Maître.</li>
   <li><b>Le niveau</b> suit la renommée de tes 4 meilleures créatures : le donjon se prépare à tes champions.</li>
-  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')}). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace.</li></ul>` };
+  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')}). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace.</li></ul>` };
 WIKI.elements = { cat: 'danger', t: 'Les éléments', x: () => `<p>En expédition, chaque coup a un <b>type de dégâts</b>, comme dans Donjons et Dragons : ${Object.values(ELEM).map(([i, n]) => `${i} ${n}`).join(', ')}.</p>
   <ul><li><b>Vulnérable</b> : les dégâts sont doublés (×2, et un « Vulnérable ! » s’affiche). <b>Résistant</b> : moitié moins. <b>Immunisé</b> : rien du tout. Sous chaque ennemi, ses faiblesses et ses résistances.</li>
   <li><b>La Frappe</b> prend l’arme naturelle de la créature qui la joue : le troll et le golem cognent (contondant), le squelette et l’orque tranchent, le gobelin et le vampire percent, le fantôme et la liche frappent nécrotique, la fée frappe de force. Les cartes du château ont leur propre type : Braises et Sort de flammes (feu), Fiole explosive (acide), Éclair de l’archimage (foudre), Épée qui chante faux (tonnerre), Relique bénite (radiant), Eau glacée du lac (froid), Malédiction de la tombe (nécrotique)…</li>
@@ -14467,16 +14489,20 @@ function heartTierHTML() {
   if (!st) return `<div class="htier max"><h3>⭐ Palier ${S.tier} : le maximum</h3><p class="hint">Ton Cœur bat aussi fort qu’un Cœur peut battre. Bravo, Maître !</p>
     <div class="btnrow"><button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
   const n = st.rows.filter(r => r.ok).length, k = st.rows.length;
-  return `<div class="htier${st.ok ? ' ok' : ''}"><h3>⭐ Palier ${S.tier} → ${S.tier + 1}</h3>
+  return `<div class="htier${st.ok ? ' ok' : ''}"><h3>⭐ Palier ${S.tier} → ${S.tier + 1}</h3>${st.ok ? `<div class="btnrow"><button class="sbtn pri" type="button" id="hTier">⭐ Monter au Palier ${S.tier + 1}</button></div>` : ''}
     <p class="hint">Le Cœur grandit avec ton château. Chaque palier débloque des stickers, un étage de plus… et des aventuriers plus coriaces.</p>
     <div class="hbar" role="progressbar" aria-valuemin="0" aria-valuemax="${k}" aria-valuenow="${n}"><i style="width:${Math.round(n / k * 100)}%"></i><span>${n}/${k} conditions</span></div>
     <ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul>
     <p><b>Débloque :</b> ${esc(st.next.unlock)}, et un étage de plus.</p>
-    <div class="btnrow"><button class="sbtn pri" type="button" id="hTier" ${st.ok ? '' : 'disabled'}>⭐ Monter au Palier ${S.tier + 1}</button><button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
+    <div class="btnrow">${st.ok ? '' : `<button class="sbtn pri" type="button" id="hTier" disabled>⭐ Monter au Palier ${S.tier + 1}</button>`}<button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
 }
 function tierCelebrate() {
   const h = heartRoom(); if (h && Z === zOf(h)) { poof(h.x, h.y, h.w, h.h); floatText(h.x + h.w / 2, h.y + h.h / 2, `⭐ Palier ${S.tier}`, '#ffe07a'); }
   banner(`⭐ Palier ${S.tier} !`, 'Le Cœur grandit : de nouveaux stickers sont disponibles', 1800);
+  // puis une vraie fiche : ce qui vient d'être débloqué, et ce qu'il faut pour la suite
+  const T = TIERS[S.tier - 1];
+  setTimeout(() => { if ($('#modalRoot').children.length || UI.busy) return; const st = tierStatus();
+    openModal(`<h2>⭐ Palier ${S.tier} !</h2><p>Le Cœur grandit : <b>${esc(T ? T.unlock : 'de nouveaux stickers')}</b>, et un étage de plus. Ouvre « Construire » pour les voir.</p>${st ? `<h3>Pour le Palier ${S.tier + 1}</h3><ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul>` : '<p>C’est le palier le plus haut : ton Cœur ne peut pas battre plus fort.</p>'}<div class="btnrow"><button class="sbtn pri" type="button" data-close>En avant !</button></div>`, { label: 'Nouveau palier' }); }, 1900);
 }
 // la fiche du Cœur commence par son palier
 const openRoomHeart = openRoom;
@@ -17905,7 +17931,7 @@ const raidVig = k => ((S.world && S.world.vig) || {})[k] || 0;
 // la réserve de dés : la vigilance de la cible
 const raidBreakdownVig = raidBreakdown;
 raidBreakdown = function (targetId, teamIds) {
-  const b = raidBreakdownVig(targetId, teamIds), v = raidVig(targetId);
+  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume, la finale, n'en tient pas compte
   if (v) { b.pool -= v; b.rows.push([`Cible sur ses gardes (vigilance ${v})`, -v]); }
   return b;
 };
@@ -17913,7 +17939,7 @@ const applyRaidRisk = applyRaid;
 applyRaid = function (roll) {
   const k = S.raid && S.raid.target, app = (S.raid && S.raid.app) || 'risquee', team = S.raid ? S.raid.team.map(critter).filter(Boolean) : [];
   const g0 = S.gold, s0 = S.mat, lines = applyRaidRisk(roll);
-  if (k && S.world) { S.world.vig = S.world.vig || {}; S.world.vig[k] = Math.min(RAID_VIG_MAX, (S.world.vig[k] || 0) + 1); }
+  if (k && S.world && !(RAIDS[k] && RAIDS[k].siege)) { S.world.vig = S.world.vig || {}; S.world.vig[k] = Math.min(RAID_VIG_MAX, (S.world.vig[k] || 0) + 1); }
   // un succès partiel : on file avec ce qu'on peut porter, et parfois avec un·e blessé·e
   if (roll.res === 'partial') {
     const cg = Math.floor(Math.max(0, S.gold - g0) * .25), cs = Math.floor(Math.max(0, S.mat - s0) * .25); S.gold -= cg; S.mat -= cs;
@@ -17921,7 +17947,7 @@ applyRaid = function (roll) {
     if (app !== 'prudente' && Math.random() < .35) { const c = pick(team); if (c) { c.hurt = Math.max(c.hurt || 0, S.night + 2); lines.push(['🤕', `${c.name} rentre blessé·e : 2 nuits au repos.`, 'bad']); } }
   }
   // un échec : quelqu'un peut rester aux mains des villageois
-  if (roll.res === 'fail' && app !== 'prudente' && team.length && (app === 'desesperee' || Math.random() < .5)) {
+  if (roll.res === 'fail' && app !== 'prudente' && team.length && S.night >= 10 && (app === 'desesperee' || Math.random() < .5)) {   // le début de partie est clément : pas de capture avant la nuit 10
     const c = pick(team); c.captive = S.night + 4; c.post = null;
     lines.push(['🪤', `${c.name} est pris·e par les villageois ! Rançon de ${captiveRansom(c)} 💰 (sa fiche), ou évasion dans 4 nuits.`, 'bad']);
     addLog(`${c.name} est retenu·e au village.`, 'bad');
@@ -17955,7 +17981,7 @@ soulsDawn = function (report) {
 WIKI.risques = { cat: 'danger', t: 'Risques et conséquences', x: () => `<ul><li><b>Vigilance des cibles</b> : chaque raid sur un même lieu le met sur ses gardes (−1 dé par raid, ${RAID_VIG_MAX} au plus) ; il oublie un peu une nuit sur trois. Varie tes cibles.</li>
   <li><b>Six dés au plus</b> : on ne lance jamais plus de ${RAID_DICE_MAX} dés. Une grosse réserve garde son utilité (elle compense la vigilance et les cibles bien gardées), mais le 6 n’est jamais garanti.</li>
   <li><b>Succès partiel</b> : on file avec les trois quarts du butin, et parfois un·e blessé·e (2 nuits au repos).</li>
-  <li><b>Échec</b> : en approche risquée, une fois sur deux, quelqu’un reste aux mains des villageois ; en désespérée, toujours. Rançon dans sa fiche, ou évasion au bout de 4 nuits. L’approche prudente ne risque rien.</li>
+  <li><b>Échec</b> : en approche risquée, une fois sur deux, quelqu’un reste aux mains des villageois ; en désespérée, toujours (jamais avant la nuit 10). Rançon dans sa fiche, ou évasion au bout de 4 nuits. L’approche prudente ne risque rien.</li>
   <li><b>L’attention</b> : une envie qui attend fait baisser l’épanouissement de plus en plus (jusqu’à −30), donc la loyauté. Sous 20 de loyauté, une créature finit par partir vivre sa vie.</li></ul>` };
 /* =========================================================
    Défendre le Cœur aux cartes
@@ -18075,9 +18101,10 @@ const WONDERS = {
   archives: { ico: 'book', name: 'Les Archives', desc: L => `${L} créature${L > 1 ? 's' : ''} gagne${L > 1 ? 'nt' : ''} 1 d’expérience chaque nuit`, base: { g: 20, s: 55 }, k: 1.6 },
 };
 const wonderLv = k => ((S && S.wonders) || {})[k] || 0;
+const wonderGold = k => { const c = wonderCost(k); return { g: c.g + Math.ceil(c.s * 1.5), s: 0 }; };   // tout payer en or, quand c'est l'or qui dort
 const wonderCost = k => { const W = WONDERS[k], m = Math.pow(W.k, wonderLv(k)); return { g: Math.round(W.base.g * m), s: Math.round(W.base.s * m) }; };
 CMD.wonder = a => {
-  const W = WONDERS[a && a.id]; if (!W) return 'Merveille inconnue'; const cost = wonderCost(a.id); if (!canAfford(cost)) return 'Pas assez';
+  const W = WONDERS[a && a.id]; if (!W) return 'Merveille inconnue'; const cost = a.gold ? wonderGold(a.id) : wonderCost(a.id); if (!canAfford(cost)) return 'Pas assez';
   pay(cost); S.wonders = S.wonders || {}; S.wonders[a.id] = wonderLv(a.id) + 1; S.stats.wonders = (S.stats.wonders || 0) + 1;
   addLog(`${W.name} : niveau ${S.wonders[a.id]}.`, 'good'); return null;
 };
@@ -18105,7 +18132,7 @@ soulsDawn = function (report) {
 function wondersHTML() {
   const fw = feteWhy(), fc = feteCost();
   return `<div class="chsec"><h3>${gi('crown')} Les Merveilles</h3><p class="hint">De grands ouvrages qu’on agrandit sans fin, de plus en plus chers, payés surtout en bois : c’est là que dort le bois en trop.</p>
-    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costText(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button></div>`; }).join('')}</div>
+    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costText(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button>${(() => { const cg = wonderGold(k), okg = canAfford(cg); return okg && !ok || okg && S.gold > 200 ? ` <button type="button" class="sbtn small" data-wonder="${k}" data-gold="1">… ou tout en or (${cg.g} 💰)</button>` : ''; })()}</div>`; }).join('')}</div>
     <h3>${gi('music')} La Grande fête</h3><p class="hint">${costText(fc)} : toutes les créatures +1 de bonne humeur, et ${FETE_LAST} nuits d’épanouissement en plus (+12). Une fois toutes les ${FETE_EVERY} nuits.</p>
     <div class="btnrow"><button type="button" class="sbtn${fw ? '' : ' pri'}" data-fete="1" ${fw ? 'disabled' : ''}>${fw ? esc(fw) : '🎉 Donner une grande fête'}</button></div></div>`;
 }
@@ -18116,8 +18143,9 @@ openRoom = function (id) {
   const box = el('div', '', wondersHTML()), foot = m.querySelector('.mbody .btnrow:last-child'); (foot ? foot.parentNode.insertBefore(box, foot) : m.querySelector('.mbody').appendChild(box));
   box.addEventListener('click', e => {
     const w = e.target.closest('[data-wonder]'), f = e.target.closest('[data-fete]');
-    if (w && !w.disabled && run('wonder', { id: w.dataset.wonder })) { sfx('chime'); afterChange(); openRoom(id); }
-    if (f && !f.disabled && run('fete')) { sfx('victory'); afterChange(); toast('🎉 La fête bat son plein ! Tout le monde est de bonne humeur.'); openRoom(id); }
+    const keep = () => { const sc = m.scrollTop; openRoom(id); const m2 = document.querySelector('#modalRoot .modal'); if (m2) m2.scrollTop = sc; };
+    if (w && !w.disabled && run('wonder', { id: w.dataset.wonder, gold: !!w.dataset.gold })) { sfx('chime'); afterChange(); keep(); }
+    if (f && !f.disabled && run('fete')) { sfx('victory'); afterChange(); toast('🎉 La fête bat son plein ! Tout le monde est de bonne humeur.'); keep(); }
   });
 };
 // une pastille quand l'or et le bois dorment
@@ -18126,13 +18154,14 @@ valNotifs = function (add) {
   valNotifsW(add);
   if (S.night >= 12 && S.gold >= 250 && S.mat >= 250 && Object.keys(WONDERS).some(k => canAfford(wonderCost(k)))) add('wonder', '🏛️', 'Ton or dort : agrandis une Merveille (touche le Cœur)', () => { const h = heartRoom(); if (h) openRoom(h.id); }, 1);
 };
-WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
+WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent. On les paie surtout en bois, ou tout en or (1 bois = 1,5 or) quand c’est l’or qui dort.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
 
 /* ---------- la chronique de l'aube : d'abord ce qui compte ----------
    Les 1 à 3 événements marquants de la nuit en grand (« À la une »), le détail replié en dessous. */
 const UNE_RULES = [
   [10, /quitte|part vivre|est parti|pris·e par|retenu·e|capturé|désert|emport|filent avec|trahi/i],
   [9, /repouss|la bande|aux cartes|invasion|le Cœur/i],
+  [8, /^Expédition dans|Reddition|vers la vassalité/],
   [7, /critique|victoire|légende|palier|nouvelle créature|arrive au château|rejoint|chantier terminé|quête accomplie|niveau \d+ !|évolue/i],
 ];
 function uneOf(report) {
@@ -18149,7 +18178,7 @@ chronicleHTML = function (n, report, sub, snap, now) {
 // les artefacts du Bazar : chaque achat renchérit les suivants
 { const wv = WIKI.ville && WIKI.ville.x; if (wv) WIKI.ville.x = () => wv() + `<p class="hint">Les artefacts en vente coûtent 25 % de plus pour chaque artefact déjà acheté (${(S && S.stats && S.stats.artBought) || 0} jusqu’ici) : les expéditions restent le meilleur moyen d’en trouver.</p>`; }
 /* =========================================================
-   Le fil rouge : sept chapitres pour découvrir le château
+   Le fil rouge : huit chapitres pour découvrir le château
    Chaque chapitre a ses objectifs (une pastille 📜 à droite,
    son journal avec « Montre-moi ») et dévoile, une fois
    achevé, de nouveaux boutons : les pièges et les gardes,
@@ -18178,11 +18207,11 @@ const FIL = [
     goals: [
       { id: 'carte', t: 'Ouvre la carte du Val', ok: () => !!filFlag('map'), show: () => filGlow('#minimap'), wiki: 'carte' },
       { id: 'raid', t: 'Réussis un raid', ok: () => S.stats.raidsWon >= 1, show: () => filGlow('#btnRaid'), wiki: 'raids' },
-      { id: 'cibles', t: 'Pille deux lieux différents', ok: () => Object.keys((S.fil && S.fil.tg) || {}).length >= 2, n: () => [Object.keys((S.fil && S.fil.tg) || {}).length, 2], show: () => filGlow('#btnRaid'), wiki: 'risques' },
+      { id: 'cibles', t: 'Pille ou explore deux lieux différents (raid ou expédition)', ok: () => Object.keys((S.fil && S.fil.tg) || {}).length >= 2, n: () => [Object.keys((S.fil && S.fil.tg) || {}).length, 2], show: () => { openWorld(); toast('Sur la carte : un éclaireur ou une rumeur au village dévoile de nouvelles cibles.'); }, wiki: 'risques' },
     ], reward: { g: 15, s: 20 }, unlock: 'la renommée et les hauts faits' },
   { id: 'ames', t: 'Des âmes à choyer', intro: 'Tes créatures ne sont pas des meubles : chacune a ses envies, ses rêves, son humeur. Comble-les et elles te le rendront. Et un château heureux grandit : vise le Palier 1, puis offre-leur une fête.',
     goals: [
-      { id: 'envies', t: 'Comble 3 envies de tes créatures', ok: () => (S.stats.quests || 0) >= 3, n: () => [S.stats.quests || 0, 3], show: () => toggleLeft(true), wiki: 'missions' },
+      { id: 'envies', t: 'Comble 2 envies de tes créatures (leur fiche dit ce qu’elles veulent)', ok: () => (S.stats.quests || 0) >= 2, n: () => [S.stats.quests || 0, 2], show: () => toggleLeft(true), wiki: 'missions' },
       { id: 'palier', t: 'Atteins le Palier 1', ok: () => S.tier >= 1, show: () => openHeart(), wiki: 'paliers' },
       { id: 'fete', t: 'Donne une Grande fête (fiche du Cœur)', ok: () => !!S.feteAt, show: () => openHeart(), wiki: 'merveilles' },
     ], reward: { g: 20, s: 30 }, unlock: 'le journal des quêtes et le Val des Maîtres' },
@@ -18202,7 +18231,12 @@ const FIL = [
       { id: 'palier2', t: 'Atteins le Palier 2', ok: () => S.tier >= 2, show: () => openHeart(), wiki: 'paliers' },
       { id: 'merveille', t: 'Bâtis une Merveille (fiche du Cœur)', ok: () => (S.stats.wonders || 0) >= 1, show: () => openHeart(), wiki: 'merveilles' },
       { id: 'victoire', t: 'Regarde les cinq victoires', ok: () => !!filFlag('vic'), show: () => openVictories(), wiki: 'victoires' },
-    ], reward: { g: 50, s: 50 }, unlock: 'tout le reste : à toi d’écrire la suite' },
+    ], reward: { g: 50, s: 50 }, unlock: 'ta propre légende' },
+  { id: 'legende', t: 'Ta propre légende', intro: 'Tu connais tout le château. Choisis l’une des cinq victoires du Val et va jusqu’au bout : la nuit en cours (en haut à droite) montre où tu en es dans chacune. Les rivaux, eux, n’attendent pas.',
+    goals: [
+      { id: 'mi', t: 'Atteins 50 % dans une victoire du Val', ok: () => VICTORIES.some(v => vicPct(v.id) >= 50), n: () => [Math.max(...VICTORIES.map(v => vicPct(v.id))), 50], show: () => openVictories(), wiki: 'victoires' },
+      { id: 'vic', t: 'Remporte une victoire du Val', ok: () => (S.stats.victories || 0) >= 1, show: () => openVictories(), wiki: 'victoires' },
+    ], reward: { g: 100, s: 60 }, unlock: 'le Panthéon du Val' },
 ];
 // ce que chaque chapitre dévoile : la fonction est libre dès que le joueur a atteint ce chapitre
 const FIL_LOCKS = { def: 1, raid: 2, soc: 3, val: 4, cards: 5 };
@@ -18258,6 +18292,9 @@ const afterChangeFil = afterChange;
 afterChange = function () { try { filCheck(); } catch (e) { console.error(e); } return afterChangeFil(); };
 const applyRaidFil = applyRaid;
 applyRaid = function (roll) { const k = S.raid && S.raid.target, lines = applyRaidFil(roll); if (filOn() && k && roll.res !== 'fail') S.fil.tg[k] = 1; return lines; };
+// une expédition menée jusqu'à au moins une salle compte comme un lieu exploré
+const crawlApplyFil = crawlApply;
+crawlApply = function (R, team, lines) { const r = crawlApplyFil(R, team, lines); if (filOn() && R && R.path && R.path.length && R.done !== 'wipe' && S.raid && S.raid.target) S.fil.tg[S.raid.target] = 1; return r; };
 const openWorldFil = openWorld;
 openWorld = function (...a) { filSet('map'); return openWorldFil(...a); };
 const openVictoriesFil = openVictories;
@@ -18316,7 +18353,7 @@ function openFil() {
     return `<li class="fch cur"><b>Chapitre ${i + 1} · ${esc(c.t)}</b><p class="hint">${esc(c.intro)}</p><ul class="fgoals">${c.goals.map(g => { const ok = S.fil.ok[c.id + ':' + g.id]; return `<li class="${ok ? 'ok' : ''}"><span class="fck">${ok ? '✔' : '○'}</span><span class="ftx">${esc(g.t)}${ok ? '' : esc(filCount(g))}</span>${ok ? '' : `${g.show ? `<button type="button" class="sbtn small" data-fshow="${g.id}">${esc(g.showLabel || 'Montre-moi')}</button>` : ''}${g.wiki ? `<button type="button" class="sbtn small" data-fwiki="${g.wiki}" aria-label="Le Grimoire">📖</button>` : ''}`}</li>`; }).join('')}</ul>
       <p class="frw">Récompense : ${costText(c.reward)} · Débloque ${esc(c.unlock)}</p></li>`;
   }).join('');
-  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Sept chapitres pour découvrir le château. Chaque chapitre achevé rapporte une récompense et dévoile de nouveaux boutons.'}</p>
+  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Huit chapitres pour découvrir le château, jusqu’à ta première victoire. Chaque chapitre achevé rapporte une récompense et dévoile de nouveaux boutons.'}</p>
     <ol class="filj">${rows}</ol>${S.fil.done ? '' : '<div class="btnrow"><button type="button" class="sbtn" id="filAll">Je connais déjà le jeu : tout débloquer</button></div>'}`, { label: 'Le fil rouge', cls: 'film' });
   m.addEventListener('click', e => {
     const s = e.target.closest('[data-fshow]'), w = e.target.closest('[data-fwiki]');
@@ -18341,7 +18378,7 @@ function filDrill() {
 // Gribouille ouvre chaque chapitre ; il attend que la voie soit libre (pas de nuit, de fiche, de carte ni d'expédition en cours)
 function filFree() {
   const wv = document.getElementById('world');
-  return S && S.started && !UI.busy && !ADMIN.open && !VISIT && COOP.role !== 'guest' && !(wv && !wv.hidden) && !document.body.classList.contains('crawling') && !$('#modalRoot').children.length;
+  return S && S.started && !UI.busy && !V.spotOn && !ADMIN.open && !VISIT && COOP.role !== 'guest' && !(wv && !wv.hidden) && !document.body.classList.contains('crawling') && !$('#modalRoot').children.length;
 }
 function filIntro() {
   const i = S.fil.ch, c = FIL[i];
@@ -18383,7 +18420,7 @@ tutoTick = function () {
 // le premier mot de Gribouille annonce le fil
 { const st0 = TUTO_STEPS.find(s => s.id === 'intro'), x0 = st0 && st0.x;
   if (st0) Object.defineProperty(st0, 'x', { get: () => x0 + (filOn() ? ' Suis le fil rouge : la pastille 📜, à droite, donne tes objectifs ; chaque chapitre achevé dévoile une nouvelle partie du château.' : '') }); }
-WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>sept chapitres</b>. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
+WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>huit chapitres</b>, jusqu’à ta première victoire. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
 // le fil en texte (pour la partie en ligne de commande)
 function filText() {
   if (!S.fil) return '';

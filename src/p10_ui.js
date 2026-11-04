@@ -194,9 +194,9 @@ function renderHand(msg, tone) {
   if (!UI.hand) { hb.hidden = true; return; }
   hb.hidden = false; const { kind, t } = UI.hand, rot = kind === 'room' && ROOMS[t].size[0] !== ROOMS[t].size[1];
   hb.innerHTML = `${imgThumb(kind, t, 'mini')}<span class="msg ${tone || ''}">${msg ? esc(msg) : `<b>${esc(itemName(t))}</b> en main (${costText(costOf(kind, t))}). Touche le château pour coller.`}</span>` +
-    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + `<button class="pill" id="btnInfo" type="button" aria-expanded="${UI.handInfo !== false}">${gi('info')} Effets</button>` + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>' +
-    (UI.handInfo !== false ? `<div class="hinfo">${tipHTML(kind, t)}</div>` : '');
-  const bi = hb.querySelector('#btnInfo'); if (bi) bi.onclick = () => { UI.handInfo = UI.handInfo === false; sfx('tick'); renderHand(msg, tone); };
+    (rot ? '<button class="pill" id="btnRot" type="button">⟳ Tourner (R)</button>' : '') + `<button class="pill" id="btnInfo" type="button" aria-expanded="${UI.handInfo === true}">${gi('info')} Effets</button>` + '<button class="pill" id="btnDrop" type="button">✕ Ranger</button>' +
+    (UI.handInfo === true ? `<div class="hinfo">${tipHTML(kind, t)}</div>` : '');
+  const bi = hb.querySelector('#btnInfo'); if (bi) bi.onclick = () => { UI.handInfo = UI.handInfo !== true; sfx('tick'); renderHand(msg, tone); };
 }
 function renderAll() { V.dirty = true; renderHUD(); renderSheet(); renderPortraits(); renderGoals(); renderHand(); renderFloors(); syncActors(); if (typeof renderMinimap === 'function') renderMinimap(); }
 // sélecteur d'étage (à côté du zoom) : n'apparaît qu'une fois un escalier construit

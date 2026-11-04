@@ -9,16 +9,20 @@ function heartTierHTML() {
   if (!st) return `<div class="htier max"><h3>⭐ Palier ${S.tier} : le maximum</h3><p class="hint">Ton Cœur bat aussi fort qu’un Cœur peut battre. Bravo, Maître !</p>
     <div class="btnrow"><button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
   const n = st.rows.filter(r => r.ok).length, k = st.rows.length;
-  return `<div class="htier${st.ok ? ' ok' : ''}"><h3>⭐ Palier ${S.tier} → ${S.tier + 1}</h3>
+  return `<div class="htier${st.ok ? ' ok' : ''}"><h3>⭐ Palier ${S.tier} → ${S.tier + 1}</h3>${st.ok ? `<div class="btnrow"><button class="sbtn pri" type="button" id="hTier">⭐ Monter au Palier ${S.tier + 1}</button></div>` : ''}
     <p class="hint">Le Cœur grandit avec ton château. Chaque palier débloque des stickers, un étage de plus… et des aventuriers plus coriaces.</p>
     <div class="hbar" role="progressbar" aria-valuemin="0" aria-valuemax="${k}" aria-valuenow="${n}"><i style="width:${Math.round(n / k * 100)}%"></i><span>${n}/${k} conditions</span></div>
     <ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul>
     <p><b>Débloque :</b> ${esc(st.next.unlock)}, et un étage de plus.</p>
-    <div class="btnrow"><button class="sbtn pri" type="button" id="hTier" ${st.ok ? '' : 'disabled'}>⭐ Monter au Palier ${S.tier + 1}</button><button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
+    <div class="btnrow">${st.ok ? '' : `<button class="sbtn pri" type="button" id="hTier" disabled>⭐ Monter au Palier ${S.tier + 1}</button>`}<button class="sbtn" type="button" id="hFloors">🪜 Étages et remparts</button></div></div>`;
 }
 function tierCelebrate() {
   const h = heartRoom(); if (h && Z === zOf(h)) { poof(h.x, h.y, h.w, h.h); floatText(h.x + h.w / 2, h.y + h.h / 2, `⭐ Palier ${S.tier}`, '#ffe07a'); }
   banner(`⭐ Palier ${S.tier} !`, 'Le Cœur grandit : de nouveaux stickers sont disponibles', 1800);
+  // puis une vraie fiche : ce qui vient d'être débloqué, et ce qu'il faut pour la suite
+  const T = TIERS[S.tier - 1];
+  setTimeout(() => { if ($('#modalRoot').children.length || UI.busy) return; const st = tierStatus();
+    openModal(`<h2>⭐ Palier ${S.tier} !</h2><p>Le Cœur grandit : <b>${esc(T ? T.unlock : 'de nouveaux stickers')}</b>, et un étage de plus. Ouvre « Construire » pour les voir.</p>${st ? `<h3>Pour le Palier ${S.tier + 1}</h3><ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul>` : '<p>C’est le palier le plus haut : ton Cœur ne peut pas battre plus fort.</p>'}<div class="btnrow"><button class="sbtn pri" type="button" data-close>En avant !</button></div>`, { label: 'Nouveau palier' }); }, 1900);
 }
 // la fiche du Cœur commence par son palier
 const openRoomHeart = openRoom;

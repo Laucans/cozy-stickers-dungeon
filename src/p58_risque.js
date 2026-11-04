@@ -15,7 +15,7 @@ const raidVig = k => ((S.world && S.world.vig) || {})[k] || 0;
 // la réserve de dés : la vigilance de la cible
 const raidBreakdownVig = raidBreakdown;
 raidBreakdown = function (targetId, teamIds) {
-  const b = raidBreakdownVig(targetId, teamIds), v = raidVig(targetId);
+  const b = raidBreakdownVig(targetId, teamIds), v = RAIDS[targetId] && RAIDS[targetId].siege ? 0 : raidVig(targetId);   // le Siège de Mirebrume, la finale, n'en tient pas compte
   if (v) { b.pool -= v; b.rows.push([`Cible sur ses gardes (vigilance ${v})`, -v]); }
   return b;
 };
@@ -23,7 +23,7 @@ const applyRaidRisk = applyRaid;
 applyRaid = function (roll) {
   const k = S.raid && S.raid.target, app = (S.raid && S.raid.app) || 'risquee', team = S.raid ? S.raid.team.map(critter).filter(Boolean) : [];
   const g0 = S.gold, s0 = S.mat, lines = applyRaidRisk(roll);
-  if (k && S.world) { S.world.vig = S.world.vig || {}; S.world.vig[k] = Math.min(RAID_VIG_MAX, (S.world.vig[k] || 0) + 1); }
+  if (k && S.world && !(RAIDS[k] && RAIDS[k].siege)) { S.world.vig = S.world.vig || {}; S.world.vig[k] = Math.min(RAID_VIG_MAX, (S.world.vig[k] || 0) + 1); }
   // un succès partiel : on file avec ce qu'on peut porter, et parfois avec un·e blessé·e
   if (roll.res === 'partial') {
     const cg = Math.floor(Math.max(0, S.gold - g0) * .25), cs = Math.floor(Math.max(0, S.mat - s0) * .25); S.gold -= cg; S.mat -= cs;
@@ -31,7 +31,7 @@ applyRaid = function (roll) {
     if (app !== 'prudente' && Math.random() < .35) { const c = pick(team); if (c) { c.hurt = Math.max(c.hurt || 0, S.night + 2); lines.push(['🤕', `${c.name} rentre blessé·e : 2 nuits au repos.`, 'bad']); } }
   }
   // un échec : quelqu'un peut rester aux mains des villageois
-  if (roll.res === 'fail' && app !== 'prudente' && team.length && (app === 'desesperee' || Math.random() < .5)) {
+  if (roll.res === 'fail' && app !== 'prudente' && team.length && S.night >= 10 && (app === 'desesperee' || Math.random() < .5)) {   // le début de partie est clément : pas de capture avant la nuit 10
     const c = pick(team); c.captive = S.night + 4; c.post = null;
     lines.push(['🪤', `${c.name} est pris·e par les villageois ! Rançon de ${captiveRansom(c)} 💰 (sa fiche), ou évasion dans 4 nuits.`, 'bad']);
     addLog(`${c.name} est retenu·e au village.`, 'bad');
@@ -65,5 +65,5 @@ soulsDawn = function (report) {
 WIKI.risques = { cat: 'danger', t: 'Risques et conséquences', x: () => `<ul><li><b>Vigilance des cibles</b> : chaque raid sur un même lieu le met sur ses gardes (−1 dé par raid, ${RAID_VIG_MAX} au plus) ; il oublie un peu une nuit sur trois. Varie tes cibles.</li>
   <li><b>Six dés au plus</b> : on ne lance jamais plus de ${RAID_DICE_MAX} dés. Une grosse réserve garde son utilité (elle compense la vigilance et les cibles bien gardées), mais le 6 n’est jamais garanti.</li>
   <li><b>Succès partiel</b> : on file avec les trois quarts du butin, et parfois un·e blessé·e (2 nuits au repos).</li>
-  <li><b>Échec</b> : en approche risquée, une fois sur deux, quelqu’un reste aux mains des villageois ; en désespérée, toujours. Rançon dans sa fiche, ou évasion au bout de 4 nuits. L’approche prudente ne risque rien.</li>
+  <li><b>Échec</b> : en approche risquée, une fois sur deux, quelqu’un reste aux mains des villageois ; en désespérée, toujours (jamais avant la nuit 10). Rançon dans sa fiche, ou évasion au bout de 4 nuits. L’approche prudente ne risque rien.</li>
   <li><b>L’attention</b> : une envie qui attend fait baisser l’épanouissement de plus en plus (jusqu’à −30), donc la loyauté. Sous 20 de loyauté, une créature finit par partir vivre sa vie.</li></ul>` };

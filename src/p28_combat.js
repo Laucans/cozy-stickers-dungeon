@@ -591,7 +591,9 @@ function defenseSummary(plan) {
 function goalLine(plan) { const g = plan.goal || { k: 'coeur', label: 'le Cœur' }, G = INV_GOALS[g.k]; return `${G.ico} <b>Leur but : ${esc(G.name.toLowerCase())}</b>${g.k === 'enlever' ? ` (${esc(g.label)})` : g.k === 'saccage' ? ` (${esc(g.label)})` : ''}. ${esc(G.desc)}`; }
 // combien de fois sur 20 la bande atteint son but, pour chaque tactique (tes pouvoirs lancés au bon moment)
 // leurs chances, tactique par tactique : si tu laisses faire, et si tu joues tes jetons du Cœur au bon moment
-function invOdds(plan, n = 20) { const out = {}; Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = f / n; out[k + '0'] = f0 / n; }); return out; }
+const oddsRand = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// les mêmes tirages avec et sans jetons : l'écart mesure vraiment l'effet des jetons
+function invOdds(plan, n = 20) { const out = {}, rnd = Math.random; try { Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = Math.min(f, f0) / n; out[k + '0'] = f0 / n; }); } finally { Math.random = rnd; } return out; }
 const oddsCls = v => v >= .45 ? 'bad' : v >= .2 ? 'mid' : 'good';
 function chooseTactic(plan, opts = {}) {
   if (typeof document === 'undefined' || !document.body || !document.body.appendChild) return Promise.resolve('postes');

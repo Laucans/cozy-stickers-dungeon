@@ -51,7 +51,7 @@ const TIPS = [
 function advisorShow(o) {
   const a = $('#advisor'); a.hidden = false; a.className = 'advisor' + (o.cls ? ' ' + o.cls : '');
   a.innerHTML = `<div class="adv-pic" title="Fais-moi glisser pour voir ce que je cache (deux touchers : je reviens)"><img alt="" src="${portrait('diablotin')}"></div><span class="adv-grip" aria-hidden="true">✥</span><div class="adv-box"><div class="adv-head"><b>${esc(o.title)}</b>${o.step ? `<small>${o.step}/${o.total}</small>` : ''}</div>
-    <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
+    <div class="adv-text">${wikiText(esc(o.text).replace(/&amp;/g, '&'))}</div><div class="adv-btns">${(o.buttons || []).map(b => `<button type="button" class="sbtn${b.pri ? ' pri' : ''}${b.side ? ' side' : ''}" data-adv="${b.id}">${esc(b.label)}</button>`).join('')}${o.wiki ? `<button type="button" class="sbtn" data-adv="wiki" data-wid="${o.wiki}">📖 En savoir plus</button>` : ''}${o.skip ? '<button type="button" class="link" data-adv="skip">Passer le tutoriel</button>' : ''}</div></div>`;
   advPlace();
 }
 // Gribouille se déplace : on le prend par le visage, avec sa bulle, pour voir ce qu'il cache (deux touchers rapides le remettent à sa place)
@@ -70,9 +70,9 @@ function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.t
 function showStep(st) {
   const i = TUTO_STEPS.indexOf(st), btns = [];
   if (st.btn === 'next') btns.push({ id: 'next', label: 'Suivant', pri: true });
-  if (st.btn === 'later') btns.push({ id: 'next', label: 'Plus tard' });
+  if (st.btn === 'later') btns.push({ id: 'next', label: 'Passer cette étape', side: true });
   if (st.btn === 'end') btns.push({ id: 'end', label: 'Terminer', pri: true }, { id: 'grim', label: '📖 Ouvrir le Grimoire' });
-  if (!st.btn) btns.push({ id: 'hide', label: 'Plus tard' });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
+  if (!st.btn) btns.push({ id: 'hide', label: 'Ranger le conseil', side: true });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
   advisorShow({ title: st.t, text: st.x, step: i + 1, total: TUTO_STEPS.length, buttons: btns, skip: st.btn !== 'end', cls: 'tuto' });
 }
 function nextStep() { if (!S.tuto) return; const hid = !!S.tuto.hid; S.tuto.i++; delete S.tuto.hid; delete S.tuto.n0; if (hid && TUTO_STEPS[S.tuto.i]) S.tuto.hid = TUTO_STEPS[S.tuto.i].id; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
