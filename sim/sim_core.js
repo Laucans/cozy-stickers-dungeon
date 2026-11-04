@@ -20,6 +20,7 @@ function simNewGame(seed, theme) {
 // une nuit, comme endNight() mais sans fenêtres ni animations
 function simInvasion(plan) {
   if (S.opts && S.opts.cliTac === 'rancon' && typeof payOff === 'function') { payOff(plan); SIM.m.inv_bought = SIM.m.inv_bought || 0; return 'bought'; }   // la tactique « rançon » de la ligne de commande
+  if (typeof invResolve === 'function') { const R = invResolve(plan); plan.res = R; return R.outcome; }   // les invasions aux cartes (p69) : la bande traverse les pièces, l'ordinateur joue les combats
   if (typeof resolveInvasion === 'function') { const R = resolveInvasion(plan, (S.opts && S.opts.cliTac) || 'postes'); plan.res = R; return R.outcome; }   // les vrais combats
   if (!plan.path) return 'lost';
   let courage = plan.courage;
@@ -135,14 +136,8 @@ A.care = () => {
 };
 A.acceptQuests = (expe = true) => S.creatures.forEach(c => { const q = questOf(c); if (q && (q.st === 'offered' || q.st === 'ready') && (expe || !QT[q.k].away)) cmd('qAccept', { id: c.id }); });
 const invasionSoon = () => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) >= MENACE_MAX;
-// les gardes : les plus costauds sur les pièces du chemin des héros (dans la limite), le reste défend le Cœur
-A.guards = () => {
-  if (typeof guardCap !== 'function') return;
-  const route = []; (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (guardable(r) && !route.includes(r)) route.push(r); });
-  S.creatures.forEach(c => { c.guard = null; }); if (!route.length) return;
-  const crew = S.creatures.filter(fitToFight).sort((a, b) => guardOf(b) - guardOf(a)), n = Math.min(guardCap(), Math.floor(crew.length * .6));
-  let k = 0; for (const c of crew.slice(0, n)) { for (let t = 0; t < route.length; t++) { const r = route[(k + t) % route.length]; if (!CMD.guard({ id: c.id, room: r.id })) { k = (k + t + 1) % route.length; break; } } }
-};
+// plus de gardes à poster : les défenseurs sont tirés au sort par palier de force (invLineup) ; on lève les vieux postes, sans plus (SIM_GUARD n'a plus d'effet)
+A.guards = () => { S.creatures.forEach(c => { if (c.guard) c.guard = null; }); };
 // les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
 // les Merveilles : l'or et le bois en trop (au-delà d'une réserve) vont à la moins chère ; une fête quand quelqu'un se sent délaissé
 A.wonder = (reserve = 200) => { if (typeof WONDERS === 'undefined') return; const k = Object.keys(WONDERS).map(x => [x, wonderCost(x)]).sort((a, b) => (a[1].g + a[1].s) - (b[1].g + b[1].s))[0]; if (k && S.gold - k[1].g >= reserve && S.mat - k[1].s >= reserve / 2) cmd('wonder', { id: k[0] }); };
@@ -151,7 +146,7 @@ A.fete = () => { if (typeof feteWhy === 'undefined' || feteWhy()) return; if (S.
 A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => !chantierWhy(x)).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve) cmd('chantier', { id: k }); };
 A.cook = () => { if (typeof RECIPES === 'undefined' || !hasKitchen()) return; const order = [eaters() > foodCap() ? 'tourte' : null, invasionSoon() ? 'gateau' : null, invasionSoon() ? 'poisson' : null, S.calamity >= CAL_MAX - 3 ? 'ragout' : null, 'soupe'].filter(Boolean); for (const k of order) if (canCook(k)) { cmd('cook', { id: k }); return; } };
 A.caravan = how => { if (typeof activeCaravans === 'undefined') return; const cv = activeCaravans().find(x => !x.done); if (cv && (how !== 'pille' || caravanOdds(cv) >= .5)) cmd('caravan', { id: cv.id, how }); };
-A.posts = () => {   // chaque créature dans sa pièce préférée (humeur) ; les gardes, eux, se postent sur le chemin des héros
+A.posts = () => {   // chaque créature dans sa pièce préférée (humeur), ou à l'atelier de son métier (le guet : au Corps de garde)
   A.guards();
   if (invasionSoon()) return;
   const path = new Set((heroPath() || []).map(([x, y]) => roomAt(x, y, 0)).filter(r => r && !isHall(r) && r.t !== 'coeur').map(r => r.id));

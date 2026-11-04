@@ -10,9 +10,9 @@ const VISITORS = {
   barde: { ico: 'music', name: 'Un barde de passage', w: 30 },
   inspecteur: { ico: 'book', name: 'L’inspecteur du Guide des Donjons Douillets', w: 30 },
 };
-// la note du Guide : confort (ambiance), table (repas en plus), frissons (pièges et gardes)
+// la note du Guide : confort (ambiance), table (repas en plus), frissons (pièges et créatures prêtes à défendre)
 function guideScore() {
-  const comfort = clamp(Math.round(ambiance() / 9), 0, 5), table = clamp(foodCap() - eaters() + 2, 0, 5), thrill = clamp(Math.round((S.defs.length + (typeof guardCount === 'function' ? guardCount() : 0)) / 2), 0, 5);
+  const comfort = clamp(Math.round(ambiance() / 9), 0, 5), table = clamp(foodCap() - eaters() + 2, 0, 5), thrill = clamp(Math.round((S.defs.length + Math.min(6, S.creatures.filter(c => fitToFight(c) && (c.fat || 0) < (typeof FAT_TIRED !== 'undefined' ? FAT_TIRED : 4)).length)) / 2), 0, 5);   // les pièges, et les créatures prêtes à défendre (6 au plus)
   return { comfort, table, thrill, stars: clamp(Math.round((comfort + table + thrill) / 3), 1, 5) };
 }
 const GUIDE_LINES = {
@@ -56,4 +56,4 @@ dawn = function (report) {
   }
   return r;
 };
-WIKI.visiteurs = { cat: 'val', t: 'Les visiteurs de la nuit', x: () => `<p>À l’aube, parfois, quelqu’un frappe à la porte, et ce n’est pas un héros :</p><ul><li><b>Le marchand ambulant</b> propose trois stickers à prix d’ami (ils vont dans ta barre).</li><li><b>Le barde</b> chante tes exploits : +2 notoriété, et tout le monde a le sourire.</li><li><b>L’inspecteur du Guide des Donjons Douillets</b> note ton château sur 5 étoiles : le confort (ambiance), la table (repas en plus des besoins) et les frissons (pièges et gardes). Chaque étoile rapporte de l’or et de la notoriété, et ajoute 3 de rayonnement jusqu’à sa prochaine visite.</li></ul>` };
+WIKI.visiteurs = { cat: 'val', t: 'Les visiteurs de la nuit', x: () => `<p>À l’aube, parfois, quelqu’un frappe à la porte, et ce n’est pas un héros :</p><ul><li><b>Le marchand ambulant</b> propose trois stickers à prix d’ami (ils vont dans ta barre).</li><li><b>Le barde</b> chante tes exploits : +2 notoriété, et tout le monde a le sourire.</li><li><b>L’inspecteur du Guide des Donjons Douillets</b> note ton château sur 5 étoiles : le confort (ambiance), la table (repas en plus des besoins) et les frissons (pièges et créatures prêtes à défendre). Chaque étoile rapporte de l’or et de la notoriété, et ajoute 3 de rayonnement jusqu’à sa prochaine visite.</li></ul>` };

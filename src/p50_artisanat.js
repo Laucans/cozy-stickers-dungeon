@@ -1,7 +1,7 @@
 /* =========================================================
    Les métiers (l'artisanat)
-   Une créature apprend un métier là où on la poste (ou en
-   montant la garde), nuit après nuit… si on ne l'envoie pas
+   Une créature apprend un métier là où on la poste (le guet :
+   au Corps de garde), nuit après nuit… si on ne l'envoie pas
    ailleurs (raid, expédition, combat). Apprenti·e, compagnon·ne,
    puis maître·sse : tant que ses gens travaillent, chaque métier
    a son effet, et il débloque pour toujours un savoir de rang 2,
@@ -9,7 +9,7 @@
    ========================================================= */
 const CRAFT_LVLS = [{ n: 0, name: 'novice' }, { n: 6, name: 'apprenti·e' }, { n: 16, name: 'compagnon·ne' }, { n: 32, name: 'maître·sse' }];
 const defNames = l => l.map(k => DEFS[k].name).join(', ');
-// les métiers : où on l'apprend (une pièce, ou la garde), qui l'apprend (2 = né pour ça : deux fois plus vite),
+// les métiers : où on l'apprend (une pièce), qui l'apprend (2 = né pour ça : deux fois plus vite),
 // ce qu'il fait chaque nuit (selon les points de ses gens au travail), et ses savoirs de rang 2 et 3
 const WORKSHOPS = {
   forge:   { room: 'forge', at: 'à la Forge', de: 'de la Forge', trade: 'forgeron·ne', team: 'Les forgerons', ico: 'anvil', sp: { nainsombre: 2, orque: 1, golem: 1 },
@@ -29,20 +29,19 @@ const WORKSHOPS = {
              ranks: { 2: { t: 'Recette des Brochettes du troll', d: () => RECIPES.brochettes.desc }, 3: { t: 'Recette du Banquet du Maître', d: () => RECIPES.banquet.desc } } },
   labo:    { room: 'labo', at: 'au Laboratoire', de: 'du Laboratoire', trade: 'alchimiste', team: 'Les alchimistes', ico: 'potion', sp: { sorciere: 2, mandragore: 2, liche: 1, crapaud: 1 },
              live: () => `−${labCalm()} Calamité chaque nuit (−1 tous les 3 points)`,
-             ranks: { 2: { t: 'Jeton du Cœur : Brume soporifique', d: () => POWERS.brume.desc }, 3: { t: 'Jeton du Cœur : Élixir de bravoure', d: () => POWERS.elixir.desc } } },
-  // la garde : une créature postée sur le chemin des héros (mode Gardes) apprend le guet ; se battre à son poste, c'est son métier
-  guet:    { guard: true, at: 'en montant la garde', de: 'des sentinelles', trade: 'sentinelle', team: 'Les sentinelles', ico: 'shield', sp: { gargouille: 2, squelette: 2, golem: 1, troll: 1, orque: 1, mimique: 1, nainsombre: 1 },
-             live: () => 'chaque sentinelle se bat mieux à son poste : +2 PV par grade, une armure dès compagnon·ne, +1 en attaque en maître·sse',
-             ranks: { 2: { t: 'Le chemin de ronde', d: () => '+1 garde au plus' }, 3: { t: 'Les meurtrières', d: () => '+1 garde au plus, et un barrage de couloir tient 3 gardes' } } },
+             ranks: { 2: { t: 'La Brume soporifique', d: () => 'dans chaque combat d’invasion, une carte Brume soporifique (immobilise un héros, à usage unique)' }, 3: { t: 'L’Élixir de bravoure', d: () => 'dans chaque combat d’invasion, une carte Élixir de bravoure (soigne tes défenseurs et leur donne du courage, à usage unique)' } } },
+  // le guet : il s'apprend en travaillant au Corps de garde ; défendre le château pendant une invasion compte double (la main ne se rouille pas)
+  guet:    { room: 'garde', at: 'au Corps de garde', de: 'des sentinelles', trade: 'sentinelle', team: 'Les sentinelles', ico: 'shield', sp: { gargouille: 2, squelette: 2, golem: 1, troll: 1, orque: 1, mimique: 1, nainsombre: 1 },
+             live: () => 'chaque sentinelle tirée pour défendre se bat mieux, où qu’elle défende : +3 PV par grade, +4 de parade au premier tour de chaque combat dès compagnon·ne, +1 en attaque en maître·sse',
+             ranks: { 2: { t: 'Le chemin de ronde', d: () => `chaque créature a ${Math.round((typeof INV_TUNE !== 'undefined' ? INV_TUNE.rondeP : .1) * 100)} points de chances en plus d’être tirée pour défendre une pièce` }, 3: { t: 'Les meurtrières', d: () => `une défenseuse de plus au Cœur (${(typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3) + 1} au lieu de ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3})` } } },
 };
 function craftLvl(n) { let l = 0; CRAFT_LVLS.forEach((L, i) => { if (n >= L.n) l = i; }); return l; }
 const craftOf = (c, w) => (c && c.craft && c.craft[w]) || 0;
 const craftAff = (c, w) => (c && WORKSHOPS[w] && WORKSHOPS[w].sp[c.sp]) || 0;
 const workshopType = r => { if (!r || !ROOMS[r.t]) return null; const k = Object.keys(WORKSHOPS).find(w => WORKSHOPS[w].room && (WORKSHOPS[w].room === r.t || WORKSHOPS[w].room === ROOMS[r.t].like)); return k || null; };
-// le métier qu'une créature apprend en ce moment : la garde d'abord (si son espèce s'y prête), sinon la pièce où elle est postée
+// le métier qu'une créature apprend en ce moment : celui de la pièce où elle est postée (le guet : au Corps de garde)
 function metierOf(c) {
   if (!c) return null;
-  if (c.guard && craftAff(c, 'guet') && typeof guardRoomOf === 'function' && guardRoomOf(c)) return 'guet';
   const r = c.post && S.rooms.find(o => o.id === c.post && o.built), w = workshopType(r); return w && craftAff(c, w) ? w : null;
 }
 const workshopOf = metierOf;
@@ -72,10 +71,10 @@ availability = function (kind, t) {
   const a = availabilityCraft(kind, t); if (a || kind !== 'def') return a;
   const d = DEFS[t]; return d && d.rank && WORKSHOPS[d.needs] && craftRank(d.needs) < d.rank ? { lock: true, reason: `Plans de rang ${d.rank}` } : a;
 };
-// les sentinelles : plus solides à leur poste
+// les sentinelles : plus solides quand elles défendent (l'ancien combat ; les invasions aux cartes : p71)
 const fighterOfCraft = fighterOf;
 fighterOf = function (c, bonus = 0) {
-  const f = fighterOfCraft(c, bonus), l = c && c.guard && craftAff(c, 'guet') && typeof guardRoomOf === 'function' && guardRoomOf(c) ? craftLvl(craftOf(c, 'guet')) : 0;
+  const f = fighterOfCraft(c, bonus), l = c && craftAff(c, 'guet') ? craftLvl(craftOf(c, 'guet')) : 0;
   if (l) { f.hp += 2 * l; f.max += 2 * l; if (l >= 2) f.A = { ...f.A, armor: (f.A.armor || 0) + 1 }; if (l >= 3) f.atk += 1; }
   return f;
 };
@@ -83,7 +82,7 @@ fighterOf = function (c, bonus = 0) {
 const calamityDeltaCraft = calamityDelta;
 calamityDelta = function () { const r = calamityDeltaCraft(), k = labCalm(); if (k) { r.d -= k; r.parts.push(`−${k} alchimistes`); } return r; };
 
-// qui s'est battu cette nuit (une nuit ailleurs fait perdre la main ; une sentinelle, elle, apprend)
+// qui s'est battu cette nuit (une nuit ailleurs fait perdre la main ; une sentinelle, elle, apprend : défendre, c'est son métier)
 const applyInvasionCraft = applyInvasion;
 applyInvasion = function (plan, outcome) {
   const l = applyInvasionCraft(plan, outcome);
@@ -150,7 +149,7 @@ function craftLine(c, w) {
   const n = craftOf(c, w), l = craftLvl(n), nx = CRAFT_LVLS[l + 1];
   return `${gi(WORKSHOPS[w].ico)} <b>${WORKSHOPS[w].trade}</b> : ${CRAFT_LVLS[l].name}${nx ? ` <small>(${n}/${nx.n})</small>` : ' <small>(au sommet de son art)</small>'}${craftAff(c, w) > 1 ? ' · <i>né·e pour ça</i>' : ''}`;
 }
-const whereOf = w => (WORKSHOPS[w].guard ? 'en garde (bouton bouclier)' : WORKSHOPS[w].at);
+const whereOf = w => WORKSHOPS[w].at;
 const openCreatureCraft = openCreature;
 openCreature = function (id) {
   openCreatureCraft(id);
@@ -183,8 +182,8 @@ openDef = function (id) {
   const desc = m.querySelector('.mbody > p, .modal > p'); if (parts.length && desc) desc.after(el('p', 'hint', `${gi('hammer')} ${parts.join(' ; ')}.`));
 };
 
-TIPS.push({ id: 'artisans', when: () => S.creatures.some(c => Object.keys(WORKSHOPS).some(w => craftAff(c, w) > 1 && (WORKSHOPS[w].guard || builtCount(WORKSHOPS[w].room) > 0))), t: 'Les métiers', x: 'Certaines créatures apprennent un métier là où on les poste (depuis leur fiche) : un {sp:nainsombre} à la {room:forge}, une {sp:sorciere} à la {room:bibli} ou au {room:labo}, un {sp:troll} à la {room:cuisine}, un {sp:menestrel} à la {room:taverne}… et une {sp:gargouille} en montant la garde. Nuit après nuit, elles progressent : leur métier agit tant qu’elles travaillent, et chaque grade de compagnon ou de maître débloque un savoir pour toujours. Un raid, une expédition ou un combat loin de son poste fait perdre un peu la main.', wiki: 'artisanat' });
+TIPS.push({ id: 'artisans', when: () => S.creatures.some(c => Object.keys(WORKSHOPS).some(w => craftAff(c, w) > 1 && builtCount(WORKSHOPS[w].room) > 0)), t: 'Les métiers', x: 'Certaines créatures apprennent un métier là où on les poste (depuis leur fiche) : un {sp:nainsombre} à la {room:forge}, une {sp:sorciere} à la {room:bibli} ou au {room:labo}, un {sp:troll} à la {room:cuisine}, un {sp:menestrel} à la {room:taverne}… et une {sp:gargouille} au {room:garde}, où l’on apprend le guet. Nuit après nuit, elles progressent : leur métier agit tant qu’elles travaillent, et chaque grade de compagnon ou de maître débloque un savoir pour toujours. Un raid, une expédition ou un combat loin de son poste fait perdre un peu la main.', wiki: 'artisanat' });
 
-WIKI.artisanat = { cat: 'crea', t: 'Les métiers (artisanat)', x: () => `<p>Certaines créatures apprennent un métier là où on les poste (dans leur fiche, « Poste »), ou en montant la garde (mode Gardes). Chaque nuit passée à travailler (sans bouder) fait progresser : <b>apprenti·e</b> (${CRAFT_LVLS[1].n} points), <b>compagnon·ne</b> (${CRAFT_LVLS[2].n}), <b>maître·sse</b> (${CRAFT_LVLS[3].n}). Les créatures nées pour un métier apprennent deux fois plus vite. Une nuit ailleurs (raid, expédition, combat loin de son poste, ou sonnée) fait perdre un point, mais jamais un grade acquis ; une sentinelle qui se bat à son poste, elle, apprend encore plus.</p>
+WIKI.artisanat = { cat: 'crea', t: 'Les métiers (artisanat)', x: () => `<p>Certaines créatures apprennent un métier là où on les poste (dans leur fiche, « Poste ») ; le guet, au {room:garde}. Chaque nuit passée à travailler (sans bouder) fait progresser : <b>apprenti·e</b> (${CRAFT_LVLS[1].n} points), <b>compagnon·ne</b> (${CRAFT_LVLS[2].n}), <b>maître·sse</b> (${CRAFT_LVLS[3].n}). Les créatures nées pour un métier apprennent deux fois plus vite. Une nuit ailleurs (raid, expédition, combat loin de son poste, ou sonnée) fait perdre un point, mais jamais un grade acquis ; une sentinelle qui a défendu le château pendant une invasion, elle, ne perd rien et gagne même un point de plus.</p>
   <p>Tant qu’ils travaillent, les gens d’un métier comptent 1 (apprenti·e), 2 (compagnon·ne) ou 3 points (maître·sse) chacun. Un·e compagnon·ne débloque le savoir de rang 2, un·e maître·sse celui de rang 3 : ils restent à toi pour toujours.</p>
-  <ul>${Object.values(WORKSHOPS).map(W => `<li><b>${W.trade[0].toUpperCase() + W.trade.slice(1)}</b>, ${W.guard ? 'en montant la garde' : `à la {room:${W.room}}`} : ${Object.keys(W.sp).filter(sp => SPECIES[sp]).map(sp => `{sp:${sp}}${W.sp[sp] > 1 ? ' (né·e pour ça)' : ''}`).join(', ')}.<br>Au travail : ${W.live()}.<br>Rang 2, ${esc(W.ranks[2].t)} : ${esc(W.ranks[2].d())}. Rang 3, ${esc(W.ranks[3].t)} : ${esc(W.ranks[3].d())}.</li>`).join('')}</ul>` };
+  <ul>${Object.values(WORKSHOPS).map(W => `<li><b>${W.trade[0].toUpperCase() + W.trade.slice(1)}</b>, ${W.room === 'garde' ? 'au {room:garde}' : `à la {room:${W.room}}`} : ${Object.keys(W.sp).filter(sp => SPECIES[sp]).map(sp => `{sp:${sp}}${W.sp[sp] > 1 ? ' (né·e pour ça)' : ''}`).join(', ')}.<br>Au travail : ${W.live()}.<br>Rang 2, ${esc(W.ranks[2].t)} : ${esc(W.ranks[2].d())}. Rang 3, ${esc(W.ranks[3].t)} : ${esc(W.ranks[3].d())}.</li>`).join('')}</ul>` };

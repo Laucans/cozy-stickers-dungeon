@@ -6,8 +6,8 @@
    ========================================================= */
 const CHANTIERS = {
   serre:     { ico: 'leaf', name: 'La grande serre', desc: 'Des légumes toute l’année : +4 repas, même en hiver.', cost: { g: 45, s: 25 }, nights: 4, tier: 0 },
-  pontlevis: { ico: 'door', name: 'Le pont-levis', desc: 'Un vrai pont-levis à la porte : +1 jeton du Cœur à chaque invasion.', cost: { g: 60, s: 30 }, nights: 4, tier: 1 },
-  secrete:   { ico: 'key', name: 'La pièce secrète', desc: 'Derrière une bibliothèque qui pivote : à chaque invasion, « Claquer les portes » une fois sans dépenser de jeton.', cost: { g: 50, s: 15 }, nights: 3, tier: 1 },
+  pontlevis: { ico: 'door', name: 'Le pont-levis', desc: 'Un vrai pont-levis à la porte : à chaque invasion, +1 énergie au premier tour du combat du Cœur.', cost: { g: 60, s: 30 }, nights: 4, tier: 1 },
+  secrete:   { ico: 'key', name: 'La pièce secrète', desc: 'Derrière une bibliothèque qui pivote : à chaque invasion, la bande s’y perd et traverse une pièce de moins.', cost: { g: 50, s: 15 }, nights: 3, tier: 1 },
   biblio:    { ico: 'book', name: 'La bibliothèque sans fond', desc: 'Chaque nuit, deux créatures y apprennent quelque chose : +1 expérience.', cost: { g: 70, s: 20 }, nights: 5, tier: 1 },
   statue:    { ico: 'statue', name: 'La statue du Maître', desc: 'Toi, en pierre et en grand, dans la cour : +12 de rayonnement.', cost: { g: 90, s: 40 }, nights: 5, tier: 2 },
 };

@@ -2,7 +2,7 @@
    COZY STICKERS DUNGEON — données du château
    Règles d'aménagement inspirées de Wicked Ones :
    thèmes, pièces construites via des horloges de projet,
-   verrous / pièges / ruses sur le chemin des aventuriers,
+   verrous / pièges / ruses dans les couloirs du château,
    cycle Rôder → Calamité → Raid → Contrecoup.
    ========================================================= */
 // taille du château : 12×12 au départ, agrandie de 2 à chaque extension des remparts (voir syncGeom)
@@ -27,7 +27,7 @@ const ROOMS = {
   porche:   { name: 'Porche', size: [1,1], fixed: true, floor: 'flag', color: '#c9bfae',
               desc: 'L’entrée du château. Les nouvelles recrues passent par ici… les aventuriers aussi.' },
   coeur:    { name: 'Cœur du château', size: [2,2], fixed: true, floor: 'magic', color: '#7b52b8', gold: 2, beds: 2, food: 3,
-              desc: 'Le cristal qui fait battre ton château. Si des héros l’atteignent, ils pillent ton or. Les créatures sans poste le défendent.' },
+              desc: 'Le cristal qui fait battre ton château. Chaque bande finit son parcours ici : si elle gagne, elle pille ton or. Tes 3 créatures les plus fortes (et pas épuisées) le défendent jusqu’au bout.' },
   dortoir:  { name: 'Dortoir', size: [3,2], cost: { g: 3, s: 3 }, clock: 4, floor: 'straw', color: '#b9a4e6',
               furn: ['paillasse','litsup','baldaquin','coffre','grandlit'], attracts: ['gobelin'], desc: 'Pose des lits pour loger tes créatures. Attire les Gobelins.' },
   cuisine:  { name: 'Cuisine', size: [2,2], cost: { g: 3, s: 2 }, clock: 4, floor: 'checker', color: '#f2c48d',
@@ -40,7 +40,7 @@ const ROOMS = {
   atelier:  { name: 'Atelier', size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'wood', color: '#d9b38c', syn: { adj: 'tour', harass: 1 },
               furn: ['etabli','caisse','pedale'], attracts: ['kobold'], desc: 'Débloque les pièges mécaniques. Attire les Kobolds.' },
   tour:     { name: 'Tour de guet', size: [2,2], cost: { g: 3, s: 3 }, clock: 4, edge: true, floor: 'flag', color: '#a8c6e8', harass: 1,
-              furn: ['longuevue','perchoir','catapulte'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Les héros arrivent déjà fatigués. Attire les Gargouilles.' },
+              furn: ['longuevue','perchoir','catapulte'], attracts: ['gargouille'], desc: 'Doit toucher les remparts. Dès l’arrivée de la bande, ses guetteurs lui jettent des cailloux. Attire les Gargouilles.' },
   bibli:    { name: 'Bibliothèque', tier: 1, size: [3,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'carpet', color: '#c27a5a', syn: { adj: 'salon', amb: 2 },
               furn: ['etagere','pupitre','fauteuil','rayonnage','globe'], attracts: ['fantome'], desc: 'Grimoires poussiéreux et fauteuils qui grincent. Attire les Fantômes.' },
   labo:     { name: 'Laboratoire', tier: 1, size: [2,2], cost: { g: 5, s: 3 }, clock: 6, floor: 'checker', color: '#8fd6c6', syn: { adj: 'bibli', cal: 1 },
@@ -48,7 +48,7 @@ const ROOMS = {
   caveau:   { name: 'Caveau', tier: 1, size: [2,2], cost: { g: 5, s: 5 }, clock: 8, far: 5, floor: 'flag', color: '#a99fc0', syn: { adj: 'oubliettes', guard: 1 },
               furn: ['cercueil','ossuaire','sarcophage'], attracts: ['squelette'], desc: 'Au calme, loin du porche (5 pas minimum). Attire les Squelettes.' },
   forgeancetres: { name: 'Forge des Ancêtres', unique: true, saga: true, like: 'forge', size: [2,2], cost: { g: 8, s: 8 }, clock: 6, floor: 'flag', color: '#ff9a5c', gold: 3, guard: 2, amb: 1, preset: ['hautfourneau','enclume'],
-              attracts: ['orque'], desc: 'Rallumée par un orque au bout d’une longue intrigue. +3 💰 chaque nuit et 2 de garde : le feu des anciens ne s’éteint jamais.' },
+              attracts: ['orque'], desc: 'Rallumée par un orque au bout d’une longue intrigue. +3 💰 chaque nuit et 2 de garde : le premier héros qui y entre s’y brûle (5 dégâts). Le feu des anciens ne s’éteint jamais.' },
   forge:    { name: 'Forge', tier: 1, size: [2,2], cost: { g: 6, s: 6 }, clock: 8, floor: 'flag', color: '#f2a477',
               furn: ['enclume','fourneau','ratelier','hautfourneau','pilon'], syn: { adj: 'atelier', gold: 2 }, attracts: ['orque','nainsombre'],
               desc: '+2 💰 si elle touche l’Atelier. Attire les Orques et les Nains sombres, qui y deviennent forgerons.' },
@@ -68,12 +68,12 @@ const ROOMS = {
   planque:  { name: 'Planque', theme: 'repaire', unique: true, size: [2,2], cost: { g: 4, s: 3 }, clock: 6, floor: 'wood', color: '#c9cf86',
               dice: 1, mat: 1, preset: ['caisse','coffre'], desc: 'Pièce de thème, livrée meublée. +1 dé aux raids, +1 🪵 par nuit.' },
   garde:    { name: 'Corps de garde', theme: 'bastion', unique: true, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'flag', color: '#b5c4d6',
-              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; ses râteliers font 3 dégâts au premier héros qui y entre.' },
+              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; avec son râtelier, sa garde fait 10 dégâts au premier héros qui y entre (une fois par invasion). Tant qu’il est bâti, chaque pièce tire un défenseur de plus quand une bande attaque, et les créatures qui y travaillent apprennent le guet (sentinelles).' },
   observatoire: { name: 'Observatoire', theme: 'enclave', unique: true, size: [2,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'magic', color: '#8f9fe8',
               amb: 2, hype: 1, dice: 1, preset: ['longuevue','cristal'], desc: 'Pièce de thème, livrée meublée. +2 Ambiance, +1 🔥, +1 dé aux raids.' },
-  // sous le château : un escalier ouvre l'étage du dessous (les héros n'y descendent jamais)
+  // sous le château : un escalier ouvre l'étage du dessous (la bande peut aussi y traverser des pièces)
   escalier: { name: 'Escalier des caves', size: [1,1], cost: { g: 4, s: 6 }, clock: 4, floor: 'flag', color: '#8a8f9c', preset: ['colimacon'], stairs: -1,
-              desc: 'Creuse un étage sous le château : les Caves, puis les Profondeurs. Un nouvel étage par palier, vers le haut ou vers le bas : à toi de choisir. Les héros ne quittent jamais le rez-de-chaussée.' },
+              desc: 'Creuse un étage sous le château : les Caves, puis les Profondeurs. Un nouvel étage par palier, vers le haut ou vers le bas : à toi de choisir. La bande peut traverser des pièces à tous les étages.' },
   montee:   { name: 'Escalier de la tour', size: [1,1], cost: { g: 5, s: 5 }, clock: 4, floor: 'wood', color: '#b08a5a', preset: ['montee'], stairs: 1,
               desc: 'Monte un étage au-dessus du château : les Hauteurs, puis les Cimes. Un nouvel étage par palier, vers le haut ou vers le bas : à toi de choisir.' },
   jardin:   { name: 'Jardin suspendu', high: 1, size: [3,2], cost: { g: 5, s: 4 }, clock: 6, floor: 'garden', open: true, color: '#8fd47a', food: 1, amb: 1,
@@ -81,7 +81,7 @@ const ROOMS = {
   voliere:  { name: 'Volière', high: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'straw', color: '#d8c08a',
               furn: ['nid','mangeoire'], attracts: ['harpie','gargouille'], desc: 'En hauteur seulement. Le royaume des créatures ailées. Attire la Harpie mélomane (rare) et les Gargouilles.' },
   belvedere: { name: 'Belvédère', high: 2, size: [2,2], cost: { g: 6, s: 5 }, clock: 8, floor: 'flag', open: true, color: '#a8c6e8', harass: 2, sight: 2,
-              furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et les héros reçoivent des cailloux dès l’approche (2 dégâts répartise).' },
+              furn: ['girouette','lanterne'], desc: 'Dans les Cimes seulement. On voit à des lieues : la carte se dévoile plus loin autour du château, et la bande reçoit des cailloux dès son arrivée (5 PV répartis sur les héros).' },
   mine:     { name: 'Mine', deep: 1, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'rock', color: '#a08a6a', mat: 2,
               furn: ['wagonnet','filon','etai'], attracts: ['golem'], desc: 'Sous terre seulement. +2 🪵 par nuit, plus avec ses filons. Attire le Golem de mousse, une créature rare.' },
   reliquaire: { name: 'Reliquaire', deep: 1, size: [3,2], cost: { g: 8, s: 5 }, clock: 8, floor: 'carpet', color: '#c9a2e8', amb: 1,
@@ -242,22 +242,22 @@ const EVOS = {
 
 // défenses posées dans les couloirs
 const DEFS = {
-  porte:   { name: 'Porte cloutée', kind: 'verrou', str: 2, cost: { g: 1, s: 2 }, desc: 'Verrou : 2 dégâts au héros qui l’enfonce (moitié moins pour un barbare).' },
-  banane:  { name: 'Peau de banane géante', kind: 'piège', str: 1, sticky: true, cost: { g: 1, s: 1 }, desc: 'Piège : 1 dégât, et la rencontre suivante frappe +1 (ils sont encore par terre).' },
-  trappe:  { name: 'Trappe à pics', kind: 'piège', str: 3, needs: 'atelier', cost: { g: 2, s: 2 }, desc: 'Piège : 3 dégâts à un héros. Nécessite un Atelier.' },
-  sphinx:  { name: 'Sphinx empaillé', kind: 'verrou', str: 2, lost: 0.3, tier: 1, cost: { g: 3, s: 1 }, desc: 'Verrou à énigme : 2 dégâts, et 30 % de chances que les héros sèchent et rentrent chez eux.' },
-  hache:   { name: 'Hache pendulaire', kind: 'piège', str: 4, needs: 'atelier', tier: 1, cost: { g: 3, s: 3 }, desc: 'Piège : 4 dégâts à un héros. Nécessite un Atelier.' },
-  leurre:  { name: 'Faux trésor', kind: 'ruse', str: 1, lost: 0.4, needs: 'bibli', cost: { g: 2, s: 1 }, desc: 'Ruse : 1 dégât, 40 % de chances que les héros repartent avec le faux butin. Nécessite une Bibliothèque.' },
-  cloche:  { name: 'Cloche d’alarme', kind: 'ruse', str: 0, alarm: true, unique: true, cost: { g: 2, s: 1 }, desc: 'Ruse : quand les héros la franchissent, chaque créature libre gagne +1 en garde au Cœur.' },
+  porte:   { name: 'Porte cloutée', kind: 'verrou', str: 2, cost: { g: 1, s: 2 }, desc: 'Verrou : 5 dégâts au héros qui l’enfonce (moitié moins pour un barbare).' },
+  banane:  { name: 'Peau de banane géante', kind: 'piège', str: 1, sticky: true, cost: { g: 1, s: 1 }, desc: 'Piège : 3 dégâts, et la victime perd son premier tour au combat suivant (elle est encore par terre).' },
+  trappe:  { name: 'Trappe à pics', kind: 'piège', str: 3, needs: 'atelier', cost: { g: 2, s: 2 }, desc: 'Piège : 8 dégâts à un héros. Nécessite un Atelier.' },
+  sphinx:  { name: 'Sphinx empaillé', kind: 'verrou', str: 2, lost: 0.3, tier: 1, cost: { g: 3, s: 1 }, desc: 'Verrou à énigme : 5 dégâts, et 18 % de chances que les héros sèchent et rentrent chez eux.' },
+  hache:   { name: 'Hache pendulaire', kind: 'piège', str: 4, needs: 'atelier', tier: 1, cost: { g: 3, s: 3 }, desc: 'Piège : 10 dégâts à un héros. Nécessite un Atelier.' },
+  leurre:  { name: 'Faux trésor', kind: 'ruse', str: 1, lost: 0.4, needs: 'bibli', cost: { g: 2, s: 1 }, desc: 'Ruse : 3 dégâts, 24 % de chances que les héros repartent avec le faux butin. Nécessite une Bibliothèque.' },
+  cloche:  { name: 'Cloche d’alarme', kind: 'ruse', str: 0, alarm: true, unique: true, cost: { g: 2, s: 1 }, desc: 'Ruse : où qu’elle soit, elle sonne l’alarme à l’arrivée de la bande : +1 énergie au premier tour du combat du Cœur.' },
   // rang 2 et 3 : il faut des plans, que seuls des artisans savent tracer (voir l'artisanat)
-  herse:    { name: 'Herse d’acier noir', kind: 'verrou', str: 4, sticky: true, rank: 2, needs: 'forge', cost: { g: 4, s: 5 }, desc: 'Verrou forgé (rang 2) : 4 dégâts au héros qui la soulève, et la rencontre suivante frappe +1 (il a encore mal au dos). Plans : un·e compagnon·ne forgeron·ne.' },
-  meule:    { name: 'Lames de meule', kind: 'piège', str: 5, rank: 2, needs: 'forge', cost: { g: 4, s: 4 }, desc: 'Piège forgé (rang 2) : des meules affûtées qui sortent du sol, 5 dégâts à un héros. Plans : un·e compagnon·ne forgeron·ne.' },
-  machoire: { name: 'Mâchoire d’acier noir', kind: 'piège', str: 8, sticky: true, rank: 3, needs: 'forge', cost: { g: 7, s: 6 }, desc: 'Piège forgé (rang 3) : 8 dégâts, et la victime reste coincée (la rencontre suivante frappe +1). Plans : un·e maître·sse forgeron·ne.' },
-  ressort:  { name: 'Plancher à ressort', kind: 'ruse', str: 2, lost: 0.35, rank: 2, needs: 'atelier', cost: { g: 3, s: 3 }, lostLine: 'Boing ! Le Plancher à ressort les catapulte dans les douves : ils rentrent se sécher chez eux.', desc: 'Ruse mécanique (rang 2) : 2 dégâts, et 35 % de chances que la bande, catapultée dans les douves, rentre se sécher chez elle. Plans : un·e compagnon·ne mécanicien·ne.' },
-  automate: { name: 'Chevalier mécanique', kind: 'piège', str: 6, rank: 3, needs: 'atelier', cost: { g: 6, s: 5 }, desc: 'Piège mécanique (rang 3) : une armure à ressorts qui cogne 6 dégâts. Plans : un·e maître·sse mécanicien·ne.' },
-  grandpiege: { name: 'Le Grand Piège', kind: 'piège', str: 6, sticky: true, unique: true, saga: true, cost: { g: 2, s: 2 }, desc: 'Inventé par un kobold de génie au bout d’une longue intrigue : −6 PV, et la victime reste sonnée (+1 à la rencontre suivante). Unique.' },
-  poste:     { name: 'Poste de garde', kind: 'poste', str: 0, post: true, cost: { g: 2, s: 2 }, desc: 'Une guérite plantée dans un couloir : c’est le seul moyen de garder un couloir. Tu peux y poster 2 gardes (un barrage) qui arrêtent la bande au passage. Sans poste, les gardes se postent dans les pièces : fais passer le chemin des héros par elles.' },
-  barricade: { name: 'Barricade', kind: 'mur', str: 0, block: true, cost: { g: 1, s: 3 }, desc: 'Mur : les héros ne passent pas par ce couloir. Force-les à faire un détour par tes pièges et tes gardes (il faut toujours leur laisser un chemin jusqu’au Cœur).' },
+  herse:    { name: 'Herse d’acier noir', kind: 'verrou', str: 4, sticky: true, rank: 2, needs: 'forge', cost: { g: 4, s: 5 }, desc: 'Verrou forgé (rang 2) : 10 dégâts au héros qui la soulève, et il perd son premier tour au combat suivant (il a encore mal au dos). Plans : un·e compagnon·ne forgeron·ne.' },
+  meule:    { name: 'Lames de meule', kind: 'piège', str: 5, rank: 2, needs: 'forge', cost: { g: 4, s: 4 }, desc: 'Piège forgé (rang 2) : des meules affûtées qui sortent du sol, 13 dégâts à un héros. Plans : un·e compagnon·ne forgeron·ne.' },
+  machoire: { name: 'Mâchoire d’acier noir', kind: 'piège', str: 8, sticky: true, rank: 3, needs: 'forge', cost: { g: 7, s: 6 }, desc: 'Piège forgé (rang 3) : 20 dégâts, et la victime reste coincée (elle perd son premier tour au combat suivant). Plans : un·e maître·sse forgeron·ne.' },
+  ressort:  { name: 'Plancher à ressort', kind: 'ruse', str: 2, lost: 0.35, rank: 2, needs: 'atelier', cost: { g: 3, s: 3 }, lostLine: 'Boing ! Le Plancher à ressort les catapulte dans les douves : ils rentrent se sécher chez eux.', desc: 'Ruse mécanique (rang 2) : 5 dégâts, et 21 % de chances que la bande, catapultée dans les douves, rentre se sécher chez elle. Plans : un·e compagnon·ne mécanicien·ne.' },
+  automate: { name: 'Chevalier mécanique', kind: 'piège', str: 6, rank: 3, needs: 'atelier', cost: { g: 6, s: 5 }, desc: 'Piège mécanique (rang 3) : une armure à ressorts qui cogne 15 dégâts. Plans : un·e maître·sse mécanicien·ne.' },
+  grandpiege: { name: 'Le Grand Piège', kind: 'piège', str: 6, sticky: true, unique: true, saga: true, cost: { g: 2, s: 2 }, desc: 'Inventé par un kobold de génie au bout d’une longue intrigue : −15 PV, et la victime reste sonnée (elle perd son premier tour au combat suivant). Unique.' },
+  poste:     { name: 'Poste de garde', kind: 'poste', str: 0, post: true, cost: { g: 2, s: 2 }, desc: 'Une guérite plantée dans un couloir, contre une pièce : quand une bande attaque, cette pièce tire un défenseur de plus (une place de plus au tirage).' },
+  barricade: { name: 'Barricade', kind: 'mur', str: 0, block: true, cost: { g: 1, s: 3 }, desc: 'Mur : la bande perd du temps à l’enfoncer, et pille moitié moins d’or dans la pièce voisine (il faut toujours laisser un passage jusqu’au Cœur).' },
 };
 const DEF_ORDER = Object.keys(DEFS);
 

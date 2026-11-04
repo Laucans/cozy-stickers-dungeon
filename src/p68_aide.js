@@ -8,7 +8,7 @@
 // les mots des fiches, et l'article du Grimoire qui les explique
 const AIDE_TERMS = [
   [/^loyaute/, 'loyaute', 'la loyauté'], [/^epanouissement|epanouit/, 'loyaute', 'l’épanouissement'], [/^humeur/, 'humeur', 'l’humeur'],
-  [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie/, 'paie', 'le salaire'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et les gardes'],
+  [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie/, 'paie', 'le salaire'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et la défense'],
   [/^combat/, 'combat', 'le combat'], [/^competence/, 'creatures', 'les compétences'], [/^caractere|^occupation/, 'caracteres', 'le caractère'],
   [/^reves? secrets?|^envies?\b/, 'missions', 'les envies et les rêves secrets'], [/^reputation/, 'reputation', 'la réputation'], [/^renommee/, 'renommee', 'la renommée'],
   [/^ambiance/, 'ambiance', 'l’ambiance'], [/^lits?\b|^repas/, 'lits_repas', 'les lits et les repas'], [/^calamite/, 'calamite', 'la Calamité'], [/^menace/, 'menace', 'la Menace'],
@@ -50,8 +50,8 @@ openGrimoire = function () {
 const HOVER_NAMES = {
   btnMenu: 'Partie et sauvegardes', turn: 'Les victoires du Val', btnAdmin: 'L’Atelier du Maître', adminFab: 'L’Atelier du Maître', btnSound: 'Le son', btnHelp: 'Le Grimoire des règles',
   btnCrit: 'Tes créatures', btnBest: 'L’album des espèces', btnRen: 'La renommée', btnAch: 'Le Livre du Maître', btnQuests: 'Le journal des quêtes',
-  btnBuild: 'Construire', btnBuildClose: 'Fermer la construction', minimap: 'La carte du Val', zfit: 'Recadrer la vue', btnPath: 'Le chemin des héros',
-  btnGuards: 'Les gardes', btnRaid: 'Raid et expéditions', btnTier: 'Le Cœur du donjon', btnVal: 'Le Val des Maîtres', btnNight: 'Finir la nuit',
+  btnBuild: 'Construire', btnBuildClose: 'Fermer la construction', minimap: 'La carte du Val', zfit: 'Recadrer la vue',
+  btnRaid: 'Raid et expéditions', btnTier: 'Le Cœur du donjon', btnVal: 'Le Val des Maîtres', btnNight: 'Finir la nuit',
 };
 const HV = { t: 0, el: null, tip: null };
 const hvCap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;

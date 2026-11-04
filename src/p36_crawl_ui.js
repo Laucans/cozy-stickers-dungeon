@@ -246,13 +246,14 @@ const crawlHead = (top, o) => { const L = o.loot; morphHTML(top, `<span class="c
 
 /* ---------- l'expédition, jouée à l'écran (par l'hôte, à plusieurs si le château est partagé) ---------- */
 let CRAWL_LIVE = null;
-async function runCrawl(report) {
-  if (!S.raid) return;
-  const key = S.raid.target, tg = RAIDS[key], dg = crawlDgOf(key), team = S.raid.team.map(critter).filter(Boolean), DG = CRAWL_DG[dg];
-  if (!team.length || !DG) { S.raid = null; return; }
+// SCN : un autre scénario qui réutilise cet écran (les invasions du château, p69) : il fournit ses salles, ses combats et sa fin
+async function runCrawl(report, SCN) {
+  if (!SCN && !S.raid) return;
+  const key = SCN ? null : S.raid.target, tg = SCN ? { name: SCN.name, emo: SCN.emo } : RAIDS[key], dg = SCN ? SCN.dg : crawlDgOf(key), team = SCN ? SCN.team : S.raid.team.map(critter).filter(Boolean), DG = SCN ? { desc: SCN.desc || '' } : CRAWL_DG[dg];
+  if (!SCN && (!team.length || !DG)) { S.raid = null; return; }
   const emo = tg.emo || DG.emo || '🏰', lines = [];
   // les Maîtres présents : l'hôte, puis les invités du château partagé
-  const coop = typeof COOP !== 'undefined' && COOP.role === 'host' && COOP.peers.size > 0, players = coop ? [COOP.me.id, ...[...COOP.peers.keys()].slice(0, 4)] : ['moi'];
+  const coop = !SCN && typeof COOP !== 'undefined' && COOP.role === 'host' && COOP.peers.size > 0, players = coop ? [COOP.me.id, ...[...COOP.peers.keys()].slice(0, 4)] : ['moi'];
   const names = coop ? [COOP.me.name, ...players.slice(1).map(id => (COOP.peers.get(id) || {}).name || 'Maître')] : [];
   const page = openCrawlPage(dg), top = page.querySelector('.cp-top'), body = page.querySelector('.cp-body'), A = crawlAnimator(body, page);
   page.classList.toggle('coop', coop);
@@ -280,7 +281,7 @@ async function runCrawl(report) {
   CRAWL_LIVE = { onGuest: (peerId, m) => { const p = players.indexOf(peerId); if (p <= 0) return; if (m.a === 'secret' && !ui.pending) { if (ui.phase === 'players') ui.secretReq = { p, v: String(m.v || '0') }; return; } send({ a: String(m.a || ''), v: String(m.v || ''), tv: String(m.tv || ''), p }); } };
   const cast = (o) => { if (coop) coopSend({ t: 'cw', dg, players, names, head: headObj(), ...o }); };
   let R = null;
-  const headMeta = () => R ? `Niveau ${String(R.lvl).replace('.', ',')}${coop ? ` · ${players.length} Maîtres` : ''} · ${R.floor > CRAWL_FLOORS ? 'le boss' : `étage ${R.floor}/${CRAWL_FLOORS}, salle ${R.step + 1}/${CRAWL_STEPS}`}` : 'Avant de partir';
+  const headMeta = () => SCN ? SCN.meta() : R ? `Niveau ${String(R.lvl).replace('.', ',')}${coop ? ` · ${players.length} Maîtres` : ''} · ${R.floor > CRAWL_FLOORS ? 'le boss' : `étage ${R.floor}/${CRAWL_FLOORS}, salle ${R.step + 1}/${CRAWL_STEPS}`}` : 'Avant de partir';
   const headObj = () => ({ dg, name: tg.name, meta: headMeta(), loot: R ? { g: R.loot.g, s: R.loot.s, n: R.loot.items.length } : null, relics: S.relics || [] });
   const head = () => crawlHead(top, headObj());
   const waitCast = text => cast({ view: 'wait', text, party: R ? R.party.map(o => figVM(null, o, 'ally')) : [] });
@@ -288,7 +289,7 @@ async function runCrawl(report) {
   page.classList.remove('battle');
 
   // 1. le sac : quelles cartes du château emporter ?
-  const pool = castlePool(); let bag = crawlAutoBag(pool);
+  const pool = SCN ? [] : castlePool(); let bag = crawlAutoBag(pool);
   if (pool.length > BAG_SIZE) {
     const pick0 = new Set(bag);
     waitCast(`${names[0] || 'L’hôte'} remplit le sac de l’expédition…`);
@@ -305,10 +306,10 @@ async function runCrawl(report) {
     }
     bag = [...pick0];
   }
-  R = crawlNew(dg, team, { bag, np: players.length });
+  R = SCN ? SCN.R : crawlNew(dg, team, { bag, np: players.length });
 
   // 2. la carte du donjon : où aller ?
-  const track = () => { const out = []; for (let f = 1; f <= CRAWL_FLOORS; f++) for (let s = 0; s < CRAWL_STEPS; s++) { const i = (f - 1) * CRAWL_STEPS + s, done = i < R.path.length, cur = i === R.path.length && R.floor <= CRAWL_FLOORS; out.push(`<span class="st${done ? ' done' : ''}${cur ? ' cur' : ''}" title="Étage ${f}, salle ${s + 1}">${done ? gi(NODE_IK[R.path[i]]) : cur ? '?' : ''}</span>${s === CRAWL_STEPS - 1 ? '<i class="sep"></i>' : ''}`); } out.push(`<span class="st boss${R.floor > CRAWL_FLOORS ? ' cur' : ''}" title="Le boss">${gi('crown')}</span>`); return `<div class="ctrack">${out.join('')}</div>`; };
+  const track = () => { if (SCN) return SCN.track ? SCN.track() : ''; const out = []; for (let f = 1; f <= CRAWL_FLOORS; f++) for (let s = 0; s < CRAWL_STEPS; s++) { const i = (f - 1) * CRAWL_STEPS + s, done = i < R.path.length, cur = i === R.path.length && R.floor <= CRAWL_FLOORS; out.push(`<span class="st${done ? ' done' : ''}${cur ? ' cur' : ''}" title="Étage ${f}, salle ${s + 1}">${done ? gi(NODE_IK[R.path[i]]) : cur ? '?' : ''}</span>${s === CRAWL_STEPS - 1 ? '<i class="sep"></i>' : ''}`); } out.push(`<span class="st boss${R.floor > CRAWL_FLOORS ? ' cur' : ''}" title="Le boss">${gi('crown')}</span>`); return `<div class="ctrack">${out.join('')}</div>`; };
   const NODE_TXT = { combat: 'Des ennemis, un peu de butin, une carte à gagner.', elite: 'Un ennemi d’élite et sa capacité redoutable : beau butin, belle carte.', tresor: 'De l’or, peut-être un sticker.', repos: 'Soigner, se calmer, ou aiguiser une carte.', event: 'Une rencontre étrange : un choix à faire.' };
   const mapView = msg => {
     head(); page.classList.remove('battle');
@@ -337,8 +338,8 @@ async function runCrawl(report) {
   };
 
   // 3. le combat : l'arène en haut, les mains en bas
-  const fight = async kind => {
-    const B = crawlBattle(R, crawlFoes(R, kind)); ui.auto = false; ui.autoWarned = false; page.classList.add('battle');
+  const fight = async (kind, foesIn, onB) => {
+    const B = crawlBattle(R, foesIn || crawlFoes(R, kind)); if (onB) onB(B); ui.auto = !!ui.autoNext; ui.autoNext = false; ui.autoWarned = false; page.classList.add('battle');
     const st = { sel: null, info: '', seen: new Set(), host: true, boss: kind === 'boss' }, ready = Array(B.np).fill(false);
     let sentEv = 0, castT = null;
     const vmNow = enemy => battleVM(B, { p: 0, ready, names });
@@ -411,8 +412,13 @@ async function runCrawl(report) {
     return res;
   };
 
-  // 4. la boucle des salles
+  // 4. la boucle des salles (ou le scénario qui a emprunté l'écran)
   let msg = null;
+  if (SCN) {
+    try { await SCN.run({ page, body, top, A, head, fight, partyRow, wait, ui, setR: r => { R = r; }, getR: () => R }); }
+    finally { CRAWL_LIVE = null; document.removeEventListener('keydown', onKey); closeCrawlPage(); }
+    return;
+  }
   for (;;) {
     mapView(msg); msg = null; const ch = await wait(); if (ch.p) continue;
     if (ch.a === 'deck') { await deckView(`🃏 Le deck de l’expédition (${R.deck.length} cartes)`, false); continue; }

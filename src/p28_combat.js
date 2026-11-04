@@ -830,7 +830,7 @@ function pathOverlay() {
   if (V.invGoal) { const r = S.rooms.find(o => o.id === V.invGoal); if (r && zOf(r) === Z) groupOf(r).rooms.forEach(o => glowPath(footprint(o), '255,110,90', true, 1.1 + .4 * Math.abs(Math.sin(performance.now() / 400)))); }
   if (V.invPath) { drawHeroPath(V.invPath.filter(c => (c[2] || 0) === Z), 1, '255,150,120'); return; }   // pendant une invasion : le chemin que la bande a vraiment pris
   if (Z !== 0) return;
-  const hand = UI.hand && UI.hand.kind === 'def';
+  const hand = false;   // plus de chemin des héros (les invasions traversent des pièces tirées au hasard, p69)
   if (!V.showPath && !hand) return;
   const p = heroPath(), g = V.ghost, D = hand && DEFS[UI.hand.t];
   const alt = D && D.block && g && g.ok ? heroPath([g.ax, g.ay]) : null;

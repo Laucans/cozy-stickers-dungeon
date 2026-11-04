@@ -27,9 +27,9 @@ const TUTO_STEPS = [
   { id: 'repas', t: 'Pense aux repas', x: 'En haut, le bol 🍲 compare les bouches à nourrir et les repas produits. Le Cœur nourrit 3 créatures ; ensuite il te faut un {room:potager} ou une {room:cuisine} meublés. Voir {c:lits_repas}.', target: '#res [data-k="food"]', until: hasFood, btn: 'later' },
   { id: 'creature', t: 'Fais connaissance', x: 'Touche une créature dans le château, ou ouvre la liste de tes créatures (🐾, en haut à gauche), pour voir sa fiche : caractère, envies, humeur, poste.', target: '#btnCrit', until: () => TUTO.flags.creature },
   { id: 'caresse', t: 'Ses envies', x: 'Chaque créature déclare une envie (✦) : son sticker préféré, un poste dans sa pièce, un·e ami·e… Comble-la et la récompense tombe toute seule : loyauté, expérience, cadeaux. Elle cache aussi un rêve secret (💭) : elle te le confiera quand elle te fera confiance, à moins qu’un ragot de taverne ne le trahisse. Voir {c:missions}.', target: '#mEnvie', btn: 'next' },
-  { id: 'piege', t: 'Prépare l’accueil des héros', x: 'Les aventuriers viendront par le plus court chemin jusqu’au Cœur. Touche le bouton des empreintes (en bas à droite) pour le voir, puis colle un piège (Construire, onglet Pièges) dans un couloir sur ce chemin. Voir {c:pieges}.', target: '#btnPath', enter: () => setTab('def'), until: () => S.defs.length > 0, btn: 'later' },
-  { id: 'gardes', t: 'Poste des gardes', x: 'Le bouton bouclier (en bas à droite) ouvre le mode Gardes : glisse une créature de la liste de gauche sur une pièce du chemin des héros (en doré). Elle y arrêtera la bande. Le nombre de gardes est limité ; les autres défendent le Cœur. Voir {c:postes}.', target: '#btnGuards', until: () => typeof guardCount === 'function' && guardCount() > 0, btn: 'later' },
-  { id: 'jetons', t: 'Pendant l’invasion', x: 'Quand des héros attaquent, ne reste pas les bras croisés : tes jetons du Cœur servent à semer de l’or, claquer les portes, sonner la cloche ou provoquer un éboulement. Si tu laisses faire, la bande arrive presque toujours à ses fins ! Voir {c:invasion}.', btn: 'next' },
+  { id: 'piege', t: 'Prépare l’accueil des héros', x: 'Les aventuriers traverseront quelques pièces de ton château avant d’atteindre le Cœur. Ouvre Construire (en bas à gauche), onglet Pièges, et colle un piège dans un couloir, contre une pièce : il frappera la bande quand elle y entrera, et donnera sa carte aux combats de cette pièce. Voir {c:pieges}.', target: '#btnBuild', enter: () => setTab('def'), until: () => S.defs.length > 0, btn: 'later' },
+  { id: 'gardes', gone: true, t: 'Poste des gardes', x: '', btn: 'next' },   // plus de gardes à poster : l'étape est sautée (gardée pour ne pas décaler les tutoriels en cours)
+  { id: 'jetons', t: 'Pendant l’invasion', x: 'Quand des héros attaquent, ils traversent quelques pièces de ton château, tirées au hasard, puis le Cœur. Tes créatures se défendent d’elles-mêmes : les 3 plus fortes au Cœur, les autres tirées au sort, les plus faibles dans les premières pièces. Une pièce avec des défenseurs, c’est un combat aux cartes (les cartes viennent de la pièce). Une créature épuisée par les raids se repose : ménage-les avant une attaque. Voir {c:invasion}.', btn: 'next' },
   { id: 'raid', t: 'Un petit raid ?', x: 'Le bouton Raid (la carte au trésor, en bas à droite) envoie jusqu’à 3 créatures piller les environs : un dé par point d’équipe, on garde le meilleur. Mais chaque raid réveille la Menace. Voir {c:raids}.', target: '#btnRaid', until: () => !!S.raid || S.stats.raidsWon > 0, btn: 'later' },
   { id: 'horloges', t: 'Surveille tes horloges', x: 'En haut : la {c:calamite|Calamité} (rouge) monte quand le château va mal, la {c:menace|Menace} (bleue) quand le village s’agace. Pleine, la Menace amène des aventuriers. Et tous les 5 nuits, c’est jour de paie : garde de l’or pour tes créatures.', target: '#clocks', btn: 'next' },
   { id: 'envies', t: 'Tes envies', x: 'À droite, les pastilles te signalent ce qui compte : les Envies du château (✦) qui rapportent des récompenses, les demandes de tes créatures, les dangers. Touche-les pour agir. Vise le {c:paliers|Palier 1} pour débloquer de nouvelles pièces et créatures.', target: '#notifs', btn: 'next' },
@@ -41,11 +41,11 @@ const TIPS = [
   { id: 'faim', when: () => eaters() > foodCap(), t: 'Des ventres vides !', x: 'Tu as plus de bouches que de repas. Les affamés boudent et la Calamité monte. Meuble un {room:potager} ou une {room:cuisine}.', wiki: 'lits_repas' },
   { id: 'lits', when: () => S.night > 1 && S.creatures.length >= beds(), t: 'Plus un lit de libre', x: 'Plus aucune créature ne peut s’installer. Touche un Dortoir (ou une autre chambre) et colle-y des lits depuis sa fiche : {furn:paillasse}, {furn:litsup}, {furn:cercueil}…', wiki: 'lits_repas' },
   { id: 'calam', when: () => S.calamity >= CAL_MAX - 2, t: 'La Calamité gronde', x: 'L’horloge de Calamité est presque pleine : une catastrophe va tomber. Nourris tout le monde, soigne l’Ambiance, ou construis un {room:labo}.', wiki: 'calamite' },
-  { id: 'menace', when: () => S.menace >= MENACE_MAX - 2, t: 'Des héros approchent', x: 'La Menace est presque pleine : des aventuriers attaqueront bientôt. Regarde le Chemin des héros, pose des pièges dessus ou poste des gardes.', wiki: 'invasion' },
+  { id: 'menace', when: () => S.menace >= MENACE_MAX - 2, t: 'Des héros approchent', x: 'La Menace est presque pleine : des aventuriers attaqueront bientôt. Pose des pièges dans les couloirs qui bordent tes pièces, et évite d’épuiser tes créatures en raids : une créature épuisée ne défend pas, et tes plus fortes doivent être reposées pour tenir le Cœur.', wiki: 'invasion' },
   { id: 'boude', when: () => S.creatures.some(c => c.mood <= 1), t: 'Quelqu’un boude', x: 'Une créature boude : sa compétence est éteinte. Ouvre sa fiche pour voir ce qui cloche (faim, sticker préféré, poste), et comble son envie.', wiki: 'humeur' },
   { id: 'palier', when: () => { const s = tierStatus(); return !!(s && s.ok); }, t: 'Palier disponible', x: 'Tu remplis toutes les conditions du palier suivant ! Touche le Cœur du donjon (l’étoile dorée brille au-dessus) et monte de palier depuis sa fiche.', wiki: 'paliers' },
   { id: 'raid1', when: () => S.stats.raidsWon >= 1, t: 'Premier butin', x: 'Bravo ! Garde un œil sur la Menace : chaque raid la fait monter.', wiki: 'raids' },
-  { id: 'invasion1', when: () => S.stats.invasions >= 1, t: 'Ta première invasion', x: 'Les pièges blessent les héros, tes gardes les combattent pièce par pièce, et le Cœur se défend en dernier. Quand la moitié de la bande est K.O., elle fuit en semant sa bourse.', wiki: 'invasion' },
+  { id: 'invasion1', when: () => S.stats.invasions >= 1, t: 'Ta première invasion', x: 'Chaque pièce qu’ils pillent rend la bande plus forte… mais une bande repoussée rend tout ce qu’elle a pris, avec une prime. Quand un ou deux de ses héros tombent (selon sa taille), la bande fuit ; au Cœur, elle se bat jusqu’au bout.', wiki: 'invasion' },
   { id: 'album', when: () => Object.keys(S.album).length >= 4, t: 'Ton album se remplit', x: 'Chaque pièce meublée attire une espèce différente. Le bestiaire du Grimoire dit qui vient d’où.', wiki: 'creatures' },
 ];
 function advisorShow(o) {
@@ -68,12 +68,12 @@ function advPlace() {
 }
 function advisorHide() { const a = $('#advisor'); if (a) a.hidden = true; TUTO.tip = null; TUTO.tipObj = null; }
 function showStep(st) {
-  const i = TUTO_STEPS.indexOf(st), btns = [];
+  const live = TUTO_STEPS.filter(s => !s.gone), i = live.indexOf(st), btns = [];
   if (st.btn === 'next') btns.push({ id: 'next', label: 'Suivant', pri: true });
   if (st.btn === 'later') btns.push({ id: 'next', label: 'Passer cette étape', side: true });
   if (st.btn === 'end') btns.push({ id: 'end', label: 'Terminer', pri: true }, { id: 'grim', label: '📖 Ouvrir le Grimoire' });
   if (!st.btn) btns.push({ id: 'hide', label: 'Ranger le conseil', side: true });   // l'étape attend une action : on peut la ranger (une pastille 🎓 la rouvre)
-  advisorShow({ title: st.t, text: st.x, step: i + 1, total: TUTO_STEPS.length, buttons: btns, skip: st.btn !== 'end', cls: 'tuto' });
+  advisorShow({ title: st.t, text: st.x, step: i + 1, total: live.length, buttons: btns, skip: st.btn !== 'end', cls: 'tuto' });
 }
 function nextStep() { if (!S.tuto) return; const hid = !!S.tuto.hid; S.tuto.i++; delete S.tuto.hid; delete S.tuto.n0; if (hid && TUTO_STEPS[S.tuto.i]) S.tuto.hid = TUTO_STEPS[S.tuto.i].id; TUTO.shown = null; TUTO.cells = null; sfx('chime'); save(); tutoTick(); }
 function startTutorial() { S.tuto = { on: true, i: 0, asked: true }; TUTO.shown = null; TUTO.flags = {}; save(); tutoTick(); }
@@ -86,6 +86,7 @@ function tutoTick() {
   const T = S.tuto;
   if (T && T.on) {
     if (TUTO.pending) { TUTO.pending = null; renderGoals(); }   // pas de conseil 💡 pendant le tutoriel
+    while (TUTO_STEPS[T.i] && TUTO_STEPS[T.i].gone) T.i++;   // une étape retirée du jeu : on passe sans l'afficher
     const st = TUTO_STEPS[T.i];
     if (!st) { T.on = false; T.done = true; save(); advisorHide(); return; }
     if ($('#modalRoot').children.length && !(st.target && document.querySelector('#modalRoot ' + st.target))) { $('#advisor').hidden = true; if (st.until) { let ok = false; try { ok = !!st.until(); } catch (e) {} if (ok) nextStep(); } return; }

@@ -229,10 +229,10 @@ function openHelp() {
     <li>Chaque pièce démarre en chantier, avec une horloge de 4, 6 ou 8 segments. Tes ouvriers en remplissent 2 par nuit, plus un par diablotin ou orque.</li>
     <li>Les <b>meubles</b> donnent leurs effets à la pièce et l’éclairent : lits au Dortoir, chaudron en Cuisine, candélabres… Une pièce meublée attire son espèce.</li>
     <li>La Tour de guet touche les remparts ; le Caveau et le Trésor sont loin du porche. Bonus de voisinage : Cuisine contre Taverne, Forge contre Atelier.</li>
-    <li>Les pièges se posent dans les couloirs, sur le chemin des héros (bouton « Chemin des héros »). Les meubles se collent depuis la fiche de leur pièce (touche-la). Décoller un meuble est gratuit : il reste offert et se recolle sans rien payer.</li></ul>
+    <li>Les pièges se posent dans les couloirs, contre les pièces à protéger. Les meubles se collent depuis la fiche de leur pièce (touche-la). Décoller un meuble est gratuit : il reste offert et se recolle sans rien payer.</li></ul>
     <h3>Créatures</h3>
     <ul><li>Comble leurs envies, pose la déco qu’elles aiment, donne-leur un poste dans leur pièce préférée. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
-    <li>Une créature postée dans une pièce la défend. Les créatures libres défendent le Cœur.</li></ul>
+    <li>Quand une bande attaque, tes créatures se défendent d’elles-mêmes : les 3 plus fortes (reposées) au Cœur, les autres tirées au sort pièce par pièce, des plus faibles aux plus fortes. Une pièce sans défenseurs : celles qui y travaillent agissent à leur idée. Une créature épuisée se repose.</li></ul>
     <p class="hint">Règles d’aménagement inspirées du jeu de rôle Wicked Ones (Forged in the Dark) : thèmes, horloges de projet, verrous et pièges, calamités et contrecoups.</p>
     <div class="mfoot"><button class="sbtn pri" type="button" data-close>C’est parti</button></div></div>`, { wide: true, label: 'Aide' });
 }
@@ -245,7 +245,7 @@ function openMenu() {
     <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSave">Renommer</button>'}<button class="sbtn" type="button" id="mLog">Chronique</button><button class="sbtn" type="button" id="mAch">🏆 Hauts faits</button><button class="sbtn" type="button" id="mRen">⭐ Renommée</button><button class="sbtn" type="button" id="mVal">🌐 Val des Maîtres</button></div>
     ${guest ? '' : `<h3>Désertions</h3><p class="hint">Une créature peu loyale peut partir pour un château qui reçoit mieux son espèce. Elle prévient toujours une nuit avant.</p>
     <div class="choices three" id="mDes">${[['on', '🧳 Activées', 'Les créatures délaissées peuvent partir.'], ['soft', '🍃 Douces', 'Deux fois moins de départs.'], ['off', '🛌 Désactivées', 'Personne ne part pour un autre château.']].map(([k, t, d]) => `<button type="button" class="choice" data-des="${k}" aria-pressed="${des === k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`}
-    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button><button class="sbtn" type="button" id="mCardDef">${(S.opts || {}).cardDef === 'auto' ? '🃏 Défense du Cœur : me demander' : '⚡ Défense du Cœur : toujours automatique'}</button>${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
+    <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button><button class="sbtn" type="button" id="mCardDef">${(S.opts || {}).cardDef === 'auto' ? '🃏 Combats d’invasion : me demander' : '⚡ Combats d’invasion : toujours en auto'}</button>${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
   const q = s => m.querySelector(s);
   q('#mSave') && q('#mSave').addEventListener('click', () => { if (run('rename', { name: q('#mName').value })) { closeModal(); afterChange(); } });
   q('#mLog').addEventListener('click', openJournal);
@@ -254,7 +254,7 @@ function openMenu() {
   q('#mVal').addEventListener('click', () => openVal());
   q('#mDes') && q('#mDes').addEventListener('click', e => { const b = e.target.closest('[data-des]'); if (!b) return; S.opts.desert = b.dataset.des; sfx('tick'); save(); m.querySelectorAll('[data-des]').forEach(x => x.setAttribute('aria-pressed', x.dataset.des === S.opts.desert)); if (COOP.role === 'host') coopDirty(); });
   q('#mTuto') && q('#mTuto').addEventListener('click', () => { closeModal(); startTutorial(); });
-  q('#mCardDef').addEventListener('click', () => { S.opts = S.opts || {}; S.opts.cardDef = S.opts.cardDef === 'auto' ? 'ask' : 'auto'; save(); closeModal(); toast(S.opts.cardDef === 'auto' ? 'Tes créatures défendront le Cœur toutes seules.' : 'Quand la bande arrivera au Cœur, tu pourras la combattre aux cartes.'); });
+  q('#mCardDef').addEventListener('click', () => { S.opts = S.opts || {}; S.opts.cardDef = S.opts.cardDef === 'auto' ? 'ask' : 'auto'; save(); closeModal(); toast(S.opts.cardDef === 'auto' ? 'Tes défenseurs se battront en combat auto (il te rend la main si ça tourne mal).' : 'Avant chaque combat d’invasion, tu choisiras : jouer tes cartes ou le combat auto.'); });
   q('#mTips').addEventListener('click', () => { S.tipsOff = !S.tipsOff; save(); closeModal(); toast(S.tipsOff ? 'Gribouille gardera ses conseils pour lui.' : 'Gribouille te soufflera de nouveau des conseils.'); });
   q('#mNew') && q('#mNew').addEventListener('click', () => { if (slotIndex().list.length >= SLOTS_MAX) { closeModal(true); openTitle('load'); toast(`${SLOTS_MAX} parties au plus : supprimes-en une d’abord.`, true); return; } if (COOP.role) coopLeave(true); closeModal(true); openIntro(); });
   q('#mSaveNow') && q('#mSaveNow').addEventListener('click', () => { if (save()) { sfx('chime'); toast(`💾 « ${S.name} » sauvegardé (nuit ${S.night}).`); } });

@@ -1,7 +1,7 @@
 /* =========================================================
    Dépenser son or et son bois
    - Les Merveilles : quatre grands ouvrages à niveaux, de plus
-     en plus chers, sans fin. Remparts (des jetons du Cœur),
+     en plus chers, sans fin. Remparts (de l'énergie au Cœur),
      Cave à festins (de l'ambiance), Galerie des statues (du
      rayonnement), Archives (de l'expérience chaque nuit).
    - La Grande fête : de l'or et du bois contre de la bonne
@@ -10,7 +10,7 @@
    chantiers ; une pastille les rappelle quand l'or dort.
    ========================================================= */
 const WONDERS = {
-  remparts: { ico: 'shield', name: 'Les Remparts', desc: L => `+${Math.ceil(L / 2)} jeton${Math.ceil(L / 2) > 1 ? 's' : ''} du Cœur à chaque invasion (un de plus tous les deux niveaux)`, base: { g: 10, s: 60 }, k: 1.7 },
+  remparts: { ico: 'shield', name: 'Les Remparts', desc: L => `+${Math.ceil(L / 2)} énergie au premier tour du combat du Cœur, à chaque invasion (une de plus tous les deux niveaux ; +3 au plus, tous bonus confondus)`, base: { g: 10, s: 60 }, k: 1.7 },
   cave:     { ico: 'mug', name: 'La Cave à festins', desc: L => `+${3 * L} d’ambiance`, base: { g: 15, s: 55 }, k: 1.6 },
   galerie:  { ico: 'statue', name: 'La Galerie des statues', desc: L => `+${8 * L} de rayonnement`, base: { g: 30, s: 50 }, k: 1.6 },
   archives: { ico: 'book', name: 'Les Archives', desc: L => `${L} créature${L > 1 ? 's' : ''} gagne${L > 1 ? 'nt' : ''} 1 d’expérience chaque nuit`, base: { g: 20, s: 55 }, k: 1.6 },

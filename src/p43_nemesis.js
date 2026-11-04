@@ -3,8 +3,8 @@
    Un aventurier nommé revient d'invasion en invasion : il prend
    des niveaux, apprend à désamorcer tes pièges, laisse des mots
    dans la chronique. Repoussé trois fois, il est à ta merci :
-   le capturer, le corrompre (il te renseigne : +1 jeton du Cœur),
-   ou le recruter (il défend ton Cœur).
+   le capturer, le corrompre (il te renseigne : +1 énergie au Cœur),
+   ou le recruter (il change de camp).
    ========================================================= */
 // les choix de l'aube : des fenêtres qui s'ouvrent après la chronique (le simulateur répond tout seul)
 const DAWN_Q = [];
@@ -65,20 +65,20 @@ applyInvasion = function (plan, outcome) {
 };
 function nemDecide(k) {
   const N = S.foeHero; if (!N || N.st !== 'mercy') return;
-  if (k === 'spy') { if (S.gold < 40) return; S.gold -= 40; N.st = 'spy'; addLog(`${N.name} travaille désormais pour toi : un jeton du Cœur de plus à chaque invasion.`, 'ev'); }
-  else if (k === 'ally') { N.st = 'ally'; addLog(`${N.name} rejoint ta garde : il défendra ton Cœur.`, 'ev'); }
+  if (k === 'spy') { if (S.gold < 40) return; S.gold -= 40; N.st = 'spy'; addLog(`${N.name} travaille désormais pour toi : +1 énergie au premier tour du combat du Cœur, à chaque invasion.`, 'ev'); }
+  else if (k === 'ally') { N.st = 'ally'; addLog(`${N.name} change de camp : il défendra ton Cœur à tes côtés.`, 'ev'); }
   else { N.st = 'captive'; N.ransom = 10; S.hype += 5; addLog(`${N.name} croupit dans tes cachots (+5 notoriété) ; sa famille paie une rançon chaque nuit.`, 'ev'); }
 }
 async function nemMercy() {
   const N = S.foeHero; if (!N || N.st !== 'mercy') return;
   const k = await choiceModal(`${gi('crown')} ${esc(N.name)} est à ta merci`, `Trois fois repoussé·e, ${esc(N.name)} ne fait plus le fier. Que fais-tu de ce héros ?`, [
     ['jail', 'lock', 'Le capturer', 'Aux cachots : +5 notoriété, et sa famille paie 4 or par nuit pendant 10 nuits.'],
-    ['spy', 'eye', 'Le corrompre (40 or)', 'Il te renseigne sur chaque bande : un jeton du Cœur de plus à chaque invasion.', S.gold < 40],
-    ['ally', 'shield', 'Le recruter', 'Il change de camp et défend ton Cœur à chaque invasion, aux côtés de tes créatures.'],
+    ['spy', 'eye', 'Le corrompre (40 or)', 'Il te renseigne sur chaque bande : +1 énergie au premier tour du combat du Cœur, à chaque invasion.', S.gold < 40],
+    ['ally', 'shield', 'Le recruter', 'Il change de camp : il ne t’attaquera plus, et défendra ton Cœur à tes côtés.'],
   ]);
   nemDecide(k); renderAll(); save();
 }
-// ses effets : la rançon, le jeton de l'espion, le garde du Cœur
+// ses effets : la rançon, et l'énergie de l'espion au combat du Cœur (p71)
 const dawnNem = dawn;
 dawn = function (report) {
   const r = dawnNem(report), N = S.foeHero;
@@ -89,6 +89,6 @@ const heartTokensNem = heartTokens;
 heartTokens = function () { return heartTokensNem() + (S.foeHero && S.foeHero.st === 'spy' ? 1 : 0); };
 const nemAlly = () => { const N = S.foeHero; return N && N.st === 'ally' ? { id: 'nemally', name: N.name, hp: 10 + 3 * N.lvl, max: 10 + 3 * N.lvl, atk: 2 + Math.floor(N.lvl / 2), merc: true, A: {} } : null; };
 
-WIKI.nemesis = { cat: 'danger', t: 'Le héros némésis', x: () => `<p>Un jour, parmi les aventuriers qui t’attaquent, un héros te prend en grippe. Il a un nom (${S.foeHero ? `<b>${esc(S.foeHero.name)}</b>` : 'tu le sauras bien assez tôt'}) et il revient à <b>chaque invasion</b>, à la place d’un des héros de la bande, un peu plus fort que les autres.</p>
-  <ul><li>Chaque invasion le fait monter d’un niveau (6 au plus) ; dès le niveau 2, il <b>désamorce</b> le premier piège de sa route.</li><li>S’il gagne, il te nargue dans la chronique ; s’il fuit, il jure de revenir.</li>
-  <li>Repoussé trois fois, il est <b>à ta merci</b> : le capturer (notoriété, rançon), le corrompre (un jeton du Cœur de plus à chaque invasion) ou le recruter (il défend ton Cœur).</li></ul>` };
+WIKI.nemesis = { cat: 'danger', t: 'Le héros némésis', x: () => `<p>Un jour, parmi les aventuriers qui t’attaquent, un héros te prend en grippe. Il a un nom (${S.foeHero ? `<b>${esc(S.foeHero.name)}</b>` : 'tu le sauras bien assez tôt'}) et il revient à <b>chaque invasion</b>, à la place d’un des héros de la bande, avec 35 % de PV en plus.</p>
+  <ul><li>Chaque invasion le fait monter d’un niveau (6 au plus), et il <b>désamorce</b> toujours le premier piège de la bande.</li><li>S’il gagne, il te nargue dans la chronique ; s’il fuit, il jure de revenir.</li>
+  <li>Repoussé trois fois, il est <b>à ta merci</b> : le capturer (notoriété, rançon), le corrompre (+1 énergie au premier tour du combat du Cœur, à chaque invasion) ou le recruter (il change de camp, ne t’attaque plus et défend ton Cœur à tes côtés).</li></ul>` };

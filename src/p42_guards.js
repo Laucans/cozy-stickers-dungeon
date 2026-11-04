@@ -1,10 +1,12 @@
 /* =========================================================
-   Les gardes : des créatures postées sur le chemin des héros
-   Le poste de garde est à part de la pièce où une créature
-   vit (son « poste » de travail, qui compte pour son humeur).
-   Un nombre maximum de gardes ; le reste défend le Cœur.
-   Le mode « Gardes » : on prend un sticker de créature sur le
-   côté et on le colle sur une pièce du château.
+   Les gardes (ancienne règle, désactivée)
+   Autrefois, on postait des créatures en garde dans les pièces
+   (mode « Gardes », bouton bouclier). Désormais, les créatures se
+   défendent d'elles-mêmes : avant chaque invasion, les défenseurs
+   sont tirés au sort par palier de force (voir invLineup, p69).
+   Les fonctions restent définies pour les vieux appels, mais le
+   mode Gardes ne s'ouvre plus, le bouton bouclier est caché, et
+   les postes de garde des vieilles parties sont levés.
    ========================================================= */
 const guardCap = (s = S) => 3 + 2 * (s.tier || 0) + 2 * (s.rooms || []).filter(r => r.built && r.t === 'garde').length + ((s.craftRank && s.craftRank.guet) >= 2 ? 1 : 0) + ((s.craftRank && s.craftRank.guet) >= 3 ? 1 : 0);   // + le chemin de ronde et les meurtrières des sentinelles
 const roomGuardCap = r => isHall(r) ? (S.craftRank && S.craftRank.guet >= 3 ? 3 : 2) : 1 + 2 * groupSize(r);   // un barrage de couloir : 2 ; une pièce : les places au premier rang d'un combat
@@ -15,16 +17,9 @@ const hallPost = r => !!r && (S.defs || []).some(d => d.x === r.x && d.y === r.y
 const guardable = r => !!r && r.built && r.t !== 'coeur' && !(ROOMS[r.t] || {}).out && !(ROOMS[r.t] || {}).stairs && (r.t !== 'couloir' || hallPost(r));   // une pièce, le porche, ou un couloir équipé d'un Poste de garde (un barrage)
 Object.assign(CMD, {
   guard(a) {
-    const c = critter(a.id); if (!c || isOut(c)) return 'Absent·e';
+    const c = critter(a.id); if (!c) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
-    const r = S.rooms.find(x => x.id === a.room); if (!r || !r.built) return 'Pièce indisponible';
-    if (r.t === 'coeur') return 'Le Cœur est défendu par toutes les créatures libres';
-    if (!guardable(r)) return r.t === 'couloir' ? 'Un couloir ne se garde qu’avec un Poste de garde (Construire, onglet Pièges)' : 'Cette pièce ne se garde pas';
-    if (c.guard !== r.id && !groupOf(r).rooms.some(o => o.id === c.guard)) {
-      if (!guardRoomOf(c) && guardCount() >= guardCap()) return `Plus de poste de garde libre (${guardCap()} au plus) : retire d’abord un garde`;
-      if (guardsOfRoom(r).length >= roomGuardCap(r)) return `${ROOMS[r.t].name} : ${roomGuardCap(r)} garde${roomGuardCap(r) > 1 ? 's' : ''} au plus`;
-    }
-    c.guard = r.id; return null;
+    return 'Plus de gardes à poster : avant chaque invasion, tes défenseurs sont tirés au sort par palier de force';
   },
 });
 // le combat lit maintenant les postes de garde
@@ -50,7 +45,7 @@ renderAll = function (...a) { if (GM.on && (GM.of !== S || (typeof VISIT !== 'un
 // les places de garde sur le chemin des héros (une pièce : son premier rang ; un Poste de garde : 2)
 const routeGuardCap = () => { const seen = new Set(); let n = 0; (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (!guardable(r)) return; const k = groupOf(r).rooms[0].id; if (seen.has(k)) return; seen.add(k); n += roomGuardCap(r); }); return n; };
 const newStateGuards = newState;
-newState = function (...a) { const r = newStateGuards(...a); if (S) { S.guardsV = 1; S.guardsV2 = 1; } return r; };
+newState = function (...a) { const r = newStateGuards(...a); if (S) { S.guardsV = 1; S.guardsV2 = 1; S.guardsV3 = 1; } return r; };
 // les gardes postés dans un couloir sans Poste de garde rentrent défendre le Cœur (règle d'avant : tout couloir se gardait)
 const upgradeStateHalls = upgradeState;
 upgradeState = function (s) {
@@ -58,8 +53,16 @@ upgradeState = function (s) {
   if (s && s.creatures && !s.guardsV2) {
     s.guardsV2 = 1; let n = 0;
     s.creatures.forEach(c => { const r = c.guard && (s.rooms || []).find(o => o.id === c.guard); if (r && r.t === 'couloir' && !(s.defs || []).some(d => d.x === r.x && d.y === r.y && zOf(d) === zOf(r) && (DEFS[d.t] || {}).post)) { c.guard = null; n++; } });
-    if (n && Array.isArray(s.log)) s.log.unshift({ n: s.night || 1, text: `🛡️ ${n} garde${n > 1 ? 's' : ''} posté${n > 1 ? 's' : ''} dans des couloirs rentre${n > 1 ? 'nt' : ''} au Cœur : un couloir ne se garde plus qu’avec un Poste de garde (onglet Pièges).`, tone: '' });
+    // (plus de message : les gardes sont de toute façon levés juste après, voir guardsV3)
   }
+  return s;
+};
+
+// plus de gardes : les vieilles parties lèvent tous les postes de garde (le tirage des défenseurs les remplace)
+const upgradeStateNoGuards = upgradeState;
+upgradeState = function (s) {
+  s = upgradeStateNoGuards(s);
+  if (s && s.creatures && !s.guardsV3) { s.guardsV3 = 1; s.creatures.forEach(c => { if (c.guard) c.guard = null; }); }
   return s;
 };
 
@@ -71,9 +74,10 @@ function guardHud() {
   if (!h) { h = el('div', 'guardhud panel', ''); h.id = 'guardHud'; $('#game').appendChild(h); h.addEventListener('click', e => { if (e.target.closest('[data-gm="close"]')) guardMode(false); if (e.target.closest('[data-gm="clear"]')) { S.creatures.forEach(c => { c.guard = null; }); afterChange(); sfx('peel'); guardHud(); } }); }
   const n = guardCount(), cap = guardCap(), sel = GM.sel && critter(GM.sel);
   h.innerHTML = `<div class="gh-top"><b>${gi('shield')} Les gardes <span class="gh-n${n >= cap ? ' full' : ''}">${n}/${cap}</span></b><button type="button" class="sbtn" data-gm="clear">Tout retirer</button><button type="button" class="sbtn pri" data-gm="close">Terminé</button></div>
-    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce du château (ou un Poste de garde) pour l’y poster, ou sa vignette pour la libérer.` : 'Glisse une créature de la liste sur une pièce <b>du chemin des héros</b> (en doré) : elle y arrêtera la bande. Un couloir ne se garde qu’avec un <b>Poste de garde</b> (Construire, onglet Pièges) : un barrage de 2 gardes au plus. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur.'}</p>`;
+    <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce du château (ou un Poste de garde) pour l’y poster, ou sa vignette pour la libérer.` : 'Glisse une créature de la liste sur une pièce : si la bande la traverse, elle l’y combattra aux cartes. Un couloir ne se garde qu’avec un <b>Poste de garde</b> (Construire, onglet Pièges) : 2 gardes au plus, qui renforcent la pièce voisine. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur (les 3 plus solides).'}</p>`;
 }
 function guardMode(on) {
+  on = false;   // le mode Gardes ne s'ouvre plus (les défenseurs sont tirés au sort)
   GM.on = !!on; GM.of = on ? S : null; GM.sel = null; GM.drag = null; GM.hover = null;
   document.body.classList.toggle('guarding', GM.on);
   const b = $('#btnGuards'); if (b) { b.classList.toggle('on', GM.on); b.setAttribute('aria-pressed', GM.on); }
@@ -138,16 +142,15 @@ function bindGuards() {
     else if (r && guardable(r) && guardsOfRoom(r).length) { const c = guardsOfRoom(r)[0]; guardDrop(c.id, null); toast(`${c.name} quitte son poste de garde.`); }
   }, true);
   cv.addEventListener('pointermove', e => { if (GM.on && GM.sel) GM.hover = roomAtScreen(e.clientX, e.clientY); });
-  const b = $('#btnGuards'); if (b) b.addEventListener('click', () => { if (!UI.busy) guardMode(!GM.on); });
 }
 const CMDcheck = (id, r) => { const c = critter(id); if (!c) return 'Absent·e'; const save = c.guard; const err = CMD.guard({ id, room: r.id }); c.guard = save; return err; };
 
-// sur le château : le chemin des héros en doré, et sur chaque pièce les vignettes de ses gardes
+// sur le château : les pièces à garder en doré (la bande peut passer par n'importe laquelle), et sur chaque pièce les vignettes de ses gardes
 const drawOverlaysGuards = drawOverlays;
 drawOverlays = function (t) {
   drawOverlaysGuards(t);
   if (!GM.on) return;
-  const route = new Set(); try { (heroRoute() || []).forEach(([x, y, z]) => { const r = roomAt(x, y, z || 0); if (r && (z || 0) === Z) route.add(r.id); }); } catch (e) {}
+  const route = new Set(); S.rooms.forEach(r => { if (zOf(r) === Z && guardable(r) && !isHall(r)) route.add(r.id); });
   worldXf();
   S.rooms.forEach(r => { if (zOf(r) !== Z || !guardable(r)) return; if (route.has(r.id)) glowPath(footprint(r), '255,205,110', true, .8, [14, 10]); });
   const hov = GM.hover && guardable(GM.hover) ? GM.hover : null;
@@ -171,26 +174,7 @@ drawOverlays = function (t) {
     ctx.fillStyle = gs.length >= cap || on ? '#2a1c16' : '#fff3dc'; if (gs.length >= cap) ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, sx + R * .45, sy + R * .78);
   });
 };
-// la fiche d'une pièce : ses gardes, et un bouton pour en poster
-const openRoomGuards = openRoom;
-openRoom = function (id) {
-  openRoomGuards(id);
-  const r = S.rooms.find(x => x.id === id), m = document.querySelector('#modalRoot .modal'); if (!r || !m || !guardable(r)) return;
-  const gs = guardsOfRoom(r), box = el('div', 'gsec', `<h3>${gi('shield')} Gardes (${gs.length}/${roomGuardCap(r)})</h3><p>${gs.length ? gs.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne ne garde cette pièce. Si les héros passent par ici, des gardes les y arrêtent.</span>'}</p><div class="btnrow"><button type="button" class="sbtn" data-gm="open">${gi('shield')} Placer des gardes (${guardCount()}/${guardCap()})</button></div>`);
-  const foot = m.querySelector('.mbody .btnrow:last-child'); (foot ? foot.parentNode.insertBefore(box, foot) : m.querySelector('.mbody').appendChild(box));
-  box.addEventListener('click', e => { if (e.target.closest('[data-gm="open"]')) { closeModal(); guardMode(true); } });
-};
-// la fiche d'une créature : son poste de garde
-const openCreatureGuards = openCreature;
-openCreature = function (id) {
-  openCreatureGuards(id);
-  const c = critter(id), m = document.querySelector('#modalRoot .modal'), post = m && m.querySelector('#mPost'); if (!c || !post) return;
-  const dl = post.closest('dl'), rooms = builtRooms().filter(guardable);
-  const opts = `<option value="">Aucun (défend le Cœur)</option>` + rooms.map(r => `<option value="${r.id}" ${c.guard === r.id ? 'selected' : ''}>${esc(ROOMS[r.t].name)}${zOf(r) ? ' · ' + FLOOR_SHORT[zOf(r)] : ''} (${guardsOfRoom(r).length}/${roomGuardCap(r)})</option>`).join('');
-  const dt = el('dt', '', 'Garde'), dd = el('dd', '', `<select class="sel" id="mGuard" ${isOut(c) ? 'disabled' : ''} aria-label="Poste de garde de ${esc(c.name)}">${opts}</select> <span class="hint">${guardCount()}/${guardCap()} gardes</span>`);
-  if (dl) { const at = post.closest('dd'); at.after(dt, dd); }
-  dd.querySelector('select').addEventListener('change', e => { const err = CMD.guard({ id, room: e.target.value || null }); if (err) { toast(err, true); sfx('bad'); } else { sfx('tick'); afterChange(); } openCreature(id); });
-};
+// (les fiches des pièces et des créatures n'ont plus de section « Garde » : il n'y a plus rien à poster)
 
 const bindSoulsGuards = bindSouls;
 bindSouls = function () { bindSoulsGuards(); try { bindGuards(); } catch (e) { console.error(e); } };

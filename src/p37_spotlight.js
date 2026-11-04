@@ -8,7 +8,7 @@ function spotFacts(c) {
   const sp = SPECIES[c.sp] || {}, F = SP_FIGHT[c.sp], X = typeof CRAWL_SK !== 'undefined' && CRAWL_SK[c.sp], rows = [];
   rows.push(`<li><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</li>`);
   rows.push(`<li>🛡️ Garde ${sp.guard || 0} · 🎲 ${sp.dice || 0} dé${(sp.dice || 0) > 1 ? 's' : ''} en raid${sp.tag ? ` · ${esc(TAGS[sp.tag])}` : ''}</li>`);
-  if (F) rows.push(`<li>⚔️ Au combat : <b>${esc(F.sk)}</b>. ${esc(F.sd)}</li>`);
+  { const K = typeof CRAWL_SK !== 'undefined' && CRAWL_SK[c.sp]; if (K) { let t = ''; try { t = cardText(newCard('sp', c.sp), null, null); } catch (e) {} rows.push(`<li>🃏 Sa carte au combat : <b>${esc(K.name)}</b>${t ? `. ${esc(String(t).replace(/<[^>]+>/g, ''))}` : ''}</li>`); } }
   if (X) rows.push(`<li>${X.ico} En expédition : <b>${esc(X.name)}</b>. ${esc(X.desc)}</li>`);
   if (sp.likes) rows.push(`<li>💛 Adore le sticker <b>${esc(itemName(sp.likes))}</b>${hasItem(sp.likes) ? ' (tu en as un !)' : ''}.</li>`);
   if (sp.from && ROOMS[sp.from]) rows.push(`<li>🏠 Attiré·e par : ${sp.from === 'coeur' ? 'le Cœur' : esc(ROOMS[sp.from].name)}. Y avoir son poste la rend plus heureuse.</li>`);

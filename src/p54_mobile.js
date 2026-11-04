@@ -151,13 +151,11 @@ if (typeof cv !== 'undefined' && cv && cv.addEventListener) {
    des étiquettes sous les boutons du bas et de la colonne de gauche, le texte des 3 notifications les plus
    importantes, un appui long qui montre ce que fait n'importe quel bouton (sans le déclencher), et un petit
    rappel des gestes au premier toucher sur le château. */
-const ACT_LABELS = { zfit: 'Cadrer', btnPath: 'Chemin', btnGuards: 'Gardes', btnRaid: 'Raid', btnTier: 'Cœur', btnVal: 'Le Val', btnBest: 'Album', btnRen: 'Renom', btnAch: 'Exploits', btnQuests: 'Quêtes' };
+const ACT_LABELS = { zfit: 'Cadrer', btnPath: 'Chemin', btnRaid: 'Raid', btnTier: 'Cœur', btnVal: 'Le Val', btnBest: 'Album', btnRen: 'Renom', btnAch: 'Exploits', btnQuests: 'Quêtes' };
 function labelActs() { Object.entries(ACT_LABELS).forEach(([id, t]) => { const b = document.getElementById(id); if (b && !b.querySelector('.albl')) { const s = document.createElement('span'); s.className = 'albl'; s.textContent = t; b.appendChild(s); } }); }
 // ce que fait chaque bouton, en une phrase (l'appui long au doigt)
 const LP_HELP = {
   zfit: 'Recadrer : remet tout le château à l’écran.',
-  btnPath: 'Chemin des héros : montre par où passeront les aventuriers, pour y poser tes pièges et tes gardes.',
-  btnGuards: 'Gardes : poste tes créatures sur le chemin des héros (fais glisser leur portrait sur une pièce, ou sur un Poste de garde dans un couloir).',
   btnRaid: 'Raid : envoie une équipe piller les environs, ou partir en expédition dans un donjon. Ça se joue à la fin de la nuit.',
   btnTier: 'Cœur du donjon : monter de palier, ouvrir des étages, agrandir les remparts, lancer un grand chantier.',
   btnVal: 'Le Val des Maîtres : les châteaux des autres joueurs, en ligne.',

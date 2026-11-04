@@ -22,10 +22,10 @@ const BARGAINS = [
 // la fatigue (0 à 6) : pousser coûte 2, une approche désespérée 1 ; on récupère 1 par nuit de repos
 const FAT_MAX = 6, FAT_TIRED = 4;
 const SCARS = {
-  froussard:   { ico: '😰', name: 'Froussard·e', desc: '−1 en attaque au combat, mais +1 dé dans les raids de ruse : il·elle sait filer.' },
+  froussard:   { ico: '😰', name: 'Froussard·e', desc: '+1 dé dans les raids de ruse : il·elle sait filer… mais −1 attaque quand il·elle défend le château.' },
   tetebrulee:  { ico: '🔥', name: 'Tête brûlée', desc: '+1 dé dans tous les raids, mais −1 ❤️ de plus quand un raid échoue.' },
-  rancunier:   { ico: '😤', name: 'Rancunier·e', desc: '+1 en attaque au combat : il·elle n’a rien oublié.' },
-  insomniaque: { ico: '👁️', name: 'Insomniaque', desc: '+2 PV au combat (toujours aux aguets), mais récupère la fatigue deux fois moins vite.' },
+  rancunier:   { ico: '😤', name: 'Rancunier·e', desc: 'Il·elle n’a rien oublié : +1 attaque quand il·elle défend le château.' },
+  insomniaque: { ico: '👁️', name: 'Insomniaque', desc: 'Toujours aux aguets : +4 de parade au premier tour quand il·elle défend le château, mais récupère la fatigue deux fois moins vite.' },
 };
 const scarsOf = c => c.scars || [];
 function addFat(c, n, lines) {
@@ -130,7 +130,7 @@ function simRaidExtras(b, team, lines) {
 }
 
 /* ---------- la fiche, les stickers, l'aube ---------- */
-STATUS.fatigue = { ch: '😮‍💨', bg: '#8a7a5a', tip: 'Épuisé·e : −1 dé en raid et −2 PV au combat' };
+STATUS.fatigue = { ch: '😮‍💨', bg: '#8a7a5a', tip: 'Épuisé·e : −1 dé en raid et −4 PV au combat' };
 const statusOfFat = statusOf;
 statusOf = function (c) { const l = statusOfFat(c); if (c && (c.fat || 0) >= FAT_TIRED && !isOut(c)) l.splice(Math.min(l.length, 3), 0, 'fatigue'); return l; };
 const openCreatureFat = openCreature;
@@ -141,6 +141,6 @@ openCreature = function (id) {
 };
 WIKI.raids2 = { cat: 'danger', t: 'Approches, pacte et fatigue', x: () => `<p>Trois décisions rendent un raid plus tendu :</p><ul>
   <li><b>L’approche</b>, en le planifiant : ${Object.values(RAID_APPS).map(a => `${a.ico} <b>${esc(a.name)}</b> (${esc(a.desc)})`).join(' ; ')}.</li>
-  <li><b>Pousser l’équipe</b>, au moment de lancer : +1 dé, mais 2 de fatigue chacun. À ${FAT_TIRED} de fatigue, une créature est épuisée (−1 dé, −2 PV au combat). Elle récupère 1 par nuit de repos.</li>
+  <li><b>Pousser l’équipe</b>, au moment de lancer : +1 dé, mais 2 de fatigue chacun. À ${FAT_TIRED} de fatigue, une créature est épuisée (−1 dé, −4 PV au combat). Elle récupère 1 par nuit de repos.</li>
   <li><b>Le pacte du diable</b>, au moment de lancer : +1 dé, contre un prix annoncé d’avance (Calamité, Menace, une créature sonnée, du prestige pour ton rival…). Il se paie quel que soit le résultat.</li>
   <li><b>Les cicatrices</b> : une créature qui atteint ${FAT_MAX} de fatigue en garde une pour la vie (deux au plus) : ${Object.values(SCARS).map(s => `${s.ico} ${esc(s.name)}`).join(', ')}. Rien de grave, mais elle change.</li></ul>` };

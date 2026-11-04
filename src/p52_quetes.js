@@ -170,7 +170,7 @@ const QGEN = {
     const prep = Math.random();
     if (prep < .3 && metierRooms().some(w => w === 'forge' || w === 'atelier')) { const w = builtCount('forge') ? 'forge' : 'atelier'; steps.push({ k: 'craft', t: 'Préparer l’accueil', x: 'Ils viendront bien armés. Tes créatures postées à la ' + ROOMS[w].name + ' préparent de quoi les recevoir.', items: [{ w, name: w === 'forge' ? 'chausse-trapes' : 'portes à ressort', n: 2 }], done: 'L’accueil est prêt. Il pique.' }); }
     else if (prep < .5) steps.push({ k: 'pay', t: 'Un espion', x: 'Un espion propose de te vendre leur plan d’attaque pour quelques pièces.', cost: { g: 6 + 2 * (S.tier || 0) }, done: 'Le plan est griffonné au dos d’une recette de crêpes, mais il est clair : ils viennent pour le Cœur.' });
-    steps.push(qDefend(band, rint(3, 4), `${cap1(band.name)} arrivent dans quelques nuits. Poste tes gardes, pose tes pièges et garde tes jetons du Cœur pour l’assaut : ils sont venus pour gagner.`, `${cap1(band.name)} repartent en boitant, leur fierté un peu froissée.`));
+    steps.push(qDefend(band, rint(3, 4), `${cap1(band.name)} arrivent dans quelques nuits. Pose tes pièges et ménage tes créatures les plus solides (une créature épuisée ne défend pas) : ils sont venus pour gagner.`, `${cap1(band.name)} repartent en boitant, leur fierté un peu froissée.`));
     const tr = pick(DEF_ORDER.filter(k => !DEFS[k].rank && !DEFS[k].unique && !DEFS[k].saga && !DEFS[k].block && DEFS[k].kind !== 'ruse'));
     return { ico: 'swords', title: cap1(band.name), giver: pick(['un héraut en collants', 'une lettre parfumée', 'un pigeon voyageur']), intro: `${how} : « ${cap1(band.name)}, pourfendeurs de donjons, défient ton château ! Ils viendront bientôt. Prépare-toi à… être pourfendu ! »`, steps, limit: 10, reward: qReward(steps, { free: { [tr]: 1 } }), outro: `${cap1(band.name)} te laissent, beaux joueurs, un souvenir de leur passage : ${itemName(tr)}.`, key: 'defi' };
   },
@@ -387,7 +387,7 @@ function questDawn(report) {
       st.items.forEach((it, i) => { const k = 'i' + i, need = it.n * QUEST_UNIT; if ((q.prog[k] || 0) < need) q.prog[k] = Math.min(need, (q.prog[k] || 0) + questProd(it.w)); });
       if (st.items.every((it, i) => (q.prog['i' + i] || 0) >= it.n * QUEST_UNIT)) questAdvance(q, out);
     } else if (st.k === 'wait' && S.night >= q.at) questAdvance(q, out);
-    else if (st.k === 'defend' && !q.armed && S.night >= q.at) { q.armed = true; S.menace = MENACE_MAX; out.push(['⚔️', `${cap1(st.band.name)} ${vbQ(st.band.name, 'arrivent', 'arrive')} cette nuit ! Poste tes gardes et garde tes jetons du Cœur.`, 'bad']); }
+    else if (st.k === 'defend' && !q.armed && S.night >= q.at) { q.armed = true; S.menace = MENACE_MAX; out.push(['⚔️', `${cap1(st.band.name)} ${vbQ(st.band.name, 'arrivent', 'arrive')} cette nuit ! Garde tes créatures les plus solides reposées : ce sont elles qui tiendront le Cœur.`, 'bad']); }
   });
   // les délais
   Q.cur.slice().forEach(q => { if (q.until && S.night > q.until) questFail(q, 'le temps est écoulé', out); });
@@ -425,7 +425,7 @@ function stepHTML(q, st) {
   if (st.k === 'pay') { const err = CMDcheckPay(q); return `<div class="btnrow"><button type="button" class="sbtn ${err ? '' : 'pri'}" data-qpay="${q.id}" ${err ? 'disabled' : ''}>Livrer : ${costTags(st.cost)}</button></div>${err ? `<p class="hint no">${esc(err)}.</p>` : ''}`; }
   if (st.k === 'choice') return `<div class="choices">${st.opts.map((o, i) => `<button type="button" class="choice" data-qch="${q.id}" data-o="${i}"><span class="emo">${gi('scroll')}</span><b>${esc(o.t)}</b><span>${esc(o.d)}</span></button>`).join('')}</div>`;
   if (st.k === 'raid' || st.k === 'boss') { const T = st.raid || {}, planned = S.raid && S.raid.target === st.target; return `<div class="btnrow"><button type="button" class="sbtn pri" data-qraid="${st.target}">${gi('swords')} ${planned ? 'Équipe prête : voir le raid' : st.k === 'boss' ? 'Préparer l’expédition' : 'Préparer le raid'}</button></div><p class="hint">${esc(T.desc || '')}${planned ? ' Ton équipe part à la fin de la nuit.' : ''}</p>`; }
-  if (st.k === 'defend') { const left = Math.max(0, (q.at || S.night) - S.night); return `<p class="${q.armed ? 'no' : 'hint'}">${q.armed ? `${gi('swords')} Ils attaquent à la fin de cette nuit !` : `${gi('hourglass')} Ils arrivent dans ${left} nuit${left > 1 ? 's' : ''}.`}</p><div class="btnrow"><button type="button" class="sbtn" data-qguard="1">${gi('shield')} Placer les gardes</button></div>`; }
+  if (st.k === 'defend') { const left = Math.max(0, (q.at || S.night) - S.night); return `<p class="${q.armed ? 'no' : 'hint'}">${q.armed ? `${gi('swords')} Ils attaquent à la fin de cette nuit !` : `${gi('hourglass')} Ils arrivent dans ${left} nuit${left > 1 ? 's' : ''}.`}</p><p class="hint">${gi('shield')} Tes créatures se défendront d’elles-mêmes : les plus fortes au Cœur, les autres tirées au sort dans les pièces. Évite de les épuiser en raids d’ici là.</p>`; }
   if (st.k === 'wait') { const left = Math.max(0, q.at - S.night); return `<p class="hint">${gi('hourglass')} Encore ${left} nuit${left > 1 ? 's' : ''}.</p>`; }
   return '';
 }
@@ -475,7 +475,6 @@ function openQuests(tab) {
     else if (d.qab) confirmBtn(b, 'Sûr ? Elle sera perdue', () => act('questAbandon', { id: d.qab }));
     else if (d.qraid) { closeModal(true); openRaid(d.qraid); }
     else if (d.qcook) cookModal();
-    else if (d.qguard) { closeModal(true); guardMode(true); }
     else if (d.qmis) openMissions();
     else if (d.qcrit) openCreature(d.qcrit);
   });

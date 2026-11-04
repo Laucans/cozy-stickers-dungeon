@@ -366,7 +366,7 @@ function checkDef(t, x, y) {
   if (!r || r.t !== 'couloir') return 'Les pièges se posent dans un couloir';
   if (defAt(x, y)) return 'Il y a déjà un piège ici';
   if (furnAt(x, y)) return 'Une déco occupe ce couloir';
-  if (DEFS[t] && DEFS[t].block && !heroRoute([x, y, Z])) return 'Il faut laisser aux héros un chemin jusqu’au Cœur (sinon ils défoncent tout)';
+  if (DEFS[t] && DEFS[t].block && !heroRoute([x, y, Z])) return 'Il faut toujours laisser un passage du porche jusqu’au Cœur';
   return null;
 }
 function useCost(kind, t) { if ((S.free[t] || 0) > 0) S.free[t]--; else pay(costOf(kind, t)); }

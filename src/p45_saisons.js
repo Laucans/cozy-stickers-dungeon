@@ -30,7 +30,7 @@ dawn = function (report) {
     let what = '';
     if (Sn.k === 'printemps') { S.gold += 8; what = '+8 or'; }
     else if (Sn.k === 'ete') { S.hype += 3; what = '+3 notoriété'; }
-    else if (Sn.k === 'automne') { S.bonusToken = 1; what = 'un jeton du Cœur de plus à la prochaine invasion'; }
+    else if (Sn.k === 'automne') { S.bonusToken = 1; what = '+1 énergie au premier tour du combat du Cœur, à la prochaine invasion'; }
     else { S.creatures.forEach(c => { c.mood = Math.min(5, c.mood + 1); }); what = 'tout le monde se réchauffe (+1 humeur)'; }
     report.push(['🎉', `C’est ${Sn.fete} dans tout le Val : ${what}${gift ? `, et un sticker de saison offert (${FURN[gift].name})` : ''}.`, 'good']);
   }

@@ -8,7 +8,7 @@ function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.
 const UI = { tab: 'room', hand: null, busy: false, phase: 'roder', prev: {}, tracker: true };
 const PHASES = [['roder', 'Rôder'], ['calamite', 'Calamité'], ['raid', 'Raid'], ['contrecoup', 'Contrecoup'], ['aube', 'Aube']];
 const STAT_LABELS = { gold: ['💰', 'or / nuit'], mat: ['🪵', 'matériaux / nuit'], hype: ['🔥', 'notoriété / nuit'], food: ['🍲', 'repas'], beds: ['🛏️', 'lits'],
-  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde'], harass: ['🪨', 'dégâts aux héros dès leur arrivée'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
+  amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde (×2,5 dégâts au premier héros qui entre)'], harass: ['🪨', 'harcèlement (×2,5 PV de cailloux sur la bande à son arrivée)'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
   sight: ['🔭', 'cases de carte en vue'], glow: ['✨', 'rayonnement'] };
 const statTags = o => Object.keys(STAT_LABELS).filter(k => o[k]).map(k => `<span class="tag2">${STAT_LABELS[k][0]} ${o[k] > 0 ? '+' : ''}${o[k]} ${STAT_LABELS[k][1]}</span>`).join('');
 const hearts = m => `<span class="hearts" aria-label="Humeur ${m} sur 5">${'❤️'.repeat(m)}<span class="off">${'🤍'.repeat(5 - m)}</span></span>`;
@@ -71,7 +71,7 @@ function renderSheet() {
       sh.appendChild(b);
     }
   }
-  if (!sh.children.length) sh.appendChild(el('div', 'empty', Z === EXT ? (UI.tab === 'def' ? '<b>Pas de pièges dans les Jardins.</b> Ils se posent dans les couloirs du château, au rez-de-chaussée.' : UI.tab === 'arte' ? '<b>Les trésors s’exposent à l’intérieur.</b> Rentre au château pour les poser.' : '<b>Rien à poser dehors ici.</b>')
+  if (!sh.children.length) sh.appendChild(el('div', 'empty', Z === EXT ? (UI.tab === 'def' ? '<b>Pas de pièges dans les Jardins.</b> Ils se posent dans les couloirs du château, à tous les étages.' : UI.tab === 'arte' ? '<b>Les trésors s’exposent à l’intérieur.</b> Rentre au château pour les poser.' : '<b>Rien à poser dehors ici.</b>')
     : UI.tab === 'arte' ? '<b>Aucun artefact pour l’instant.</b> Les héros vaincus en abandonnent, les expéditions en rapportent, et les marchands de la ville en vendent (à prix d’or).' : '<b>Rien à poser ici.</b>'));
 }
 function tipHTML(kind, t) {
@@ -84,18 +84,18 @@ function tipHTML(kind, t) {
     if (r.syn) { const k = Object.keys(r.syn).find(x => x !== 'adj'); li.push(`🤝 Si elle touche ${ROOMS[r.syn.adj].name} : ${STAT_LABELS[k] ? `${STAT_LABELS[k][0]} +${r.syn[k]} ${STAT_LABELS[k][1]}` : '+' + r.syn[k] + ' ' + k}.`); }
     if (typeof ROOM_CLASH !== 'undefined') { const cl = ROOM_CLASH.filter(([x, y]) => x === t || y === t); if (cl.length) li.push(`🚫 Jamais au même étage que : ${cl.map(([x, y, why]) => `${ROOMS[x === t ? y : x].name} (${why})`).join(', ')}.`); }
     if (ups.length) li.push(`🧩 Collée à une autre ${r.name} : grande salle, +1 Ambiance et stickers améliorés (${ups.map(f => FURN[f].name).join(', ')}).`);
-    if (typeof ROOM_EVENTS !== 'undefined' && !isHall({ t }) && ROOM_EVENTS[t]) li.push(`🚪 Les héros qui la traversent : « ${ROOM_EVENTS[t].sk} ».`);
+    if (t !== 'coeur' && !isHall({ t }) && !r.out && !r.stairs) li.push('⚔️ En invasion : si des défenseurs y sont tirés au sort, un combat aux cartes (ses meubles donnent leurs cartes) ; sinon, ses créatures agissent à leur idée, puis la bande pille.');
     if (r.edge) li.push('📐 Doit toucher les remparts.'); if (r.far) li.push(`📐 À ${r.far} pas du porche au moins.`); if (r.unique) li.push('⭐ Unique.');
     if (r.furn && !r.preset) li.push(`🪑 Meubles : ${r.furn.filter(f => FURN[f] && !FURN[f].size).map(f => FURN[f].name).join(', ')}.`);
     if (!isHall({ t })) { const n = r.size[0] * r.size[1]; li.push(`📦 Place : ${Math.ceil(n / 2)} sticker${n > 2 ? 's' : ''} au plus (un pour deux cases ; une grande salle additionne ses pièces).`); }
   } else if (kind === 'def') {
     const f = DEFS[t];
-    html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · ${f.str} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
-    if (f.kind === 'piège') li.push('🎯 Blesse un héros au hasard. La voleuse désamorce le premier piège de la route.');
-    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.'); if (f.post) li.push('🛡️ Seul moyen de garder un couloir : 2 gardes au plus, ils arrêtent la bande ici.');
-    if (f.lost) li.push(`🌀 ${Math.round(f.lost * 100)} % de chances que la bande renonce et rentre.`);
-    if (f.sticky) li.push('🍌 La rencontre suivante frappe +1.'); if (f.alarm) li.push('🔔 Les défenseurs de leur cible frappent +1.'); if (f.block) li.push('🧱 Ferme le couloir : la bande fait un détour (montré en bleu quand tu la tiens).');
-    li.push('📍 Se pose dans un couloir, sur le chemin des héros (à tous les étages qu’ils traversent pour atteindre le Cœur).');
+    html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · force ${f.str} : ${Math.round(f.str * 2.5)} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
+    if (f.kind === 'piège') li.push('🎯 Blesse un héros au hasard (sa force × 2,5 en dégâts). La voleuse, ou le héros némésis, désamorce le premier piège.');
+    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.'); if (f.post) li.push('🛡️ La pièce voisine tire un défenseur de plus quand une bande l’attaque.');
+    if (f.lost) li.push(`🌀 ${Math.round(f.lost * 60)} % de chances que la bande renonce et rentre.`);
+    if (f.sticky) li.push('🍌 La victime perd son premier tour au combat suivant.'); if (f.alarm) li.push('🔔 Où qu’elle soit : +1 énergie au premier tour du combat du Cœur.'); if (f.block) li.push('🧱 La bande perd du temps à l’enfoncer : elle pille moitié moins d’or dans la pièce voisine.');
+    li.push(f.post ? '📍 Se pose dans un couloir, contre une pièce.' : `📍 Se pose dans un couloir, contre une pièce : ${f.str || f.lost ? 'il frappe la bande quand elle y entre (une fois par invasion), et ' : ''}donne sa carte aux combats de cette pièce.`);
     if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
   } else {
     const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(spn);
@@ -138,8 +138,7 @@ function notifList() {
     const q = questOf(c); if (q && q.st === 'ready' && !isOut(c)) add('qa' + c.id, '🧭', `${c.name} rêve d’aventure`, () => openCreature(c.id), 3);
   });
   { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
-  if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, 6, 'bad');
-  if (typeof guardCount === 'function' && S.menace >= MENACE_MAX - 2) { const gc = guardCount(), cap = Math.min(guardCap(), S.creatures.filter(c => !isOut(c)).length - 1, typeof routeGuardCap === 'function' ? routeGuardCap() : 99); if (gc < cap) add('guards', '🛡️', `Poste tes gardes sur leur chemin (${gc}/${cap})`, () => guardMode(true), 5, 'bad'); }
+  if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => openGrimoire('invasion'), 6, 'bad');
   if (typeof RECIPES !== 'undefined' && hasKitchen() && Object.keys(RECIPES).some(canCook) && Object.values(pantry()).reduce((a, b) => a + b, 0) >= 10) add('cook', '🍲', 'Le garde-manger déborde : cuisine !', () => cookModal(), 1);
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
@@ -314,8 +313,8 @@ function openRoom(id) {
       <details class="ardet"><summary>${gi('info')} Tous ses effets</summary><div class="ardetb">${tipHTML('furn', t)}</div></details>
       <button class="sbtn ${no ? '' : 'pri'}" type="button" data-take="${t}" ${no ? 'disabled' : ''}>${no ? 'Indisponible' : `${gi('pin')} Coller ici`}</button></div>`; }).join('')}</div>`;
   }
-  if (r.t === 'coeur') { const def = homeCreatures().filter(c => !c.post || c.post === r.id); html += `<h3>Défenseurs du Cœur</h3><p>${def.length ? def.map(c => esc(c.name)).join(', ') : 'Personne !'} <span class="hint">(garde ${def.reduce((a, c) => a + guardOf(c), 0)})</span></p>`; }
-  else if (!isHall(r)) { const posted = S.creatures.filter(c => c.post === r.id); html += `<h3>Postes</h3><p>${posted.length ? posted.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne. Donne un poste ici depuis la fiche d’une créature : elle défendra la pièce.</span>'}</p>`; }
+  if (r.t === 'coeur') { const def = typeof invHeartCrew === 'function' ? invHeartCrew() : homeCreatures().filter(c => !c.post || c.post === r.id); html += `<h3>Défenseurs du Cœur</h3><p>${def.length ? def.map(c => esc(c.name)).join(', ') : 'Personne !'} <span class="hint">(si une bande attaquait ce soir : les plus fortes de tes créatures reposées ; les autres sont tirées au sort pour les pièces)</span></p>`; }
+  else if (!isHall(r)) { const posted = S.creatures.filter(c => c.post === r.id); html += `<h3>Postes</h3><p>${posted.length ? posted.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne. Donne un poste ici depuis la fiche d’une créature : si la bande passe et que personne n’a été tiré pour défendre la pièce, elle agira à son idée.</span>'}</p>`; }
   html += '<div class="btnrow">';
   if (!r.built) html += `<button class="sbtn pri" id="mPush" type="button" ${S.gold >= 2 && r.prog + (r.boost || 0) < d.clock ? '' : 'disabled'}>🔨 Renfort de nuit : +1 segment à l’aube (2 💰)${r.boost ? ` · ${r.boost} prévu${r.boost > 1 ? 's' : ''}` : ''}</button>`;
   if (!d.fixed) html += `<button class="sbtn danger" id="mRemove" type="button">${r.built ? 'Décoller (rend la moitié)' : 'Annuler le chantier (remboursé)'}</button>`;
@@ -346,9 +345,9 @@ function openFurn(id) {
 }
 function openDef(id) {
   const d = S.defs.find(x => x.id === id); if (!d) return; const f = DEFS[d.t];
-  const m = openModal(`<div class="cardhead"><div class="portrait">${imgThumb('def', d.t)}</div><div><h2>${esc(f.name)}</h2><p><span class="tag2">${f.kind}</span><span class="tag2">force ${defStr(d)}</span></p></div></div>
+  const m = openModal(`<div class="cardhead"><div class="portrait">${imgThumb('def', d.t)}</div><div><h2>${esc(f.name)}</h2><p><span class="tag2">${f.kind}</span><span class="tag2">force ${defStr(d)}${f.str ? ` · ${Math.round(defStr(d) * 2.5)} dégâts` : ''}</span></p></div></div>
     <p>${esc(f.desc)}</p>${f.kind === 'piège' && trapBonus() ? `<p class="hint">+${trapBonus()} grâce à tes Kobolds.</p>` : ''}${f.kind === 'verrou' && S.theme === 'bastion' ? '<p class="hint">+1 grâce à la Forteresse têtue.</p>' : ''}
-    <p class="hint">Les aventuriers prennent le plus court chemin du porche au Cœur. Active « Chemin des héros » pour vérifier que tes pièges sont dessus.</p>
+    <p class="hint">La bande traverse des pièces tirées au hasard, face à des défenseurs de plus en plus forts : un piège posé dans un couloir frappe quand elle entre dans une pièce voisine.</p>
     <div class="btnrow"><button class="sbtn" id="mRemove" type="button">Décoller (retourne dans ta planche)</button><button class="sbtn" type="button" data-wiki-open="def:${d.t}">📖 Grimoire</button></div>`, { label: f.name });
   m.querySelector('#mRemove').addEventListener('click', () => { if (run('removeDef', { id })) { sfx('peel'); closeModal(); afterChange(); } });
 }
@@ -379,7 +378,7 @@ function openCreature(id) {
     ${q ? questCard(c, q) : `<p class="hint" id="mEnvie">${c.legend ? '🗿 Son histoire est devenue légende. Il·elle repartira parfois à l’aventure.' : `Son histoire : chapitre ${c.story || 0}/3. ${(c.story || 0) >= 2 && !c.dream ? 'La suite (une aventure) viendra quand son rêve secret sera réalisé.' : 'Une nouvelle envie viendra bientôt.'}`}</p>`}
     ${typeof secretHTML === 'function' ? secretHTML(c) : ''}
     <dl class="kv">${typeof persHTML === 'function' ? persHTML(c) : ''}<dt>Compétence</dt><dd><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</dd>
-      <dt>Combat</dt><dd>${(() => { const f = fighterOf(c); return `❤️ ${f.max} PV · ⚔️ ${f.atk}`; })()} · ${guardOf(c)} 🛡️ garde · ${diceOf(c)} 🎲 en raid${sp.eats > 1 ? ' · mange pour deux' : ''}${injured(c) ? '<br><span class="no">🤕 Sonné·e : se repose jusqu’à l’aube, ni garde ni raid.</span>' : ''}</dd>
+      <dt>Combat</dt><dd>${(() => { const f = crawler(c); return `❤️ ${f.max} PV · ⚔️ ${f.atk}`; })()} · ${guardOf(c)} 🛡️ garde · ${diceOf(c)} 🎲 en raid${sp.eats > 1 ? ' · mange pour deux' : ''}${injured(c) ? '<br><span class="no">🤕 Sonné·e : se repose jusqu’à l’aube, ni garde ni raid.</span>' : ''}</dd>
       <dt>Salaire</dt><dd>${salaryOf(c) ? `${salaryOf(c)} 💰 tous les ${PAY_EVERY} nuits${c.unpaid && S.night - c.unpaid < PAY_EVERY ? ' · <span class="no">pas payé·e à la dernière paie</span>' : c.paidAt ? ' · payé·e à la dernière paie' : ''}` : 'Aucun : les diablotins travaillent pour le Cœur'}</dd>
       <dt>Poste</dt><dd><select class="sel" id="mPost" ${out ? 'disabled' : ''} aria-label="Poste de ${esc(c.name)}">${opts}</select></dd>
       <dt>Expérience</dt><dd>${c.lvl < 5 ? `${bar((c.xp - LVL_XP[c.lvl]) / (LVL_XP[c.lvl + 1] - LVL_XP[c.lvl]) * 100, '#8fb8ff', 'XP')} <span class="num">${c.xp}/${LVL_XP[c.lvl + 1]} XP</span>` : '<b>Niveau maximal</b>'}${perks.length ? `<br><span class="hint">${perks.map(esc).join(' · ')}</span>` : ''}</dd>

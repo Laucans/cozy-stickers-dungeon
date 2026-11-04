@@ -82,9 +82,9 @@ function renderSpriteDetail() {
   } else if (kind === 'def') {
     const d = DEFS[key]; if (!d) return;
     html += `<h2>${esc(d.name)} <small class="hint">clé « ${esc(key)} »</small></h2>
-      <h3>Fiche</h3><div class="afgrid">${fld('DEFS', key, 'name', 'Nom', 'text')}${fld('DEFS', key, 'kind', 'Type', 'sel', { opts: [['verrou', 'Verrou'], ['piège', 'Piège'], ['ruse', 'Ruse']] })}${fld('DEFS', key, 'str', 'Force', 'num', { min: 0, max: 9 })}${fld('DEFS', key, 'lost', 'Chance de perdre les héros', 'num', { step: .05, min: 0, max: 1 })}
+      <h3>Fiche</h3><div class="afgrid">${fld('DEFS', key, 'name', 'Nom', 'text')}${fld('DEFS', key, 'kind', 'Type', 'sel', { opts: [['verrou', 'Verrou'], ['piège', 'Piège'], ['ruse', 'Ruse']] })}${fld('DEFS', key, 'str', 'Force', 'num', { min: 0, max: 9 })}${fld('DEFS', key, 'lost', 'Chance de perdre les héros (×0,6 en invasion)', 'num', { step: .05, min: 0, max: 1 })}
       ${fld('DEFS', key, 'needs', 'Pièce requise', 'sel', { opts: optsOf(ROOMS, '(aucune)') })}${fld('DEFS', key, 'tier', 'Palier requis', 'num', { min: 0, max: 3 })}${fld('DEFS', key, 'cost.g', 'Coût en or', 'num', { min: 0 })}${fld('DEFS', key, 'cost.s', 'Coût en matériaux', 'num', { min: 0 })}
-      ${fld('DEFS', key, 'sticky', 'Collant (+1 à la rencontre suivante)', 'bool')}${fld('DEFS', key, 'alarm', 'Alarme (+1 garde au Cœur)', 'bool')}${fld('DEFS', key, 'unique', 'Unique', 'bool')}${fld('DEFS', key, 'desc', 'Description', 'area')}</div>
+      ${fld('DEFS', key, 'sticky', 'Collant (la victime perd son 1er tour)', 'bool')}${fld('DEFS', key, 'alarm', 'Alarme (+1 énergie au combat du Cœur)', 'bool')}${fld('DEFS', key, 'unique', 'Unique', 'bool')}${fld('DEFS', key, 'desc', 'Description', 'area')}</div>
       <div class="btnrow"><button type="button" class="sbtn" data-act="give" data-arg="${key}">+3 stickers gratuits</button><button type="button" class="sbtn" data-act="resetD" data-arg="${key}">Réinitialiser</button></div>`;
   } else html += `<h2>Décor extérieur <small class="hint">« ${esc(key)} »</small></h2><p class="hint">Décor posé automatiquement autour des remparts (arbres, rochers, braseros du porche, échafaudage des chantiers, souches et fougères de la forêt des Jardins, poules du poulailler). Pas de statistiques.</p>`;
   box.innerHTML = html;

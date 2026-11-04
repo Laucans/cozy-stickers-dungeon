@@ -79,7 +79,7 @@ function rivalDawn(report) {
     out.push(['📯', `${who} te lance un défi : ${Dk.t(goal)} d’ici la nuit ${S.night + 6}. À la clé : de l’or, et un rival qui recule.`, 'ev']);
   }
   // le sabotage de la nuit prochaine est annoncé (ses sbires ne savent pas se taire)
-  if (S.night === n.next) out.push(['⚔️', `Rumeur : les sbires ${dN(who)} attaqueront ton château cette nuit ! Prépare le chemin, tes gardes et tes pièges.`, 'bad']);
+  if (S.night === n.next) out.push(['⚔️', `Rumeur : les sbires ${dN(who)} attaqueront ton château cette nuit ! Pose tes pièges et garde tes créatures reposées.`, 'bad']);
   else if (S.night + 1 === n.next) out.push(['⚔️', `Rumeur : les sbires ${dN(who)} préparent un sale coup pour la nuit prochaine.`, 'bad']);
   if (Math.random() < .25 && S.night >= 3) nemNews(`${who} : ${pick(NEM_TAUNTS[n.id] || ['« Bientôt, le Val sera à moi. »'])}`);
   if (out.length) { report.push(['sec', 'Ton rival']); out.forEach(l => report.push(l)); }
@@ -106,7 +106,7 @@ function nemRaidPlan() {
     return { k: sp, name: `${SPECIES[sp].name} ${dN(who)}`, hp: 3 + 2 * g + 2 * S.tier + Math.floor(lead / 6), atk: 1 + Math.floor(g / 2) + (S.tier >= 2 ? 1 : 0), minion: true, F: {} };
   });
   const plan = { party, rank: 1, foe: `les sbires ${dN(who)}`, rival: r.id, courage: party.reduce((a, h) => a + h.hp, 0), steps: [] };
-  return prepareParty(assignGoal(plan, { kidnap: false, wreck: 40 }), .35);   // des sbires : piller le Cœur, vider le trésor ou tout casser, et préparés à ta défense
+  return assignGoal(plan, { kidnap: false, wreck: 40 });   // (la préparation à ta défense n'a plus lieu d'être : les sbires traversent le château comme une bande, p70)   // des sbires : piller le Cœur, vider le trésor ou tout casser, et préparés à ta défense
 }
 function applyNemRaid(plan, R, lines) {
   const n = nem(), r = nemRival(), who = nemName(), v = vicState();
@@ -188,7 +188,7 @@ function openRival() {
 function rivalNotifs(add) {
   if (!nemActive()) return;
   const n = nem(), soon = n.next - S.night, who = nemName();
-  if (soon <= 0) add('nem', '🏴', `Les sbires ${dN(who)} attaquent cette nuit`, () => { if (!V.showPath) $('#btnPath').click(); openRival(); }, 6, 'bad');
+  if (soon <= 0) add('nem', '🏴', `Les sbires ${dN(who)} attaquent cette nuit`, () => { openRival(); }, 6, 'bad');
   else if (soon === 1) add('nem', '🏴', `${who} prépare un sabotage pour demain`, openRival, 4, 'bad');
   if (n.ch) { const D = DEFIS[n.ch.k]; add('nemch', '📯', `Défi ${dN(who)} : ${D.t(n.ch.goal)} (${Math.max(0, n.ch.until - S.night)} nuit${n.ch.until - S.night > 1 ? 's' : ''})`, openRival, 3); }
 }
@@ -198,6 +198,6 @@ WIKI.rival = { cat: 'val', t: 'Ton rival', x: () => `<p>Dès la première nuit, 
   <ul><li><b>Prestige</b> : Ambiance + 2 par créature + 1 par pièce + 3 par palier. Le rival grandit en même temps que toi, un peu plus vite s’il gagne.</li>
   <li><b>Créatures volées</b> : s’il a nettement plus de prestige que toi, il attire parfois chez lui une créature qui venait vers ton château.</li>
   <li><b>Défis</b> : il te met régulièrement au défi (avoir tant de créatures, tant d’Ambiance…) avant une nuit donnée. Relevé : or, matériaux, et il recule dans la course à la victoire.</li>
-  <li><b>Sabotages</b> : toutes les 8 à 12 nuits, ses sbires suivent le chemin des héros jusqu’à ton Cœur. La rumeur te prévient la veille. Ils se battent comme des aventuriers ({c:combat|combat}).</li>
+  <li><b>Sabotages</b> : toutes les 8 à 12 nuits, ses sbires traversent ton château comme une bande d’aventuriers : quelques pièces, puis le Cœur ({c:invasion}). La rumeur te prévient la veille, et pas question d’acheter leur départ.</li>
   <li><b>Le faire reculer</b> : repousser ses sbires, relever ses défis, et dès le Palier 1, piller sa tour. Trois raids réussis et il devient ton vassal ; un autre rival prend alors sa place.</li></ul>` };
 TIPS.push({ id: 'rival0', when: () => S.night >= 2 && !(S.tuto && S.tuto.on), t: 'Ton rival te surveille', x: 'Le blason en haut de l’écran, c’est ton rival : il te dispute les créatures, te lance des défis et enverra ses sbires. Touche-le pour voir qui mène.', wiki: 'rival' });

@@ -515,7 +515,7 @@ Object.assign(WIKI, {
     <ul><li>Tout le monde colle des pièces, des meubles et des pièges, comble les envies des créatures, prépare des raids. L’hôte vérifie chaque action.</li>
     <li>On voit les curseurs des autres, le sticker qu’ils ont en main, et on peut discuter.</li><li>Les invités cliquent <b>Je suis prêt·e</b> ; l’hôte lance la nuit et chacun voit la chronique.</li>
     <li>La partie se joue dans le château de l’hôte. Les invités retrouvent le leur en partant, et gagnent le haut fait « Main dans la main ».</li></ul>` },
-  escarmouches: { cat: 'val', t: 'Escarmouches et boucliers', x: () => `<p>En visite chez un voisin, tu peux lancer une <b>escarmouche</b> : jusqu’à 3 créatures tentent de chaparder un peu d’or. On lance un dé par point de raid de l’équipe, moins un dé par tranche de 6 de défense du château visé (pièges sur le chemin et gardes).</p>
+  escarmouches: { cat: 'val', t: 'Escarmouches et boucliers', x: () => `<p>En visite chez un voisin, tu peux lancer une <b>escarmouche</b> : jusqu’à 3 créatures tentent de chaparder un peu d’or. On lance un dé par point de raid de l’équipe, moins un dé par tranche de 6 de défense du château visé (pièges, garde des pièces et créatures prêtes à défendre).</p>
     <ul><li>Réussie : de l’or (selon le palier du voisin) et de la notoriété. Le voisin perd au plus 4 or.</li><li>Ratée : ton équipe rentre vexée, la Menace monte, et le voisin gagne de l’or et de la notoriété.</li>
     <li>Une escarmouche par nuit. Un château visité gagne un <b>bouclier</b> de 12 heures.</li><li>Un château <b>pacifique</b> (case à cocher dans le Val) ne peut ni viser, ni être visé.</li></ul>` },
 });

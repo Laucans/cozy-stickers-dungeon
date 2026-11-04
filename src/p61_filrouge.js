@@ -2,7 +2,7 @@
    Le fil rouge : huit chapitres pour découvrir le château
    Chaque étape a ses objectifs (une pastille 📜 à droite,
    son journal avec « Montre-moi ») et dévoile, une fois
-   achevé, de nouveaux boutons : les pièges et les gardes,
+   achevé, de nouveaux boutons : les pièges et la défense,
    puis le Raid et la carte, la renommée, les quêtes et le Val,
    la défense du Cœur aux cartes. Gribouille ouvre chaque
    chapitre ; le tutoriel pas à pas attend le chapitre de ses
@@ -17,13 +17,12 @@ const FIL = [
       { id: 'nuit', t: 'Finis ta première nuit', ok: () => S.night >= 2, show: () => filGlow('#btnNight'), wiki: 'nuit' },
       { id: 'crea', t: 'Accueille une nouvelle créature', ok: () => S.creatures.length >= 3, n: () => [Math.max(0, S.creatures.length - 2), 1], wiki: 'creatures' },
       { id: 'repas', t: 'Meuble un Potager ou une Cuisine', ok: () => hasFood(), show: () => { openBuild('room'); filGlow('.card[data-kind="room"][data-t="potager"]'); }, wiki: 'lits_repas' },
-    ], reward: { g: 10, s: 15 }, unlock: 'les pièges, les gardes et le chemin des héros' },
-  { id: 'visiteurs', t: 'Les premiers visiteurs', intro: 'La rumeur court au village : un château s’éveille. Des aventuriers viendront chercher l’or du Cœur. Prépare-leur un accueil : un piège sur leur chemin, un garde dans une pièce. Dès que tout est en place, ils arrivent.',
+    ], reward: { g: 10, s: 15 }, unlock: 'les pièges et la défense du château' },
+  { id: 'visiteurs', t: 'Les premiers visiteurs', intro: 'La rumeur court au village : un château s’éveille. Des aventuriers viendront chercher l’or du Cœur. Prépare-leur un accueil : un piège dans un couloir, contre une pièce. Tes créatures se défendront d’elles-mêmes : les plus fortes au Cœur, les autres tirées au sort dans les pièces. Dès que tout est en place, ils arrivent.',
     goals: [
-      { id: 'piege', t: 'Pose un piège sur le chemin des héros', ok: () => S.defs.length > 0, show: () => { openBuild('def'); filGlow('#btnPath'); }, wiki: 'pieges' },
-      { id: 'garde', t: 'Poste un garde dans une pièce du chemin (bouton Gardes)', ok: () => guardCount() > 0, show: () => filGlow('#btnGuards'), wiki: 'postes' },
+      { id: 'piege', t: 'Pose un piège dans un couloir', ok: () => S.defs.length > 0, show: () => { openBuild('def'); }, wiki: 'pieges' },
       { id: 'bande', t: 'Affronte ta première bande d’aventuriers', ok: () => S.stats.invasions >= 1, wiki: 'invasion' },
-    ], band: ['piege', 'garde'], bandAfter: 3, reward: { g: 12, s: 15 }, unlock: 'le Raid et la carte du Val' },
+    ], band: ['piege'], bandAfter: 3, reward: { g: 12, s: 15 }, unlock: 'le Raid et la carte du Val' },
   { id: 'pillage', t: 'Piller les environs', intro: 'Le Val regorge de fermes endormies et de moulins mal gardés. Ouvre la carte, choisis une cible, envoie une petite équipe. Mais un lieu pillé se méfie : varie tes cibles.',
     goals: [
       { id: 'carte', t: 'Ouvre la carte du Val', ok: () => !!filFlag('map'), show: () => filGlow('#minimap'), wiki: 'carte' },
@@ -45,7 +44,7 @@ const FIL = [
   { id: 'profond', t: 'Les profondeurs', intro: 'Sous les collines dorment des donjons. Le bouton Raid te propose des expéditions en cartes : chaque créature y joue ses cartes. Et quand une bande atteint le Cœur, c’est toi qui le défends, aux cartes. Une répétition t’attend dans le journal.',
     goals: [
       { id: 'expe', t: 'Mène une expédition en cartes', ok: () => (S.stats.crawls || 0) >= 1, show: () => filGlow('#btnRaid'), wiki: 'expeditions' },
-      { id: 'defc', t: 'Défends le Cœur aux cartes (une vraie bande, ou une répétition)', ok: () => (S.stats.cardDefs || 0) >= 1, show: () => filDrill(), showLabel: '🃏 Répétition', wiki: 'invasion' },
+      { id: 'defc', t: 'Livre un combat d’invasion aux cartes (une vraie bande, ou une répétition)', ok: () => (S.stats.cardDefs || 0) >= 1, show: () => filDrill(), showLabel: '🃏 Répétition', wiki: 'invasion' },
     ], reward: { g: 30, s: 40 }, unlock: 'la dernière marche' },
   { id: 'gloire', t: 'Vers la gloire', intro: 'Ton château a fière allure. Vise plus haut : le Palier 2, une Merveille pour l’or qui dort, et l’une des cinq victoires du Val (touche la nuit en cours, en haut à droite).',
     goals: [
@@ -62,7 +61,7 @@ const FIL = [
 // ce que chaque chapitre dévoile : la fonction est libre dès que le joueur a atteint ce chapitre
 const FIL_LOCKS = { def: 1, raid: 2, soc: 3, val: 4, cards: 5 };
 // les étapes du tutoriel pas à pas qui attendent un chapitre
-const FIL_STEP = { piege: 1, gardes: 1, jetons: 1, raid: 2, horloges: 2, envies: 2, fin: 2 };
+const FIL_STEP = { piege: 1, jetons: 1, raid: 2, horloges: 2, envies: 2, fin: 2 };
 const FILU = { showing: false, ev: [], glow: null };
 const filNew = () => ({ ch: 0, ok: {}, seen: 0, at: 1, f: {}, tg: {} });
 const filOn = () => !!(S && S.fil && !S.fil.done);
@@ -145,8 +144,8 @@ notifList = function () {
   let L = notifListFil();
   if (!filOn()) return L;
   const st = S.tuto && S.tuto.on && TUTO_STEPS[S.tuto.i];
-  L = L.filter(x => x.k !== 'goal' && !(x.k === 'tuto' && st && (FIL_STEP[st.id] || 0) > S.fil.ch) && !(filLocked('def') && (x.k === 'men' || x.k === 'guards')));
-  if (filBandDue()) L.unshift({ k: 'filband', ico: '⚔️', text: 'Une bande d’aventuriers arrive à la fin de cette nuit', act: () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, pri: 8, cls: 'bad' });
+  L = L.filter(x => x.k !== 'goal' && !(x.k === 'tuto' && st && (FIL_STEP[st.id] || 0) > S.fil.ch) && !(filLocked('def') && x.k === 'men'));
+  if (filBandDue()) L.unshift({ k: 'filband', ico: '⚔️', text: 'Une bande d’aventuriers arrive à la fin de cette nuit', act: () => { openGrimoire('invasion'); }, pri: 8, cls: 'bad' });
   const c = filCur(), [d, n] = filProgress();
   if (c && (S.ndis || {}).fil !== S.night) L.unshift({ k: 'fil', ico: '📜', text: `Étape ${S.fil.ch + 1} · ${c.t} (${d}/${n})`, act: () => openFil(), pri: 7, cls: 'goal fil' });
   return L.slice(0, 7);
@@ -164,7 +163,7 @@ function filGlow(sel, ms = 6000) {
   clearTimeout(FILU.glow); FILU.glow = setTimeout(() => L.forEach(e => e.classList.remove('fil-glow')), ms);
 }
 // ce qu'un chapitre achevé dévoile : les nouveaux boutons brillent un moment
-const FIL_NEW = { 1: ['#btnPath', '#btnGuards'], 2: ['#btnRaid', '#minimap'], 3: ['#btnCrit'], 4: ['#btnVal', '#btnCrit'] };
+const FIL_NEW = { 1: [], 2: ['#btnRaid', '#minimap'], 3: ['#btnCrit'], 4: ['#btnVal', '#btnCrit'] };
 function openFil() {
   if (!S.fil) return;
   const ch = S.fil.done ? FIL.length : S.fil.ch;

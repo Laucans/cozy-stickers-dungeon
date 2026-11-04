@@ -13,7 +13,7 @@ const SHOP = {
   tisane: { name: 'Tisane anti-calamité', ico: '🌿', price: 6, per: 1, desc: '−3 Calamité. Camomille, valériane et une pincée de bave de crapaud.' },
   oubli: { name: 'Sirop d’oubli', ico: '🫗', price: 8, per: 3, desc: '−2 Menace : on en verse discrètement dans le puits du village.' },
   tournee: { name: 'Tournée générale', ico: '🍻', price: 6, per: 1, desc: '+2 🔥 : tout le monde boit à ta santé, sans savoir qui tu es.' },
-  merco: { name: 'Mercenaire à la semaine', ico: '🗡️', price: 10, per: 3, desc: 'Un garde du corps défend ton Cœur pendant 3 nuits (+4 garde). Il ne pose aucune question, et ne répond à aucune non plus.' },
+  merco: { name: 'Mercenaire à la semaine', ico: '🗡️', price: 10, per: 3, desc: 'Un orque costaud se bat au Cœur à tes côtés pendant 3 nuits. Il ne pose aucune question, et ne répond à aucune non plus.' },
   tableau: { name: 'Consulter le tableau des quêtes', ico: '📋', price: 0, desc: 'Gratuit : qui part bientôt à l’assaut d’un château… comme le tien ?' },
   dossier: { name: 'Égarer ton dossier', ico: '🗂️', price: 8, per: 3, desc: '−3 Menace. Le greffier perd ton dossier sous une pile de formulaires B-52 en triple exemplaire.' },
   avis: { name: 'Faux avis de recherche', ico: '📜', price: 12, per: 4, desc: 'La prochaine bande d’aventuriers part avec 25 % de PV en moins : ils cherchent un dragon qui n’existe pas.' },
@@ -145,7 +145,7 @@ Object.assign(WIKI, {
     <ul><li><b>Vers le haut</b> avec l’{room:montee} : les Hauteurs, puis les Cimes. Des terrasses à ciel ouvert où l’on bâtit {room:jardin}, {room:voliere} et {room:belvedere}. Créatures rares : la {sp:fee} et la {sp:harpie}.</li>
     <li><b>Vers le bas</b> avec l’{room:escalier} : les Caves, puis les Profondeurs. On y creuse {room:mine}, {room:reliquaire} et {room:lac}. Créatures rares : le {sp:golem} et la {sp:liche}.</li></ul>
     <p>Les pièces d’un étage doivent toucher le palier d’arrivée ou une autre pièce de l’étage. Les pièces à ciel ouvert (potager…) ne vont pas sous terre ; la tour de guet reste au rez-de-chaussée. La plupart des pièces classiques se construisent partout.</p>
-    <p>Les héros ne quittent jamais le rez-de-chaussée : un étage est un abri sûr. Les pièges, eux, ne servent qu’au rez-de-chaussée. Change d’étage avec les boutons <b>Étage</b> de la barre de construction (ou Page↑ / Page↓).</p>` },
+    <p>La bande peut traverser des pièces à tous les étages : aucun n’est un abri sûr. Les pièges se posent dans les couloirs de tous les étages (chacun protège les pièces qu’il borde). Change d’étage avec les boutons <b>Étage</b> de la barre de construction (ou Page↑ / Page↓).</p>` },
   remparts: { cat: 'build', t: 'Agrandir les remparts', x: () => `<p>Depuis la fenêtre du <b>Palier</b>, tu peux élargir le château : ${SIZE_COST.slice(1).map((c, i) => `${12 + 2 * (i + 1)}×${12 + 2 * (i + 1)} cases (Palier ${i + 1}, ${costText(c)})`).join(', puis ')}.</p><p>Une rangée s’ajoute de chaque côté et deux au fond, à tous les étages ; tout le château glisse d’autant, rien n’est perdu.</p>` },
   rayonnement: { cat: 'eco', t: 'Rayonnement', x: () => `<p>Le rayonnement (✨ en haut de l’écran) mesure l’éclat de ton château : ${GLOW_LV.map(([m, n]) => `${n} (${m})`).join(', ')}.</p>
     <ul><li>Il vient des {c:artefacts|artefacts} exposés, des trésors (tas d’or, coffres, or en réserve), des {c:rares|créatures rares}, des légendes, du palier, des {c:etages|étages}, des remparts, de l’ambiance, de la notoriété et des hauts faits.</li>

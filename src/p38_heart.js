@@ -71,7 +71,7 @@ tap = function (e) {
   return tapHeart(e);
 };
 
-/* ---------- déménager le Cœur : plus il est loin du porche, plus la route des héros est longue ---------- */
+/* ---------- déménager le Cœur : il change d'étage (la bande le trouve toujours au bout de son parcours) ---------- */
 const heartMoveCost = () => ({ g: 80 + 40 * (S.heartMoves || 0), s: 12 });
 // les pièces d'un étage qui ne tiendraient plus à rien (ni au porche, ni au palier, ni au Cœur)
 function orphanRooms(z) {
@@ -90,7 +90,7 @@ function heartMoveCheck(x, y, z) {
   // on essaie pour de vrai : les héros doivent pouvoir l'atteindre, et rien ne doit rester isolé derrière lui
   const o = { x: h.x, y: h.y, z: zOf(h) }; h.x = x; h.y = y; h.z = z; dirty();
   let route = null, lost = 0; try { route = heroRoute(); lost = orphanRooms(o.z); } finally { h.x = o.x; h.y = o.y; if (o.z) h.z = o.z; else delete h.z; dirty(); }
-  if (!route) return 'Les héros doivent pouvoir l’atteindre : relie-le aux escaliers par un couloir';
+  if (!route) return 'Le Cœur doit rester relié au porche : relie-le aux escaliers par un couloir';
   if (lost) return `${lost} pièce${lost > 1 ? 's' : ''} ${floorWord(o.z)} ne tiendrai${lost > 1 ? 'ent' : 't'} plus qu’au Cœur : relie-les d’abord au reste`;
   return null;
 }
@@ -109,7 +109,7 @@ Object.assign(CMD, {
 });
 function heartMoveHTML() {
   const h = heartRoom(), c = heartMoveCost(), fl = floorsOpen().filter(z => z !== zOf(h));
-  return `<div class="hmove"><h3>🚚 Déménager le Cœur</h3><p class="hint">Il bat ${esc(floorWord(zOf(h)))}. Plus il est loin du porche, plus les héros doivent traverser d’étages, de pièges et de gardes pour l’atteindre (ils prennent les escaliers). Ses meubles le suivent, ses défenseurs aussi. Coût : <b>${costText(c)}</b>${S.heartMoves ? ` (+40 💰 à chaque déménagement)` : ''}.</p>
+  return `<div class="hmove"><h3>🚚 Déménager le Cœur</h3><p class="hint">Il bat ${esc(floorWord(zOf(h)))}. Tu peux l’installer à un autre étage : où qu’il soit, la bande le trouve au bout de son parcours. Ses meubles le suivent, ses défenseurs aussi. Coût : <b>${costText(c)}</b>${S.heartMoves ? ` (+40 💰 à chaque déménagement)` : ''}.</p>
     ${fl.length ? `<div class="btnrow">${fl.map(z => `<button type="button" class="sbtn" data-mvz="${z}" ${canAfford(c) ? '' : 'disabled'}>${z > 0 ? '▲' : z < 0 ? '▼' : '⌂'} ${esc(FLOOR_NAMES[z])}</button>`).join('')}</div>` : '<p class="hint">Ouvre d’abord un autre étage avec un escalier.</p>'}</div>`;
 }
 const openRoomMove = openRoom;

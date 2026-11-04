@@ -22,7 +22,7 @@ const SAGAS = {
     hook: c => `${c.name} griffonne des plans toute la nuit en marmonnant « clac… CLAC… GRAND CLAC ». Il·elle prépare quelque chose.`,
     ch: [
       { t: 'L’atelier secret', x: c => `${c.name} doit travailler 3 nuits d’affilée, posté·e à l’Atelier.`, need: { post: ['atelier', 3] } },
-      { t: 'Les essais', x: () => 'Il faut 3 pièges ou verrous sur le chemin des héros pour tester les mécanismes.', need: { traps: 3 } },
+      { t: 'Les essais', x: () => 'Il faut 3 pièges ou verrous dans tes couloirs pour tester les mécanismes.', need: { traps: 3 } },
       { t: 'Le premier clac', x: () => 'Un de tes pièges doit mettre un héros (ou un sbire) K.O.', need: { trapko: 1 } },
       { t: 'Le montage', x: () => 'Il ne manque que de la ferraille : 6 🪵.', pay: { s: 6 } },
     ] },
@@ -85,7 +85,7 @@ const sagaChap = st => SAGAS[st.id] && SAGAS[st.id].ch[st.i];
 const sagaAction = ch => !!ch && !!(ch.pay || ch.choice);
 // le petit sticker 📖 : une intrigue proposée, un nouveau chapitre pas encore lu, ou un choix qui t'attend
 function sagaReady(c) { const o = sagaOf(c); if (!o) return false; return o.offer || !o.st.seen || sagaAction(sagaChap(o.st)); }
-const trapsOnPath = () => { const p = heroRoute() || []; return p.filter(([x, y, z]) => { const d = withZ(z, () => defAt(x, y)); return d && DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm && !DEFS[d.t].post; }).length; };
+const trapsOnPath = () => (S.defs || []).filter(d => DEFS[d.t] && !DEFS[d.t].block && !DEFS[d.t].alarm && !DEFS[d.t].post).length;   // (il n'y a plus de chemin des héros : tous les pièges comptent)
 function sagaNeedMet(c, need, st) {
   if (need.room) return builtCount(need.room) > 0;
   if (need.big) return maxGroup(need.big) >= 2;

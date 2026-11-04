@@ -3,16 +3,16 @@
    Le potager, la mare, le poulailler, la ruche remplissent le
    garde-manger à chaque aube. Dans la fiche d'une Cuisine (ou
    d'une Taverne), on transforme les ingrédients en plats : de
-   la bonne humeur, des repas, des défenseurs requinqués, un
-   jeton du Cœur de plus, une Calamité qui recule.
+   la bonne humeur, des repas, des défenseurs requinqués, de
+   l'énergie pour le combat du Cœur, une Calamité qui recule.
    ========================================================= */
 const INGR = { legume: { ico: 'cabbage', name: 'légumes', from: ['choux', 'serre', 'herbes', 'melon'] }, poisson: { ico: 'fish', name: 'poissons', from: ['barque', 'ponton'] }, oeuf: { ico: 'egg', name: 'œufs', from: ['nichoir', 'juchoir'] }, miel: { ico: 'honey', name: 'miel', from: ['ruche'] }, champi: { ico: 'mushroom', name: 'champignons', from: ['champis'] } };
 const PANTRY_MAX = 12;
 const RECIPES = {
   soupe:   { ico: 'teapot', name: 'Soupe du chaudron', need: { legume: 3 }, desc: 'Tout le château se réchauffe : +1 humeur pour chacun, tout de suite.' },
   tourte:  { ico: 'food', name: 'Tourte aux légumes', need: { legume: 2, oeuf: 1 }, desc: '+6 repas pendant 3 nuits.' },
-  poisson: { ico: 'fish', name: 'Poisson grillé', need: { poisson: 2, legume: 1 }, desc: 'À la prochaine invasion, tes défenseurs ont +2 PV.' },
-  gateau:  { ico: 'gift', name: 'Gâteau au miel', need: { oeuf: 2, miel: 1 }, desc: 'À la prochaine invasion : un jeton du Cœur de plus.' },
+  poisson: { ico: 'fish', name: 'Poisson grillé', need: { poisson: 2, legume: 1 }, desc: 'À la prochaine invasion, tes défenseurs ont +5 PV.' },
+  gateau:  { ico: 'gift', name: 'Gâteau au miel', need: { oeuf: 2, miel: 1 }, desc: 'À la prochaine invasion : +1 énergie au premier tour du combat du Cœur.' },
   ragout:  { ico: 'mushroom', name: 'Ragoût de champignons douteux', need: { champi: 2, legume: 1 }, desc: 'Personne n’ose en reparler : la Calamité recule de 2.' },
   // les savoirs des cuisiniers (voir les métiers)
   brochettes: { ico: 'meat', name: 'Brochettes du troll', rank: 2, need: { poisson: 1, champi: 1, legume: 1 }, desc: 'À la prochaine invasion, tes défenseurs frappent 1 de plus.' },

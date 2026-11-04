@@ -54,7 +54,7 @@ const DREAMS = {
   gourmand:  [['f', 'jambons', 'des jambons pendus à la cuisine'], ['f', 'melon', 'des cloches à melon'], ['f', 'ruche', 'une ruche bien pleine']],
   studieux:  [['f', 'fauteuil', 'un fauteuil moelleux pour lire'], ['f', 'pupitre', 'un pupitre à grimoires']],
   fetard:    [['f', 'scene', 'une estrade du barde'], ['f', 'orgue', 'un orgue lugubre']],
-  bagarreur: [['d', 'hache', 'une hache pendulaire sur le chemin des héros'], ['f', 'ratelier', 'un râtelier d’armes']],
+  bagarreur: [['d', 'hache', 'une hache pendulaire dans un couloir'], ['f', 'ratelier', 'un râtelier d’armes']],
   maniaque:  [['f', 'coffre', 'un coffre à chaussettes pour tout ranger'], ['f', 'tapis', 'un beau tapis de plus']],
   radin:     [['f', 'tasdor', 'un tas d’or'], ['f', 'coffreor', 'un coffre-fort']],
   bucolique: [['f', 'banc', 'un banc moussu dans les Jardins'], ['f', 'saule', 'un saule pleureur'], ['dehors', 'mare', 'une mare dans les Jardins']],
@@ -215,7 +215,7 @@ function findTarget(c, a, k, post) {
     })); });
     return pickNear(a, spots);
   }
-  if (A.guard) { if (guardOf(c) < 3) return null; const p = (heroPath() || []).filter(([x, y]) => isHall(roomAt(x, y, 0))); if (!p.length) return null; const [x, y] = pick(p); return cellSpot(0, null, x, y, 'le chemin des héros'); }
+  if (A.guard) { if (guardOf(c) < 3) return null; const p = (heroPath() || []).filter(([x, y]) => isHall(roomAt(x, y, 0))); if (!p.length) return null; const [x, y] = pick(p); return cellSpot(0, null, x, y, 'les couloirs'); }
   if (A.wander) {
     let r = post; if (!r) { const rs = builtRooms().filter(o => zOf(o) === here && !ROOMS[o.t].stairs && (!isHall(o) || Math.random() < .2)); r = here === 0 && Math.random() < .4 ? heartRoom() : pick(rs) || heartRoom(); }
     if (!r && here === EXT) { const [x, y] = extCell(); return cellSpot(EXT, null, x, y, 'les Jardins'); }
@@ -468,7 +468,7 @@ function openForest() {
 Object.assign(WIKI, {
   caracteres: { cat: 'ames', t: 'Caractères et occupations', x: () => `<p>Chaque créature a <b>deux traits de caractère</b> et une petite manie (voir sa fiche). Son caractère décide de ce qu’elle fait de ses nuits : sieste, grignotage, lecture, forge, fête à la taverne, ménage, bavardages… Elle se sert des meubles du château : plus il y a de commodités, plus le donjon vit.</p>
     <ul>${TRAIT_ORDER.map(k => `<li>${TRAITS[k].ico} <b>${TRAITS[k].name}</b> : ${TRAITS[k].desc} S’épanouit avec : ${TRAITS[k].ok.toLowerCase()}.</li>`).join('')}</ul>
-    <p>Un trait comblé donne <b>+6 d’épanouissement</b> ; certains manques coûtent un peu (−3). Les rivaux se chamaillent quand ils se croisent, les diablotins filent aux chantiers, les costauds surveillent le chemin des héros, et une créature tentée de partir va regarder la route. Ce qu’elle fait en ce moment s’affiche sur sa fiche.</p>` },
+    <p>Un trait comblé donne <b>+6 d’épanouissement</b> ; certains manques coûtent un peu (−3). Les rivaux se chamaillent quand ils se croisent, les diablotins filent aux chantiers, les costauds font leur ronde dans les couloirs, et une créature tentée de partir va regarder la route. Ce qu’elle fait en ce moment s’affiche sur sa fiche.</p>` },
   jardins: { cat: 'build', t: 'Les Jardins (dehors)', x: () => `<p>Derrière les remparts, un coin d’herbe t’appartient : les <b>Jardins</b>. Va les voir avec le bouton <b>🌳 Dehors</b> (à côté des étages) ou la touche <b>J</b>. Tes créatures y sortent par le portillon quand l’envie les prend.</p>
     <p>On y bâtit des enclos, sans couloir ni mur : {room:poulailler} (la {sp:cocatrice}), {room:simples} (la {sp:mandragore}), {room:mare} (la {sp:nixe}) et {room:cimetiere} (la {sp:goule}). Bancs, puits et nains de jardin se posent directement sur l’herbe.</p>
     <p>Au début, l’espace est limité à quatre rangées. Le reste, c’est la <b>forêt du Baron</b> : touche-la pour en racheter une parcelle de deux rangées (de plus en plus chère, avec du bois en prime). Agrandir les remparts élargit aussi les Jardins.</p>
