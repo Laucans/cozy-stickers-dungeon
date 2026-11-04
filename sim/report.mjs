@@ -67,7 +67,7 @@ const L = [];
 const NAMES = { idle: 'Inactive (ne fait rien)', negligent: 'Négligente (jamais de soins)', casual: 'Tranquille (bâtit, soigne)', legende: 'Légende', terreur: 'Terreur', voisinage: 'Bon voisinage', menagerie: 'Ménagerie', secrets: 'Secrets' };
 const N0 = R.length, MAX = Math.max(...R.map(r => r.night));
 L.push(`# Équilibrage — ${N0} parties simulées`, '', `${BOTS.length} IA × ${out[BOTS[0]].n} parties, ${MAX} nuits maximum (une partie s'arrête quand l'IA gagne la victoire qu'elle vise). Médiane (10e–90e centile) entre parenthèses.`, '');
-L.push('## Victoire visée', '', '| IA | Parties | Victoire visée gagnée | Nuit de victoire | Un rival gagne une ère avant | Erreurs |', '|---|---|---|---|---|---|');
+L.push('## Victoire visée', '', '| IA | Parties | Victoire visée gagnée | Nuit de victoire | Un rival devient Grand Maître avant | Erreurs |', '|---|---|---|---|---|---|');
 BOTS.forEach(b => { const o = out[b]; L.push(`| ${NAMES[b] || b} | ${o.n} | ${o.goal ? o.goalRate + ' %' : '–'} | ${o.goal ? o.goalNight : '–'} | ${o.goal ? o.eraBeforeGoal + ' %' : o.eraGames + ' %'} | ${o.errors} |`); });
 L.push('', '## Toutes les victoires (taux · nuit)', '', '| IA | ' + VIC.join(' | ') + ' |', '|---|' + VIC.map(() => '---').join('|') + '|');
 BOTS.forEach(b => L.push(`| ${NAMES[b] || b} | ` + VIC.map(v => out[b].wins[v].rate ? `${out[b].wins[v].rate} % · ${out[b].wins[v].night}` : '–').join(' | ') + ' |'));

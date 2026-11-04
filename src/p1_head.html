@@ -1354,4 +1354,36 @@ body.fl-def #btnPath, body.fl-def #btnGuards, body.fl-def #tabs [data-tab="def"]
 .adv-btns .sbtn.side{margin-left:auto; font-size:12px; opacity:.85}
 .modal .mfoot.sticky{position:sticky; bottom:-20px; margin:16px -20px -20px; padding:10px 20px; background:var(--parch); border-top:2px solid var(--parch-3); z-index:3}
 .cmsg2.warn, .modal .warnline{color:#8a2a18; font-weight:700}
+/* la main à l'ordinateur : écartée et un peu plus grande quand il y a de la place ; resserrée, chaque carte grandit nettement au survol pour se lire en entier */
+@media (min-width:761px) and (min-height:501px){
+  .cpage .hand{overflow:visible; min-width:0} .cpage .handzone{grid-template-columns:auto minmax(0, 1fr) auto; align-self:stretch; box-sizing:border-box} .cpage.battle .cp-body{align-self:stretch}
+  .cpage .hand .kcard{zoom:var(--kz, 1)}
+  .cpage .hand.tight .kcard:hover, .cpage .hand.tight .kcard:focus-visible{transform:translateY(-34%) scale(1.42); z-index:40; transition:transform .12s ease-out}
+  .cpage .hand.tight .kcard:first-child:hover{transform-origin:left bottom} .cpage .hand.tight .kcard:last-child:hover{transform-origin:right bottom}
+}
+/* le Livre du Maître : un livre de stickers, un chapitre par ère */
+.modal.livrem{max-width:860px; background:linear-gradient(90deg, #e9d9b4 0, #f6ead0 4%, #f6ead0 96%, #e2cfa6 100%); border-color:#5a3a22; box-shadow:0 0 0 6px #6b4528, 0 0 0 9px #3a2416, 0 20px 50px rgba(0,0,0,.6)}
+.livre .lv-nav{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; margin:0 30px 8px; font-family:var(--f-display); font-weight:800; color:#5a3a22}
+.livre .lv-nav span{flex:1 1 160px; text-align:center}
+.lv-page{padding:4px 6px 8px}
+.lv-page.open{animation:lvOpen .55s ease-out}
+@keyframes lvOpen{0%{transform:perspective(900px) rotateY(-75deg); transform-origin:left center; opacity:0}100%{transform:none; opacity:1}}
+.lv-chap{text-align:center; font-family:var(--f-hand); font-size:18px; color:#8a5a2a; letter-spacing:.08em}
+.lv-title{text-align:center; font-family:var(--f-display); font-size:30px; margin:0 0 2px; color:#3a2416}
+.lv-dates{text-align:center; color:#6e5444; margin:0 0 12px}
+.lv-stickers{display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:12px; margin:8px 0 14px}
+.lv-st{position:relative; transform:rotate(var(--rot, 0deg)); background:#fffdf5; border:3px solid #fff; border-radius:14px; box-shadow:0 0 0 1.5px #c9b38a, 0 4px 10px rgba(80,50,20,.25); padding:8px 8px 7px; text-align:center; display:flex; flex-direction:column; gap:3px; align-items:center}
+.lv-st .lv-ico{font-size:28px; line-height:1.1} .lv-st .lv-ico .gi{width:30px; height:30px}
+.lv-st b{font-size:13px; line-height:1.15} .lv-st small{font-size:11px; color:#6e5444; line-height:1.2}
+.lv-st.after{box-shadow:0 0 0 1.5px #b8a6a0, 0 4px 10px rgba(80,50,20,.2)}
+.lv-st.rv{background:#f3e7e7; transform:rotate(var(--rot, 0deg)) scale(.92)}
+.lv-st.off{background:#ece2cc; border-color:#e2d6bb; box-shadow:inset 0 0 0 2px #d6c6a2; opacity:.75} .lv-st.off .lv-ico{filter:grayscale(1); opacity:.6}
+.lv-margin{border-left:3px double #b08a5a; padding:4px 0 4px 12px; margin:6px 0}
+.lv-margin h4{margin:0 0 4px} .lv-margin ol{margin:0; padding-left:20px} .lv-margin li{display:flex; justify-content:space-between; gap:10px; max-width:420px} .lv-margin li.me{font-weight:800; color:#2f5e1e}
+.lv-rv{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px} .lv-rv .lv-st{width:150px}
+.lv-gain{background:#fff6dc; border:2px solid #e2b85a; border-radius:12px; padding:8px 12px; margin:8px 0}
+.lv-gain.dark{background:#ece6f2; border-color:#7d6a99}
+.lv-pacts{display:flex; flex-direction:column; gap:8px} .lv-pacts .sbtn{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px} .lv-pacts small{font-weight:400}
+.lv-relics p{margin:4px 0}
+@media (max-width:640px){ .lv-title{font-size:24px} .lv-stickers{grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:9px} .lv-st b{font-size:12px} }
 </style>

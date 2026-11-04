@@ -163,7 +163,7 @@ const LP_HELP = {
   btnVal: 'Le Val des Maîtres : les châteaux des autres joueurs, en ligne.',
   btnBest: 'Album : toutes les espèces que tu as accueillies, et celles qui manquent.',
   btnRen: 'Renommée : ta réputation auprès de chaque espèce (elle décide qui vient, et qui reste).',
-  btnAch: 'Hauts faits : tes exploits et les pouvoirs qu’ils débloquent.',
+  btnAch: 'Le Livre du Maître : tes moments marquants en stickers, un chapitre par ère.',
   btnQuests: 'Journal des quêtes : quêtes en cours, tableau des nouvelles quêtes, envies des créatures.',
   btnBuild: 'Construire : pièces, pièges, déco et trésors à coller sur le château.',
   btnNight: 'Finir la nuit : tes créatures travaillent, les raids partent, des héros attaquent peut-être… puis vient l’aube et sa chronique.',
@@ -258,7 +258,14 @@ function fitHand() {
   const page = document.getElementById('crawlPage'), h = page && page.querySelector('.hand'); if (!h) return;
   const cards = [...h.querySelectorAll('.kcard')], small = innerWidth <= 760 || innerHeight <= 500;
   // les cartes se recouvrent juste ce qu'il faut pour que toute la main tienne (au doigt, l'écart reste de 8 px si elles tiennent déjà)
-  if (cards.length > 1) { const cw = cards[0].offsetWidth, n = cards.length, gap = small ? 4 : -6, avail = h.clientWidth - (small ? 20 : 28), m = n * cw + (n - 1) * 2 * gap > avail ? Math.max(-(cw - (small ? 22 : 40)) / 2, Math.floor((avail - n * cw) / (n - 1) / 2)) : gap; page.style.setProperty('--hm', m + 'px'); }
+  // à l'ordinateur : de la place, les cartes s'écartent et grandissent (jusqu'à +20 %) ; trop de cartes, elles se recouvrent juste ce qu'il faut, et grandissent franchement au survol
+  if (!small) {
+    const n = cards.length, base = n ? parseFloat(getComputedStyle(cards[0]).width) || 128 : 128, gap = 6, avail = h.clientWidth - 28;   // la largeur CSS, sans le zoom ni le survol
+    const z = n ? Math.max(1, Math.min(1.2, avail / (n * (base + 2 * gap)))) : 1, fits = n * (base + 2 * gap) <= avail;
+    const m = fits || n < 2 ? gap : Math.max(-(base - Math.min(46, base * .36)) / 2, Math.floor((avail - n * base) / (n - 1) / 2));
+    page.style.setProperty('--kz', fits ? z.toFixed(3) : '1'); page.style.setProperty('--hm', m + 'px'); h.classList.toggle('tight', !fits && n > 1);
+  }
+  else if (cards.length > 1) { const cw = cards[0].offsetWidth, n = cards.length, gap = small ? 4 : -6, avail = h.clientWidth - (small ? 20 : 28), m = n * cw + (n - 1) * 2 * gap > avail ? Math.max(-(cw - (small ? 22 : 40)) / 2, Math.floor((avail - n * cw) / (n - 1) / 2)) : gap; page.style.setProperty('--hm', m + 'px'); }
   let tag = page.querySelector(':scope > .hmore'); const hr = h.getBoundingClientRect(), hidden = small ? cards.filter(c => c.getBoundingClientRect().left > hr.right - 24).length : 0;
   if (!hidden) { if (tag) tag.remove(); return; }
   if (!tag) { tag = document.createElement('span'); tag.className = 'hmore'; tag.setAttribute('aria-hidden', 'true'); page.appendChild(tag); }

@@ -170,7 +170,7 @@ function openRival() {
   const m = openModal(`<div class="cardhead"><div class="portrait rv">${r.emo}</div><div><h2>${esc(r.name)}</h2><p class="hint">Le donjon ${esc(deM(r.master))}, ton rival dans le Val. Il vise la ${esc(VIC_BY[raceGoal(r.id)].name.replace('Victoire', 'victoire'))}.</p></div></div>
     <div class="duels"><div class="duel head"><span></span><b>Toi</b><span></span><b>${esc(who)}</b></div>
       ${duelRow('Prestige', myPres(), n.pres, 'Ambiance, créatures, pièces et palier. S’il te dépasse, il te vole des créatures à l’aube.')}
-      ${duelRow('Course à la victoire', mine, v.race[r.id] || 0, 'En %. S’il arrive à 100 avant toi, une nouvelle ère commence.')}
+      ${duelRow('Course à la victoire', mine, v.race[r.id] || 0, 'En %. S’il arrive à 100 avant toi, il devient Grand Maître du Val.')}
       ${duelRow('Sabotages repoussés', n.losses, n.wins, 'Ses sbires repoussés, contre ses coups réussis.')}
       ${duelRow('Défis', n.chWon, n.chLost, 'Défis relevés, contre défis perdus.')}</div>
     <h3>Ce qu’il prépare</h3><ul class="chron">

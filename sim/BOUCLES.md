@@ -139,3 +139,24 @@ Décisions :
 Évolution des notes d'amusement sur les trois boucles « plaisir » : globales de 3 à 4 dans le vrai jeu (Chrome), et des testeurs qui veulent tous « continuer la partie ». Points qui restent ouverts : le creux du milieu de partie (nuits 15-30) quand rien ne presse, la course des rivaux qui ne fait pas peur, la main de cartes qui se chevauche sur ordinateur (voulu, façon Hearthstone, mais le texte des cartes y est coupé).
 
 Rapport des IA scriptées après les boucles « plaisir » : `sim/RAPPORT_v13.md` (Légende 100 % · 53, Secrets 100 % · 38, Voisinage 100 % · 40, Ménagerie 8 %, Terreur 7/12 avant le passage à deux combats gagnés, 11/12 · 71 après).
+
+## Milieu de partie — les rivaux contre-attaquent
+
+Demande : remplir le creux des nuits 15 à 30. Choix retenu : des rivaux menaçants (`src/p62_rivaux.js`).
+- À certains seuils de leur course (le premier entre les nuits 15 et 35 selon le rival, puis vers 55 % et 82 %), chaque donjon rival annonce un coup trois nuits à l'avance : Krouk pille ta réserve (au moins 20 💰 + 10 par palier, du bois s'il manque l'or), Mère-Crapaud attire deux créatures, Ysolde vole un artefact (ou enlève une créature contre rançon), Pâlefroid sème la zizanie (−1 humeur et −5 loyauté pour tous, −15 de bonne volonté partout).
+- Parades : une expédition dans son donjon qui passe au moins une salle, ou un espion (15 💰 + 5 par palier + 5 par espion déjà payé).
+- Une ère perdue face à un donjon rival coûte un tribut (le cinquième de l'or et du bois).
+- Les IA paient un espion quand elles en ont les moyens ; victoires inchangées (Légende 100 % · 52, Terreur 83 %, Voisinage 100 % · 50, Secrets 83 %).
+
+Test Sonnet (45 nuits, première version des coups) : notes 3 de la nuit 10 à 35, puis 4 avec la croisade ; un seul coup sur quatre posait un vrai choix, car les pertes dépendaient trop de ce que le joueur possédait et l'espion coûtait plus que la perte. Les coups ont été durcis et l'espion rendu moins cher en conséquence.
+
+Main de cartes à l'ordinateur : les cartes s'écartent et grandissent (jusqu'à +20 %) quand il y a de la place, se recouvrent juste ce qu'il faut sinon, grandissent nettement au survol, et la zone de la main occupe toute la largeur (elle ne pousse plus les boutons).
+
+## Le Livre du Maître (ères courtes, façon frise de Civilization)
+
+Demande : des ères courtes en compétition avec les rivaux, avec âge d'or (relique unique) et âge sombre (boost de développement contre une pénalité, au choix), annoncées par l'ouverture d'un chapitre dans un « Livre du Maître » où l'on colle des stickers de moments marquants ; les hauts faits fusionnent avec ces stickers et perdent leurs pouvoirs, mais changent l'issue de certains événements (`src/p63_livre.js`).
+- Moments : 8 « premiers du Val » disputés aux rivaux (3 points, 1 si un rival t'a devancé), les anciens hauts faits et une vingtaine de nouveaux (1 à 5 points), et 14 moments récurrents plafonnés par chapitre (bande repoussée, boss terrassé, page d'album, quête, coup déjoué…) : sans eux, les premiers chapitres finissaient toujours en âge d'or et les derniers en âge sombre.
+- Rivaux : 1,3 point par nuit × leur forme du chapitre (0,6 à 1,4) × (1 + course/100). Sur 37 chapitres simulés : 15 âges d'or ou héroïques, 10 ordinaires, 12 sombres ; l'IA passive perd la course, les actives la gagnent souvent.
+- Reliques d'ère : 19 pouvoirs des anciens hauts faits (Truelle bénie, Sacoches profondes, Trèfle…). Pactes d'âge sombre : 6 (Serrer les rangs, Tout pour le butin, Portes ouvertes, Économie de guerre, Veillées, L'école du château).
+- Fins alternatives : coffre, osselets, autel, fontaine et cage en expédition ; les quatre coups des rivaux.
+- IA scriptées : victoires inchangées (Légende 100 % · 50, Terreur 83 % · 74, Voisinage 100 % · 40, Secrets 100 % · 43), aucune erreur.

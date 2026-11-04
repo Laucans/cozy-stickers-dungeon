@@ -66,7 +66,7 @@ const ACH = [
   { id: 'escarmouche', cat: 'Val des Maîtres', online: true, ico: '🏹', name: 'Taquin',         desc: 'Réussis une escarmouche contre un voisin.', test: s => s.stats.skirmishWon >= 1, pw: 'Bannière de guerre', pd: '+1 dé aux escarmouches.' },
 ];
 const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
-const PW = id => !!(S && S.ach && S.ach[id]);
+const PW = id => !!(S && S.book && S.book.pw && S.book.pw[id]);   // les pouvoirs viennent des reliques d'ère et des pactes du Livre du Maître (p63)
 const pwRep = () => (PW('menagerie') ? 10 : 0) + (PW('livredor') ? 5 : 0) + (PW('aimant') ? 5 : 0);
 const pwAmb = () => (PW('deco') ? 2 : 0) + (PW('voisin') ? 1 : 0);
 const workPerNight = () => CONSTS.WORK + sumCrit('build') + (PW('pierre') ? 1 : 0) + (PW('coop') ? 1 : 0) + (PW('etages') ? 1 : 0);

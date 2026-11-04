@@ -1,6 +1,6 @@
 /* =========================================================
    Le fil rouge : huit chapitres pour découvrir le château
-   Chaque chapitre a ses objectifs (une pastille 📜 à droite,
+   Chaque étape a ses objectifs (une pastille 📜 à droite,
    son journal avec « Montre-moi ») et dévoile, une fois
    achevé, de nouveaux boutons : les pièges et les gardes,
    puis le Raid et la carte, la renommée, les quêtes et le Val,
@@ -83,7 +83,7 @@ function filCheck(report) {
     c.goals.forEach(g => { const k = c.id + ':' + g.id; if (!S.fil.ok[k] && filTry(g.ok)) { S.fil.ok[k] = S.night; FILU.ev.push({ k: 'goal', t: g.t }); } });
     if (!c.goals.every(g => S.fil.ok[c.id + ':' + g.id])) break;
     S.gold += c.reward.g || 0; S.mat += c.reward.s || 0;
-    const line = `Chapitre ${S.fil.ch + 1} achevé : ${c.t} (+${costText(c.reward)}). Débloqué : ${c.unlock}.`;
+    const line = `Étape ${S.fil.ch + 1} du fil rouge achevée : ${c.t} (+${costText(c.reward)}). Débloqué : ${c.unlock}.`;
     addLog(line, 'good'); if (report) report.push(['📜', line, 'good']);
     FILU.ev.push({ k: 'ch', t: c.t, reward: c.reward, unlock: c.unlock });
     S.fil.ch++; S.fil.at = S.night;
@@ -148,7 +148,7 @@ notifList = function () {
   L = L.filter(x => x.k !== 'goal' && !(x.k === 'tuto' && st && (FIL_STEP[st.id] || 0) > S.fil.ch) && !(filLocked('def') && (x.k === 'men' || x.k === 'guards')));
   if (filBandDue()) L.unshift({ k: 'filband', ico: '⚔️', text: 'Une bande d’aventuriers arrive à la fin de cette nuit', act: () => { if (!V.showPath) $('#btnPath').click(); openGrimoire('invasion'); }, pri: 8, cls: 'bad' });
   const c = filCur(), [d, n] = filProgress();
-  if (c && (S.ndis || {}).fil !== S.night) L.unshift({ k: 'fil', ico: '📜', text: `Chapitre ${S.fil.ch + 1} · ${c.t} (${d}/${n})`, act: () => openFil(), pri: 7, cls: 'goal fil' });
+  if (c && (S.ndis || {}).fil !== S.night) L.unshift({ k: 'fil', ico: '📜', text: `Étape ${S.fil.ch + 1} · ${c.t} (${d}/${n})`, act: () => openFil(), pri: 7, cls: 'goal fil' });
   return L.slice(0, 7);
 };
 
@@ -169,12 +169,12 @@ function openFil() {
   if (!S.fil) return;
   const ch = S.fil.done ? FIL.length : S.fil.ch;
   const rows = FIL.map((c, i) => {
-    if (i < ch) return `<li class="fch ok"><b>✔ Chapitre ${i + 1} · ${esc(c.t)}</b></li>`;
-    if (i > ch) return `<li class="fch lock"><b>🔒 Chapitre ${i + 1} · ${esc(c.t)}</b></li>`;
-    return `<li class="fch cur"><b>Chapitre ${i + 1} · ${esc(c.t)}</b><p class="hint">${esc(c.intro)}</p><ul class="fgoals">${c.goals.map(g => { const ok = S.fil.ok[c.id + ':' + g.id]; return `<li class="${ok ? 'ok' : ''}"><span class="fck">${ok ? '✔' : '○'}</span><span class="ftx">${esc(g.t)}${ok ? '' : esc(filCount(g))}</span>${ok ? '' : `${g.show ? `<button type="button" class="sbtn small" data-fshow="${g.id}">${esc(g.showLabel || 'Montre-moi')}</button>` : ''}${g.wiki ? `<button type="button" class="sbtn small" data-fwiki="${g.wiki}" aria-label="Le Grimoire">📖</button>` : ''}`}</li>`; }).join('')}</ul>
+    if (i < ch) return `<li class="fch ok"><b>✔ Étape ${i + 1} · ${esc(c.t)}</b></li>`;
+    if (i > ch) return `<li class="fch lock"><b>🔒 Étape ${i + 1} · ${esc(c.t)}</b></li>`;
+    return `<li class="fch cur"><b>Étape ${i + 1} · ${esc(c.t)}</b><p class="hint">${esc(c.intro)}</p><ul class="fgoals">${c.goals.map(g => { const ok = S.fil.ok[c.id + ':' + g.id]; return `<li class="${ok ? 'ok' : ''}"><span class="fck">${ok ? '✔' : '○'}</span><span class="ftx">${esc(g.t)}${ok ? '' : esc(filCount(g))}</span>${ok ? '' : `${g.show ? `<button type="button" class="sbtn small" data-fshow="${g.id}">${esc(g.showLabel || 'Montre-moi')}</button>` : ''}${g.wiki ? `<button type="button" class="sbtn small" data-fwiki="${g.wiki}" aria-label="Le Grimoire">📖</button>` : ''}`}</li>`; }).join('')}</ul>
       <p class="frw">Récompense : ${costText(c.reward)} · Débloque ${esc(c.unlock)}</p></li>`;
   }).join('');
-  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Huit chapitres pour découvrir le château, jusqu’à ta première victoire. Chaque chapitre achevé rapporte une récompense et dévoile de nouveaux boutons.'}</p>
+  const m = openModal(`<h2>📜 Le fil rouge</h2><p class="hint">${S.fil.done ? 'Le fil rouge est bouclé : tout le château est à toi.' : 'Huit étapes pour découvrir le château, jusqu’à ta première victoire. Chaque étape achevée rapporte une récompense et dévoile de nouveaux boutons.'}</p>
     <ol class="filj">${rows}</ol>${S.fil.done ? '' : '<div class="btnrow"><button type="button" class="sbtn" id="filAll">Je connais déjà le jeu : tout débloquer</button></div>'}`, { label: 'Le fil rouge', cls: 'film' });
   m.addEventListener('click', e => {
     const s = e.target.closest('[data-fshow]'), w = e.target.closest('[data-fwiki]');
@@ -204,7 +204,7 @@ function filFree() {
 function filIntro() {
   const i = S.fil.ch, c = FIL[i];
   FILU.showing = true; TUTO.shown = null;
-  advisorShow({ title: `Chapitre ${i + 1} · ${c.t}`, text: `${c.intro} Objectifs : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(' ; ')}.`, buttons: [{ id: 'filgo', label: 'C’est parti !', pri: true }, { id: 'filjrn', label: '📜 Le journal' }], cls: 'tip' });
+  advisorShow({ title: `Étape ${i + 1} · ${c.t}`, text: `${c.intro} Objectifs : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(' ; ')}.`, buttons: [{ id: 'filgo', label: 'C’est parti !', pri: true }, { id: 'filjrn', label: '📜 Le journal' }], cls: 'tip' });
 }
 function filFinale() {
   FILU.showing = true; S.fil.fin = true; save();
@@ -226,7 +226,7 @@ tutoTick = function () {
   if (!S || !S.fil) return tutoTickFil();
   filBind(); filApply();
   // les nouvelles du fil (objectifs cochés, chapitre achevé)
-  if (FILU.ev.length && !UI.busy) { const ev = FILU.ev.splice(0); ev.forEach((x, i) => setTimeout(() => { if (x.k === 'goal') { toast(`📜 Objectif atteint : ${x.t}`); sfx('chime'); } else { toast(`📜 Chapitre achevé : ${x.t} ! +${costText(x.reward)}`); sfx('victory'); } }, i * 900)); renderGoals(); }
+  if (FILU.ev.length && !UI.busy) { const ev = FILU.ev.splice(0); ev.forEach((x, i) => setTimeout(() => { if (x.k === 'goal') { toast(`📜 Objectif atteint : ${x.t}`); sfx('chime'); } else { toast(`📜 Étape achevée : ${x.t} ! +${costText(x.reward)}`); sfx('victory'); } }, i * 900)); renderGoals(); }
   if (FILU.showing) { const a = $('#advisor'); if (a && a.hidden) FILU.showing = false; else return; }
   if (S.fil.done) { if (!S.fil.fin && !S.fil.skip && filFree()) { filFinale(); return; } return tutoTickFil(); }
   if (S.fil.seen < S.fil.ch && filFree()) { filIntro(); return; }
@@ -240,12 +240,12 @@ tutoTick = function () {
 };
 // le premier mot de Gribouille annonce le fil
 { const st0 = TUTO_STEPS.find(s => s.id === 'intro'), x0 = st0 && st0.x;
-  if (st0) Object.defineProperty(st0, 'x', { get: () => x0 + (filOn() ? ' Suis le fil rouge : la pastille 📜, à droite, donne tes objectifs ; chaque chapitre achevé dévoile une nouvelle partie du château.' : '') }); }
-WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>huit chapitres</b>, jusqu’à ta première victoire. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
+  if (st0) Object.defineProperty(st0, 'x', { get: () => x0 + (filOn() ? ' Suis le fil rouge : la pastille 📜, à droite, donne tes objectifs ; chaque étape achevée dévoile une nouvelle partie du château.' : '') }); }
+WIKI.filrouge = { cat: 'bases', t: 'Le fil rouge', x: () => `<p>Une nouvelle partie avec le tutoriel suit <b>huit étapes</b>, jusqu’à ta première victoire. Chacun a ses objectifs (la pastille 📜, à droite) ; achevé, il rapporte une récompense et dévoile de nouveaux boutons.</p><ol>${FIL.map(c => `<li><b>${c.t}</b> : ${c.goals.map(g => g.t.charAt(0).toLowerCase() + g.t.slice(1)).join(', ')}. Débloque ${c.unlock}.</li>`).join('')}</ol><p>Pas d’aventuriers avant la fin du premier chapitre ; la première bande arrive quand le piège et le garde sont en place (ou au bout de trois nuits). Le journal du fil permet de tout débloquer d’un coup.</p>` };
 // le fil en texte (pour la partie en ligne de commande)
 function filText() {
   if (!S.fil) return '';
   if (S.fil.done) return '📜 Fil rouge : bouclé. La suite : choisis ta victoire (wiki victoires, action victoires).';
   const c = filCur();
-  return `📜 Fil rouge · chapitre ${S.fil.ch + 1}/${FIL.length} : ${c.t}\n${c.goals.map(g => `  [${S.fil.ok[c.id + ':' + g.id] ? 'x' : ' '}] ${g.t}${S.fil.ok[c.id + ':' + g.id] ? '' : filCount(g)}`).join('\n')}\n  Récompense : ${c.reward.g} or, ${c.reward.s} bois · débloque ${c.unlock}${filBandDue() ? '\n  ⚔️ Une bande d’aventuriers arrive à la fin de cette nuit.' : ''}`;
+  return `📜 Fil rouge · étape ${S.fil.ch + 1}/${FIL.length} : ${c.t}\n${c.goals.map(g => `  [${S.fil.ok[c.id + ':' + g.id] ? 'x' : ' '}] ${g.t}${S.fil.ok[c.id + ':' + g.id] ? '' : filCount(g)}`).join('\n')}\n  Récompense : ${c.reward.g} or, ${c.reward.s} bois · débloque ${c.unlock}${filBandDue() ? '\n  ⚔️ Une bande d’aventuriers arrive à la fin de cette nuit.' : ''}`;
 }

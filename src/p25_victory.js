@@ -131,7 +131,7 @@ function newEra(champ, out) {
   const v = vicState(), r = racer(champ), goal = VIC_BY[raceGoal(champ)];
   v.era++; v.master = champ; v.eraNews = champ;
   Object.keys(v.race).forEach(k => { if (!isVassal(k)) v.race[k] = Math.round(Math.random() * 8); });
-  const t = `Nouveau Grand Maître du Val : ${r.name}, par la ${goal.name.replace('Victoire', 'victoire')}. Une nouvelle ère commence (ère ${v.era}) ; tes progrès, eux, restent intacts.`;
+  const t = `Nouveau Grand Maître du Val : ${r.name}, par la ${goal.name.replace('Victoire', 'victoire')}. Les rivaux repartent de zéro ; tes progrès, eux, restent intacts.`;
   addLog(t, 'bad'); out.push(['👑', t, 'bad']);
 }
 function raceTick(out) {
@@ -231,8 +231,8 @@ function openVictories(focus) {
       <button class="link2" type="button" data-wiki-open="v_${V0.id}">📖 Comment l’emporter</button></section>`;
   };
   const md = openModal(`<h2>🏛️ Les victoires du Val</h2>
-    <p class="hint">Ère ${v.era} · ${m ? `Grand Maître actuel : ${m.emo} ${esc(m.name)}` : 'Le Val attend encore son Grand Maître'} · ${laurels.length ? `Tes lauriers : ${laurels.map(k => VIC_BY[k].ico).join(' ')}` : 'Pas encore de laurier'}</p>
-    <p>Cinq chemins mènent au titre de Grand Maître. Les donjons rivaux et le Baron font la course : si l’un d’eux gagne avant toi, une nouvelle ère commence, mais tu gardes tout ce que tu as bâti. Pille-les pour les ralentir.</p>
+    <p class="hint">${typeof bookCur === 'function' && bookCur() ? `Chapitre ${ROMAN(bookCur().n)}, l’Ère ${esc(bookCur().name)}` : ''} · ${m ? `Grand Maître actuel : ${m.emo} ${esc(m.name)}` : 'Le Val attend encore son Grand Maître'} · ${laurels.length ? `Tes lauriers : ${laurels.map(k => VIC_BY[k].ico).join(' ')}` : 'Pas encore de laurier'}</p>
+    <p>Cinq chemins mènent au titre de Grand Maître. Les donjons rivaux et le Baron font la course : si l’un d’eux gagne avant toi, il devient Grand Maître et la course repart de zéro, mais tu gardes tout ce que tu as bâti (moins un tribut si c’est un donjon rival : le cinquième de ton or et de ton bois). En chemin, les rivaux préparent aussi des coups contre toi : {c:coups}. Pille-les pour les ralentir.</p>
     <div class="vicgrid">${VICTORIES.map(card).join('')}</div>`, { wide: true, cls: 'vicm', label: 'Victoires' });
   md.addEventListener('click', e => { const b = e.target.closest('[data-proj]'); if (!b) return; if (!run('project', { id: b.dataset.proj })) return; sfx('chime'); banner('🎉 Le grand projet commence !', esc(PROJ[b.dataset.proj].name), 1800); afterChange(); openVictories(); });
   if (focus) setTimeout(() => { const f = md.querySelector('.vic.focus'); if (f) f.scrollIntoView({ block: 'center' }); }, 50);
@@ -244,7 +244,7 @@ function openVictoryFinale(id) {
     menagerie: 'La Grande Parade a traversé le Val sous les vivats : gobelins, liches, fées et golems, tous fiers et épanouis. Aucun bestiaire n’égale le tien.',
     secrets: 'Les douze artefacts ont chanté ensemble. Le Val n’a plus de secret pour toi… ou presque.' }[id];
   openModal(`<div class="vfinale"><h2>🏛️ ${esc(V0.name)} !</h2><p class="big">${esc(text)}</p>
-    <p>${esc(S.name)} devient le château du Grand Maître du Val, à la nuit ${S.night}, ère ${vicState().era}. ${netUsable() ? 'Ton nom est gravé au Panthéon du Val.' : ''}</p>
+    <p>${esc(S.name)} devient le château du Grand Maître du Val, à la nuit ${S.night}${typeof bookCur === 'function' && bookCur() ? `, au chapitre ${ROMAN(bookCur().n)} du Livre` : ''}. ${netUsable() ? 'Ton nom est gravé au Panthéon du Val.' : ''}</p>
     <ul class="chron"><li><span class="emo">✨</span><span>Rayonnement ${radiance()}</span></li><li><span class="emo">🐾</span><span>${S.creatures.length} créatures, ${legendsHome()} légendes, album ${albumN()}/${MENAGERIE_SP.length}</span></li><li><span class="emo">🏆</span><span>${Object.keys(S.ach || {}).length} hauts faits · ${artPlaced()} artefacts exposés</span></li></ul>
     <p class="hint">Les autres victoires restent à prendre, pour la gloire.</p>
     <div class="mfoot"><button class="sbtn" type="button" id="vfAll">🏛️ Voir les victoires</button><button class="sbtn pri" type="button" data-close>🌙 Encore une nuit</button></div></div>`, { wide: true, label: V0.name });
@@ -254,7 +254,7 @@ function openVictoryFinale(id) {
 function victoryAfterNight() {
   const v = S.vic; if (!v) return;
   if (v.justWon) { const id = v.justWon; v.justWon = null; save(); sfx('chime'); openVictoryFinale(id); return; }
-  if (v.eraNews) { const r = racer(v.eraNews); v.eraNews = null; save(); banner(`👑 ${esc(r.name)}`, `devient Grand Maître du Val. Une nouvelle ère commence !`, 2600); }
+  if (v.eraNews) { const r = racer(v.eraNews); v.eraNews = null; save(); banner(`👑 ${esc(r.name)}`, `devient Grand Maître du Val. La course repart de zéro !`, 2600); }
 }
 
 /* ---------- la carte et la ville : bonne volonté, requêtes, vassaux, siège ---------- */
@@ -289,7 +289,7 @@ Object.assign(WIKI, {
     <p>Chaque victoire a des étapes, puis une finale qui dure plusieurs nuits. Tu peux toutes les remporter, une à une, pour la gloire. Voir aussi {c:eres}.</p>` },
   eres: { cat: 'vic', t: 'La course des rivaux et les ères', x: () => `<p>Tu n’es pas seul à viser le titre. Chaque donjon rival poursuit une victoire : ${RIVALS.map(r => `${r.name} (${VIC_BY[raceGoal(r.id)].name.replace('Victoire ', '')})`).join(', ')}. Le Baron Pâlichon, lui, brigue les voix du Conseil du Val.</p>
     <ul><li>Leur avancée se voit sur l’écran des victoires ; une pastille ⚠️ t’avertit quand l’un d’eux approche du but.</li><li>Un raid réussi contre un rival le fait reculer et le ralentit quelques nuits. Un rival devenu ton vassal ne court plus.</li>
-    <li>Si un rival gagne avant toi, il devient Grand Maître et <b>une nouvelle ère commence</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti. Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
+    <li>Si un rival gagne avant toi, il devient <b>Grand Maître</b> : les rivaux repartent de zéro, et tu gardes tout ce que tu as bâti (moins un tribut, si c’est un donjon rival). Pas de partie perdue, juste un rival qui fanfaronne.</li></ul>` },
   v_legende: { cat: 'vic', t: 'Victoire de Légende', x: () => `<p>Fais rayonner ton château jusqu’à <b>Mythique</b> (200 ✨) : artefacts, trésors, créatures rares, légendes, étages… Voir {c:rayonnement}.</p><p><b>Finale :</b> à Mythique, la cité de Mirebrume lève une croisade de héros légendaires. La Menace monte chaque nuit : repousse trois invasions de croisés et ton château entre dans la légende.</p>` },
   v_terreur: { cat: 'vic', t: 'Victoire de Terreur', x: () => `<p>Une domination douce : personne ne meurt. Mène des <b>expéditions</b> dans chacun des quatre donjons rivaux (sur la carte, dès le Palier 1) : vaincre le boss rapporte 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir un combat, 1 point ; à 3 points, le rival devient ton <b>vassal</b>, te verse 2 💰 et 1 🪵 par nuit, cesse de te disputer tes créatures et quitte la course.</p><p><b>Finale :</b> le Siège de Mirebrume, une cible de raid très gardée (Palier 2). Trois assauts réussis (un 6 au meilleur dé : un succès partiel ne suffit pas) et la cité te remet ses clés.</p><p class="hint">Les donjons rivaux grandissent avec toi (+0,5 niveau par palier) ; chaque défaite rend un rival plus coriace (+0,25 niveau par point pris), et tous se méfient d’un suzerain (+0,25 par vassal). Attention : piller fait monter la Menace, et piller les fermes, moulins et auberges fâche les villages ({c:v_voisinage}).</p>` },
   v_voisinage: { cat: 'vic', t: 'Victoire de Bon Voisinage', x: () => `<p>Chaque village, la ville et la cité ont une <b>bonne volonté</b> envers toi (visible sur la carte et en ville). Elle monte avec leurs <b>requêtes</b> (envoyer une créature, payer un service, repousser une invasion), les dons pour la fête et tes achats ; elle baisse quand tu pilles leurs environs, et retombe doucement avec le temps.</p>
