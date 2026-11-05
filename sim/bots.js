@@ -50,7 +50,9 @@ function common(o = {}) {
   if (tierStatus() && tierStatus().ok && S.gold - tierStatus().next.cost.g > (o.tierReserve || 0)) cmd('tierUp');
   econ(o); defend(o.trap || 10); prepare(o); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60); A.concours(); A.trade(); A.mecenat(o.mecenatReserve || 60); A.wonder(o.wonderReserve || 200); A.fete(); A.spy(); A.shelf(o.shelfReserve || 80);
   if (roomsOf('trone').length && !hasItem('trone')) A.placeItem('trone');   // palier 3 : le Trône dans sa salle
-  const ex = expandStatus(); if (ex && ex.ok && SIM.noRoom && S.night - SIM.noRoom < 3 && S.gold > (ex.cost.g || 0) + 30) { cmd('expand'); SIM.noRoom = 0; }   // à l'étroit : on agrandit les remparts
+  const ex = expandStatus(); if (ex && S.tier >= ex.need && SIM.noRoom && S.night - SIM.noRoom < 3 && S.gold > (ex.cost.g || 0) + 30 && S.mat >= (ex.cost.s || 0) && (typeof amberSpare !== 'function' || amberSpare(ex.cost)) && ex.ok) { cmd('expand'); SIM.noRoom = 0; }   // à l'étroit : on agrandit les remparts
+  // l'Ambre (v33) : une expédition quand elle manque pour le prochain palier (o.floors : et pour le prochain escalier)
+  if (typeof A.amberRun === 'function' && typeof AMBER_COST !== 'undefined') A.amberRun(o.floors && floorSet().size < Math.min(3, S.tier) ? AMBER_COST.floor : 0);
 }
 function floors(wantUp, wantDown) {
   const fs = floorSet();
@@ -78,11 +80,11 @@ const BOTS = {
   // ne fait rien : la course des rivaux et les invasions à l'état brut
   idle() {},
   // bâtit et pille comme « tranquille », mais ne s'occupe jamais de ses créatures (ni caresses, ni friandises, ni missions)
-  negligent() { SIM.careful = false; if (tierStatus() && tierStatus().ok) cmd('tierUp'); econ(); defend(10); grow(BASE_ROOMS); if (S.night % 3 === 0) raidFor(FARM, 3); },
+  negligent() { SIM.careful = false; if (tierStatus() && tierStatus().ok) cmd('tierUp'); econ(); defend(10); grow(BASE_ROOMS); if (typeof A.amberRun === 'function') A.amberRun(0, { every: 3 }); if (S.night % 3 === 0) raidFor(FARM, 3); },
   // joueur tranquille : bâtit, meuble, caresse, pille un peu les fermes
   casual() { common(); grow(BASE_ROOMS); if (S.night % 3 === 0) raidFor(FARM, 3); },
   legende() {
-    common({ trap: 14 }); grow(BASE_ROOMS, { reserve: 4 });
+    common({ trap: 14, floors: true }); grow(BASE_ROOMS, { reserve: 4 });
     floors(S.tier >= 2, true); buildOn(-1, ['reliquaire', 'mine']); buildOn(1, ['voliere', 'jardin']); buildOn(-2, ['lac']); buildOn(2, ['belvedere']);
     S.rooms.filter(r => r.built && zOf(r) !== 0 && ROOMS[r.t].furn && !fullRoom(r)).forEach(r => A.furnish(r, S.gold - 4));
     roomsOf('tresor').forEach(r => A.furnish(r, S.gold - 4));
@@ -115,14 +117,14 @@ const BOTS = {
     if (setts.length < 7 && S.night % 2 === 0) A.scout();
   },
   menagerie() {
-    common({ trap: 12, tierReserve: 0 }); grow(BASE_ROOMS, { reserve: 2 });
+    common({ trap: 12, tierReserve: 0, floors: true }); grow(BASE_ROOMS, { reserve: 2 });
     floors(true, true); buildOn(-1, ['mine', 'reliquaire']); buildOn(1, ['jardin', 'voliere']); buildOn(-2, ['lac']); buildOn(2, ['belvedere']);
     S.rooms.filter(r => r.built && zOf(r) !== 0 && ROOMS[r.t].furn && !fullRoom(r)).forEach(r => A.furnish(r, S.gold - 2));
     outdoors(['poulailler', 'simples', 'mare', 'cimetiere']);
     expeditions(2, s => { const X = EXPE_SITES[s.expe] || {}; return X.meet && !worldMet(X.meet) ? 5 : ((X.arts || []).some(k => !ownedArtefacts().has(k)) ? 1 : 0); });
     if (S.creatures.filter(c => c.mood <= 2).length > 2 && S.gold > 10) { const t = A.knownTowns().find(s => s.kind !== 'village') || A.knownTowns()[0]; if (t) A.shop(t.id, 'humeur'); }
     Object.entries(SPECIES).filter(([k, d]) => d.fromDecor && !S.album[k]).forEach(([k, d]) => Object.entries(d.fromDecor).forEach(([t, n]) => { for (let i = 0; i < 4 && countItem(t) < n; i++) if (A.placeItem(t)) break; }));
-    // château plein (renommée ou lits) alors qu'une espèce jamais vue pourrait venir : on renvoie un doublon
+    // château plein (places d’accueil ou lits) alors qu'une espèce jamais vue pourrait venir : on renvoie un doublon
     if (typeof homeCap === 'function' && S.creatures.length >= homeCap() && SPECIES_ORDER.some(sp => !S.album[sp] && nestsOf(sp) && rareOK(sp) && !(SPECIES[sp].tier && S.tier < SPECIES[sp].tier))) {
       const by = {}; S.creatures.forEach(c => { (by[c.sp] = by[c.sp] || []).push(c); });
       const dup = Object.values(by).filter(l => l.length >= 3).flat().filter(c => !c.legend && !isOut(c) && !questOf(c)).sort((a, b) => (a.lvl || 1) - (b.lvl || 1))[0]; if (dup) cmd('fire', { id: dup.id });

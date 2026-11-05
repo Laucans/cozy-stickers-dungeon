@@ -65,7 +65,7 @@ function cliCrawlText(X) {
   const R = X.R, B = X.B, L = [], st = o => Object.entries(o.st || {}).filter(([, v]) => v).map(([k, v]) => k + (v === true ? '' : ' ' + v)).join(', ');
   const tg = RAIDS[X.key] || {};
   const bossTxt = crawlPeekText(R, 'boss');
-  L.push(`🃏 Expédition : ${tg.name || X.key} (niveau ${String(R.lvl).replace('.', ',')})${bossTxt ? ` · au bout : ${bossTxt}` : ''} · étage ${Math.min(R.floor, CRAWL_FLOORS)}/${CRAWL_FLOORS}${R.floor > CRAWL_FLOORS ? ' · porte du boss' : `, salle ${R.step + 1}/${CRAWL_STEPS}`} · butin ${R.loot.g} 💰 ${R.loot.s} 🪵${R.loot.items.length ? ' + ' + R.loot.items.length + ' sticker(s)' : ''} · deck ${R.deck.length} cartes`);
+  L.push(`🃏 Expédition : ${tg.name || X.key} (niveau ${String(R.lvl).replace('.', ',')})${bossTxt ? ` · au bout : ${bossTxt}` : ''} · étage ${Math.min(R.floor, CRAWL_FLOORS)}/${CRAWL_FLOORS}${R.floor > CRAWL_FLOORS ? ' · porte du boss' : `, salle ${R.step + 1}/${CRAWL_STEPS}`} · butin ${R.loot.g} 💰 ${R.loot.s} 🪵${R.loot.a ? ' ' + R.loot.a + ' 🟠' : ''}${R.loot.items.length ? ' + ' + R.loot.items.length + ' sticker(s)' : ''} · deck ${R.deck.length} cartes`);
   L.push('Équipe : ' + R.party.map((p, i) => `${i + 1}) ${p.name} (${SPECIES[p.sp] ? SPECIES[p.sp].name : p.sp}) ${p.ko ? 'K.O.' : `${p.hp}/${p.max} PV`}${p.block ? ` · parade ${p.block}` : ''} · peur ${p.stress}/${STRESS_MAX}${st(p) ? ' · ' + st(p) : ''}`).join(' | '));
   if (X.msg.length) L.push('— ' + X.msg.filter(Boolean).map(s => String(s).replace(/<[^>]+>/g, '')).join(' — '));
   if (X.info && X.info.length) L.push('ℹ️ ' + X.info.join(' '));
@@ -89,10 +89,10 @@ function cliCrawlText(X) {
 // la fin : le château reçoit le résultat, et la nuit ne rejouera pas l'expédition
 function cliCrawlFinish(X) {
   if (!X.R.path.length) { cancelRaid(); return '🏁 Expédition annulée avant la première salle : personne n’est parti, le lieu reste ouvert.'; }
-  const lines = []; crawlApply(X.R, X.team, lines); crawlVictory(X.dg, X.R, lines); crawlSiteResult(X.key, X.R, X.team, lines);
+  const lines = [], got = crawlApply(X.R, X.team, lines); crawlVictory(X.dg, X.R, lines); crawlSiteResult(X.key, X.R, X.team, lines);
   S.raid.played = true;
   const head = X.R.done === 'boss' ? 'le boss est vaincu !' : X.R.done === 'wipe' ? 'l’équipe est terrassée.' : X.R.done === 'fled' ? (X.R.fledBoss ? 'fuite devant le boss (la moitié du butin et tous les stickers restent là-bas).' : 'fuite (la moitié du butin reste là-bas).') : 'retour avec le butin.';
-  return [`🏁 Expédition terminée : ${head} Butin rapporté : ${X.R.done === 'wipe' ? 0 : X.R.loot.g} 💰, ${X.R.done === 'wipe' ? 0 : X.R.loot.s} 🪵.`, ...lines.map(l => `${l[0]} ${String(l[1]).replace(/<[^>]+>/g, '')}`)].join('\n');
+  return [`🏁 Expédition terminée : ${head} Butin rapporté : ${got.g || 0} 💰, ${got.s || 0} 🪵, ${got.a || 0} 🟠 d’Ambre (tu en as ${S.amber || 0}).`, ...lines.map(l => `${l[0]} ${String(l[1]).replace(/<[^>]+>/g, '')}`)].join('\n');
 }
 // le deck de l'expédition (pour choisir quoi aiguiser)
 function cliCrawlDeck(X) { return 'Deck : ' + X.R.deck.map((c, i) => `${i + 1}) ${cardName(c)}${c.owner ? ' (' + ((X.R.party.find(p => p.id === c.owner) || {}).name || '?') + ')' : ''}`).join(' | '); }

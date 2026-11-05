@@ -4,6 +4,9 @@
    contexte : il voit toutes ses fonctions et variables.
    ========================================================= */
 var SIM = { m: null, careful: false };
+// une copie plus ancienne des sources (CSD_SRC) n'a pas toujours la notoriété unique ni l'origine des bandes
+const simMenaceRises = () => typeof menaceRises === 'function' ? menaceRises() : S.hype >= 3;
+const simBandFrom = r => typeof bandFrom === 'function' ? bandFrom(r) : `(rang ${r || 1})`;
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 // l'affichage n'existe pas ici : on neutralise les effets visuels qui accumuleraient des données
 poof = function () {}; floatText = function () {}; say = function () {}; critterLeave = function () {}; toast = function () {}; sfx = function () {};
@@ -40,8 +43,8 @@ function simNight() {
   if (S.raid && S.raid.played) { /* expédition déjà jouée à la main (sim/crawl_cli.js) */ }
   else if (S.raid && S.raid.crawl && typeof simCrawlNight === 'function') { const o = simCrawlNight(report); M.crawls = (M.crawls || 0) + 1; if (o) M['crawl_' + o] = (M['crawl_' + o] || 0) + 1; }
   else if (S.raid) { const team = S.raid.team.map(critter).filter(Boolean); if (team.length) { const b = raidBreakdown(S.raid.target, S.raid.team), extra = typeof simRaidExtras === 'function' ? simRaidExtras(b, team, report) : 0, roll = rollPool(b.pool + extra), tg = RAIDS[S.raid.target]; report.push(['🎲', `Raid sur ${tg ? tg.name : S.raid.target} : ${b.pool} dés → ${roll.dice.join(', ')} (${roll.res === 'fail' ? 'échec' : roll.res === 'partial' ? 'réussite partielle' : roll.res === 'crit' ? 'critique' : 'réussite'})`, '']); applyRaid(roll).forEach(l => report.push(l)); M.raids++; if (roll.res !== 'fail') M.raidsWon++; } }
-  if (S.hype >= 3) S.menace += 1;
-  if (S.menace >= MENACE_MAX) { S.menace = 0; const plan = planInvasion(), out = simInvasion(plan); if (plan.res) { M.hurt = (M.hurt || 0) + plan.res.hurt.length; M.heroKO = (M.heroKO || 0) + plan.res.fallen.length; M.fought = (M.fought || 0) + plan.res.fought.length; } report.push(['⚔️', `Invasion : ${plan.party.length} héros (rang ${plan.rank || 1}) → ${out === 'repelled' ? 'repoussés' : out === 'lost' ? 'perdus en route' : out === 'bought' ? 'leur départ est acheté' : 'le Cœur est pillé'}${plan.res && plan.res.inv2 ? ` (${plan.res.inv2.fights} combat${plan.res.inv2.fights > 1 ? 's' : ''} aux cartes, ${plan.res.fallen.length} héros à terre sur ${plan.party.length})` : plan.res && plan.res.fought ? ` (${plan.res.fought.length} combat${plan.res.fought.length > 1 ? 's' : ''}, ${plan.res.fallen.length} héros à terre)` : ''}`, out === 'robbed' ? 'bad' : 'good']); if (plan.banned) report.push(['💰', plan.banned + ' Ta tactique « rançon » attendra la prochaine bande.', '']);
+  if (simMenaceRises()) S.menace += 1;
+  if (S.menace >= MENACE_MAX) { S.menace = 0; const plan = planInvasion(), out = simInvasion(plan); if (plan.res) { M.hurt = (M.hurt || 0) + plan.res.hurt.length; M.heroKO = (M.heroKO || 0) + plan.res.fallen.length; M.fought = (M.fought || 0) + plan.res.fought.length; } report.push(['⚔️', `Invasion : ${plan.party.length} héros venus ${simBandFrom(plan.rank)} → ${out === 'repelled' ? 'repoussés' : out === 'lost' ? 'perdus en route' : out === 'bought' ? 'leur départ est acheté' : 'le Cœur est pillé'}${plan.res && plan.res.inv2 ? ` (${plan.res.inv2.fights} combat${plan.res.inv2.fights > 1 ? 's' : ''} aux cartes, ${plan.res.fallen.length} héros à terre sur ${plan.party.length})` : plan.res && plan.res.fought ? ` (${plan.res.fought.length} combat${plan.res.fought.length > 1 ? 's' : ''}, ${plan.res.fallen.length} héros à terre)` : ''}`, out === 'robbed' ? 'bad' : 'good']); if (plan.banned) report.push(['💰', plan.banned + ' Ta tactique « rançon » attendra la prochaine bande.', '']);
     if (plan.res && plan.res.inv2 && typeof invSummary === 'function') invSummary(plan.res.inv2, out).forEach(l => report.push(l));   // le résumé, pièce par pièce
     (out === 'bought' ? plan.bought || [] : applyInvasion(plan, out)).forEach(l => report.push(l)); M.inv++; M['inv_' + out] = (M['inv_' + out] || 0) + 1; M.invRank[plan.rank || 1]++; (M.invLog = M.invLog || []).push([S.night, plan.rank || 1, plan.courage, (plan.steps || []).reduce((a, st) => a + st.dmg, 0), out, vicState().croisade && !vicState().won.legende ? 1 : 0]); }
   if (typeof rivalNightSim === 'function') { const o = rivalNightSim(report); if (o) { M.nemRaids = (M.nemRaids || 0) + 1; if (o === 'robbed') M.nemRobbed = (M.nemRobbed || 0) + 1; } }
@@ -175,21 +178,26 @@ A.care = () => {
   });
 };
 A.acceptQuests = (expe = true) => S.creatures.forEach(c => { const q = questOf(c); if (q && (q.st === 'offered' || q.st === 'ready') && (expe || !QT[q.k].away)) cmd('qAccept', { id: c.id }); });
-const invasionSoon = (extra = 0) => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) + extra >= MENACE_MAX;
+const invasionSoon = (extra = 0) => S.menace + (simMenaceRises() ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) + extra >= MENACE_MAX;
 // plus de gardes à poster : les défenseurs se rangent d'eux-mêmes, de la plus faible à la plus forte (invLineup) ; on lève les vieux postes, sans plus (SIM_GUARD n'a plus d'effet)
 A.guards = () => { S.creatures.forEach(c => { if (c.guard) c.guard = null; }); };
 // les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
 // les Merveilles : l'or et le bois en trop (au-delà d'une réserve) vont à la moins chère ; une fête quand quelqu'un se sent délaissé
-A.wonder = (reserve = 200) => { if (typeof WONDERS === 'undefined') return; const k = Object.keys(WONDERS).map(x => [x, wonderCost(x)]).sort((a, b) => (a[1].g + a[1].s) - (b[1].g + b[1].s))[0]; if (k && S.gold - k[1].g >= reserve && S.mat - k[1].s >= reserve / 2) cmd('wonder', { id: k[0] }); };
+// l'Ambre (v33) : celle du prochain palier ne se dépense pas ailleurs (les escaliers mis à part : un étage fait monter la notoriété)
+const amberKeep = () => { const st = typeof AMBER_COST !== 'undefined' && tierStatus(); return st ? st.next.cost.a || 0 : 0; };
+// un achat « grand » qui n'attend plus que l'ambre la note dans SIM.amberWant : la prochaine expédition (A.amberRun) ira la chercher
+const amberSpare = c => { if (!c || !c.a || (S.amber || 0) - c.a >= amberKeep()) return true; SIM.amberWant = Math.max(SIM.amberWant || 0, c.a); return false; };
+A.wonder = (reserve = 200) => { if (typeof WONDERS === 'undefined') return; const k = Object.keys(WONDERS).map(x => [x, wonderCost(x)]).sort((a, b) => (a[1].g + a[1].s) - (b[1].g + b[1].s))[0]; if (k && S.gold - k[1].g >= reserve && S.mat - k[1].s >= reserve / 2 && amberSpare(k[1])) cmd('wonder', { id: k[0] }); };
 A.spy = (reserve = 30) => { if (typeof coupPending !== 'function') return; coupPending().forEach(([id]) => { if (S.gold >= coupCost() + reserve) cmd('spy', { id }); }); };
 A.fete = () => { if (typeof feteWhy === 'undefined' || feteWhy()) return; if (S.creatures.some(c => !isOut(c) && (c.loy == null ? 50 : c.loy) < 35) && S.gold - feteCost().g >= 40) cmd('fete'); };
-A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => !chantierWhy(x)).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve) cmd('chantier', { id: k }); };
+A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => { const w = chantierWhy(x), C = CHANTIERS[x].cost; return !w || (/^Il te faut/.test(w) && S.gold >= (C.g || 0) && S.mat >= (C.s || 0)); }).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve && amberSpare(CHANTIERS[k].cost)) cmd('chantier', { id: k }); };
 A.cook = () => { if (typeof RECIPES === 'undefined' || !hasKitchen()) return; const order = [eaters() > foodCap() ? 'tourte' : null, invasionSoon() ? 'gateau' : null, invasionSoon() ? 'poisson' : null, S.calamity >= CAL_MAX - 3 ? 'ragout' : null, 'soupe'].filter(Boolean); for (const k of order) if (canCook(k)) { cmd('cook', { id: k }); return; } };
 A.caravan = how => { if (typeof activeCaravans === 'undefined') return; const cv = activeCaravans().find(x => !x.done); if (cv && (how !== 'pille' || caravanOdds(cv) >= .5)) cmd('caravan', { id: cv.id, how }); };
 // le mécénat (v29) : le bois et l'or en trop (au-delà d'une réserve) vont à l'embellissement le moins cher d'un lieu connu
 A.mecenat = (reserve = 60) => { if (typeof mecState !== 'function' || mecState().cur) return; const s = mecSites().filter(x => mecLv(x.id) < 3 && S.tier >= 1).sort((a, b) => (mecCost(a).g + mecCost(a).s) - (mecCost(b).g + mecCost(b).s))[0]; if (!s) return; const c = mecCost(s);
-  if (S.gold - c.g >= reserve && S.mat - c.s >= reserve) cmd('mecenat', { id: s.id });
-  else if (S.gold - allGold(c).g >= 250) cmd('mecenat', { id: s.id, gold: true }); };   // l'or déborde (les pillards) : tout en or
+  const wood = S.gold - c.g >= reserve && S.mat - c.s >= reserve; if (!(wood || S.gold - allGold(c).g >= 250) || !amberSpare(c)) return;
+  if (wood) cmd('mecenat', { id: s.id });
+  else cmd('mecenat', { id: s.id, gold: true }); };   // l'or déborde (les pillards) : tout en or
 // le concours de saison (v29) : on s'inscrit si on a une chance, puis on prépare avec le bois en trop
 A.concours = () => { if (typeof concOpen !== 'function' || !concOpen()) return; const C = S.concours, lvl = concRivalLevel() + 2.2;
   if (!C.in && concMine() + 4 >= lvl && S.gold - concFee().g >= 25) cmd('concours');
@@ -233,7 +241,7 @@ A.journalText = () => {
 A.shelf = (reserve = 80) => {
   if (typeof shelfTarget !== 'function' || S.night - (SIM.shelfAt || -9) < 5) return null;
   const needBeds = beds() - S.creatures.length < 3, needFood = foodCap() < eaters() + 2, want = { dortoir: needBeds ? 3 : 1, potager: needFood ? 3 : 1, cuisine: needFood ? 3 : 1 };
-  const rs = S.rooms.filter(r => r.built && ROOMS[r.t].furn && furnCount(r) >= furnCap(r) && shelfTarget(r) && !shelfWhy(r) && S.mat - (shelfCost(shelfTarget(r)).s || 0) >= reserve)
+  const rs = S.rooms.filter(r => r.built && ROOMS[r.t].furn && furnCount(r) >= furnCap(r) && shelfTarget(r) && (!shelfWhy(r) || (/^Il te faut/.test(shelfWhy(r)) && S.gold >= (shelfCost(shelfTarget(r)).g || 0))) && S.mat - (shelfCost(shelfTarget(r)).s || 0) >= reserve && amberSpare(shelfCost(shelfTarget(r))))
     .sort((a, b) => (want[b.t] || 1) - (want[a.t] || 1) || (shelfCost(shelfTarget(a)).s || 0) - (shelfCost(shelfTarget(b)).s || 0));
   if (!rs.length) return null; const e = cmd('shelf', { id: rs[0].id }); if (!e) { SIM.shelfAt = S.night; A.furnish(rs[0], Math.max(0, S.gold - 4)); } return e;
 };
@@ -278,6 +286,23 @@ A.scout = () => { const w = world(), vis = visibleSet(); const edge = w.list.fil
 A.shop = (siteId, item, arg) => cmd('shop', { site: siteId, item, arg });
 A.knownTowns = () => world().sites.filter(s => SITE_KINDS[s.kind].shop && siteKnown(s));
 A.request = (q) => { const R = REQ[q.req]; if (R.kind === 'pay') return cmd('request', { id: q.id }); if (R.kind === 'send' && q.st === 'open') { const c = reqCandidates(q).filter(x => !(S.raid && S.raid.team.includes(x.id)))[0]; if (!c) return 'personne'; return cmd('request', { id: q.id, team: [c.id] }); } return 'rien à faire'; };
+// l'Ambre (v33) : une expédition aux cartes quand elle manque pour le prochain palier (et extra de plus : un escalier…) ;
+// le lieu d'expédition prêt le plus proche, sinon un donjon rival (dès le Palier 1), sinon un éclaireur pour en trouver un. o.every : une nuit sur n au plus
+// comme un joueur qui ne part qu'au besoin : le palier n'attend plus que l'ambre (et l'or, qui viendra), ou l'ambre manque pour extra (un escalier)
+A.amberRun = (extra = 0, o = {}) => {
+  if (typeof AMBER_COST === 'undefined' || S.raid || keepHome() || (o.every && S.night % o.every)) return null;
+  const st = tierStatus(), ready = st && st.rows.every(r => r.ok || r.amber || r.pay), keep = ready ? amberKeep() : 0;
+  extra = Math.max(extra, SIM.amberWant || 0); SIM.amberWant = 0;
+  if ((S.amber || 0) >= keep + extra) return null;
+  const fit = A.free().filter(c => !injured(c)); if (fit.length < (o.min || 4)) return null;
+  const site = world().sites.filter(s => s.expe && CRAWL_SITES.includes(s.expe) && siteKnown(s) && expeReady(s)).sort((a, b) => hdist(a.q, a.r) - hdist(b.q, b.r))[0];
+  const want = keep + extra - (S.amber || 0), go = e => { if (!e && S.raid) S.raid.amber = want; return e; };   // l'équipe rentre quand elle l'a (simCrawlNight)
+  if (site) return go(A.expedition(site.id)) || 'expé ' + site.id;
+  const rv = S.tier >= 1 && RIVALS.filter(r => !isVassal(r.id) && raidKnown('r_' + r.id)).sort((a, b) => crawlResist(a.id) - crawlResist(b.id))[0];
+  if (rv) return go(A.raid('r_' + rv.id)) || 'expé r_' + rv.id;
+  if (!world().sites.some(s => s.expe && CRAWL_SITES.includes(s.expe) && siteKnown(s))) return A.scout();
+  return null;
+};
 A.floor = (dir) => { const z = dir > 0 ? Math.max(0, ...floorsOpen()) : Math.min(0, ...floorsOpen()); return A.build(dir > 0 ? 'montee' : 'escalier', z); };
 A.free = free;
 const roomFree = r => cellsOf(r).filter(([x, y]) => !furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r)));
@@ -327,7 +352,7 @@ function simState(full) {
   const raids = Object.keys(RAIDS).filter(k => raidKnown(k) && RAIDS[k].tier <= S.tier && !(/^x_/.test(k) && RAIDS[k].site && !siteKnown(siteById(RAIDS[k].site)))).map(k => { if (typeof isCrawlTarget === 'function' && isCrawlTarget(k)) return `${k}(expédition en cartes)`; const p = A.raidPool(k); return `${k}(${p < 0 ? 'personne pour y aller' : 'dés ' + Math.min(6, p) + (p > 6 ? ' (réserve ' + p + ', 6 lancés au plus)' : '')})`; });
   const reqs = openReqs().map(q => `${q.id}:${siteById(q.site).name}:${q.req}(${REQ[q.req].kind}${q.st === 'sent' ? ', en cours' : ''})`);
   const lines = [
-    `NUIT ${S.night} · palier ${S.tier} · or ${S.gold} · matériaux ${S.mat} · notoriété ${S.hype} · rayonnement ${radiance()} · ambiance ${ambiance()} · lits ${S.creatures.length}/${beds()} · repas ${eaters()}/${foodCap()} · calamité ${S.calamity}/${CAL_MAX} · menace ${S.menace}/${MENACE_MAX}`,
+    `NUIT ${S.night} · palier ${S.tier} · or ${S.gold} · bois ${S.mat}${typeof AMBER_COST !== 'undefined' ? ` · ambre ${S.amber || 0} 🟠` : ''} · notoriété ${radiance()}${typeof eclatPts === 'function' ? ` (éclat ${eclatPts()} + bouche-à-oreille ${wordPts()} : 💬 ${S.hype})` : ''} · ambiance ${ambiance()} · lits ${S.creatures.length}/${beds()} · repas ${eaters()}/${foodCap()} · calamité ${S.calamity}/${CAL_MAX} · menace ${S.menace}/${MENACE_MAX}`,
     `Prochains héros : ${pp.size} ${HERO_RANK[pp.rank].label} de ${h ? h.name : '?'} · pièges ${S.defs.length} (l’estimation sur 24 essais s’affiche quand une bande approche)`,
     `Étages ${floorsOpen().join(',')} (max ${Math.min(3, S.tier)} en plus) · remparts ${12 + 2 * (S.size || 0)}×${12 + 2 * (S.size || 0)} · palier suivant : ${tierStatus() ? tierStatus().rows.map(r => (r.ok ? '✓' : '✗') + r.text).join(' ; ') : 'max'}`,
     `Pièces : ${Object.entries(rooms).map(([k, n]) => n > 1 ? k + '×' + n : k).join(', ') || 'aucune'}`,
