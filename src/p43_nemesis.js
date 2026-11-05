@@ -57,9 +57,9 @@ applyInvasion = function (plan, outcome) {
     const j = plan.party.findIndex(h => h.nem), R = plan.res, down = R && R.fallen && R.fallen.includes(j);
     if (outcome === 'robbed') { N.wins++; N.lvl = Math.min(6, N.lvl + 1); lines.push(['😠', `${N.name} ${pick(NEM_LINES.win)} (niveau ${N.lvl})`, 'bad']); }
     else if (outcome === 'repelled') {
-      N.beaten++; lines.push(['💪', `${N.name} ${down ? 'est à terre' : 'est mis en déroute'} (${N.beaten}/3) ! ${pick(NEM_LINES.down)}`, 'good']);
+      N.beaten++; lines.push(['💪', `${N.name} ${down ? 'est à terre' : 'est repoussé'} (${N.beaten}/3) ! ${pick(NEM_LINES.down)}`, 'good']);
       if (N.beaten >= 3) { N.st = 'mercy'; lines.push(['🗝️', `${N.name} est à ta merci. À toi de décider de son sort.`, 'ev']); dawnChoice(nemMercy, () => nemDecide(S.gold >= 40 ? 'spy' : 'ally')); }
-    } else { N.lvl = Math.min(6, N.lvl + 1); lines.push(['😠', `${N.name} s’enfuit : ${pick(NEM_LINES.lose)} (niveau ${N.lvl})`, '']); }
+    } else { N.lvl = Math.min(6, N.lvl + 1); lines.push(['😠', `${N.name} rebrousse chemin avec la bande : ${pick(NEM_LINES.lose)} (niveau ${N.lvl})`, '']); }
   } catch (e) { console.error(e); }
   return lines;
 };
@@ -90,5 +90,5 @@ heartTokens = function () { return heartTokensNem() + (S.foeHero && S.foeHero.st
 const nemAlly = () => { const N = S.foeHero; return N && N.st === 'ally' ? { id: 'nemally', name: N.name, hp: 10 + 3 * N.lvl, max: 10 + 3 * N.lvl, atk: 2 + Math.floor(N.lvl / 2), merc: true, A: {} } : null; };
 
 WIKI.nemesis = { cat: 'danger', t: 'Le héros némésis', x: () => `<p>Un jour, parmi les aventuriers qui t’attaquent, un héros te prend en grippe. Il a un nom (${S.foeHero ? `<b>${esc(S.foeHero.name)}</b>` : 'tu le sauras bien assez tôt'}) et il revient à <b>chaque invasion</b>, à la place d’un des héros de la bande, avec 35 % de PV en plus.</p>
-  <ul><li>Chaque invasion le fait monter d’un niveau (6 au plus), et il <b>désamorce</b> toujours le premier piège de la bande.</li><li>S’il gagne, il te nargue dans la chronique ; s’il fuit, il jure de revenir.</li>
+  <ul><li>Chaque invasion le fait monter d’un niveau (6 au plus), et il <b>désamorce</b> toujours le premier piège de la bande.</li><li>S’il gagne, il te nargue dans la chronique ; si une ruse fait rebrousser chemin à sa bande, il jure de revenir.</li>
   <li>Repoussé trois fois, il est <b>à ta merci</b> : le capturer (notoriété, rançon), le corrompre (+1 énergie au premier tour du combat du Cœur, à chaque invasion) ou le recruter (il change de camp, ne t’attaque plus et défend ton Cœur à tes côtés).</li></ul>` };

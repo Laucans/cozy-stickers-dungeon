@@ -48,7 +48,7 @@ function common(o = {}) {
   if (typeof sagaBotStep === 'function') sagaBotStep();   // les intrigues : on les suit, on paie, on choisit
   if (typeof qState === 'function') A.questStep();   // les quêtes du journal : on accepte, on livre, on choisit, on lance raids et expéditions
   if (tierStatus() && tierStatus().ok && S.gold - tierStatus().next.cost.g > (o.tierReserve || 0)) cmd('tierUp');
-  econ(o); defend(o.trap || 10); prepare(o); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60); A.concours(); A.trade(); A.mecenat(o.mecenatReserve || 60); A.wonder(o.wonderReserve || 200); A.fete(); A.spy();
+  econ(o); defend(o.trap || 10); prepare(o); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60); A.concours(); A.trade(); A.mecenat(o.mecenatReserve || 60); A.wonder(o.wonderReserve || 200); A.fete(); A.spy(); A.shelf(o.shelfReserve || 80);
   if (roomsOf('trone').length && !hasItem('trone')) A.placeItem('trone');   // palier 3 : le Trône dans sa salle
   const ex = expandStatus(); if (ex && ex.ok && SIM.noRoom && S.night - SIM.noRoom < 3 && S.gold > (ex.cost.g || 0) + 30) { cmd('expand'); SIM.noRoom = 0; }   // à l'étroit : on agrandit les remparts
 }

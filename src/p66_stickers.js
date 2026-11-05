@@ -82,7 +82,7 @@ applyCombat = function (plan, R, lines) {
     if (R.outcome === 'repelled') {
       if (!(R.hurt || []).length) stk('inv:intacte', 'Pas une égratignure', '✨', 'Invasions', 2, 'Repousser une invasion sans qu’aucune créature ne soit sonnée.', { lines });
       if ((plan.party || []).length >= 5 || (plan.rank || 0) >= 3) stk('inv:redoutable', 'Une bande redoutable', '🔥', 'Invasions', 3, 'Repousser une bande de cinq héros, ou venue de très loin.', { art: { k: 'hero', key: 'paladin' }, lines });
-      if (S.vic && S.vic.croisade && S.vic.croisade.done) stk('inv:croisade', 'Les croisés en déroute', '⚔️', 'Invasions', 3, 'Repousser une bande de la croisade.', { art: { k: 'hero', key: 'paladin' }, lines });
+      if (S.vic && S.vic.croisade && S.vic.croisade.done) stk('inv:croisade', 'Les croisés repoussés', '⚔️', 'Invasions', 3, 'Repousser une bande de la croisade.', { art: { k: 'hero', key: 'paladin' }, lines });
     }
   } catch (e) { console.error(e); }
   return r;

@@ -18,7 +18,7 @@ const FIL = [
       { id: 'crea', t: 'Accueille une nouvelle créature', ok: () => S.creatures.length >= 3, n: () => [Math.max(0, S.creatures.length - 2), 1], wiki: 'creatures' },
       { id: 'repas', t: 'Meuble un Potager ou une Cuisine', ok: () => hasFood(), show: () => { openBuild('room'); filGlow('.card[data-kind="room"][data-t="potager"]'); }, wiki: 'lits_repas' },
     ], reward: { g: 10, s: 15 }, unlock: 'les pièges et la défense du château' },
-  { id: 'visiteurs', t: 'Les premiers visiteurs', intro: 'La rumeur court au village : un château s’éveille. Des aventuriers viendront chercher l’or du Cœur. Prépare-leur un accueil : un piège dans un couloir, contre une pièce. Tes créatures se défendront d’elles-mêmes : les plus fortes au Cœur, les autres tirées au sort dans les pièces. Dès que tout est en place, ils arrivent.',
+  { id: 'visiteurs', t: 'Les premiers visiteurs', intro: 'La rumeur court au village : un château s’éveille. Des aventuriers viendront chercher l’or du Cœur. Prépare-leur un accueil : un piège dans un couloir, contre une pièce. Tes créatures se défendront d’elles-mêmes : les plus fortes au Cœur, les autres rangées dans les pièces, des plus faibles aux plus fortes. Dès que tout est en place, ils arrivent.',
     goals: [
       { id: 'piege', t: 'Pose un piège dans un couloir', ok: () => S.defs.length > 0, show: () => { openBuild('def'); }, wiki: 'pieges' },
       { id: 'bande', t: 'Affronte ta première bande d’aventuriers', ok: () => S.stats.invasions >= 1, wiki: 'invasion' },

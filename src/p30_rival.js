@@ -119,7 +119,7 @@ function applyNemRaid(plan, R, lines) {
   } else {
     const purse = 2 * plan.party.length + S.tier, room = Math.max(0, sumRooms('cells') - S.prisoners), caught = Math.min(room, R.fallen.length);
     S.gold += purse; S.prisoners += caught; n.losses++; n.pres = Math.max(6, n.pres - 3); v.race[r.id] = Math.max(0, (v.race[r.id] || 0) - 5);
-    lines.unshift(['🛡️', `Les sbires ${dN(who)} détalent : +${purse} 💰, et ${r.name} recule dans la course.${caught ? ` ${caught} sbire${caught > 1 ? 's' : ''} aux Oubliettes : rançon à l’aube.` : ''}`, 'good']);
+    lines.unshift(['🛡️', `Les sbires ${dN(who)} sont tous à terre : +${purse} 💰, et ${r.name} recule dans la course.${caught ? ` ${caught} sbire${caught > 1 ? 's' : ''} aux Oubliettes : rançon à l’aube.` : ''}`, 'good']);
     nemNews(`${who} jure de se venger de l’accueil réservé à ses sbires.`);
   }
   S.stats.nemRaids = (S.stats.nemRaids || 0) + 1; if (R.outcome !== 'robbed') S.stats.nemRepelled = (S.stats.nemRepelled || 0) + 1;
@@ -131,7 +131,7 @@ async function rivalNight(report) {
   if (report.some(l => l[0] === 'sec' && l[1] === 'Contrecoup')) { nem().next = S.night + 1; return; }   // déjà des héros cette nuit : les sbires attendent demain
   const plan = nemRaidPlan(), r = nemRival(), who = nemName();
   report.push(['sec', 'Sabotage']); sfx('horn');
-  const tactic = await chooseTactic(plan, { title: `${r.emo} Les sbires ${dN(who)} !`, sub: `${esc(r.name)} envoie ses sbires saboter ton château. Ils fuient quand la moitié d’entre eux est K.O.`, noRansom: true });
+  const tactic = await chooseTactic(plan, { title: `${r.emo} Les sbires ${dN(who)} !`, sub: `${esc(r.name)} envoie ses sbires saboter ton château. Ils ne fuient pas : ils vont jusqu’au Cœur, à moins de tomber tous en chemin.`, noRansom: true });
   plan.tactic = tactic; const { R, enlisted } = await playInvasion(plan, tactic, report); plan.res = R;
   R.lines.forEach(l => report.push(l));
   const lines = []; applyNemRaid(plan, R, lines); lines.forEach(l => report.push(l));

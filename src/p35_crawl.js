@@ -27,7 +27,10 @@ const crawlLevel = () => Math.round((1 + Math.max(0, (crawlChampions() - CRAWL_T
 // un donjon rival grandit avec toi (+0,5 niveau par palier), se prépare après chaque défaite (+0,25 par point de vassalité pris chez lui), et tous se méfient d'un suzerain (+0,25 par vassal)
 // le Siège de Mirebrume, lui, a son propre niveau, quartier par quartier (siegeLvl, p25)
 const RIVAL_TUNE = { tier: .5, pt: .25, vassal: .25, regen: .03 };   // par palier, par point pris chez ce rival, par vassal (le Siège de Mirebrume suit les mêmes, p25) ; regen : la part de PV qu'un boss rival blessé reprend chaque nuit (p36)
-const crawlResist = dg => { if (dg === 'cite' && typeof siegeLvl === 'function') return siegeLvl(); if (typeof vicState !== 'function' || typeof RIVALS === 'undefined' || !RIVALS.some(r => r.id === dg)) return 0; const v = vicState().vassals || {}; return RIVAL_TUNE.tier * (S.tier || 0) + RIVAL_TUNE.pt * (v[dg] || 0) + RIVAL_TUNE.vassal * Object.keys(v).filter(k => typeof isVassal === 'function' && isVassal(k)).length; };
+const crawlResist0 = dg => { if (dg === 'cite' && typeof siegeLvl === 'function') return siegeLvl(); if (typeof vicState !== 'function' || typeof RIVALS === 'undefined' || !RIVALS.some(r => r.id === dg)) return 0; const v = vicState().vassals || {}; return RIVAL_TUNE.tier * (S.tier || 0) + RIVAL_TUNE.pt * (v[dg] || 0) + RIVAL_TUNE.vassal * Object.keys(v).filter(k => typeof isVassal === 'function' && isVassal(k)).length; };
+// la difficulté de la partie (menu) joue aussi sur les donjons (INV_DIFFS[…].x, en niveaux ; boss vaincu en expédition auto : Facile ~70 %, Normal ~35 %, Difficile ~0 %) ; le Siège la prend dans la moyenne des rivaux
+const crawlDiffLvl = () => typeof invDiff === 'function' ? (invDiff().x || 0) : 0;
+const crawlResist = dg => crawlResist0(dg) + (dg === 'cite' ? 0 : crawlDiffLvl());
 
 /* ---------- les ennemis : leurs actions tournent en boucle (on voit toujours la prochaine) ---------- */
 const CRAWL_EN = {

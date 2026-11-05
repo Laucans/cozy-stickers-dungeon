@@ -39,7 +39,7 @@ function bindVal() {
 function defenseScore() { try { return planInvasion().steps.reduce((a, s) => a + s.dmg, 0); } catch (e) { return 0; } }
 function valSummary() {
   return { v: 1, master: NET.name || 'Maître anonyme', name: S.name, theme: S.theme, tier: S.tier, night: S.night, title: castleTitle(), amb: ambiance(), hype: S.hype,
-    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(), wins: S.vic ? Object.keys(S.vic.won) : [],
+    crit: S.creatures.length, sp: Object.keys(S.album).length, ach: Object.keys(S.ach).length, legends: S.stats.legends, def: defenseScore(), glow: radiance(), size: S.size || 0, floors: floorsDug(), wins: S.vic ? Object.keys(S.vic.won) : [], diff: typeof diffLowKey === 'function' ? diffLowKey() : 'normal',
     rep: Object.fromEntries(SPECIES_ORDER.map(sp => [sp, repOf(sp)])), pvp: !!S.val.pvp, season: seasonId(),
     top: [...S.creatures].sort((a, b) => (b.lvl || 1) - (a.lvl || 1) || b.loy - a.loy).slice(0, 3).map(c => [c.sp, c.name, c.lvl || 1]) };
 }
@@ -67,7 +67,7 @@ function cleanSummary(o, ev) {
   if (o.rep && typeof o.rep === 'object') Object.keys(o.rep).slice(0, 60).forEach(k => { if (SPECIES[k]) rep[k] = num(o.rep[k], 0, 100); });
   return { pk: ev.pubkey, at: ev.created_at, master: cleanName(o.master, 24) || 'Maître anonyme', name: cleanName(o.name, 40) || 'Château sans nom', theme: THEMES[o.theme] ? o.theme : 'forge',
     tier: num(o.tier, 0, 3), night: num(o.night, 1, 99999), title: cleanName(o.title, 48), amb: num(o.amb, 0, 9999), hype: num(o.hype, 0, 99999), crit: num(o.crit, 0, 999), sp: num(o.sp, 0, 99),
-    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), wins: (Array.isArray(o.wins) ? o.wins : []).filter(k => typeof VIC_BY !== 'undefined' && VIC_BY[k]).slice(0, 5), rep, pvp: !!o.pvp, season: cleanName(o.season, 8),
+    ach: num(o.ach, 0, 99), legends: num(o.legends, 0, 999), def: num(o.def, 0, 999), glow: num(o.glow, 0, 9999), wins: (Array.isArray(o.wins) ? o.wins : []).filter(k => typeof VIC_BY !== 'undefined' && VIC_BY[k]).slice(0, 5), rep, diff: typeof o.diff === 'string' && typeof INV_DIFFS !== 'undefined' && INV_DIFFS[o.diff] ? o.diff : null, pvp: !!o.pvp, season: cleanName(o.season, 8),
     top: (Array.isArray(o.top) ? o.top : []).slice(0, 3).filter(t => Array.isArray(t) && SPECIES[t[0]]).map(t => [t[0], cleanName(t[1], 24), num(t[2], 1, 5)]), me: ev.pubkey === NET.pk };
 }
 function valIngest(ev) {
@@ -366,7 +366,7 @@ function renderBoard() {
   const leaders = SPECIES_ORDER.map(sp => { let best = null; list.forEach(c => { const v = c.rep[sp] || 0; if (!best || v > best.v) best = { c, v }; }); return best && best.v > 0 ? [sp, best] : null; }).filter(Boolean);
   return `<p class="hint">Saison de ${SEASON_NAME(season)} : ${list.length} château${list.length > 1 ? 'x' : ''} actif${list.length > 1 ? 's' : ''} ce mois-ci.</p>
     <div class="vtabs small">${cats.map(([c, l]) => `<button type="button" data-board="${c}" aria-selected="${k === c}">${l}</button>`).join('')}</div>
-    <ol class="board">${top.map((c, i) => `<li class="${c.me ? 'me' : ''}"><span class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</span><span class="who"><b>${esc(c.name)}</b><small>${esc(c.master)}</small></span><b class="num">${c[k]}</b>${c.me ? '' : `<button class="sbtn" type="button" data-visit="${c.pk}">Visiter</button>`}</li>`).join('') || '<li class="hint">Personne encore cette saison.</li>'}</ol>
+    <ol class="board">${top.map((c, i) => `<li class="${c.me ? 'me' : ''}"><span class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</span><span class="who"><b>${esc(c.name)}${typeof diffBadge === 'function' ? diffBadge(c.diff) : ''}</b><small>${esc(c.master)}</small></span><b class="num">${c[k]}</b>${c.me ? '' : `<button class="sbtn" type="button" data-visit="${c.pk}">Visiter</button>`}</li>`).join('') || '<li class="hint">Personne encore cette saison.</li>'}</ol>
     <h3>Les châteaux chouchous de chaque espèce</h3><div class="leaders">${leaders.map(([sp, b]) => `<div class="leader"><img class="th" alt="" src="${thumb('char', sp)}"><span><b>${esc(SPECIES[sp].name)}</b><small>${esc(b.c.name)} · ${b.v}</small></span></div>`).join('') || '<p class="hint">Pas encore de données.</p>'}</div>`;
 }
 function valClick(e) {
@@ -394,12 +394,12 @@ async function valRetire() {
 /* ---------- le Panthéon du Val : les victoires de tous les Maîtres ---------- */
 function pantheonPublish(id) {
   if (!NET.ok || VISIT || COOP.role === 'guest') return;
-  const ev = sign(30078, [['d', 'csd1:victoire:' + id], ['t', 'csd1-pantheon'], ['alt', 'Victoire au jeu Cozy Stickers Dungeon']], JSON.stringify({ v: id, night: S.night, era: S.vic.era, m: NET.name || 'Maître anonyme', from: S.name, season: seasonId() }));
+  const ev = sign(30078, [['d', 'csd1:victoire:' + id], ['t', 'csd1-pantheon'], ['alt', 'Victoire au jeu Cozy Stickers Dungeon']], JSON.stringify({ v: id, night: S.night, era: S.vic.era, m: NET.name || 'Maître anonyme', from: S.name, season: seasonId(), diff: typeof diffLowKey === 'function' ? diffLowKey() : 'normal' }));
   netPublish(NET_STORE, ev).catch(() => {});
 }
 async function pantheonLoad(box) {
   const evs = await netQuery(NET_STORE, [{ kinds: [30078], '#t': ['csd1-pantheon'], limit: 150 }], 6000);
   if (!box.isConnected) return;
   const rows = evs.filter(safeVerify).map(ev => { let o = {}; try { o = JSON.parse(ev.content); } catch (e) {} return { ev, o }; }).filter(x => VIC_BY[x.o.v]).sort((a, b) => b.ev.created_at - a.ev.created_at).slice(0, 60);
-  box.innerHTML = `<p class="hint">Les Maîtres qui ont remporté une victoire, du plus récent au plus ancien.</p><ol class="board">${rows.map(({ ev, o }) => `<li class="${ev.pubkey === NET.pk ? 'me' : ''}"><span class="rk">${VIC_BY[o.v].ico}</span><span class="who"><b>${esc(VIC_BY[o.v].name)}</b><small>${esc(cleanName(o.from, 40) || '?')}, de ${esc(cleanName(o.m, 24) || 'Maître anonyme')} · nuit ${clamp(+o.night || 0, 0, 99999)} · ${agoText(ev.created_at)}</small></span></li>`).join('') || '<li class="hint">Personne n’est encore entré au Panthéon. À toi l’honneur !</li>'}</ol>`;
+  box.innerHTML = `<p class="hint">Les Maîtres qui ont remporté une victoire, du plus récent au plus ancien.</p><ol class="board">${rows.map(({ ev, o }) => `<li class="${ev.pubkey === NET.pk ? 'me' : ''}"><span class="rk">${VIC_BY[o.v].ico}</span><span class="who"><b>${esc(VIC_BY[o.v].name)}${typeof diffBadge === 'function' ? diffBadge(typeof INV_DIFFS !== 'undefined' && INV_DIFFS[o.diff] ? o.diff : null) : ''}</b><small>${esc(cleanName(o.from, 40) || '?')}, de ${esc(cleanName(o.m, 24) || 'Maître anonyme')} · nuit ${clamp(+o.night || 0, 0, 99999)} · ${agoText(ev.created_at)}</small></span></li>`).join('') || '<li class="hint">Personne n’est encore entré au Panthéon. À toi l’honneur !</li>'}</ol>`;
 }

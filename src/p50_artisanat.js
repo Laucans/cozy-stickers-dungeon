@@ -32,8 +32,8 @@ const WORKSHOPS = {
              ranks: { 2: { t: 'La Brume soporifique', d: () => 'dans chaque combat d’invasion, une carte Brume soporifique (immobilise un héros, à usage unique)' }, 3: { t: 'L’Élixir de bravoure', d: () => 'dans chaque combat d’invasion, une carte Élixir de bravoure (soigne tes défenseurs et leur donne du courage, à usage unique)' } } },
   // le guet : il s'apprend en travaillant au Corps de garde ; défendre le château pendant une invasion compte double (la main ne se rouille pas)
   guet:    { room: 'garde', at: 'au Corps de garde', de: 'des sentinelles', trade: 'sentinelle', team: 'Les sentinelles', ico: 'shield', sp: { gargouille: 2, squelette: 2, golem: 1, troll: 1, orque: 1, mimique: 1, nainsombre: 1 },
-             live: () => 'chaque sentinelle tirée pour défendre se bat mieux, où qu’elle défende : +3 PV par grade, +4 de parade au premier tour de chaque combat dès compagnon·ne, +1 en attaque en maître·sse',
-             ranks: { 2: { t: 'Le chemin de ronde', d: () => `chaque pièce du parcours a ${Math.round((typeof INV_TUNE !== 'undefined' ? INV_TUNE.rondeP : .1) * 100)} points de chances en plus d’être défendue` }, 3: { t: 'Les meurtrières', d: () => `une défenseuse de plus au Cœur (${(typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3) + 1} au lieu de ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3})` } } },
+             live: () => 'chaque sentinelle qui défend se bat mieux, où qu’elle défende : +3 PV par grade, +4 de parade au premier tour de chaque combat dès compagnon·ne, +1 en attaque en maître·sse',
+             ranks: { 2: { t: 'Le chemin de ronde', d: () => `chaque pièce du parcours a ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.ronde : 1} place de défenseur en plus` }, 3: { t: 'Les meurtrières', d: () => `une défenseuse de plus au Cœur (${(typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3) + 1} au lieu de ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3})` } } },
 };
 function craftLvl(n) { let l = 0; CRAFT_LVLS.forEach((L, i) => { if (n >= L.n) l = i; }); return l; }
 const craftOf = (c, w) => (c && c.craft && c.craft[w]) || 0;

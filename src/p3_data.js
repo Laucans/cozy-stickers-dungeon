@@ -68,7 +68,7 @@ const ROOMS = {
   planque:  { name: 'Planque', theme: 'repaire', unique: true, size: [2,2], cost: { g: 4, s: 3 }, clock: 6, floor: 'wood', color: '#c9cf86',
               dice: 1, mat: 1, preset: ['caisse','coffre'], desc: 'Pièce de thème, livrée meublée. +1 dé aux raids et +1 🪵 par nuit ; sa caisse à outils ajoute un dé de plus.' },
   garde:    { name: 'Corps de garde', theme: 'bastion', unique: true, size: [2,2], cost: { g: 4, s: 4 }, clock: 6, floor: 'flag', color: '#b5c4d6',
-              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; avec son râtelier, sa garde fait 10 dégâts au premier héros qui y entre (une fois par invasion). Tant qu’il est bâti, chaque pièce tire un défenseur de plus quand une bande attaque, et les créatures qui y travaillent apprennent le guet (sentinelles).' },
+              beds: 2, guard: 3, preset: ['ratelier','paillasse'], desc: 'Pièce de thème, livrée meublée. 2 lits ; avec son râtelier, sa garde fait 10 dégâts au premier héros qui y entre (une fois par invasion). Tant qu’il est bâti, chaque pièce a une place de défenseur de plus quand une bande attaque, et les créatures qui y travaillent apprennent le guet (sentinelles).' },
   observatoire: { name: 'Observatoire', theme: 'enclave', unique: true, size: [2,2], cost: { g: 6, s: 4 }, clock: 8, floor: 'magic', color: '#8f9fe8',
               amb: 2, hype: 1, dice: 1, preset: ['longuevue','cristal'], desc: 'Pièce de thème, livrée meublée. +2 Ambiance, +1 🔥, +1 dé aux raids.' },
   // sous le château : un escalier ouvre l'étage du dessous (la bande peut aussi y traverser des pièces)
@@ -256,7 +256,7 @@ const DEFS = {
   ressort:  { name: 'Plancher à ressort', kind: 'ruse', str: 2, lost: 0.35, rank: 2, needs: 'atelier', cost: { g: 3, s: 3 }, lostLine: 'Boing ! Le Plancher à ressort les catapulte dans les douves : ils rentrent se sécher chez eux.', desc: 'Ruse mécanique (rang 2) : 5 dégâts, et 21 % de chances que la bande, catapultée dans les douves, rentre se sécher chez elle. Plans : un·e compagnon·ne mécanicien·ne.' },
   automate: { name: 'Chevalier mécanique', kind: 'piège', str: 6, rank: 3, needs: 'atelier', cost: { g: 6, s: 5 }, desc: 'Piège mécanique (rang 3) : une armure à ressorts qui cogne 15 dégâts. Plans : un·e maître·sse mécanicien·ne.' },
   grandpiege: { name: 'Le Grand Piège', kind: 'piège', str: 6, sticky: true, unique: true, saga: true, cost: { g: 2, s: 2 }, desc: 'Inventé par un kobold de génie au bout d’une longue intrigue : −15 PV, et la victime reste sonnée (elle perd son premier tour au combat suivant). Unique.' },
-  poste:     { name: 'Poste de garde', kind: 'poste', str: 0, post: true, cost: { g: 2, s: 2 }, desc: 'Une guérite plantée dans un couloir, contre une pièce : quand une bande attaque, cette pièce tire un défenseur de plus (une place de plus au tirage).' },
+  poste:     { name: 'Poste de garde', kind: 'poste', str: 0, post: true, cost: { g: 2, s: 2 }, desc: 'Une guérite plantée dans un couloir, contre une pièce : quand une bande attaque, cette pièce a une place de défenseur de plus.' },
   barricade: { name: 'Barricade', kind: 'mur', str: 0, block: true, cost: { g: 1, s: 3 }, desc: 'Mur : la bande perd du temps à l’enfoncer, et pille moitié moins d’or dans la pièce voisine (il faut toujours laisser un passage jusqu’au Cœur).' },
 };
 const DEF_ORDER = Object.keys(DEFS);

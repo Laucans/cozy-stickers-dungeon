@@ -3,7 +3,7 @@
    Autrefois, on postait des créatures en garde dans les pièces
    (mode « Gardes », bouton bouclier). Désormais, les créatures se
    défendent d'elles-mêmes : avant chaque invasion, les défenseurs
-   sont tirés au sort par palier de force (voir invLineup, p69).
+   se rangent de la plus faible à la plus forte, sans hasard (voir invLineup, p69).
    Les fonctions restent définies pour les vieux appels, mais le
    mode Gardes ne s'ouvre plus, le bouton bouclier est caché, et
    les postes de garde des vieilles parties sont levés.
@@ -19,7 +19,7 @@ Object.assign(CMD, {
   guard(a) {
     const c = critter(a.id); if (!c) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
-    return 'Plus de gardes à poster : avant chaque invasion, tes défenseurs sont tirés au sort par palier de force (reposées, elles défendent mieux ; des pièges à la porte des pièces, un repas, un mercenaire aident aussi)';
+    return 'Plus de gardes à poster : face à une bande, tes créatures se rangent d’elles-mêmes, de la plus faible à la plus forte (les 3 plus fortes au Cœur, les autres pièce après pièce) ; reposées, elles défendent toutes ; des pièges à la porte des pièces, un repas, un mercenaire aident aussi';
   },
 });
 // le combat lit maintenant les postes de garde
@@ -58,7 +58,7 @@ upgradeState = function (s) {
   return s;
 };
 
-// plus de gardes : les vieilles parties lèvent tous les postes de garde (le tirage des défenseurs les remplace)
+// plus de gardes : les vieilles parties lèvent tous les postes de garde (le rangement automatique des défenseurs les remplace)
 const upgradeStateNoGuards = upgradeState;
 upgradeState = function (s) {
   s = upgradeStateNoGuards(s);
@@ -77,7 +77,7 @@ function guardHud() {
     <p>${sel ? `<b>${esc(sel.name)}</b> : touche une pièce du château (ou un Poste de garde) pour l’y poster, ou sa vignette pour la libérer.` : 'Glisse une créature de la liste sur une pièce : si la bande la traverse, elle l’y combattra aux cartes. Un couloir ne se garde qu’avec un <b>Poste de garde</b> (Construire, onglet Pièges) : 2 gardes au plus, qui renforcent la pièce voisine. Remets-la sur la liste pour la retirer ; les créatures libres défendent le Cœur (les 3 plus solides).'}</p>`;
 }
 function guardMode(on) {
-  on = false;   // le mode Gardes ne s'ouvre plus (les défenseurs sont tirés au sort)
+  on = false;   // le mode Gardes ne s'ouvre plus (les défenseurs se rangent d'eux-mêmes)
   GM.on = !!on; GM.of = on ? S : null; GM.sel = null; GM.drag = null; GM.hover = null;
   document.body.classList.toggle('guarding', GM.on);
   const b = $('#btnGuards'); if (b) { b.classList.toggle('on', GM.on); b.setAttribute('aria-pressed', GM.on); }

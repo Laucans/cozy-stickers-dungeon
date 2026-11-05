@@ -95,7 +95,7 @@ function duelNew(gA, gB, opt = {}) {
       if (s.hand.length >= 10) { s.disc.push(c); got++; continue; } s.hand.push(c); got++;
     }
   };
-  // un camp peut se débander avant d'être tout à fait à terre (une bande d'aventuriers fuit quand la moitié est K.O.)
+  // un camp peut se débander avant d'être tout à fait à terre (l'ancienne défense aux cartes, p59 ; les invasions d'aujourd'hui, p69, ne fuient plus)
   const routed = si => D.routAt && D.routAt[si] != null && D.sides[si].f.filter(o => o.ko).length >= D.routAt[si];
   D.check = () => { const a = alive(0).length && !routed(0), b = alive(1).length && !routed(1); if (!a && !b) D.over = 'draw'; else if (!b) D.over = 0; else if (!a) D.over = 1; return D.over; };
   D.play = (c, tid, si) => {

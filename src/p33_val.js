@@ -109,7 +109,7 @@ applyNemRaid = function (plan, R, lines) {
 const applyInvasionFac = applyInvasion;
 applyInvasion = function (plan, outcome) { const lines = applyInvasionFac(plan, outcome); if (outcome === 'repelled') facTick('baron', -1); return lines; };
 
-/* ---------- héros récurrents : ceux qui s'enfuient reviennent, rancuniers ---------- */
+/* ---------- héros récurrents : ceux qui en réchappent reviennent, rancuniers (K.O. sans place aux Oubliettes, ou partis sur une ruse) ---------- */
 const FOE_TITLES = ['le Revanchard', 'la Rancunière', 'le Tenace', 'l’Increvable', 'la Têtue', 'le Mauvais Perdant'];
 function foesState() { return S.foes || (S.foes = []); }
 const planInvasionFoe = planInvasion0;
@@ -132,15 +132,15 @@ function foesAfter(plan, outcome, lines, room) {
     if (outcome === 'robbed') { f.lvl = Math.min(4, f.lvl + 1); lines.push(['😠', `${h.name} se vante dans tout le Val. Il·elle reviendra, plus fort·e.`, 'bad']); }
     else if (down && caught.has(j)) { f.gone = true; S.hype += 2; S.gold += 5 * f.lvl; lines.push(['🏆', `${h.name} finit aux Oubliettes et jure de prendre sa retraite : +2 🔥, +${5 * f.lvl} 💰. On ne le·la reverra plus.`, 'good']); }
     else if (down) { f.lvl = Math.min(4, f.lvl + 1); lines.push(['😤', `${h.name}, K.O., est ramené·e par ses amis. Sans Oubliettes pour le·la garder, il·elle reviendra.`, '']); }
-    else lines.push(['😤', `${h.name} s’enfuit encore. On n’a pas fini de le·la voir.`, '']);
+    else lines.push(['😤', `${h.name} repart bredouille, encore. On n’a pas fini de le·la voir.`, '']);
   });
   // un nouveau héros garde rancune
   if (outcome !== 'robbed' && F.filter(f => !f.gone).length < 2 && Math.random() < .3) {
-    const cand = plan.party.map((h, j) => [h, j]).filter(([h, j]) => !h.foe && !h.minion && !R.fallen.includes(j));
+    const cand = plan.party.map((h, j) => [h, j]).filter(([h, j]) => !h.foe && !h.minion && !caught.has(j));   // la bande ne fuit plus : un héros K.O. que les Oubliettes ne gardent pas rentre chez lui
     if (cand.length) {
-      const [h] = pick(cand), base = (HEROES.find(x => x.k === h.k) || h).name, title = pick(FOE_TITLES);
+      const [h, j] = pick(cand), base = (HEROES.find(x => x.k === h.k) || h).name, title = pick(FOE_TITLES);
       F.push({ id: 'f' + S.seq++, k: h.k, name: base, title, lvl: 1, n: 1, last: S.night });
-      lines.push(['😠', `${base} s’enfuit en criant vengeance. On l’appellera désormais « ${base} ${title} ».`, 'bad']);
+      lines.push(['😠', `${base} ${R.fallen.includes(j) ? 'se relève en boitant et rentre chez lui·elle' : 'repart'} en criant vengeance. On l’appellera désormais « ${base} ${title} ».`, 'bad']);
     }
   }
 }
@@ -225,6 +225,6 @@ function valNotifs(add) {
 /* ---------- le Grimoire ---------- */
 WIKI.factions = { cat: 'val', t: 'Factions et territoires', x: () => `<p><b>Les horloges de faction</b> : le Baron Pâlichon, les villages du Val et ton rival poursuivent chacun un projet. Ouvre-les depuis la fiche de ton rival ou depuis ton château, sur la carte.</p><ul>${Object.values(FAC).map(D => `<li>${D.ico} <b>${esc(D.name)}</b> : ${esc(D.why)}</li>`).join('')}</ul>
   <p><b>Les territoires</b> : après un raid réussi sur une ferme, un moulin, une auberge ou un monastère, tu peux le revendiquer depuis la carte (${costText(CLAIM_COST)}, ${claimCap()} au plus pour l’instant, un de plus par palier). Chaque territoire rapporte un peu chaque nuit : ${Object.entries(CLAIMS).map(([k, c]) => `${esc(RAIDS[k].name)} (${esc(c.txt)})`).join(', ')}. La milice du Baron ou les sbires de ton rival peuvent te le reprendre.</p>
-  <p><b>Les héros récurrents</b> : un aventurier qui s’enfuit garde parfois rancune. Il revient plus coriace (25 % de PV en plus), avec un surnom. Mets-le K.O. avec des Oubliettes libres pour qu’il prenne sa retraite (et te rapporte gros).</p>
+  <p><b>Les héros récurrents</b> : un aventurier qui en réchappe (K.O. mais sans place pour lui aux {room:oubliettes}) garde parfois rancune. Il revient plus coriace (25 % de PV en plus), avec un surnom. Mets-le K.O. avec des Oubliettes libres pour qu’il prenne sa retraite (et te rapporte gros).</p>
   <p><b>Leur nature</b> : une créature qui vit selon son caractère (le bagarreur qui se bat, la studieuse postée à la Bibliothèque…) gagne parfois 1 XP à l’aube.</p>` };
 TIPS.push({ id: 'claim0', when: () => !!(S.claims && Object.keys(S.claims.won).length && !S.claims.own.length), t: 'Un territoire à prendre', x: 'Ton raid a réussi : tu peux revendiquer ce lieu comme territoire depuis la carte du Val. Il te rapportera chaque nuit… si le Baron te laisse faire.', wiki: 'factions' });

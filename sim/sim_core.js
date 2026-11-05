@@ -106,7 +106,7 @@ A.furnish = (r, budget = 99, o = {}) => {
 };
 // pourquoi une pièce n'a rien reçu (pour la ligne de commande)
 A.furnWhy = r => { const nm = ROOMS[r.t].name;
-  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `pièce pleine, ${nm} (${furnCount(r)}/${furnCap(r)} stickers : un pour deux cases, déco et artefacts compris ; retire une déco, ou bâtis une pièce de plus de ce type)`;
+  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `pièce pleine, ${nm} (${furnCount(r)}/${furnCap(r)} stickers : un pour deux cases, déco et artefacts compris ; retire une déco, bâtis une pièce de plus de ce type${typeof shelfTarget === 'function' && shelfTarget(r) ? `, ou aménage-la : ameliorer ${r.t} (${costText(shelfCost(shelfTarget(r)))})` : ''})`;
   if (!cellsOf(r).some(([x, y]) => !furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r)))) return `${nm} : plus une case libre`;
   const opts = (ROOMS[r.t].furn || []).filter(t => !withZ(zOf(r), () => availability('furn', t)));
   if (!opts.length) return `${nm} : aucun meuble disponible ici pour l’instant (palier ?)`;
@@ -176,7 +176,7 @@ A.care = () => {
 };
 A.acceptQuests = (expe = true) => S.creatures.forEach(c => { const q = questOf(c); if (q && (q.st === 'offered' || q.st === 'ready') && (expe || !QT[q.k].away)) cmd('qAccept', { id: c.id }); });
 const invasionSoon = (extra = 0) => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) + extra >= MENACE_MAX;
-// plus de gardes à poster : les défenseurs sont tirés au sort par palier de force (invLineup) ; on lève les vieux postes, sans plus (SIM_GUARD n'a plus d'effet)
+// plus de gardes à poster : les défenseurs se rangent d'eux-mêmes, de la plus faible à la plus forte (invLineup) ; on lève les vieux postes, sans plus (SIM_GUARD n'a plus d'effet)
 A.guards = () => { S.creatures.forEach(c => { if (c.guard) c.guard = null; }); };
 // les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
 // les Merveilles : l'or et le bois en trop (au-delà d'une réserve) vont à la moins chère ; une fête quand quelqu'un se sent délaissé
@@ -228,13 +228,20 @@ A.journalText = () => {
   if (!Q.offers.length) L.push('  rien (une nouvelle quête arrive de temps en temps)');
   return L.join('\n');
 };
-A.posts = () => {   // chaque créature dans sa pièce préférée (humeur), ou à l'atelier de son métier (le guet : au Corps de garde)
+// les étagères en plus (p75) : une place de sticker de plus dans une pièce pleine qui sert (lits ou repas qui manquent, sinon la plus utile), payée en bois ;
+// avec modération : une toutes les 5 nuits au plus, et seulement si le bois dépasse la réserve
+A.shelf = (reserve = 80) => {
+  if (typeof shelfTarget !== 'function' || S.night - (SIM.shelfAt || -9) < 5) return null;
+  const needBeds = beds() - S.creatures.length < 3, needFood = foodCap() < eaters() + 2, want = { dortoir: needBeds ? 3 : 1, potager: needFood ? 3 : 1, cuisine: needFood ? 3 : 1 };
+  const rs = S.rooms.filter(r => r.built && ROOMS[r.t].furn && furnCount(r) >= furnCap(r) && shelfTarget(r) && !shelfWhy(r) && S.mat - (shelfCost(shelfTarget(r)).s || 0) >= reserve)
+    .sort((a, b) => (want[b.t] || 1) - (want[a.t] || 1) || (shelfCost(shelfTarget(a)).s || 0) - (shelfCost(shelfTarget(b)).s || 0));
+  if (!rs.length) return null; const e = cmd('shelf', { id: rs[0].id }); if (!e) { SIM.shelfAt = S.night; A.furnish(rs[0], Math.max(0, S.gold - 4)); } return e;
+};
+A.posts = () => {   // chaque créature dans sa pièce préférée (humeur), ou à l'atelier de son métier ; la défense ne lit plus les postes (invLineup)
   A.guards();
-  if (invasionSoon()) return;
-  const path = new Set((heroPath() || []).map(([x, y]) => roomAt(x, y, 0)).filter(r => r && !isHall(r) && r.t !== 'coeur').map(r => r.id));
   S.creatures.forEach(c => { if (isOut(c) || (c.secret && c.secret.known && !c.secret.done && (c.secret.t === 'seul' || c.secret.t === 'poste'))) return; const sp = SPECIES[c.sp] || {}; const fav = S.rooms.find(r => r.built && !isHall(r) && (r.t === sp.from || (ROOMS[r.t].attracts || []).includes(c.sp)));
-    const guardRoom = guardOf(c) >= 3 ? S.rooms.find(r => path.has(r.id)) : null; const met = typeof WORKSHOPS !== 'undefined' ? Object.keys(WORKSHOPS).filter(w => !WORKSHOPS[w].guard && craftAff(c, w) > 1).map(w => S.rooms.find(r => r.built && workshopType(r) === w)).find(Boolean) : null;   // né·e pour un métier : à son atelier
-    const want = met || (guardRoom && Math.random() < .5 ? guardRoom : fav) || null;
+    const met = typeof WORKSHOPS !== 'undefined' ? Object.keys(WORKSHOPS).filter(w => !WORKSHOPS[w].guard && craftAff(c, w) > 1).map(w => S.rooms.find(r => r.built && workshopType(r) === w)).find(Boolean) : null;   // né·e pour un métier : à son atelier
+    const want = met || fav || null;
     if ((want ? want.id : null) !== c.post) cmd('post', { id: c.id, post: want ? want.id : null }); });
   // les rivaux ne vivent pas au même étage : on en poste un à un autre étage s'il en existe un
   if (typeof rivalPairs === 'function') Object.keys(rivalPairs()).forEach(k => { const [pair, zz] = k.split('@'), sp = pair.split('|')[0], z0 = +zz;

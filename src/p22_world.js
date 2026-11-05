@@ -181,7 +181,7 @@ function worldAfterInvasion(plan, outcome, lines) {
     if (o && o.id) {
       const road = w.roads.get(o.id) || [], d = discover([...road, ...discAround(o.q, o.r, 1)], 'carnets d’aventuriers');
       S.world.notes++;
-      if (d.n) lines.push(['📜', `Dans leur fuite, ils perdent leurs carnets de route : la route depuis ${o.name} apparaît sur ta carte${d.found.length ? ` (${d.found.map(s => s.name).join(', ')})` : ''} !`, 'good']);
+      if (d.n) lines.push(['📜', `Dans la mêlée, ils perdent leurs carnets de route : la route depuis ${o.name} apparaît sur ta carte${d.found.length ? ` (${d.found.map(s => s.name).join(', ')})` : ''} !`, 'good']);
     }
     const ch = { 1: .08, 2: .3, 3: .6 }[plan.rank || 1];
     if (outcome === 'repelled' && Math.random() < ch) { const k = giveArtefact(randomArtefact(), 'abandonné par des héros'); if (k) lines.push(['🏺', `Un héros a laissé tomber un artefact : ${FURN[k].name} ! Il t’attend dans l’onglet Trésors.`, 'good']); }

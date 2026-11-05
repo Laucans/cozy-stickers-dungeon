@@ -340,8 +340,8 @@ function checkRoom(t, x, y, w, h) {
   }
   return null;
 }
-// une pièce ne se remplit qu'à moitié : un sticker pour deux cases (arrondi au-dessus), sur toute la grande salle
-const furnCap = r => Math.max(1, Math.ceil(groupOf(r).rooms.reduce((a, o) => a + o.w * o.h, 0) / 2));
+// une pièce ne se remplit qu'à moitié : un sticker pour deux cases (arrondi au-dessus), sur toute la grande salle, plus ses étagères (p75)
+const furnCap = r => Math.max(1, Math.ceil(groupOf(r).rooms.reduce((a, o) => a + o.w * o.h, 0) / 2)) + (typeof shelfBonus === 'function' ? shelfBonus(r) : 0);
 const furnCount = r => groupOf(r).rooms.reduce((a, o) => a + furnIn(o).length, 0);
 function checkFurn(t, x, y) {
   const r = roomAt(x, y), f = FURN[t];
@@ -356,7 +356,7 @@ function checkFurn(t, x, y) {
   if (!r.built) return 'Chantier en cours : la pièce se meuble une fois terminée (après la nuit)';
   if (f.size && groupSize(r) < f.size) return f.size >= 3 ? `Il faut une salle immense : 3 pièces « ${ROOMS[f.room].name} » collées ou plus` : `Il faut une grande salle : 2 pièces « ${ROOMS[f.room].name} » collées`;
   if (furnAt(x, y)) return 'Il y a déjà quelque chose ici';
-  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `Pièce pleine : ${furnCap(r)} sticker${furnCap(r) > 1 ? 's' : ''} au plus (un pour deux cases)${f.room === 'any' ? `. ${f.artefact ? 'Un artefact' : 'Une déco'} se pose aussi dans un couloir, sans limite : bâtis-en un bout s’il le faut` : ''}`;
+  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `Pièce pleine : ${furnCap(r)} sticker${furnCap(r) > 1 ? 's' : ''} au plus (un pour deux cases${typeof shelfTarget === 'function' && shelfTarget(r) ? ' ; des étagères en plus, dans la fiche de la pièce, en ajoutent' : ''})${f.room === 'any' ? `. ${f.artefact ? 'Un artefact' : 'Une déco'} se pose aussi dans un couloir, sans limite : bâtis-en un bout s’il le faut` : ''}`;
   if (f.room === 'any') { if (defAt(x, y)) return 'Un piège occupe déjà ce couloir'; return null; }
   if (r.t !== f.room && ROOMS[r.t].like !== f.room) return `Ce meuble va dans : ${ROOMS[f.room].name}`;
   return null;
@@ -537,7 +537,7 @@ function applyInvasion(plan, outcome) {
   if (outcome !== 'robbed') {
     S.stats.repelled++; S.hype += 1;
     if (outcome === 'repelled') {
-      const purse = n * (plan.rank || 1); S.gold += purse; lines.push(['🏃', `Les aventuriers détalent en semant leur bourse : +${purse} 💰, +1 🔥.`, 'good']);
+      const purse = n * (plan.rank || 1); S.gold += purse; lines.push(['🛡️', `Les aventuriers sont tous à terre, et leurs bourses aussi : +${purse} 💰, +1 🔥.`, 'good']);
       const room = Math.max(0, sumRooms('cells') - S.prisoners), caught = (plan.res ? plan.res.fallen.map(j => plan.party[j]) : room ? [pick(plan.party)] : []).slice(0, room);
       if (caught.length) { S.prisoners += caught.length; lines.push(['⛓️', `${caught.map(h => h.name).join(', ')} ${caught.length > 1 ? 'finissent' : 'finit'} aux Oubliettes. Rançon à l’aube !`, 'good']); }
       S.creatures.forEach(c => { if (!c.raid) { c.mood = clamp(c.mood + 1, 0, 5); addLoy(c, 2); gainXP(c, 1, lines); } });
