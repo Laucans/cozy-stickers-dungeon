@@ -12,3 +12,6 @@ mkdir -p docs
   cat src/p2_body.html
   echo "<script>"; cat $PARTS; echo "</script></body></html>"; } > docs/index.html
 [ -f docs/tuning.json ] || echo '{}' > docs/tuning.json
+
+# la carte des chaînes d’enveloppes (fonctions redéfinies fichier après fichier) : tools/CHAINES.md
+command -v node >/dev/null && node tools/chaines.mjs > tools/CHAINES.md 2>/dev/null || true

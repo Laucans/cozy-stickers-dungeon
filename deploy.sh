@@ -10,7 +10,8 @@ TMP=$(mktemp -d)
 git clone --quiet --depth 1 git@github.com:Laucans/cozy-stickers-dungeon.git "$TMP/repo"
 rm -rf "$TMP/repo/src" "$TMP/repo/docs" "$TMP/repo/sim" "$TMP/repo/.claude/skills/simulation-equilibrage"
 cp -R src docs "$TMP/repo/"
-cp README.md build.sh deploy.sh "$TMP/repo/"
+cp README.md CLAUDE.md build.sh deploy.sh "$TMP/repo/"
+mkdir -p "$TMP/repo/tools" && cp tools/chaines.mjs tools/CHAINES.md "$TMP/repo/tools/"
 # le banc d'essai (sans les copies figées ni les résultats bruts) et son mode d'emploi
 mkdir -p "$TMP/repo/sim" "$TMP/repo/.claude/skills"
 cp sim/*.mjs sim/*.js sim/RAPPORT*.md sim/BOUCLES.md "$TMP/repo/sim/"
