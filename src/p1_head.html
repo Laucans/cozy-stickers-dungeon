@@ -118,6 +118,7 @@ img.ico{width:26px; height:26px; object-fit:contain; flex:none}
 .card .nm{font-family:var(--f-display); font-size:14px; line-height:1; color:var(--cream); text-align:center; margin-top:3px; overflow-wrap:anywhere}
 .card .cost{margin-top:auto; font-size:11px; font-weight:700; color:var(--gold)}
 .card .cost.no{color:#ff8a7a}
+.cno{color:#ff8a7a !important; font-weight:800}
 .card.locked{filter:grayscale(.85) brightness(.7)}
 .card .lock{position:absolute; top:4px; left:4px; right:4px; z-index:1; font-size:10px; font-weight:700; background:rgba(10,6,4,.85); color:var(--cream); border-radius:6px; padding:1px 4px; text-align:center}
 .card .free{position:absolute; top:-7px; right:-7px; z-index:1; background:var(--moss); color:#122; border:2px solid #142010; border-radius:999px; font-size:11px; font-weight:800; padding:0 6px}
@@ -526,7 +527,7 @@ body.guarding #portraits{outline:3px dashed rgba(233,185,73,.7); outline-offset:
 .gghost{position:fixed; z-index:200; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%; background:#3a2a24; box-shadow:0 0 0 4px #fffdf5, 0 8px 18px rgba(0,0,0,.5); overflow:hidden; pointer-events:none; transform:rotate(-6deg); opacity:.92} .gghost img{width:100%; height:100%; object-fit:cover} .gghost.ok{box-shadow:0 0 0 4px #7ee08a, 0 8px 18px rgba(0,0,0,.5)}
 #btnGuards.on{box-shadow:0 0 0 3px #e9b949, 0 0 16px #e9b949}
 .gsec .gi{width:22px; height:22px; vertical-align:-5px}
-/* l'artisanat et la renommée */
+/* l'artisanat et les places d'accueil */
 .craftlist{list-style:none; margin:6px 0; padding:0; display:grid; gap:4px}
 .craftlist li{padding:5px 9px; border-radius:10px; background:var(--edge); border:1.5px solid var(--parch-3)}
 .craftlist li.off{opacity:.6}
@@ -909,7 +910,7 @@ body.crawling .toasts{z-index:90}
 .handbar .hinfo .tag2{font-size:12px}
 </style>
 <style>
-/* ---------- âmes du château : missions, loyauté, renommée, hauts faits ---------- */
+/* ---------- âmes du château : missions, loyauté, réputation, hauts faits ---------- */
 .minis{display:flex; gap:6px}
 .mini{width:34px; height:34px; border-radius:50%; border:2px solid var(--bronze); background:radial-gradient(circle at 40% 35%, #4a3626, #1e1410); font-size:15px; box-shadow:0 4px 10px rgba(0,0,0,.6)}
 .mini:hover{border-color:var(--gold)}
@@ -1324,7 +1325,7 @@ body.touchy .floors button{min-height:36px} body.touchy .handbar .pill{min-heigh
 @media (orientation:landscape) and (max-height:500px){   /* téléphone couché : la mini-carte et la colonne des étages mangeaient toute la hauteur, les pastilles et les créatures disparaissaient */
   .minimap{width:120px; height:58px; border-radius:11px} .minimap span{font-size:10px; left:6px; bottom:2px}
   .advisor{left:max(110px, calc(50% - 230px)); right:auto; width:min(460px, calc(100vw - 230px)); bottom:calc(var(--gb) + 74px)} .advisor .adv-box{max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 90px); overflow:auto} .adv-pic{width:52px; height:52px} .adv-grip{left:32px; bottom:33px}   /* Gribouille entier à l'écran, entre les colonnes */
-  .powbar{bottom:calc(var(--gb, 0px) + 70px); max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 84px); overflow:auto} .powbar .pw small{display:none}   /* les jetons du Cœur pendant une invasion : en entier */   /* plus petite, mais toujours là : c'est l'entrée de la carte du Val */
+  .powbar{bottom:calc(var(--gb, 0px) + 70px); max-height:calc(100vh - var(--hudTopB, 74px) - var(--gb) - 84px); overflow:auto} .powbar .pw small{display:none}   /* l'énergie du Cœur pendant une invasion : en entier */   /* plus petite, mais toujours là : c'est l'entrée de la carte du Val */
   .hud-build{flex-direction:row; align-items:flex-end}
   .hud-build .floors{flex-direction:row; align-items:center}
   .hud-build .floors .flab{display:none}

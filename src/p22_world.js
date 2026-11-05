@@ -1,12 +1,15 @@
 
 /* =========================================================
-   Le monde autour du château : rayonnement, artefacts,
+   Le monde autour du château : notoriété, artefacts,
    la carte du Val en hexagones (brouillard de guerre, sites),
    d'où viennent les aventuriers, expéditions
    ========================================================= */
 
-/* ---------- rayonnement ---------- */
-const GLOW_LV = [[0, 'Obscur'], [20, 'Murmuré'], [45, 'Renommé'], [80, 'Illustre'], [130, 'Légendaire'], [200, 'Mythique']];
+/* ---------- la notoriété (🔥) : une seule jauge, l'éclat du château plus le bouche-à-oreille ---------- */
+// word : autant de bouche-à-oreille (S.hype : raids, conteurs, fêtes, concours…) pour un point de notoriété, wordCap points au plus ; menace : la Menace monte chaque nuit dès cette notoriété
+const NOTO = { word: 3, wordCap: 60, menace: 8 };
+const GLOW_LV = [[0, 'Obscur'], [20, 'Murmuré'], [45, 'Connu'], [90, 'Illustre'], [145, 'Légendaire'], [235, 'Mythique']];   // les niveaux de la notoriété (Mythique : la croisade de la Légende)
+// l'éclat : ce qui dure (artefacts, trésors, rares, légendes, palier, étages, Merveilles, mécénat…), part par part
 function glowParts() {
   const f = [], arts = S.furn.filter(x => FURN[x.t] && FURN[x.t].artefact);
   let a = 0; arts.forEach(x => { const r = roomAt(x.x, x.y, zOf(x)); a += FURN[x.t].glow * (r && r.t === 'reliquaire' ? 1.5 : 1); });
@@ -18,14 +21,16 @@ function glowParts() {
   const fl = floorsDug(); if (fl) f.push([`${fl} étage${fl > 1 ? 's' : ''} en plus`, fl * 5]);
   if (S.size) f.push(['Remparts agrandis', S.size * 5]);
   const amb = Math.floor(ambiance() / 4); if (amb) f.push(['Ambiance', amb]);
-  const hy = Math.min(25, Math.floor(S.hype / 3)); if (hy) f.push(['Notoriété', hy]);
   const ach = Object.keys(S.ach || {}).length; if (ach) f.push(['Hauts faits', ach]);
   return f;
 }
-const radiance = () => glowParts().reduce((a, x) => a + x[1], 0);
+const eclatPts = () => glowParts().reduce((a, x) => a + x[1], 0);
+const wordPts = () => Math.min(NOTO.wordCap, Math.floor(Math.max(0, (S && S.hype) || 0) / NOTO.word));   // le bouche-à-oreille, converti
+const radiance = () => eclatPts() + wordPts();   // la notoriété : la valeur unique que lisent les paliers, la réputation, la Menace, les hauts faits, la Légende, les héros, les rares et les bandes
+const menaceRises = () => radiance() >= NOTO.menace;   // la Menace monte d'un cran chaque nuit
 const glowLevel = (v = radiance()) => { let l = 0; GLOW_LV.forEach(([m], i) => { if (v >= m) l = i; }); return l; };
 const glowRadius = (l = glowLevel()) => 2 + l;
-// ce que le château voit de la carte autour de lui : son rayonnement, le belvédère, les gargouilles qui guettent
+// ce que le château voit de la carte autour de lui : sa notoriété, le belvédère, les gargouilles qui guettent
 const visionRadius = () => Math.max(3, glowRadius()) + sumRooms('sight') + (S.creatures.some(c => SPECIES[c.sp].scout && !isOut(c)) ? 1 : 0) + (PW('carto') ? 1 : 0) + (typeof craftRank === 'function' && craftRank('bibli') >= 2 ? 1 : 0);
 
 /* ---------- artefacts ---------- */
@@ -51,8 +56,8 @@ const BIOMES = {
 const SITE_KINDS = {
   chateau: { label: 'Ton château', ico: 'castle' },
   village: { label: 'Village', ico: 'village', rank: 1, shop: true, desc: 'Des paysans, une épicerie-buvette, et des apprentis héros qui rêvent de gloire. Ils viennent tenter leur chance quand ton château fait parler de lui.' },
-  ville: { label: 'Ville', ico: 'town', rank: 2, shop: true, town: true, desc: 'Remparts, marchés, taverne et Guilde des Aventuriers Patentés. Ses aventuriers sont aguerris : ils viennent quand ton rayonnement atteint la ville.' },
-  cite: { label: 'Cité', ico: 'city', rank: 3, shop: true, town: true, desc: 'La grande cité du Val et sa Guilde des Héros. Ses champions sont légendaires… et ne se déplacent que pour les châteaux qui rayonnent jusqu’à elle.' },
+  ville: { label: 'Ville', ico: 'town', rank: 2, shop: true, town: true, desc: 'Remparts, marchés, taverne et Guilde des Aventuriers Patentés. Ses aventuriers sont aguerris : ils viennent quand ta notoriété atteint la ville.' },
+  cite: { label: 'Cité', ico: 'city', rank: 3, shop: true, town: true, desc: 'La grande cité du Val et sa Guilde des Héros. Ses champions sont légendaires… et ne se déplacent que pour les châteaux dont la notoriété porte jusqu’à elle.' },
   raid: { label: 'Cible de raid', ico: 'raid' },
   rival: { label: 'Donjon rival', ico: 'dungeon' },
   joueur: { label: 'Donjon d’un Maître', ico: 'player' },
@@ -161,7 +166,7 @@ const worldMet = sp => !!(S.world && S.world.met && S.world.met[sp]);
 function raidKnown(k) { if (RAIDS[k] && RAIDS[k].siege) { const c = world().sites.find(x => x.kind === 'cite'); return typeof allVassals === 'function' && allVassals() && !!c && siteKnown(c) && !(S.vic && S.vic.siege >= 3); } const s = world().sites.find(x => x.raid === k || (RAIDS[k] && RAIDS[k].rival && x.rival === RAIDS[k].rival)); return !s || siteKnown(s); }
 RIVALS.forEach(rv => { RAIDS['r_' + rv.id] = { name: rv.name, emo: rv.emo, tier: 1, risk: 2, tag: 'combat', reward: { g: 5, s: 2 }, hype: 3, menace: 1, rival: rv.id, desc: `Le donjon ${deM(rv.master)} : une expédition de 4 créatures, trois étages et un boss. De quoi le soumettre, et en rapporter une relique.` }; });
 
-/* ---------- les aventuriers viennent des villages et des villes à portée de rayonnement ---------- */
+/* ---------- les aventuriers viennent des villages et des villes à portée de notoriété ---------- */
 function heroOrigin() {
   if (!S || !S.started) return null;
   const w = world(), reach = glowRadius() + 1, vc = S.vic;
@@ -236,9 +241,9 @@ function worldDawn(report) {
       const k = roll.res === 'partial' ? .5 : roll.res === 'crit' ? 1.5 : 1, L = X.loot || {};
       const g = Math.ceil((L.g || 0) * k), m = Math.ceil((L.s || 0) * k), h = Math.ceil((L.h || 0) * k);
       S.gold += g; S.mat += m; S.hype += h; if (L.cal) S.calamity = Math.max(0, S.calamity - L.cal);
-      if (g || m || h) gains.push(costText({ g, s: m }) + (h ? `, +${h} 🔥` : '')); if (L.cal) gains.push(`−${L.cal} Calamité`);
+      if (g || m || h) gains.push(costText({ g, s: m }) + (h ? `, +${h} 💬` : '')); if (L.cal) gains.push(`−${L.cal} Calamité`);
       if (big && (roll.res === 'crit' || Math.random() < .4)) { const a = giveArtefact(randomArtefact(X.arts) || randomArtefact(), 'expédition'); if (a) gains.push(`l’artefact « ${FURN[a].name} »`); }
-      if (big && X.meet && !worldMet(X.meet)) { S.world.met[X.meet] = S.night; gains.push(`une rencontre : ${SPECIES[X.meet].name}, qui viendra s’installer si ton château rayonne à ${SPECIES[X.meet].glow} ✨ et lui offre sa pièce`); }
+      if (big && X.meet && !worldMet(X.meet)) { S.world.met[X.meet] = S.night; gains.push(`une rencontre : ${SPECIES[X.meet].name}, qui viendra s’installer quand ton château aura ${SPECIES[X.meet].glow} 🔥 de notoriété et lui offrira sa pièce`); }
       team.forEach(c => { gainXP(c, 2, out); addLoy(c, 4); });
       if (roll.res === 'partial') { const c = pick(team); c.mood = clamp(c.mood - 1, 0, 5); }
     } else team.forEach(c => { c.mood = clamp(c.mood - 1, 0, 5); addLoy(c, -2); gainXP(c, 1, out); });

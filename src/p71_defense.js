@@ -3,7 +3,7 @@
    Chaque bonus garde sa promesse, traduite dans le nouveau
    système : harcèlement dès l'arrivée, mercenaire au Cœur, repas,
    sentinelles (le guet) et humeur pour les défenseurs (le poste
-   de travail n'y compte plus), et les jetons du Cœur (pont-levis, espion,
+   de travail n'y compte plus), et ce que préparait le Cœur (pont-levis, espion,
    fête, gâteau, Remparts, cloche) en énergie au premier tour du
    combat du Cœur. (Le Corps de garde et les Postes de garde
    donnent des places de défenseurs : voir invSeats, p69.)
@@ -50,7 +50,7 @@ invFightR = function (I, info) {
   });
   return R;
 };
-// les jetons du Cœur d'autrefois : chacun en plus de la base donne +1 énergie au premier tour du combat du Cœur
+// ce que le Cœur a préparé (pont-levis, espion, fête…) : chaque bonus au-delà de la base donne +1 énergie au premier tour du combat du Cœur
 function invBonusTokens() {
   const base = Math.min(4, 2 + Math.floor((S.tier || 0) / 2)), bell = (S.defs || []).some(d => DEFS[d.t] && DEFS[d.t].alarm) ? 1 : 0;
   return Math.max(0, Math.min(INV_BOOST.tokMax, (typeof heartTokens === 'function' ? heartTokens() : base) - base + bell));

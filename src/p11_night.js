@@ -39,24 +39,32 @@ function openRaid(pre) {
   if (UI.busy) return;
   const pk = typeof pre === 'string' && RAIDS[pre] ? pre : null;
   UI.raidSel = S.raid ? { target: pk || S.raid.target, team: new Set(S.raid.team), app: S.raid.app || 'risquee' } : { target: pk, team: new Set(), app: 'risquee' };
-  const m = openModal('<div id="raidBody"></div>', { wide: true, label: 'Raid' });
+  // deux onglets : les raids aux dés (villages, fermes, auberge, monastère, Baron, cibles de quêtes) et les expéditions aux cartes (donjons, lieux d'expédition, Mirebrume)
+  const isC = k => !!(k && typeof isCrawlTarget === 'function' && isCrawlTarget(k));
+  UI.raidTab = UI.raidSel.target ? (isC(UI.raidSel.target) ? 'expe' : 'raid') : (UI.raidTab || 'raid');
+  const m = openModal('<div id="raidBody"></div>', { wide: true, label: 'Raids et expéditions' });
   const draw = () => {
-    const sel = UI.raidSel, crawl = !!(sel.target && typeof isCrawlTarget === 'function' && isCrawlTarget(sel.target)), cap = crawl ? 4 : 3;
+    const sel = UI.raidSel, tab = UI.raidTab, crawl = tab === 'expe', cap = crawl ? 4 : 3;
+    const targets = Object.entries(RAIDS).filter(([k]) => raidKnown(k) && isC(k) === crawl);
     const crew = S.creatures.filter(c => (crawl || diceOf(c) > 0) && !c.away && !injured(c) && (!c.raid || sel.team.has(c.id)));
     const b = sel.target ? raidBreakdown(sel.target, [...sel.team]) : null;
-    m.querySelector('#raidBody').innerHTML = `<h2>Raid sur le Val Douillet</h2>
-      <p>Envoie jusqu’à 3 créatures piller les environs. Le raid se joue en fin de nuit : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
-      <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p><div class="choices">${Object.entries(RAIDS).filter(([k]) => raidKnown(k)).map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span><span>Butin ${costText(r.reward)} · +${r.hype} 🔥 · +${r.menace} Menace</span><span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
+    m.querySelector('#raidBody').innerHTML = `<div class="vtabs" role="tablist"><button type="button" role="tab" data-rtab="raid" aria-selected="${!crawl}">🎲 Raids aux dés</button><button type="button" role="tab" data-rtab="expe" aria-selected="${crawl}">🃏 Expéditions aux cartes</button></div>
+      ${crawl ? `<h2>Expédition aux cartes</h2>
+      <p>Envoie jusqu’à 4 créatures dans un <b>donjon rival</b>, un <b>lieu d’expédition</b> (forêt, grotte, ruines…) ou, au bout du chemin, à l’assaut de <b>Mirebrume</b>. Un combat aux cartes, joué cette nuit : trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. C’est là, et seulement là, qu’on trouve l’<b>Ambre 🟠</b> des paliers et des grands ouvrages.</p>
+      <h3>Destination</h3><p class="hint">D’autres donjons et lieux t’attendent sur la carte du Val : découvre-les pour pouvoir y partir.</p>` : `<h2>Raid sur le Val Douillet</h2>
+      <p>Envoie jusqu’à 3 créatures piller un <b>village</b>, une <b>ferme</b>, l’<b>auberge</b>, le <b>monastère</b>, le <b>château du Baron</b> ou la cible d’une <b>quête</b>. Le raid se joue en fin de nuit, aux dés : un dé par point d’équipe, on garde le meilleur. <b>6</b> succès total, <b>4-5</b> succès avec complication, <b>1-3</b> échec. Deux 6 : critique !</p>
+      <h3>Cible</h3><p class="hint">D’autres cibles t’attendent sur la carte du Val : découvre-les pour pouvoir les piller.</p>`}<div class="choices">${targets.length ? '' : `<p class="hint">${crawl ? 'Aucun donjon ni lieu d’expédition connu pour l’instant.' : 'Aucune cible connue pour l’instant.'}</p>`}${targets.map(([k, r]) => `<button type="button" class="choice" data-target="${k}" aria-pressed="${sel.target === k}" ${r.tier > S.tier ? 'disabled' : ''}><span class="emo">${r.emo}</span><b>${esc(r.name)}</b><span>${esc(r.desc)}</span>${crawl ? '' : `<span>Butin ${costText(r.reward)} · +${r.hype} 💬 · +${r.menace} Menace</span>`}<span>${TAGS[r.tag]}${r.risk ? ` · bien gardée (−${r.risk} dé)` : ''}${r.tier > S.tier ? ` · 🔒 Palier ${r.tier}` : ''}</span></button>`).join('')}</div>
       <h3>Équipe (${sel.team.size}/${cap})</h3>${!crawl && S.creatures.some(c => diceOf(c) <= 0 && !isOut(c)) ? `<p class="hint">Pas dans la liste : ${esc(S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).slice(0, 4).map(c => c.name).join(', '))}${S.creatures.filter(c => diceOf(c) <= 0 && !isOut(c)).length > 4 ? '…' : ''} (trop petits pour piller : ils bâtissent et gardent le château).</p>` : ''}<div class="choices">${crew.length ? crew.map(c => { const sp = SPECIES[c.sp]; return `<button type="button" class="choice" data-mate="${c.id}" aria-pressed="${sel.team.has(c.id)}" ${!sel.team.has(c.id) && sel.team.size >= cap ? 'disabled' : ''}>${imgThumb('char', c.sp)}<b>${esc(c.name)}</b><span>${crawl ? (() => { const p = crawler(c); const K = CRAWL_SK[c.sp]; return `❤️ ${p.hp} · ⚔️ ${p.atk}${K ? ` · 🃏 ${K.ico} ${esc(K.name)}` : ''}`; })() : `${sp.name} · ${diceOf(c)} 🎲 · ${TAGS[sp.tag] || '—'}`}</span>${hearts(c.mood)}</button>`; }).join('') : '<p class="hint">Personne ne peut partir : les diablotins sont trop petits. Attire des gobelins, gargouilles ou ménestrels.</p>'}</div>
-      ${crawl && RAIDS[sel.target].siege && typeof siegeFiche === 'function' ? siegeFiche() : crawl ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(Math.round((crawlLevel() + (typeof crawlResist === 'function' ? crawlResist(crawlDgOf(sel.target)) : 0)) * 10) / 10).replace('.', ',')}</b> (il suit la renommée de tes champions, et un donjon rival grandit avec ton palier). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
+      ${crawl && sel.target && RAIDS[sel.target].siege && typeof siegeFiche === 'function' ? siegeFiche() : crawl && sel.target ? `<h3>L’expédition</h3><p>${esc(CRAWL_DG[crawlDgOf(sel.target)].desc)} Niveau du donjon : <b>${String(Math.round((crawlLevel() + (typeof crawlResist === 'function' ? crawlResist(crawlDgOf(sel.target)) : 0)) * 10) / 10).replace('.', ',')}</b> (il suit la force de tes champions, et un donjon rival grandit avec ton palier). Un combat en cartes : chaque créature apporte ses cartes, et ton château remplit le sac (meubles, pièges). Trois étages, un boss, et après chaque salle le choix de continuer ou de rentrer. Elle se joue cette nuit.</p>` : ''}
       ${!crawl && typeof RAID_APPS !== 'undefined' ? `<h3>Approche</h3><div class="choices">${Object.entries(RAID_APPS).map(([k, a]) => `<button type="button" class="choice" data-app="${k}" aria-pressed="${(sel.app || 'risquee') === k}"><span class="emo">${a.ico}</span><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></button>`).join('')}</div>` : ''}
       ${b && !crawl ? `<h3>Réserve de dés</h3><div>${b.rows.map(([t, v]) => `<span class="tag2">${v >= 0 ? '+' : ''}${v} ${esc(t)}</span>`).join('')}</div><p class="odds">${oddsText(b.pool)}</p>` : ''}
-      ${(() => { const add = sel.target && RAIDS[sel.target] && !crawl ? (RAIDS[sel.target].menace || 0) : 0, men = S.menace + (S.hype >= 3 ? 1 : 0) + add; return men >= MENACE_MAX ? `<p class="warnline">⚠️ Une bande arrivera sans doute cette nuit (Menace ${S.menace} → ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}${add ? ', dont +' + add + ' pour ce raid' : ''}) : ${crawl ? 'l’expédition' : 'l’équipe'} ne sera pas là pour défendre le Cœur.</p>` : add ? `<p class="hint">Menace après ce raid : ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}.</p>` : ''; })()}
-      <div class="mfoot sticky">${S.raid ? '<button class="sbtn danger" type="button" id="rCancel">Annuler le raid prévu</button>' : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
+      ${(() => { const add = sel.target && RAIDS[sel.target] && !crawl ? (RAIDS[sel.target].menace || 0) : 0, men = S.menace + (menaceRises() ? 1 : 0) + add; return men >= MENACE_MAX ? `<p class="warnline">⚠️ Une bande arrivera sans doute cette nuit (Menace ${S.menace} → ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}${add ? ', dont +' + add + ' pour ce raid' : ''}) : ${crawl ? 'l’expédition' : 'l’équipe'} ne sera pas là pour défendre le Cœur.</p>` : add ? `<p class="hint">Menace après ce raid : ${Math.min(men, MENACE_MAX)}/${MENACE_MAX}.</p>` : ''; })()}
+      <div class="mfoot sticky">${S.raid ? `<button class="sbtn danger" type="button" id="rCancel">${S.raid.crawl || isC(S.raid.target) ? 'Annuler l’expédition prévue' : 'Annuler le raid prévu'}</button>` : ''}<button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="rGo" ${sel.target && sel.team.size ? '' : 'disabled'}>${crawl ? '🏰 Planifier l’expédition' : '🗺️ Planifier le raid'}</button></div>`;
   };
   draw();
   m.addEventListener('click', e => {
-    const t = e.target.closest('[data-target]'), mt = e.target.closest('[data-mate]'), ap = e.target.closest('[data-app]');
+    const t = e.target.closest('[data-target]'), mt = e.target.closest('[data-mate]'), ap = e.target.closest('[data-app]'), tb = e.target.closest('[data-rtab]');
+    if (tb && tb.dataset.rtab !== UI.raidTab) { UI.raidTab = tb.dataset.rtab; if (UI.raidSel.target && isC(UI.raidSel.target) !== (UI.raidTab === 'expe')) { UI.raidSel.target = null; UI.raidSel.team = new Set(); } sfx('tick'); draw(); return; }
     if (ap) { UI.raidSel.app = ap.dataset.app; sfx('tick'); draw(); }
     if (t && !t.disabled) { UI.raidSel.target = t.dataset.target; sfx('tick'); draw(); }
     else if (mt && !mt.disabled) { const id = mt.dataset.mate; UI.raidSel.team.has(id) ? UI.raidSel.team.delete(id) : UI.raidSel.team.add(id); sfx('tick'); draw(); }
@@ -64,7 +72,7 @@ function openRaid(pre) {
     else if (e.target.closest('#rGo')) {
       if (!run('raidPlan', { target: UI.raidSel.target, team: [...UI.raidSel.team], app: UI.raidSel.app || 'risquee' })) return;
       sfx('chime'); closeModal(); afterChange();
-      toast(`🗺️ L’équipe part vers ${RAIDS[S.raid.target].name}. Résultat à la fin de la nuit.`);
+      toast(S.raid.crawl || isC(S.raid.target) ? `🃏 L’expédition part vers ${RAIDS[S.raid.target].name}. Elle se joue cette nuit.` : `🗺️ L’équipe part vers ${RAIDS[S.raid.target].name}. Résultat à la fin de la nuit.`);
     }
   });
 }
@@ -138,7 +146,7 @@ async function endNight() {
   if (typeof coopNightGate === 'function' && !coopNightGate()) return;
   dropSticker(); closeModal(true); if (UI.build) closeBuild(); if (typeof GM !== 'undefined' && GM.on) guardMode(false); setFloor(0);
   UI.busy = true; document.body.classList.add('busy'); $('#btnNight').disabled = true;
-  const n = S.night, report = [], snap = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
+  const n = S.night, report = [], snap = { g: S.gold, s: S.mat, h: radiance(), c: S.creatures.length, cal: S.calamity, men: S.menace };
   try {
     setPhase('calamite');
     const cd = calamityDelta(), before = S.calamity; S.calamity = Math.max(0, S.calamity + cd.d);
@@ -148,7 +156,7 @@ async function endNight() {
     setPhase('raid');
     if (S.raid) { report.push(['sec', 'Raid']); await runRaid(report); renderAll(); }
     setPhase('contrecoup');
-    if (S.hype >= 3) S.menace += 1;
+    if (menaceRises()) S.menace += 1;
     renderHUD();
     if (S.menace >= MENACE_MAX) { S.menace = 0; renderHUD(); report.push(['sec', 'Contrecoup']); await runInvasion(report); }
     else await banner('Contrecoup', `Menace ${S.menace}/${MENACE_MAX} : pas d’aventuriers cette nuit`, 1100);
@@ -172,14 +180,14 @@ async function endNight() {
   if (typeof victoryAfterNight === 'function') victoryAfterNight();
 }
 /* ---------- la chronique de la nuit : un parchemin illustré ---------- */
-const CHRON_SEC = [[/^Métiers/, 'anvil'], [/^Quêtes/, 'scroll'], [/^Renommée/, 'legend'], [/calamit/i, 'cal'], [/raid/i, 'raid'], [/contrecoup|invasion|assaut|croisade/i, 'swords'], [/rival|sabotage/i, 'flag'], [/r[ée]colte/i, 'gold'], [/travaux|chantier/i, 'anvil'], [/paie/i, 'purse'], [/arriv/i, 'door'], [/[âa]mes|cr[ée]ature/i, 'heart'], [/intrigue/i, 'scroll'], [/hauts? faits/i, 'trophy'], [/exp[ée]dition/i, 'expe'], [/envie/i, 'spark'], [/victoire/i, 'crown'], [/en f[êe]te/i, 'trophy'], [/val/i, 'map']];
+const CHRON_SEC = [[/^Métiers/, 'anvil'], [/^Quêtes/, 'scroll'], [/^Accueil/, 'legend'], [/calamit/i, 'cal'], [/raid/i, 'raid'], [/contrecoup|invasion|assaut|croisade/i, 'swords'], [/rival|sabotage/i, 'flag'], [/r[ée]colte/i, 'gold'], [/travaux|chantier/i, 'anvil'], [/paie/i, 'purse'], [/arriv/i, 'door'], [/[âa]mes|cr[ée]ature/i, 'heart'], [/intrigue/i, 'scroll'], [/hauts? faits/i, 'trophy'], [/exp[ée]dition/i, 'expe'], [/envie/i, 'spark'], [/victoire/i, 'crown'], [/en f[êe]te/i, 'trophy'], [/val/i, 'map']];
 const chronSecIk = t => { const f = CHRON_SEC.find(([re]) => re.test(t)); return f ? f[1] : 'bookopen'; };
 // le bilan de la nuit en quelques pastilles : ce qui a bougé depuis le soir
 function chronSummary(snap, now) {
   if (!snap) return '';
   const chip = (ik, label, a, b, bad) => { const d = Math.round((b || 0) - (a || 0)), cls = !d ? 'eq' : (d > 0) !== !!bad ? 'up' : 'down';
     return `<span class="nc-chip ${cls}" title="${esc(label)} : ${a} → ${b}">${gi(ik)}<b>${b}</b><small>${d > 0 ? '+' + d : d < 0 ? '−' + -d : '='}</small><em>${esc(label)}</em></span>`; };
-  return `<div class="nc-sum">${chip('gold', 'Or', snap.g, now.g)}${chip('mat', 'Matériaux', snap.s, now.s)}${chip('hype', 'Notoriété', snap.h, now.h)}${chip('heart', 'Créatures', snap.c, now.c)}${chip('cal', 'Calamité', snap.cal, now.cal, true)}${chip('men', 'Menace', snap.men, now.men, true)}</div>`;
+  return `<div class="nc-sum">${chip('gold', 'Or', snap.g, now.g)}${chip('mat', 'Bois', snap.s, now.s)}${chip('hype', 'Notoriété', snap.h, now.h)}${chip('heart', 'Créatures', snap.c, now.c)}${chip('cal', 'Calamité', snap.cal, now.cal, true)}${chip('men', 'Menace', snap.men, now.men, true)}</div>`;
 }
 function chronicleHTML(n, report, sub, snap, now) {
   const secs = []; let cur = { t: '', items: [] }; secs.push(cur); let k = 0;
@@ -191,7 +199,7 @@ function chronicleHTML(n, report, sub, snap, now) {
     <div class="nc-body">${secs.filter(s => s.items.length || s.t).map(s => `<section class="nc-sec">${s.t ? `<h3 class="nc-rib">${gi(chronSecIk(s.t))}<span>${esc(s.t)}</span></h3>` : ''}<ul class="chron">${s.items.join('')}</ul></section>`).join('')}</div>`;
 }
 function chronicle(n, report, snap) {
-  const now = { g: S.gold, s: S.mat, h: S.hype, c: S.creatures.length, cal: S.calamity, men: S.menace };
+  const now = { g: S.gold, s: S.mat, h: radiance(), c: S.creatures.length, cal: S.calamity, men: S.menace };
   coopCast('chron', { n, report, snap, now });
   const m = openModal(`${chronicleHTML(n, report, `${esc(S.name)} · ${esc(castleTitle())}`, snap, now)}
     <div class="mfoot nc-foot"><button class="sbtn pri nc-go" type="button" id="cNext" data-focus>${gi('night')} Nuit ${S.night}</button></div>`, { noClose: true, label: 'Chronique', cls: 'nchron' });
@@ -206,7 +214,7 @@ function openTier() {
     <ul class="req">${st.rows.map(r => `<li>${r.ok ? '✅' : '⬜'} ${esc(r.text)}</li>`).join('')}</ul><p><b>Débloque :</b> ${esc(st.next.unlock)}, et un étage de plus.</p>
     <div class="btnrow"><button class="sbtn pri" type="button" id="tGo" ${st.ok ? '' : 'disabled'}>⭐ Monter de palier</button></div>`
     : `<h2>⭐ Palier ${S.tier}</h2><p>Ton château a atteint le palier maximal. Bravo, Maître !</p>`;
-  html += `<h3>🪜 Étages (${fl}/${Math.min(3, S.tier)})</h3><p class="hint">Chaque palier permet d’ouvrir un étage : vers le haut avec l’<b>Escalier de la tour</b> (les Hauteurs, puis les Cimes : jardin suspendu, volière, belvédère), ou vers le bas avec l’<b>Escalier des caves</b> (les Caves, puis les Profondeurs : mine, reliquaire, lac souterrain). Chaque direction a ses stickers et attire ses propres créatures rares.</p>`;
+  html += `<h3>🪜 Étages (${fl}/${Math.min(3, S.tier)})</h3><p class="hint">Chaque palier permet d’ouvrir un étage : vers le haut avec l’<b>Escalier de la tour</b> (les Hauteurs, puis les Cimes : jardin suspendu, volière, belvédère), ou vers le bas avec l’<b>Escalier des caves</b> (les Caves, puis les Profondeurs : mine, reliquaire, lac souterrain). Chaque direction a ses stickers et attire ses propres créatures rares. Chaque escalier demande ${AMBER_COST.floor} 🟠 d’Ambre.</p>`;
   html += ex ? `<h3>🧱 Agrandir les remparts</h3><p>Le château passera à ${W + 2}×${H + 2} cases : une rangée de chaque côté et deux au fond, à tous les étages.</p>
     <ul class="req"><li>${S.tier >= ex.need ? '✅' : '⬜'} Palier ${ex.need}</li><li>${canAfford(ex.cost) ? '✅' : '⬜'} Payer ${costText(ex.cost)}</li></ul>
     <div class="btnrow"><button class="sbtn" type="button" id="tExp" ${ex.ok ? '' : 'disabled'}>🧱 Agrandir les remparts</button></div>` : '<h3>🧱 Remparts</h3><p class="hint">Les remparts sont au plus large.</p>';
@@ -232,24 +240,32 @@ function openHelp() {
     <li>Les pièges se posent dans les couloirs, contre les pièces à protéger. Les meubles se collent depuis la fiche de leur pièce (touche-la). Décoller un meuble est gratuit : il reste offert et se recolle sans rien payer.</li></ul>
     <h3>Créatures</h3>
     <ul><li>Comble leurs envies, pose la déco qu’elles aiment, donne-leur un poste dans leur pièce préférée. Ravies (4-5 ❤️), leur compétence compte double ; boudeuses (0-1), elle s’éteint.</li>
-    <li>Quand une bande attaque, tes créatures se défendent d’elles-mêmes, sans rien à placer : les 3 plus fortes (reposées) au Cœur, les autres rangées de la plus faible à la plus forte, la première pièce du parcours d’abord. La bande ne fuit pas : elle va jusqu’au Cœur, à moins que tous ses héros tombent. Une créature épuisée se repose.</li></ul>
+    <li>Quand une bande attaque, tes créatures se défendent d’elles-mêmes, sans rien à placer : d’abord une par pièce du parcours, de la plus faible (première pièce) à la plus forte, et la plus forte de toutes au Cœur ; s’il en reste, le Cœur se renforce (3 au plus), puis les pièces. La bande ne fuit pas : elle va jusqu’au Cœur, à moins que tous ses héros tombent. Une créature épuisée se repose.</li></ul>
     <p class="hint">Règles d’aménagement inspirées du jeu de rôle Wicked Ones (Forged in the Dark) : thèmes, horloges de projet, verrous et pièges, calamités et contrecoups.</p>
     <div class="mfoot"><button class="sbtn pri" type="button" data-close>C’est parti</button></div></div>`, { wide: true, label: 'Aide' });
 }
 function resetActors() { ACT.clear(); HEROS.length = 0; V.fx = []; V.born.clear(); V.parts = []; V.selected = null; }
+// le sommaire des livres du menu : une ligne par livre, à quoi il sert, et il s'ouvre
+const MENU_BOOKS = [['maitre', '📖', 'Le Livre du Maître', 'Ta partie racontée en stickers : moments marquants, ères et course contre les rivaux, reliques.'],
+  ['stickers', '🌟', 'Le Livre des stickers', 'Tous les stickers que tu as trouvés, toutes parties confondues.'],
+  ['grimoire', '📚', 'Le Grimoire', 'Les règles du jeu, article par article (le « ? » d’une fiche y mène aussi).'],
+  ['album', '🐾', 'L’Album des espèces', 'Tes créatures, et chaque espèce déjà venue au château.'],
+  ['hauts', '🏆', 'Les hauts faits', 'Les exploits qui ajoutent des places d’accueil, et les prochains à viser.']];
+const MENU_OPEN = { maitre: () => openAch(), stickers: () => typeof openStickerBook === 'function' && openStickerBook(), grimoire: () => openGrimoire(), album: () => openBestiary(), hauts: () => typeof openFame === 'function' ? openFame() : openAch() };
 function openMenu() {
   const guest = COOP.role === 'guest', des = S.opts.desert;
   const m = openModal(`<h2>Partie</h2><p>${guest ? 'Tu joues dans le château d’un autre Maître : ta propre partie t’attend, bien au chaud dans ce navigateur.' : 'Ta partie se sauvegarde toute seule dans ce navigateur, après chaque action et chaque nuit.'}</p>
     <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSaveNow">💾 Sauvegarder</button><button class="sbtn" type="button" id="mSlots">📂 Mes parties</button>'}<button class="sbtn" type="button" id="mTitle">🏠 Écran d’accueil</button></div>
     ${guest ? '' : `<div class="field"><label for="mName">Nom du château</label><input id="mName" maxlength="40" value="${esc(S.name)}"></div>`}
-    <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSave">Renommer</button>'}<button class="sbtn" type="button" id="mLog">Chronique</button><button class="sbtn" type="button" id="mAch">🏆 Hauts faits</button><button class="sbtn" type="button" id="mRen">⭐ Renommée</button><button class="sbtn" type="button" id="mVal">🌐 Val des Maîtres</button></div>
+    <div class="btnrow">${guest ? '' : '<button class="sbtn pri" type="button" id="mSave">Renommer</button>'}<button class="sbtn" type="button" id="mLog">Chronique</button><button class="sbtn" type="button" id="mRen">⭐ Réputation</button><button class="sbtn" type="button" id="mVal">🌐 Val des Maîtres</button></div>
+    <h3>📚 Les cinq livres</h3><div class="choices" id="mBooks">${MENU_BOOKS.map(([k, ico, t, d]) => `<button type="button" class="choice" data-book="${k}"><span class="emo">${ico}</span><b>${t}</b><span>${d}</span></button>`).join('')}</div>
     ${guest ? '' : `<h3>Désertions</h3><p class="hint">Une créature peu loyale peut partir pour un château qui reçoit mieux son espèce. Elle prévient toujours une nuit avant.</p>
     <div class="choices three" id="mDes">${[['on', '🧳 Activées', 'Les créatures délaissées peuvent partir.'], ['soft', '🍃 Douces', 'Deux fois moins de départs.'], ['off', '🛌 Désactivées', 'Personne ne part pour un autre château.']].map(([k, t, d]) => `<button type="button" class="choice" data-des="${k}" aria-pressed="${des === k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`}
     <div class="btnrow">${guest ? '' : '<button class="sbtn" type="button" id="mTuto">Recommencer le tutoriel</button>'}<button class="sbtn" type="button" id="mTips">${S.tipsOff ? 'Réactiver les conseils' : 'Couper les conseils'}</button><button class="sbtn" type="button" id="mMusic">${typeof MUS !== 'undefined' && !MUS.on ? '🔇 Musique : coupée' : '🎵 Musique : activée'}</button><button class="sbtn" type="button" id="mCardDef">${(S.opts || {}).cardDef === 'auto' ? '🃏 Combats d’invasion : me demander' : '⚡ Combats d’invasion : toujours en auto'}</button>${guest ? (typeof invDiff === 'function' ? `<span class="hint">${invDiff().ico} Difficulté : ${invDiff().name} (choisie par l’hôte)</span>` : '') : `<button class="sbtn" type="button" id="mDiff" title="La force des bandes d’invasion et des donjons d’expédition : Facile, Normal, Difficile, Légende. Tu peux en changer à tout moment.">${typeof invDiff === 'function' ? `${invDiff().ico} Difficulté : ${invDiff().name}` : ''}</button>`}${guest ? '' : '<button class="sbtn" type="button" id="mNew">🏰 Nouvelle partie</button>'}</div>`, { label: 'Partie' });
   const q = s => m.querySelector(s);
   q('#mSave') && q('#mSave').addEventListener('click', () => { if (run('rename', { name: q('#mName').value })) { closeModal(); afterChange(); } });
   q('#mLog').addEventListener('click', openJournal);
-  q('#mAch').addEventListener('click', openAch);
+  q('#mBooks').addEventListener('click', e => { const b = e.target.closest('[data-book]'); if (!b) return; sfx('tick'); closeModal(true); MENU_OPEN[b.dataset.book](); });
   q('#mRen').addEventListener('click', openRenown);
   q('#mVal').addEventListener('click', () => openVal());
   q('#mDes') && q('#mDes').addEventListener('click', e => { const b = e.target.closest('[data-des]'); if (!b) return; S.opts.desert = b.dataset.des; sfx('tick'); save(); m.querySelectorAll('[data-des]').forEach(x => x.setAttribute('aria-pressed', x.dataset.des === S.opts.desert)); if (COOP.role === 'host') coopDirty(); });

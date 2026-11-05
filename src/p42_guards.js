@@ -19,7 +19,7 @@ Object.assign(CMD, {
   guard(a) {
     const c = critter(a.id); if (!c) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
-    return 'Plus de gardes à poster : face à une bande, tes créatures se rangent d’elles-mêmes, de la plus faible à la plus forte (les 3 plus fortes au Cœur, les autres pièce après pièce) ; reposées, elles défendent toutes ; des pièges à la porte des pièces, un repas, un mercenaire aident aussi';
+    return 'Plus de gardes à poster : face à une bande, tes créatures se rangent d’elles-mêmes, de la plus faible à la plus forte (une par pièce d’abord, la plus forte au Cœur ; le surplus renforce le Cœur, puis les pièces) ; reposées, elles défendent toutes ; des pièges à la porte des pièces, un repas, un mercenaire aident aussi';
   },
 });
 // le combat lit maintenant les postes de garde

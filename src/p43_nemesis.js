@@ -67,12 +67,12 @@ function nemDecide(k) {
   const N = S.foeHero; if (!N || N.st !== 'mercy') return;
   if (k === 'spy') { if (S.gold < 40) return; S.gold -= 40; N.st = 'spy'; addLog(`${N.name} travaille désormais pour toi : +1 énergie au premier tour du combat du Cœur, à chaque invasion.`, 'ev'); }
   else if (k === 'ally') { N.st = 'ally'; addLog(`${N.name} change de camp : il défendra ton Cœur à tes côtés.`, 'ev'); }
-  else { N.st = 'captive'; N.ransom = 10; S.hype += 5; addLog(`${N.name} croupit dans tes cachots (+5 notoriété) ; sa famille paie une rançon chaque nuit.`, 'ev'); }
+  else { N.st = 'captive'; N.ransom = 10; S.hype += 5; addLog(`${N.name} croupit dans tes cachots (+5 💬 de bouche-à-oreille) ; sa famille paie une rançon chaque nuit.`, 'ev'); }
 }
 async function nemMercy() {
   const N = S.foeHero; if (!N || N.st !== 'mercy') return;
   const k = await choiceModal(`${gi('crown')} ${esc(N.name)} est à ta merci`, `Trois fois repoussé·e, ${esc(N.name)} ne fait plus le fier. Que fais-tu de ce héros ?`, [
-    ['jail', 'lock', 'Le capturer', 'Aux cachots : +5 notoriété, et sa famille paie 4 or par nuit pendant 10 nuits.'],
+    ['jail', 'lock', 'Le capturer', 'Aux cachots : +5 💬 de bouche-à-oreille, et sa famille paie 4 or par nuit pendant 10 nuits.'],
     ['spy', 'eye', 'Le corrompre (40 or)', 'Il te renseigne sur chaque bande : +1 énergie au premier tour du combat du Cœur, à chaque invasion.', S.gold < 40],
     ['ally', 'shield', 'Le recruter', 'Il change de camp : il ne t’attaquera plus, et défendra ton Cœur à tes côtés.'],
   ]);
@@ -91,4 +91,4 @@ const nemAlly = () => { const N = S.foeHero; return N && N.st === 'ally' ? { id:
 
 WIKI.nemesis = { cat: 'danger', t: 'Le héros némésis', x: () => `<p>Un jour, parmi les aventuriers qui t’attaquent, un héros te prend en grippe. Il a un nom (${S.foeHero ? `<b>${esc(S.foeHero.name)}</b>` : 'tu le sauras bien assez tôt'}) et il revient à <b>chaque invasion</b>, à la place d’un des héros de la bande, avec 35 % de PV en plus.</p>
   <ul><li>Chaque invasion le fait monter d’un niveau (6 au plus), et il <b>désamorce</b> toujours le premier piège de la bande.</li><li>S’il gagne, il te nargue dans la chronique ; si une ruse fait rebrousser chemin à sa bande, il jure de revenir.</li>
-  <li>Repoussé trois fois, il est <b>à ta merci</b> : le capturer (notoriété, rançon), le corrompre (+1 énergie au premier tour du combat du Cœur, à chaque invasion) ou le recruter (il change de camp, ne t’attaque plus et défend ton Cœur à tes côtés).</li></ul>` };
+  <li>Repoussé trois fois, il est <b>à ta merci</b> : le capturer (bouche-à-oreille, rançon), le corrompre (+1 énergie au premier tour du combat du Cœur, à chaque invasion) ou le recruter (il change de camp, ne t’attaque plus et défend ton Cœur à tes côtés).</li></ul>` };

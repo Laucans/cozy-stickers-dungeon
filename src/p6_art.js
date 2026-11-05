@@ -217,6 +217,9 @@ const XFLAMES = { brazier: [[0, 0, 30, 1]] };
 const ICON_DRAW = {
   gold: g => { [[0, 10], [0, 4], [0, -2]].forEach(([x, y]) => ell(g, x, y, 13, 5.5, '#e9b949')); ell(g, 6, -6, 9, 9, '#f2c94f'); ln(g, [[3, -6], [9, -6]], '#a8781c', 1.6); ln(g, [[6, -9], [6, -3]], '#a8781c', 1.6); },
   mat: g => { [[-7, 4], [7, 4], [0, -6]].forEach(([x, y]) => { rrect(g, x - 9, y - 5, 18, 10, 4, '#a8683a'); ell(g, x + 8, y, 3, 5, '#e1b47a', .8); }); },
+  // l'Ambre : un galet de résine dorée, une petite bête prise dedans, et un éclat à côté
+  amber: g => { ell(g, 10, 11, 5.5, 4.2, '#d9821f'); g.beginPath(); g.moveTo(-2, -15); g.bezierCurveTo(9, -16, 15, -6, 13, 3); g.bezierCurveTo(11, 12, 0, 15, -7, 12); g.bezierCurveTo(-14, 9, -15, -2, -11, -9); g.bezierCurveTo(-9, -13, -6, -15, -2, -15); g.fillStyle = radial(g, -1, -1, 15, '#f2a531'); fi(g, g.fillStyle, 1.3);
+    ln(g, [[-1, 0], [-5, -4]], 'rgba(110,50,12,.55)', 1.1); ln(g, [[1, 0], [5, -4]], 'rgba(110,50,12,.55)', 1.1); ell(g, 0, 2, 2.2, 3.6, 'rgba(110,50,12,.8)', 0); ell(g, -5, -8, 4.2, 2.2, 'rgba(255,255,255,.6)', 0); ball(g, 7, 6, 1.2, 'rgba(255,240,200,.7)', 0); },
   hype: g => { g.beginPath(); g.moveTo(0, -16); g.bezierCurveTo(12, -4, 10, 8, 0, 12); g.bezierCurveTo(-10, 8, -12, -4, -4, -10); g.bezierCurveTo(-3, -4, 0, -4, 0, -16); g.fillStyle = radial(g, 0, 2, 14, '#e8622a'); fi(g, g.fillStyle, 1); g.beginPath(); g.moveTo(0, -4); g.bezierCurveTo(6, 2, 4, 9, 0, 10); g.bezierCurveTo(-4, 9, -6, 2, 0, -4); g.fillStyle = '#ffd36a'; g.fill(); },
   amb: g => { rrect(g, -6, -6, 12, 20, 3, '#f1e4c8'); ln(g, [[0, -6], [0, -10]], INK, 1.2); g.beginPath(); g.moveTo(0, -20); g.quadraticCurveTo(6, -12, 0, -9); g.quadraticCurveTo(-6, -12, 0, -20); g.fillStyle = '#ffb347'; fi(g, '#ffb347', .8); ell(g, 0, 15, 10, 3.5, '#9a6a3a'); },
   beds: g => { rrect(g, -15, -2, 30, 10, 3, '#a8683a'); rrect(g, -13, -6, 26, 7, 3, '#8fa6d8'); rrect(g, -13, -9, 9, 6, 3, '#f1e4c8'); rrect(g, -16, -12, 4, 22, 2, '#7a4a28'); },

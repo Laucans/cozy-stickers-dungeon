@@ -23,6 +23,7 @@ function upgradeState(s) {
   s.opts = Object.assign({ desert: 'on' }, s.opts || {});
   s.val = Object.assign({ claimed: [], sent: {}, visited: [], pvp: true, inboxAt: 0 }, s.val || {});
   s.payAcc = s.payAcc || 0; s.payDebt = s.payDebt || 0; s.payWeek = s.payWeek || 0;   // la paie de chaque nuit (v29)
+  if (!(s.amber >= 0)) s.amber = 0;   // l'Ambre 🟠 (une ancienne partie n'en a pas)
   (s.creatures || []).forEach(upgradeCreature);
   return s;
 }
@@ -47,7 +48,7 @@ const ACH = [
   { id: 'conteur',   cat: 'Missions',  ico: '📜', name: 'Conteur',                desc: 'Comble 5 envies de tes créatures.',            test: s => s.stats.quests >= 5,           pw: 'Carnet d’envies',        pd: '+1 💰 pour chaque envie comblée.' },
   { id: 'chouchou',  cat: 'Missions',  ico: '🌟', name: 'Chouchou',               desc: 'Une créature atteint le niveau 3.',            test: s => s.creatures.some(c => c.lvl >= 3), pw: 'Mentorat',           pd: '+1 XP à chaque gain d’expérience.' },
   { id: 'epopee',    cat: 'Missions',  ico: '🧭', name: 'Épopée',                 desc: 'Termine l’histoire d’une créature (3 chapitres).', test: s => s.stats.legends >= 1,      pw: 'Ballade héroïque',       pd: '+1 dé à tous les raids.' },
-  { id: 'legende',   cat: 'Missions',  ico: '🗿', name: 'Légende vivante',        desc: 'Une créature atteint le niveau 5.',            test: s => s.creatures.some(c => c.lvl >= 5), pw: 'Statue au porche',   pd: '+1 🔥 de notoriété chaque nuit.' },
+  { id: 'legende',   cat: 'Missions',  ico: '🗿', name: 'Légende vivante',        desc: 'Une créature atteint le niveau 5.',            test: s => s.creatures.some(c => c.lvl >= 5), pw: 'Statue au porche',   pd: '+1 💬 de bouche-à-oreille chaque nuit.' },
   { id: 'repousse',  cat: 'Stratège',  ico: '⚔️', name: 'Pas de quartier',        desc: 'Repousse une invasion.',                       test: s => s.stats.repelled >= 1,         pw: 'Pièges huilés',          pd: 'Tes pièges gagnent +1 en force.' },
   { id: 'rempart',   cat: 'Stratège',  ico: '🏰', name: 'Inviolable',             desc: 'Repousse 4 invasions.',                        test: s => s.stats.repelled >= 4,         pw: 'Brume du soir',          pd: 'Pouvoir : −3 Menace.', active: 'brume', cd: 4 },
   { id: 'pillard',   cat: 'Stratège',  ico: '💰', name: 'Pillard',                desc: 'Réussis 5 raids.',                             test: s => s.stats.raidsWon >= 5,         pw: 'Sacoches profondes',     pd: '+2 💰 de butin à chaque raid réussi.' },
@@ -61,7 +62,7 @@ const ACH = [
   { id: 'nuit20',    cat: 'Château',   ico: '🌙', name: 'Increvable',             desc: 'Atteins la nuit 20.',                          test: s => s.night >= 20,                 pw: 'Aimant à monstres',      pd: 'Les nouvelles créatures viennent plus volontiers.' },
   { id: 'voisin',    cat: 'Val des Maîtres', online: true, ico: '🏮', name: 'Bon voisin',      desc: 'Visite 3 châteaux du Val.',         test: s => s.stats.visits >= 3,       pw: 'Lanterne de voyage',     pd: '+1 Ambiance.' },
   { id: 'genereux',  cat: 'Val des Maîtres', online: true, ico: '🎁', name: 'Cœur sur la main', desc: 'Offre 3 cadeaux.',                 test: s => s.stats.gifts >= 3,        pw: 'Corne d’abondance',      pd: 'Les cadeaux que tu reçois valent double.' },
-  { id: 'livredor',  cat: 'Val des Maîtres', online: true, ico: '✍️', name: 'Célébrité locale', desc: 'Reçois 5 mots dans ton livre d’or.', test: s => s.stats.gbRecv >= 5,     pw: 'Renommée du Val',        pd: '+5 de réputation auprès de toutes les espèces.' },
+  { id: 'livredor',  cat: 'Val des Maîtres', online: true, ico: '✍️', name: 'Célébrité locale', desc: 'Reçois 5 mots dans ton livre d’or.', test: s => s.stats.gbRecv >= 5,     pw: 'Bonne réputation',        pd: '+5 de réputation auprès de toutes les espèces.' },
   { id: 'coop',      cat: 'Val des Maîtres', online: true, ico: '🤝', name: 'Main dans la main', desc: 'Termine une nuit en château partagé.', test: s => s.stats.coopNights >= 1, pw: 'Pacte des Maîtres',    pd: '+1 segment de travaux chaque nuit.' },
   { id: 'aimant',    cat: 'Val des Maîtres', online: true, ico: '🧲', name: 'Chasseur de talents', desc: 'Accueille une créature venue d’un autre château.', test: s => s.stats.migrantsIn >= 1, pw: 'Bouche-à-oreille', pd: '+5 de réputation auprès de toutes les espèces.' },
   { id: 'escarmouche', cat: 'Val des Maîtres', online: true, ico: '🏹', name: 'Taquin',         desc: 'Réussis une escarmouche contre un voisin.', test: s => s.stats.skirmishWon >= 1, pw: 'Bannière de guerre', pd: '+1 dé aux escarmouches.' },
@@ -87,7 +88,7 @@ function announceAch(list) {
 TIPS.push(
   { id: 'nouveau2', when: () => S.night >= 3 && !(S.tuto && S.tuto.on), t: 'Les âmes du château', x: 'Chaque créature a sa loyauté, ses missions personnelles et ses niveaux. Ton château a une réputation auprès de chaque espèce et des hauts faits qui débloquent des pouvoirs : ⭐, 🏆 et 📜 dans la colonne de gauche (le bouton 🐾 la déplie si elle est rangée). Et « Le Val » te relie aux autres Maîtres !', wiki: 'reputation' },
   { id: 'quete1', when: () => S.creatures.some(c => c.quest && c.quest.st === 'active'), t: 'Des envies', x: 'Chaque créature déclare une envie (✦ sur sa fiche, liste 📜 à gauche). Comble-la : la récompense tombe toute seule (loyauté, expérience, cadeaux). Elle cache aussi un rêve secret : à toi de le découvrir.', wiki: 'missions' },
-  { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Comble son envie ou réalise son rêve secret pour la retenir… ou améliore ta réputation (⭐ Renommée).', wiki: 'loyaute' },
+  { id: 'tente1', when: () => S.creatures.some(c => c.tempt), t: 'Quelqu’un lorgne ailleurs', x: 'Une créature (👀) trouve qu’un autre château reçoit mieux son espèce. Comble son envie ou réalise son rêve secret pour la retenir… ou améliore ta réputation (⭐ Réputation).', wiki: 'loyaute' },
   { id: 'haut1', when: () => Object.keys(S.ach || {}).length >= 1, t: 'Premier haut fait !', x: 'Chaque haut fait débloque un pouvoir permanent pour ton château. Retrouve-les tous dans 🏆 Hauts faits.', wiki: 'hautsfaits' },
 );
 const pwReady = a => !S.pwcd[a.active] || S.night >= S.pwcd[a.active];
@@ -107,13 +108,12 @@ function repTarget(sp) {
     f.push([`Épanouissement des siens (${Math.round(e)})`, Math.round(e / 10)]);
   }
   const amb = ambiance(); f.push([`Ambiance ${amb}`, Math.min(15, Math.round(amb * .7))]);
-  if (S.hype) f.push([`Notoriété ${S.hype}`, Math.min(10, Math.floor(S.hype / 3))]);
+  { const g = radiance(); if (g) f.push([`Notoriété ${g}`, d.rare ? Math.min(25, Math.floor(g / 6)) : Math.min(10, Math.floor(g / 5))]); }   // une rare y tient bien plus
   if (S.tier) f.push([`Palier ${S.tier}`, S.tier * 3]);
   if (d.rival && SPECIES[d.rival] && countSp(d.rival)) f.push([`Des ${SPECIES[d.rival].name.toLowerCase()}s rôdent`, -10]);
   const des = (S.desertLog || []).filter(x => x.sp === sp && S.night - x.n < 6).length; if (des) f.push(['Désertions récentes', -8 * des]);
   const pw = pwRep(); if (pw) f.push(['Pouvoirs du château', pw]);
   const art = ARTEFACTS.filter(k => FURN[k].repSp === sp && hasItem(k)); if (art.length) f.push([`${itemName(art[0])} exposé`, 12]);
-  if (d.rare && typeof radiance === 'function') { const g = radiance(); f.push([`Rayonnement ${g}`, Math.min(15, Math.floor(g / 10))]); }
   return { v: clamp(Math.round(f.reduce((a, x) => a + x[1], 0)), 0, 100), f };
 }
 const repOf = sp => (S.rep && S.rep[sp] != null) ? S.rep[sp] : repTarget(sp).v;
@@ -269,7 +269,7 @@ function questReward(q) {
   return { g: Math.ceil(t.g * base) + extra, h: Math.ceil(t.h * base), loy: Math.ceil(t.loy * base), xp: Math.ceil(t.xp * base), gift: t.gift && base === 1, rare: t.rare };
 }
 function rewardLine(rw) {
-  const p = []; if (rw.g) p.push(`+${rw.g} 💰`); if (rw.h) p.push(`+${rw.h} 🔥`); if (rw.loy) p.push(`+${rw.loy} loyauté`); if (rw.xp) p.push(`+${rw.xp} XP`); if (rw.gift) p.push('un sticker cadeau'); if (rw.rare) p.push('un Cristal');
+  const p = []; if (rw.g) p.push(`+${rw.g} 💰`); if (rw.h) p.push(`+${rw.h} 💬`); if (rw.loy) p.push(`+${rw.loy} loyauté`); if (rw.xp) p.push(`+${rw.xp} XP`); if (rw.gift) p.push('un sticker cadeau'); if (rw.rare) p.push('un Cristal');
   return p.join(', ');
 }
 // envies comblées : la récompense tombe tout de suite, sans rien réclamer (lines : où raconter, sinon des bulles)
@@ -449,7 +449,7 @@ function cmd(name, a = {}) {
   return err;
 }
 
-/* ---------- fenêtres : hauts faits, renommée ---------- */
+/* ---------- fenêtres : hauts faits, réputation ---------- */
 function openAch() {
   const n = ACH.filter(a => S.ach[a.id]).length, cats = [...new Set(ACH.map(a => a.cat))];
   const actives = ACH.filter(a => a.active && S.ach[a.id]);
@@ -482,13 +482,13 @@ function openRenown() {
       <div>${t.f.map(([l, n]) => `<span class="tag2">${n > 0 ? '+' + n : n < 0 ? n : '·'} ${esc(l)}</span>`).join('')}<p class="hint">Visée : ${t.v}. La réputation rejoint doucement sa visée à chaque aube.</p></div></details>`;
   };
   const vr = typeof valRivals === 'function' ? valRivals() : [];
-  openModal(`<h2>⭐ Renommée du château</h2>
-    <p>Chaque espèce juge ton château : pièces qui lui plaisent, sticker préféré, humeur et épanouissement des siens, ambiance. Plus ta réputation est haute, plus elle vient volontiers… et moins ses membres sont tentés d’aller voir ailleurs.</p>
+  openModal(`<h2>⭐ Réputation</h2><p><b>Ce que pensent de toi les espèces</b> : chacune juge ton château sur 100.</p>
+    <p>Ce qui compte : pièces qui lui plaisent, sticker préféré, humeur et épanouissement des siens, ambiance. Plus ta réputation est haute, plus elle vient volontiers… et moins ses membres sont tentés d’aller voir ailleurs.</p>
     <p class="hint">Une créature peu loyale (moins de 40) peut lorgner vers un château mieux réputé pour son espèce. Elle te prévient une nuit à l’avance : comble son envie ou réalise son rêve secret. Désertions : ${({ on: 'activées', soft: 'douces', off: 'désactivées' })[S.opts.desert]} (menu ⚙️).</p>
     <h3>Ta réputation</h3><div class="replist">${known.map(row).join('') || '<p class="hint">Accueille des créatures pour te faire une réputation.</p>'}</div>
     ${unknown.length ? `<p class="hint">${unknown.length} espèce${unknown.length > 1 ? 's' : ''} encore inconnue${unknown.length > 1 ? 's' : ''}.</p>` : ''}
     <h3>Les châteaux rivaux</h3><div class="rivals">${RIVALS.map(r => `<div class="rival"><span class="emo">${r.emo}</span><span><b>${esc(r.name)}</b><br><span class="hint">Tenu par ${esc(r.master)}. Prisé des ${r.likes.map(s => SPECIES[s] ? SPECIES[s].name.toLowerCase() + 's' : s).join(', ')}.</span></span></div>`).join('')}
-    ${vr.length ? `<p class="hint">+ ${vr.length} château${vr.length > 1 ? 'x' : ''} de joueurs du Val des Maîtres.</p>` : ''}</div>`, { wide: true, label: 'Renommée' });
+    ${vr.length ? `<p class="hint">+ ${vr.length} château${vr.length > 1 ? 'x' : ''} de joueurs du Val des Maîtres.</p>` : ''}</div>`, { wide: true, label: 'Réputation' });
 }
 function bindSouls() {
   $('#btnRen').addEventListener('click', () => { if (!UI.busy) openRenown(); });
@@ -499,7 +499,7 @@ function bindSouls() {
 
 /* ---------- Grimoire : les âmes du château et le Val ---------- */
 Object.assign(WIKI, {
-  reputation: { cat: 'ames', t: 'Réputation par espèce', x: () => `<p>Chaque espèce juge ton château sur 100 (⭐ Renommée, à gauche de l’écran). Ce qui compte :</p>
+  reputation: { cat: 'ames', t: 'Réputation par espèce', x: () => `<p>Ce que pensent de toi les espèces : chacune juge ton château sur 100 (⭐ Réputation, à gauche de l’écran). Ce qui compte :</p>
     <ul><li>la pièce qui l’attire, meublée (plus si tu en as plusieurs), et son sticker préféré ;</li><li>l’humeur et l’{c:loyaute|épanouissement} des siens au château ;</li><li>l’{c:ambiance}, la notoriété et le {c:paliers|palier} ;</li>
     <li>en moins : la présence de son espèce rivale, et les désertions récentes.</li></ul>
     <p>La réputation rejoint doucement sa visée à chaque aube. Une bonne réputation fait venir l’espèce plus souvent, et retient ceux qui sont déjà là : une créature ne lorgne vers un autre château que s’il reçoit mieux son espèce que toi. Voir {c:desertion} et {c:rivaux}.</p>` },
@@ -512,7 +512,7 @@ Object.assign(WIKI, {
     <li>Le risque dépend de sa loyauté, de son épanouissement et de l’écart de réputation. Il n’y a jamais de départ avant la nuit 6, pendant le tutoriel, ni pendant les 4 premières nuits d’une recrue.</li>
     <li>Les diablotins, nés du Cœur, et les créatures entrées dans la légende ne partent jamais.</li></ul>
     <p>Les désertions sont <b>optionnelles</b> : menu ⚙️ → Désertions activées, douces (deux fois moins) ou désactivées. En ligne, une créature qui part pour le château d’un autre joueur frappe vraiment à sa porte !</p>` },
-  missions: { cat: 'ames', t: 'Envies et rêves secrets', x: () => `<p>Chaque créature déclare une <b>envie</b> (✦ sur sa fiche, et la liste 📜 des envies) : son sticker préféré, un poste dans sa pièce, de la déco, un·e ami·e, une pièce de plus, un raid réussi… Comble-la : la récompense tombe aussitôt (or, notoriété, stickers, {c:loyaute|loyauté}, expérience), sans rien réclamer.</p>
+  missions: { cat: 'ames', t: 'Envies et rêves secrets', x: () => `<p>Chaque créature déclare une <b>envie</b> (✦ sur sa fiche, et la liste 📜 des envies) : son sticker préféré, un poste dans sa pièce, de la déco, un·e ami·e, une pièce de plus, un raid réussi… Comble-la : la récompense tombe aussitôt (or, bouche-à-oreille, stickers, {c:loyaute|loyauté}, expérience), sans rien réclamer.</p>
     <ol><li><b>Chapitres 1 et 2</b> de son histoire : des envies comblées. Une créature n’a pas toujours une envie : une nouvelle se déclare de temps en temps, au plus tôt deux nuits après la précédente.</li><li><b>Chapitre 3</b> : une fois son <b>rêve secret</b> réalisé, l’envie d’<b>aventure</b>, la seule qui demande ta décision. Laisse-la partir deux nuits ; à son retour, ses dés décident du résultat et son histoire entre dans la <b>légende</b> (une légende ne déserte jamais).</li></ol>
     <p>Chaque créature cache aussi un <b>rêve secret</b> (💭), tiré de son {c:caracteres|caractère} : un lit à baldaquin, un poste rien qu’à elle, un étage de plus… Réalisé, il rapporte gros (+25 loyauté, de l’expérience, un Cristal), et la créature ne songe plus jamais à partir. Pour le découvrir :</p>
     <ul><li><b>Par hasard</b> : tu le réalises sans le savoir, et la surprise est totale.</li><li><b>Les confidences</b> : à ${PW('calins') ? 65 : 80} de loyauté, elle te le confie.</li><li><b>Les ragots de la Taverne</b> : chaque nuit, une {room:taverne} meublée peut trahir un secret, plus souvent avec des Ménestrels et des bavards.</li><li><b>La diseuse de bonne aventure</b>, à la taverne des villes : contre quelques pièces, elle lit le rêve d’une de tes créatures dans le marc de bière.</li></ul>` },
@@ -524,7 +524,7 @@ Object.assign(WIKI, {
     <ul>${RIVALS.map(r => `<li><b>${esc(r.name)}</b>, ${esc(deM(r.master))} : prisé des ${r.likes.map(s => `{sp:${s}}`).join(', ')}.</li>`).join('')}</ul><p>En ligne, les châteaux des autres joueurs du {c:val} comptent aussi comme rivaux.</p>` },
   val: { cat: 'val', t: 'Le Val des Maîtres', x: () => `<p>La version en ligne du jeu (${SITE_URL}) réunit tous les joueurs, sans compte : ta clé de Maître est gardée dans ton navigateur.</p>
     <ul><li><b>Châteaux</b> : la liste des châteaux du Val, qui est en ligne, et un bouton pour les <b>visiter</b> (on regarde, on ne touche pas).</li>
-    <li><b>Livre d’or</b> : laisse un mot gentil et un sticker, une fois par jour et par château.</li><li><b>Cadeaux</b> : offre 3 or, 3 matériaux ou un sticker de ta réserve. Un par voisin et trois par jour.</li>
+    <li><b>Livre d’or</b> : laisse un mot gentil et un sticker, une fois par jour et par château.</li><li><b>Cadeaux</b> : offre 3 or, 3 bois ou un sticker de ta réserve. Un par voisin et trois par jour.</li>
     <li><b>Escarmouches</b> : voir {c:escarmouches}.</li><li><b>Palmarès</b> de la saison (le mois en cours) et château chouchou de chaque espèce.</li>
     <li><b>Créatures voyageuses</b> : une créature qui {c:desertion|déserte} peut rejoindre le château d’un autre joueur mieux réputé pour son espèce… et inversement !</li><li>Et le {c:partage|château partagé} pour jouer à plusieurs.</li></ul>
     <p class="hint">Tout ce qui est publié dans le Val (nom de Maître, château, mots) est public. Évite d’y mettre ton vrai nom.</p>` },
@@ -533,7 +533,7 @@ Object.assign(WIKI, {
     <li>On voit les curseurs des autres, le sticker qu’ils ont en main, et on peut discuter.</li><li>Les invités cliquent <b>Je suis prêt·e</b> ; l’hôte lance la nuit et chacun voit la chronique.</li>
     <li>La partie se joue dans le château de l’hôte. Les invités retrouvent le leur en partant, et gagnent le haut fait « Main dans la main ».</li></ul>` },
   escarmouches: { cat: 'val', t: 'Escarmouches et boucliers', x: () => `<p>En visite chez un voisin, tu peux lancer une <b>escarmouche</b> : jusqu’à 3 créatures tentent de chaparder un peu d’or. On lance un dé par point de raid de l’équipe, moins un dé par tranche de 6 de défense du château visé (pièges, garde des pièces et créatures prêtes à défendre).</p>
-    <ul><li>Réussie : de l’or (selon le palier du voisin) et de la notoriété. Le voisin perd au plus 4 or.</li><li>Ratée : ton équipe rentre vexée, la Menace monte, et le voisin gagne de l’or et de la notoriété.</li>
+    <ul><li>Réussie : de l’or (selon le palier du voisin) et du bouche-à-oreille. Le voisin perd au plus 4 or.</li><li>Ratée : ton équipe rentre vexée, la Menace monte, et le voisin gagne de l’or et du bouche-à-oreille.</li>
     <li>Une escarmouche par nuit. Un château visité gagne un <b>bouclier</b> de 12 heures.</li><li>Un château <b>pacifique</b> (case à cocher dans le Val) ne peut ni viser, ni être visé.</li></ul>` },
 });
 // toutes les envies du château dans une fenêtre (sur téléphone, le suivi de droite est masqué)

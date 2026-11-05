@@ -22,8 +22,8 @@ const WORKSHOPS = {
              live: () => `${bibliCells()} case${bibliCells() > 1 ? 's' : ''} du Val dévoilée${bibliCells() > 1 ? 's' : ''} chaque nuit (de vieilles cartes déchiffrées)`,
              ranks: { 2: { t: 'Les cartes annotées', d: () => 'tous les lieux du Val apparaissent sur la carte, et le château voit une case plus loin' }, 3: { t: 'Le bestiaire du Val', d: () => 'les créatures rares des lieux connus sont rencontrées d’office : elles viendront dès que ton château brillera assez' } } },
   taverne: { room: 'taverne', at: 'à la Taverne', de: 'de la Taverne', trade: 'conteur·se', team: 'Les conteurs', ico: 'music', sp: { menestrel: 2, harpie: 2, vampire: 1, gobelin: 1 },
-             live: () => `+${taleHype()} notoriété chaque nuit (tes exploits, racontés et un peu enjolivés)`,
-             ranks: { 2: { t: 'La chanson du château', d: () => '+2 places de renommée' }, 3: { t: 'La geste du Maître', d: () => '+3 places de renommée, et les visiteurs de la nuit passent plus souvent' } } },
+             live: () => `+${taleHype()} 💬 de bouche-à-oreille chaque nuit (tes exploits, racontés et un peu enjolivés)`,
+             ranks: { 2: { t: 'La chanson du château', d: () => '+2 places d’accueil' }, 3: { t: 'La geste du Maître', d: () => '+3 places d’accueil, et les visiteurs de la nuit passent plus souvent' } } },
   cuisine: { room: 'cuisine', at: 'à la Cuisine', de: 'de la Cuisine', trade: 'cuisinier·ère', team: 'Les cuisiniers', ico: 'food', sp: { troll: 2, goule: 2, gobelin: 1, diablotin: 1 },
              live: () => `+${bonusFoodCraft()} repas`,
              ranks: { 2: { t: 'Recette des Brochettes du troll', d: () => RECIPES.brochettes.desc }, 3: { t: 'Recette du Banquet du Maître', d: () => RECIPES.banquet.desc } } },
@@ -110,7 +110,7 @@ function craftDawn(report, busy, fought) {
   // les effets de chaque nuit : les érudits dévoilent la carte, les conteurs font parler de toi
   const cells = S.world ? bibliCells() : 0;
   if (cells) { const r = bibliReveal(cells); if (r && r.n) lines.push(`les érudits déchiffrent de vieilles cartes : ${r.n} case${r.n > 1 ? 's' : ''} du Val se dévoile${r.n > 1 ? 'nt' : ''}${r.found.length ? ` (tu découvres ${r.found.map(s => s.name).join(', ')})` : ''}`); }
-  const th = taleHype(); if (th) { S.hype += th; lines.push(`les conteurs racontent tes exploits à la Taverne : +${th} notoriété`); }
+  const th = taleHype(); if (th) { S.hype += th; lines.push(`les conteurs racontent tes exploits à la Taverne : +${th} 💬 de bouche-à-oreille`); }
   if (ups.length || lines.length) report.push(['sec', 'Métiers']);
   if (lines.length) report.push(['📚', lines.map(s => s[0].toUpperCase() + s.slice(1)).join('. ') + '.', '']);
   ups.forEach(([c, w, l]) => {
@@ -136,7 +136,7 @@ function bibliReveal(n) {
 }
 function bestiary(report) {
   const vis = visibleSet(); S.world.met = S.world.met || {};
-  world().sites.forEach(s => { const X = s.expe && EXPE_SITES[s.expe]; if (!X || !X.meet || worldMet(X.meet) || !vis.has(s.i) || !SPECIES[X.meet]) return; S.world.met[X.meet] = S.night; report.push(['🤝', `Le bestiaire du Val : tes érudits savent où vit la ${SPECIES[X.meet].name} (${s.name}). Elle viendra s’installer quand ton château rayonnera à ${SPECIES[X.meet].glow} ✨.`, 'good']); });
+  world().sites.forEach(s => { const X = s.expe && EXPE_SITES[s.expe]; if (!X || !X.meet || worldMet(X.meet) || !vis.has(s.i) || !SPECIES[X.meet]) return; S.world.met[X.meet] = S.night; report.push(['🤝', `Le bestiaire du Val : tes érudits savent où vit la ${SPECIES[X.meet].name} (${s.name}). Elle viendra s’installer quand ton château aura ${SPECIES[X.meet].glow} 🔥 de notoriété.`, 'good']); });
 }
 // un savoir débloqué qui agit tout de suite
 function craftUnlock(w, rk, report) {

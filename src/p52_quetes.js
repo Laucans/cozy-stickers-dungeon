@@ -129,7 +129,7 @@ const metierRooms = () => ['forge', 'atelier', 'labo', 'bibli', 'cuisine', 'tave
 const QDILEMMAS = [
   { t: 'La livraison', x: '{giver} attend, la plume levée. Comment livres-tu ?', o: [['Livrer honnêtement', 'Un bon prix.', { g: 18 }], ['Glisser une souris dans le colis', 'Moins d’or, mais tout le Val en rira.', { g: 6, hype: 8 }]] },
   { t: 'Le prix', x: '{giver} sort sa bourse. « Combien je vous dois ? »', o: [['Le prix fort', 'De l’or, beaucoup.', { g: 24 }], ['Un échange de recettes', 'La Calamité recule, et on parle de toi.', { cal: 3, hype: 3 }]] },
-  { t: 'Le pourboire', x: '« Vous avez été parfaits. Je vous laisse un petit quelque chose ? »', o: [['De l’or, s’il vous plaît', 'Du sonnant et trébuchant.', { g: 14 }], ['Des matériaux pour le château', 'Des planches et des pierres.', { s: 12 }]] },
+  { t: 'Le pourboire', x: '« Vous avez été parfaits. Je vous laisse un petit quelque chose ? »', o: [['De l’or, s’il vous plaît', 'Du sonnant et trébuchant.', { g: 14 }], ['Du bois pour le château', 'Des planches et des poutres.', { s: 12 }]] },
   { t: 'La fête', x: '{giver} veut fêter ça. « Vous venez ? Il y aura des crêpes. »', o: [['Tout le château y va', 'Tout le monde a le sourire.', { mood: 1, hype: 3 }], ['On garde nos distances', 'Un château maléfique a une réputation à tenir.', { hype: 7 }]] },
 ];
 const dilemmaStep = giver => { const D = pick(QDILEMMAS); return { k: 'choice', t: D.t, x: fillQ(D.x, { giver }), opts: D.o.map(([t, d, fx]) => ({ t, d, fx })) }; };
@@ -203,7 +203,7 @@ const QGEN = {
   },
   // un convoi : livrer, puis attendre qu'il arrive
   convoi() {
-    const pl = qPlace(), what = pick([['s', 'des matériaux', rint(8, 14)], ['g', 'de l’or (une avance)', rint(10, 16)]]), p = npc();
+    const pl = qPlace(), what = pick([['s', 'du bois', rint(8, 14)], ['g', 'de l’or (une avance)', rint(10, 16)]]), p = npc();
     const steps = [
       { k: 'pay', t: 'Le chargement', x: `« Le convoi part dès qu’il est plein. Il nous faut ${what[1]}. Je te rendrai le double, parole de ${p.g === 'f' ? 'marchande' : 'marchand'} ! »`, cost: { [what[0]]: what[2] } },
       { k: 'wait', t: 'La route', n: rint(2, 3), x: `Le convoi roule vers ${pl.name}. Les chariots grincent, les bœufs soupirent.`, done: `Le convoi arrive à ${pl.name} sans encombre (ou presque : une roue a fait la sieste).` },
@@ -220,14 +220,14 @@ const QGEN = {
       { title: `La revanche de ${c.name}`, intro: `${who} fulmine : « Les cousins de la vallée d’à côté se moquent de moi. Qu’ils viennent, je les attends ! »`, steps: [qDefend({ name: `les cousins de ${c.name}`, heroes: shuffleQ(QHERO_N).slice(0, 3).map(n => `Cousin ${n}`) }, rint(2, 3), `Les cousins de ${c.name} arrivent, la mine goguenarde. Repousse-les avec panache !`, `Les cousins repartent, beaucoup moins goguenards.`)] },
       { title: `Le cadeau de ${c.name}`, intro: `${who} est amoureux·se. « Je voudrais offrir quelque chose de beau. Quelque chose qui brille. Ou qui sent bon. Ou les deux. »`, steps: [{ k: 'pay', t: 'Le cadeau', x: 'Il faut de quoi faire un beau cadeau.', cost: { g: 6 + 2 * (S.tier || 0), s: 3 } }, { k: 'wait', t: 'Le rendez-vous', n: 1, x: `${c.name} est parti·e offrir son cadeau, un bouquet de fleurs fanées dans l’autre main.`, done: `${c.name} revient sur un petit nuage.` }] },
     ]);
-    return { ico: 'heart', title: v.title, giver: `${who}, de ton château`, intro: v.intro, steps: v.steps, limit: 12, reward: qReward(v.steps, { crit: c.id, mood: 1 }), outro: `${c.name} rayonne : il·elle ne parle plus que de toi, de ton château, et de cette quête.`, key: 'creature:' + c.id };
+    return { ico: 'heart', title: v.title, giver: `${who}, de ton château`, intro: v.intro, steps: v.steps, limit: 12, reward: qReward(v.steps, { crit: c.id, mood: 1 }), outro: `${c.name} est aux anges : il·elle ne parle plus que de toi, de ton château, et de cette quête.`, key: 'creature:' + c.id };
   },
   // un petit dilemme
   dilemme() {
     const v = pick([
       { giver: 'un chaton qui parle', title: 'Le chaton du sorcier', intro: 'Un chaton noir entre par la chatière, s’assoit et dit : « Je suis le familier d’un sorcier, et je me suis perdu. Enfin, je l’ai perdu. C’est lui qui est perdu. »', steps: [{ k: 'wait', t: 'Les recherches', n: 2, x: 'Tes créatures cherchent le sorcier dans tout le Val. Le chaton supervise, depuis un coussin.', done: 'On a retrouvé le sorcier… coincé dans sa propre bouteille.' }, { k: 'choice', t: 'La bouteille', x: 'Le sorcier promet monts et merveilles si on le libère. Le chaton, lui, propose de rester.', opts: [{ t: 'Libérer le sorcier', d: 'Il paie sa dette en or.', fx: { g: 20 } }, { t: 'Garder le chaton', d: 'Le château a une mascotte : tout le monde est ravi.', fx: { mood: 1, hype: 5 } }] }] },
       { giver: 'une diseuse de bonne aventure', title: 'La boule de cristal', intro: 'Une diseuse de bonne aventure s’installe dans ta cour. « Je vois… je vois… un grand destin. Ou un grand dîner. La boule est un peu sale. »', steps: [{ k: 'pay', t: 'Croiser les doigts', x: '« Pour en voir plus, il faut croiser ma main. D’argent, de préférence. »', cost: { g: 8 } }, { k: 'choice', t: 'La prophétie', x: 'Elle voit deux avenirs. Lequel choisis-tu de croire ?', opts: [{ t: 'Celui où tu deviens riche', d: 'Elle te révèle où dort un vieux trésor.', fx: { g: 22 } }, { t: 'Celui où tu deviens célèbre', d: 'Elle raconte ta prophétie à tout le Val.', fx: { hype: 12 } }] }] },
-      { giver: 'un nain en fuite', title: 'Le nain en fuite', intro: 'Un nain tout essoufflé se cache derrière ton porche. « On me poursuit ! Pour une histoire de dette ! Une toute petite ! Cachez-moi, je vous en prie ! »', steps: [{ k: 'choice', t: 'Les poursuivants', x: 'Des huissiers frappent au porche, le registre sous le bras.', opts: [{ t: 'Cacher le nain', d: 'Il te remercie en matériaux, et file à l’aube.', fx: { s: 14 } }, { t: 'Le livrer aux huissiers', d: 'Ils te versent une prime, et le nain te maudit (un peu).', fx: { g: 16, cal: -1 } }] }] },
+      { giver: 'un nain en fuite', title: 'Le nain en fuite', intro: 'Un nain tout essoufflé se cache derrière ton porche. « On me poursuit ! Pour une histoire de dette ! Une toute petite ! Cachez-moi, je vous en prie ! »', steps: [{ k: 'choice', t: 'Les poursuivants', x: 'Des huissiers frappent au porche, le registre sous le bras.', opts: [{ t: 'Cacher le nain', d: 'Il te remercie en bois, et file à l’aube.', fx: { s: 14 } }, { t: 'Le livrer aux huissiers', d: 'Ils te versent une prime, et le nain te maudit (un peu).', fx: { g: 16, cal: -1 } }] }] },
       { giver: 'un troubadour sans le sou', title: 'La ballade du Maître', intro: '« Laissez-moi dormir dans votre grange, et je composerai la ballade de votre château ! Une ballade épique ! Avec des rimes ! »', steps: [{ k: 'wait', t: 'La composition', n: 2, x: 'Le troubadour compose dans ta grange. On l’entend chercher des rimes à « château » toute la nuit.', done: 'La ballade est prête. Elle rime avec « gâteau », « marteau » et, curieusement, « Baron rigolo ».' }, { k: 'choice', t: 'La première', x: 'Où chante-t-il la ballade ?', opts: [{ t: 'Sur la place du village', d: 'Tout le Val l’entend.', fx: { hype: 9 } }, { t: 'Rien que pour le château', d: 'Tes créatures adorent.', fx: { mood: 1, hype: 2 } }] }] },
     ]);
     return { ico: 'scroll', title: v.title, giver: v.giver, intro: v.intro, steps: v.steps, limit: 10, reward: qReward(v.steps), outro: 'Une drôle d’histoire, que tes créatures raconteront longtemps au coin du feu.', key: 'dilemme:' + v.title };
@@ -283,7 +283,7 @@ function questApply(fx, got) {
   if (!fx) return;
   if (fx.g) { S.gold += fx.g; got.push(`+${fx.g} 💰`); }
   if (fx.s) { S.mat += fx.s; got.push(`+${fx.s} 🪵`); }
-  if (fx.hype) { S.hype += fx.hype; got.push(`+${fx.hype} notoriété`); }
+  if (fx.hype) { S.hype += fx.hype; got.push(`+${fx.hype} 💬 de bouche-à-oreille`); }
   if (fx.mood) { S.creatures.forEach(c => { if (!isOut(c)) c.mood = Math.min(5, c.mood + fx.mood); }); got.push(`+${fx.mood} humeur pour tous`); }
   if (fx.cal) { S.calamity = Math.max(0, S.calamity - fx.cal); got.push(fx.cal > 0 ? `la Calamité recule de ${fx.cal}` : `la Calamité monte de ${-fx.cal}`); }
 }
@@ -410,13 +410,13 @@ function questDawn(report) {
 /* ---------- le journal ---------- */
 const costTags = c => [c.g ? `${c.g} 💰` : '', c.s ? `${c.s} 🪵` : '', ...Object.keys(PANTRY_NAMES).filter(k => c[k]).map(k => `${c[k]} ${PANTRY_NAMES[k]}`)].filter(Boolean).join(' + ');
 function rewardTags(R) {
-  const t = []; if (R.g) t.push(`${R.g} 💰`); if (R.s) t.push(`${R.s} 🪵`); if (R.hype) t.push(`${R.hype} notoriété`); if (R.mood) t.push('+1 humeur pour tous');
+  const t = []; if (R.g) t.push(`${R.g} 💰`); if (R.s) t.push(`${R.s} 🪵`); if (R.hype) t.push(`${R.hype} 💬 de bouche-à-oreille`); if (R.mood) t.push('+1 humeur pour tous');
   if (R.art) t.push('un artefact'); if (R.free) Object.keys(R.free).forEach(k => t.push(itemName(k))); if (R.gw) t.push('l’amitié d’un village'); if (R.reveal) t.push('des cartes du Val'); if (R.craftxp) t.push('du savoir pour tes érudits');
   if (R.crit) { const c = critter(R.crit); if (c) t.push(`l’amour de ${c.name}`); }
   return t.map(x => `<span class="tag2">${esc(x)}</span>`).join(' ');
 }
 const W_NAMES = items => [...new Set(items.map(it => WORKSHOPS[it.w] ? WORKSHOPS[it.w].team.toLowerCase().replace(/^les /, '') : ''))].filter(Boolean).join(', ');
-function CMDcheckPay(q) { const st = qStep(q), c = st.cost, P = typeof pantry === 'function' ? pantry() : {}; if ((c.g || 0) > S.gold || (c.s || 0) > S.mat) return 'Pas assez d’or ou de matériaux'; if (Object.keys(PANTRY_NAMES).some(k => (c[k] || 0) > (P[k] || 0))) return 'Il manque des ingrédients au garde-manger'; return null; }
+function CMDcheckPay(q) { const st = qStep(q), c = st.cost, P = typeof pantry === 'function' ? pantry() : {}; if ((c.g || 0) > S.gold || (c.s || 0) > S.mat) return 'Pas assez d’or ou de bois'; if (Object.keys(PANTRY_NAMES).some(k => (c[k] || 0) > (P[k] || 0))) return 'Il manque des ingrédients au garde-manger'; return null; }
 function stepHTML(q, st) {
   if (st.k === 'craft') return `<ul class="qitems">${st.items.map((it, i) => { const p = q.prog['i' + i] || 0, n = Math.min(it.n, Math.floor(p / QUEST_UNIT)), prod = questProd(it.w), W = WORKSHOPS[it.w];
     return `<li>${gi(W ? W.ico : 'build')}<span><b>${esc(cap1(it.name))}</b> ${n}/${it.n} <small>· ${ROOMS[it.w].name}${builtCount(it.w) ? (prod ? ` · ${prod} point${prod > 1 ? 's' : ''} de travail par nuit` : ' · <span class="no">personne n’y travaille</span>') : ' · <span class="no">à bâtir</span>'}</small><i class="fbar"><i style="width:${Math.round(Math.min(1, p / (it.n * QUEST_UNIT)) * 100)}%"></i></i></span></li>`; }).join('')}</ul>
@@ -518,8 +518,8 @@ TIPS.push({ id: 'quetes', when: () => !!(S.quests && (S.quests.offers.length || 
 
 WIKI.quetes = { cat: 'bases', t: 'Les quêtes', x: () => `<p>Le <b>journal des quêtes</b> (le parchemin, dans la colonne de gauche) rassemble les grandes histoires du château. Les quêtes sont <b>tirées au sort à chaque partie</b> : des quêtes arrivent au <b>tableau</b> de temps en temps (${QUEST_MAX} en cours au plus), avec leurs donneurs, leurs lieux, leurs objets et leurs bêtes. Une quête se déroule étape par étape ; les étapes suivantes restent cachées jusqu’au bout.</p>
   <ul><li><b>Fabriquer une liste</b> : chaque nuit, les créatures postées dans la bonne pièce (Forge, Atelier, Bibliothèque, Laboratoire, Cuisine, Taverne) y travaillent : 1 point chacune, plus son grade pour les gens de ce {c:artisanat|métier}. ${QUEST_UNIT} points font une pièce.</li>
-  <li><b>Cuisiner</b> des plats, <b>livrer</b> de l’or, des matériaux ou des ingrédients du garde-manger, <b>choisir</b> la suite de l’histoire, <b>attendre</b> qu’un convoi arrive.</li>
+  <li><b>Cuisiner</b> des plats, <b>livrer</b> de l’or, du bois ou des ingrédients du garde-manger, <b>choisir</b> la suite de l’histoire, <b>attendre</b> qu’un convoi arrive.</li>
   <li><b>Missions de combat</b> : une chasse en raid (la cible n’apparaît dans le Raid que pendant l’étape), ou une bande nommée qui annonce son arrivée et attaque ton château : repousse-la (sinon, elle revient 4 nuits plus tard).</li>
   <li><b>La grande quête</b> : une par partie, tirée parmi cinq (${Object.values(QBOSSES).map(B => esc(B.name)).join(', ')}). Elle finit en expédition contre son boss unique, le combat le plus dur du Val ; l’équipe peut y retourner tant que la quête dure.</li></ul>
-  <p>Les quêtes secondaires ont un délai ; la grande quête, non. Chaque quête accomplie rapporte de l’or, de la notoriété, parfois un artefact, et des places de {c:renommee|renommée}.</p>
+  <p>Les quêtes secondaires ont un délai ; la grande quête, non. Chaque quête accomplie rapporte de l’or, du bouche-à-oreille, parfois un artefact, et des {c:renommee|places d’accueil}.</p>
   <p>Les <b>envies</b> des créatures et du château restent là aussi, dans l’onglet Envies du journal.</p>` };

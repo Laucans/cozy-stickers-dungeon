@@ -1,7 +1,7 @@
 
 /* =========================================================
    La carte du Val : vue en hexagones façon Civilization,
-   brouillard de guerre, champ de rayonnement du château,
+   brouillard de guerre, cercle de notoriété du château,
    sites à visiter, piller ou explorer
    ========================================================= */
 const MAPV = { open: false, cam: { x: 0, y: 0, s: 1 }, sel: null, layer: null, dirty: true, raf: 0, ptr: new Map(), drag: null };
@@ -183,7 +183,7 @@ function mapLayer() {
   const placed = []; shown.forEach(st => { const [x, y] = XY(st); mTag(g, st.name, x, y + s * .52, st.kind === 'village' || st.kind === 'raid' ? 17 : 20, st.kind === 'chateau', placed); });
   // bord du monde
   const edge = g.createRadialGradient(ox, oy, s * MAP_R * 1.2, ox, oy, s * MAP_R * 1.85); edge.addColorStop(0, 'rgba(10,8,14,0)'); edge.addColorStop(1, 'rgba(10,8,14,.95)'); g.fillStyle = edge; g.fillRect(0, 0, W2, H2);
-  // contour du champ de rayonnement (bords des cases à portée)
+  // contour du cercle de notoriété (bords des cases à portée)
   const fr = glowRadius(), seg = [];
   w.list.forEach(cell => { if (hdist(cell.q, cell.r) > fr) return; const [hx, hy] = hexXY(cell.q, cell.r, s); HEX_DIRS.forEach(([dq, dr]) => { if (hdist(cell.q + dq, cell.r + dr) <= fr) return; const [nx, ny] = hexXY(cell.q + dq, cell.r + dr, s), mx = (hx + nx) / 2, my = (hy + ny) / 2, dx = ny - hy, dy = -(nx - hx), L = Math.hypot(dx, dy), e = s / SQ3; seg.push([ox + mx + dx / L * e, oy + my + dy / L * e, ox + mx - dx / L * e, oy + my - dy / L * e]); }); });
   MAPV.layer = { c, ox, oy, s, seg, vis, fr }; MAPV.dirty = false;
@@ -251,7 +251,7 @@ function drawMap(t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d0a12'; g.fillRect(0, 0, cvw.width, cvw.height);
   g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (MAPV.cam.x - L.ox * k), dpr * (MAPV.cam.y - L.oy * k));
   g.imageSmoothingEnabled = true; g.drawImage(L.c, 0, 0);
-  // champ de rayonnement : lueur dorée qui respire
+  // cercle de notoriété : lueur dorée qui respire
   const pulse = .55 + .45 * Math.sin(t / 700);
   g.save(); g.lineCap = 'round';
   [[14, `rgba(255,200,90,${.12 * pulse})`], [6, `rgba(255,214,120,${.35 + .2 * pulse})`], [2.4, 'rgba(255,240,190,.95)']].forEach(([lw, col]) => { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); L.seg.forEach(([x1, y1, x2, y2]) => { g.moveTo(x1, y1); g.lineTo(x2, y2); }); g.stroke(); });
@@ -265,7 +265,7 @@ function drawMap(t) {
   groups.forEach(team => { const e = team[0].expe, cell = e.site ? siteById(e.site) : w0.list[e.hex]; if (!cell) return; const [x, y] = XY(cell); team.forEach((c, j) => { const img = portraitImg(c.sp); if (img) { const sz = s * .7, bx = x - s * .55 + j * s * .5, by = y - s * 1.25 + Math.sin(t / 300 + j) * 3; g.save(); g.beginPath(); g.arc(bx + sz / 2, by + sz / 2, sz / 2, 0, 7); g.fillStyle = '#2a1c16'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#e9b949'; g.stroke(); g.clip(); g.drawImage(img, bx, by, sz, sz); g.restore(); } }); });
   // sélection
   if (MAPV.sel) { const [x, y] = XY(MAPV.sel); g.save(); hexPath(g, x, y, s * .96); g.strokeStyle = `rgba(255,255,255,${.6 + .4 * Math.sin(t / 250)})`; g.lineWidth = 4; g.stroke(); g.restore(); }
-  $('#wglow').textContent = `✨ ${GLOW_LV[glowLevel()][1]} (${radiance()}) · renommée sur ${L.fr} lieues`;
+  $('#wglow').textContent = `🔥 ${GLOW_LV[glowLevel()][1]} (${radiance()}) · notoriété sur ${L.fr} lieues`;
 }
 const PIMG = {};
 function portraitImg(sp) { if (PIMG[sp]) return PIMG[sp].complete ? PIMG[sp] : null; const im = new Image(); im.src = portrait(sp); PIMG[sp] = im; return null; }
@@ -281,7 +281,7 @@ function renderMapPanel() {
   const p = $('#wpanel'); if (!p) return;
   const sel = MAPV.sel, w = world(), vis = mapVisible(); if (!sel) { p.innerHTML = ''; return; }
   const cell = w.list[sel.i], known = vis.has(sel.i), d = hdist(sel.q, sel.r), inField = d <= glowRadius();
-  const where = `<p class="hint">${d ? `À ${d} lieue${d > 1 ? 's' : ''} du château · ` : ''}${BIOMES[cell.t] && known ? BIOMES[cell.t].name : 'Brouillard'}${inField && d ? ' · dans ton rayonnement ✨' : ''}</p>`;
+  const where = `<p class="hint">${d ? `À ${d} lieue${d > 1 ? 's' : ''} du château · ` : ''}${BIOMES[cell.t] && known ? BIOMES[cell.t].name : 'Brouillard'}${inField && d ? ' · dans ton cercle de notoriété 🔥' : ''}</p>`;
   if (!known) {
     const edge = HEX_DIRS.some(([dq, dr]) => { const n = w.cell(sel.q + dq, sel.r + dr); return n && vis.has(n.i); });
     p.innerHTML = `<h3>🌫️ Terres inconnues</h3>${where}<p>Personne ne sait ce qu’il y a là-bas. Les aventuriers que tu repousses perdent parfois leurs carnets de route ; tes éclaireurs, eux, reviennent toujours (enfin, presque).</p>
@@ -292,28 +292,28 @@ function renderMapPanel() {
   const K = SITE_KINDS[sel.kind] || {}; let h = `<h3>${esc(sel.name)}</h3><p><span class="tag2">${esc(K.label || sel.kind)}</span></p>${where}`;
   if (sel.kind === 'chateau') {
     const lv = glowLevel(), nxt = GLOW_LV[lv + 1];
-    h += `<p><b>Rayonnement : ${GLOW_LV[lv][1]}</b> (${radiance()}${nxt ? ` / ${nxt[0]} pour « ${nxt[1]} »` : ''}). Ta renommée porte à <b>${glowRadius()} lieues</b> : les villages et villes dans ce cercle doré t’envoient leurs aventuriers.</p>`;
+    h += `<p><b>Notoriété : ${GLOW_LV[lv][1]}</b> (${radiance()}${nxt ? ` / ${nxt[0]} pour « ${nxt[1]} »` : ''}). Elle porte à <b>${glowRadius()} lieues</b> : les villages et villes dans ce cercle doré t’envoient leurs aventuriers.</p>`;
     const o = heroOrigin(); if (o) h += `<p class="hint">Prochains aventuriers attendus : ${HERO_RANK[o.rank].label.toLowerCase()} de ${esc(o.name)}.</p>`;
-    h += `<div class="btnrow"><button class="sbtn pri" type="button" data-m="glow">✨ D’où vient mon rayonnement ?</button></div>`;
+    h += `<div class="btnrow"><button class="sbtn pri" type="button" data-m="glow">🔥 D’où vient ma notoriété ?</button></div>`;
   } else if (K.rank) {
     const reach = d <= glowRadius() + 1;
-    h += `<p>${esc(K.desc)}</p><p>${reach ? `✨ Ta renommée est arrivée jusqu’ici : ${HERO_RANK[sel.rank].label.toLowerCase()} pourraient venir tenter leur chance.` : `Ils n’ont pas encore entendu parler de toi (il faudrait rayonner jusqu’à ${d - 1} lieues).`}</p>
+    h += `<p>${esc(K.desc)}</p><p>${reach ? `🔥 Ta notoriété est arrivée jusqu’ici : ${HERO_RANK[sel.rank].label.toLowerCase()} pourraient venir tenter leur chance.` : `Ils n’ont pas encore entendu parler de toi (il faudrait que ta notoriété porte à ${d - 1} lieues).`}</p>
       <div class="btnrow"><button class="sbtn pri" type="button" data-m="town">${sel.kind === 'village' ? '🏪 Aller à l’épicerie-buvette' : sel.kind === 'ville' ? '🏙️ Entrer en ville' : '🏰 Entrer dans la cité'}</button></div>${settleHTML(sel)}${sel.kind === 'cite' ? citeHTML() : ''}`;
   } else if (sel.kind === 'raid' || sel.kind === 'rival') {
     const key = sel.raid || 'r_' + sel.rival, tg = RAIDS[key];
     if (sel.kind === 'rival') { const rv = RIVALS.find(r => r.id === sel.rival); h += `<p>Le donjon de ${esc(rv.master)}. Sa réputation : ${rv.likes.filter(s => SPECIES[s]).map(s => `${SPECIES[s].name} <b>${rivalRep(rv, s)}</b> <span class="hint">(toi : ${repOf(s)})</span>`).join(' · ')}.${S.world.hit[rv.id] ? ` <b>Il a perdu de sa superbe</b> jusqu’à la nuit ${S.world.hit[rv.id]}.` : ''}${isVassal(rv.id) ? '' : ' Tes créatures peu loyales pourraient être tentées d’y partir.'}</p>${rivalHTML(rv)}`; }
-    h += `<p>${esc(tg.desc)}</p><p class="hint">Butin ${costText(tg.reward)} · +${tg.hype} 🔥 · +${tg.menace} Menace · ${TAGS[tg.tag]}${tg.risk ? ` · bien gardé (−${tg.risk} dé)` : ''}${tg.tier > S.tier ? ` · 🔒 Palier ${tg.tier}` : ''}</p>
+    h += `<p>${esc(tg.desc)}</p><p class="hint">Butin ${costText(tg.reward)} · +${tg.hype} 💬 · +${tg.menace} Menace · ${TAGS[tg.tag]}${tg.risk ? ` · bien gardé (−${tg.risk} dé)` : ''}${tg.tier > S.tier ? ` · 🔒 Palier ${tg.tier}` : ''}</p>
       <div class="btnrow"><button class="sbtn pri" type="button" data-m="raid" ${tg.tier > S.tier || (sel.rival && isVassal(sel.rival)) ? 'disabled' : ''}>🗺️ Préparer un raid</button></div>`;
   } else if (sel.kind === 'joueur') {
-    h += `<p>Le château de <b>${esc(sel.master)}</b>, un autre Maître du Val. Rayonnement ${sel.glow || 0}, palier ${sel.tier || 0}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-m="visit">🏰 Lui rendre visite</button></div>`;
+    h += `<p>Le château de <b>${esc(sel.master)}</b>, un autre Maître du Val. Notoriété ${sel.glow || 0}, palier ${sel.tier || 0}.</p><div class="btnrow"><button class="sbtn pri" type="button" data-m="visit">🏰 Lui rendre visite</button></div>`;
   } else if (K.expe && typeof CRAWL_SITES !== 'undefined' && CRAWL_SITES.includes(sel.expe)) {
     const X = EXPE_SITES[sel.expe], ready = expeReady(sel), D = CRAWL_DG[sel.expe], planned = S.raid && S.raid.target === 'x_' + sel.id;
-    h += `<p>${esc(D.desc)}</p><p class="hint">🃏 Une expédition en cartes, jouée cette nuit : 4 créatures au plus, trois étages, et le boss (${esc(CRAWL_EN[D.boss].name)}). On en rapporte de l’or, des matériaux, parfois un artefact (${X.arts.map(k => FURN[k].name).join(', ')})${X.meet ? `, et au bout, une rencontre : ${SPECIES[X.meet].name}` : ''}. Niveau ${String(crawlLevel()).replace('.', ',')}.${S.raid && !planned ? ' <b>Elle remplace le raid prévu cette nuit.</b>' : ''}</p>
+    h += `<p>${esc(D.desc)}</p><p class="hint">🃏 Une expédition en cartes, jouée cette nuit : 4 créatures au plus, trois étages, et le boss (${esc(CRAWL_EN[D.boss].name)}). On en rapporte de l’or, du bois, parfois un artefact (${X.arts.map(k => FURN[k].name).join(', ')})${X.meet ? `, et au bout, une rencontre : ${SPECIES[X.meet].name}` : ''}. Niveau ${String(crawlLevel()).replace('.', ',')}.${S.raid && !planned ? ' <b>Elle remplace le raid prévu cette nuit.</b>' : ''}</p>
       ${planned ? '<p class="ok">✅ Expédition prévue cette nuit.</p>' : ready ? `${teamPicker(4)}<div class="btnrow"><button class="sbtn pri" type="button" data-m="expe">🃏 Partir cette nuit</button></div>` : `<p class="no">On y retourne dans ${S.world.cd[sel.id] - S.night} nuit(s).</p>`}`;
   } else if (K.expe) {
     const X = EXPE_SITES[sel.expe], ready = expeReady(sel), meet = X.meet && SPECIES[X.meet];
     h += `<p>${esc({ foret: 'Une forêt où les arbres chuchotent et où les lucioles ont des opinions.', grotte: 'Une grotte qui résonne, pleine de pierres brillantes… et de choses qui préfèrent le noir.', ruines: 'Les restes d’une tour très ancienne. Des trésors, des pièges rouillés, et une liche qui grelotte.', pic: 'Le pic d’un vieux dragon ronchon. Dangereux, mais on y trouve des merveilles.', lac: 'Un lac noyé de brume, calme et mystérieux.' }[sel.expe])}</p>
-      <p class="hint">Expédition de ${expeNights(sel)} nuit${expeNights(sel) > 1 ? 's' : ''} (2 créatures au plus, ${TAGS[X.tag]} conseillé${X.risk ? ', danger élevé' : ''}). On peut en rapporter ${[X.loot.g && 'de l’or', X.loot.s && 'des matériaux', X.loot.h && 'de la notoriété', X.loot.cal && 'de la sérénité'].filter(Boolean).join(', ')}, parfois un artefact (${X.arts.map(k => FURN[k].name).join(', ')})${meet ? `, et rencontrer une créature rare : ${meet.name}${worldMet(X.meet) ? ' (déjà rencontrée ✅)' : ''}` : ''}.</p>
+      <p class="hint">Expédition de ${expeNights(sel)} nuit${expeNights(sel) > 1 ? 's' : ''} (2 créatures au plus, ${TAGS[X.tag]} conseillé${X.risk ? ', danger élevé' : ''}). On peut en rapporter ${[X.loot.g && 'de l’or', X.loot.s && 'du bois', X.loot.h && 'du bouche-à-oreille', X.loot.cal && 'de la sérénité'].filter(Boolean).join(', ')}, parfois un artefact (${X.arts.map(k => FURN[k].name).join(', ')})${meet ? `, et rencontrer une créature rare : ${meet.name}${worldMet(X.meet) ? ' (déjà rencontrée ✅)' : ''}` : ''}.</p>
       ${ready ? `${teamPicker(2)}<div class="btnrow"><button class="sbtn pri" type="button" data-m="expe">🧭 Lancer l’expédition</button></div>` : `<p class="no">On y retourne dans ${S.world.cd[sel.id] - S.night} nuit(s).</p>`}`;
   }
   p.innerHTML = h;
@@ -341,17 +341,20 @@ function mapPanelClick(e) {
   }
 }
 
-/* ---------- le rayonnement en détail ---------- */
+/* ---------- la notoriété en détail : l'éclat et le bouche-à-oreille ---------- */
 function openRadiance() {
-  const v = radiance(), lv = glowLevel(v), nxt = GLOW_LV[lv + 1], parts = glowParts(), pp = partyPreview();
-  openModal(`<h2>✨ Rayonnement : ${GLOW_LV[lv][1]}</h2>
+  const v = radiance(), lv = glowLevel(v), nxt = GLOW_LV[lv + 1], parts = glowParts(), pp = partyPreview(), e = eclatPts(), w = wordPts();
+  const rares = SPECIES_ORDER.filter(k => SPECIES[k].rare && SPECIES[k].glow && (typeof spSeen !== 'function' || spSeen(k) || (typeof worldMet === 'function' && worldMet(k))));   // seulement celles déjà rencontrées
+  openModal(`<h2>🔥 Notoriété : ${GLOW_LV[lv][1]}</h2>
     <div class="glowbar">${GLOW_LV.map(([m, n], i) => `<span class="${i <= lv ? 'on' : ''}">${n}<small>${m}</small></span>`).join('')}</div>
-    <p>Ton château rayonne à <b>${v}</b>${nxt ? ` (encore ${nxt[0] - v} pour « ${nxt[1]} »)` : ''}. Sa renommée porte à <b>${glowRadius(lv)} lieues</b> sur la carte.</p>
-    <h3>Ce qui le fait briller</h3><div>${parts.map(([t, n]) => `<span class="tag2">+${n} ${esc(t)}</span>`).join('') || '<span class="hint">Pas grand-chose pour l’instant…</span>'}</div>
-    <p class="hint">Pour rayonner : expose des <b>artefacts</b> (moitié plus au Reliquaire), entasse des trésors, accueille des <b>créatures rares</b>, fais naître des légendes, monte de palier, ouvre des étages.</p>
-    <h3>Ce que ça change</h3><ul><li>Les aventuriers viennent de plus loin, donc de plus fort : villages (${HERO_RANK[1].label.toLowerCase()}), puis villes, puis la cité. Prochaine bande : <b>${pp.size} ${HERO_RANK[pp.rank].label.toLowerCase()}</b>${pp.origin ? ` de ${esc(pp.origin.name)}` : ''}, ~${pp.courage} PV au total.</li>
-    <li>Plus ils sont forts, plus ils sèment d’or en fuyant, et plus ils laissent tomber d’artefacts et de carnets de route.</li><li>Les créatures rares exigent un rayonnement minimum (Golem et Harpie 45, Fée 80, Liche 110).</li><li>La carte se dévoile autour du château, aussi loin que porte ta renommée.</li></ul>
-    <div class="btnrow"><button class="sbtn pri" type="button" id="rgMap">🗺️ Voir la carte</button><button class="sbtn" type="button" data-wiki-open="rayonnement">📖 Grimoire</button></div>`, { wide: true, label: 'Rayonnement' }).querySelector('#rgMap').addEventListener('click', () => { closeModal(); if (!MAPV.open) openWorld(); });
+    <p>Ta notoriété : <b>${v}</b>${nxt ? ` (encore ${nxt[0] - v} pour « ${nxt[1]} »)` : ''}, soit l’éclat de ton château et le bouche-à-oreille. Elle porte à <b>${glowRadius(lv)} lieues</b> sur la carte.</p>
+    <h3>L’éclat : ${e}</h3><p class="hint">Ce qui dure : expose des <b>artefacts</b> (moitié plus au Reliquaire), entasse des trésors, accueille des <b>créatures rares</b>, fais naître des légendes, monte de palier, ouvre des étages, bâtis des Merveilles.</p>
+    <div>${parts.map(([t, n]) => `<span class="tag2">+${n} ${esc(t)}</span>`).join('') || '<span class="hint">Pas grand-chose pour l’instant…</span>'}</div>
+    <h3>Le bouche-à-oreille : +${w}</h3><p>💬 ${S.hype || 0} : ce qu’on raconte sur toi après tes raids, les histoires des conteurs, les fêtes, les concours, les bardes de passage… ${NOTO.word} de bouche-à-oreille font un point de notoriété, ${NOTO.wordCap} points au plus${w >= NOTO.wordCap ? ' (atteint : seul l’éclat la fait encore grandir)' : ''}.</p>
+    <h3>Ce que ça change</h3><ul><li>Les paliers et les hauts faits la demandent, et les espèces y sont sensibles (surtout les rares).</li><li>Dès ${NOTO.menace} 🔥, la Menace monte d’un cran chaque nuit.</li>
+    <li>Plus on parle de toi, plus les bandes sont coriaces, et elles viennent de plus loin : d’un village (${HERO_RANK[1].label.toLowerCase()}), puis d’une ville, puis de la cité. Prochaine bande : <b>${pp.size} ${HERO_RANK[pp.rank].label.toLowerCase()}</b>${pp.origin ? ` de ${esc(pp.origin.name)}` : ''}.</li>
+    ${rares.length ? `<li>Les créatures rares exigent une notoriété minimum (${rares.map(k => `${SPECIES[k].name} ${SPECIES[k].glow}`).join(', ')}).</li>` : ''}<li>À « Mythique » (${GLOW_LV[GLOW_LV.length - 1][0]}), la cité de Mirebrume lève sa croisade (Victoire de Légende).</li><li>La carte se dévoile autour du château, aussi loin que porte ta notoriété.</li></ul>
+    <div class="btnrow"><button class="sbtn pri" type="button" id="rgMap">🗺️ Voir la carte</button><button class="sbtn" type="button" data-wiki-open="notoriete">📖 Grimoire</button></div>`, { wide: true, label: 'Notoriété' }).querySelector('#rgMap').addEventListener('click', () => { closeModal(); if (!MAPV.open) openWorld(); });
 }
 
 /* ---------- mini-carte (en bas à droite, comme dans Civilization) ---------- */

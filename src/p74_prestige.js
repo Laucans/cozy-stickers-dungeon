@@ -4,7 +4,7 @@
    - Le mécénat : tu offres aux villages, villes et cité du Val
      des embellissements à trois niveaux (un lavoir, un kiosque,
      une grande halle…). Surtout du bois. En retour : leur bonne
-     volonté, un souvenir à coller, un peu de rayonnement, et au
+     volonté, un souvenir à coller, un peu de notoriété, et au
      troisième niveau, un panier offert à chaque fête de saison.
    - Le concours du Val : à chaque saison, un thème (le confort,
      les frissons, la table, la veillée). Inscription et préparatifs
@@ -18,12 +18,12 @@ const MECENAT = {
   ville: [['Des lanternes dans les rues', 'Plus personne ne se cogne aux réverbères la nuit. Enfin, moins.'], ['Le jardin public', 'Des allées, des massifs, et un banc à ton nom où personne n’ose s’asseoir.'], ['Le théâtre de marionnettes', 'On y joue tes exploits, en chaussettes. Les échevins t’envoient un panier à chaque fête de saison.']],
   cite: [['Les fontaines de la place', 'L’eau coule, les pigeons sont ravis, la Cité aussi.'], ['La bibliothèque publique', 'Une aile entière porte ton nom, gravé à l’envers par un apprenti.'], ['L’opéra des Ombres', 'Un opéra en ton honneur. La Cité t’envoie un panier à chaque fête de saison.']],
 };
-const MEC_BASE = [{ g: 15, s: 40 }, { g: 30, s: 90 }, { g: 60, s: 180 }], MEC_K = { village: 1, ville: 1.3, cite: 1.6 }, MEC_NIGHTS = [2, 3, 4];
+const MEC_BASE = [{ g: 15, s: 40 }, { g: 30, s: 90 }, { g: 60, s: 180 }].map(priceUp), MEC_K = { village: 1, ville: 1.3, cite: 1.6 }, MEC_NIGHTS = [2, 3, 4];
 const MEC_GW = [6, 8, 10], MEC_GLOW = [1, 2, 4], MEC_HYPE = [1, 2, 3], MEC_GIFT = ['theiere', 'tableau', 'cristal'], MEC_BASKET = { village: 6, ville: 9, cite: 12 };
 const mecState = () => (S.mecenat = S.mecenat || { cur: null, done: {} });
 const mecLv = id => mecState().done[id] || 0;
-const mecCost = s => { const lv = mecLv(s.id), b = MEC_BASE[lv], k = MEC_K[s.kind] || 1; return b ? { g: Math.round(b.g * k), s: Math.round(b.s * k) } : null; };
-const allGold = c => (c ? { g: (c.g || 0) + Math.ceil((c.s || 0) * 1.5), s: 0 } : null);   // tout payer en or, quand c'est l'or qui dort (1 bois = 1,5 or, comme les Merveilles)
+const mecCost = s => { const lv = mecLv(s.id), b = MEC_BASE[lv], k = MEC_K[s.kind] || 1; return b ? { g: Math.round(b.g * k), s: Math.round(b.s * k), a: Math.round(AMBER_COST.mec[lv] * k) } : null; };   // a : l'Ambre 🟠 (AMBER_COST, p3)
+const allGold = c => (c ? { g: (c.g || 0) + Math.ceil((c.s || 0) * 1.5), s: 0, a: c.a || 0 } : null);   // tout payer en or, quand c'est l'or qui dort (1 bois = 1,5 or, comme les Merveilles) ; l'ambre ne s'achète pas
 const mecName = (s, lv) => ((MECENAT[s.kind] || MECENAT.village)[lv] || ['?'])[0];
 const mecSites = () => (S.world ? settlements().filter(s => siteKnown(s)) : []);
 function mecWhy(s, gold) {
@@ -81,10 +81,10 @@ function concJudge(report) {
   if (rank === 1) {
     const g = 10 + 5 * tier; S.gold += g; S.hype += 3; S.free.cristal = (S.free.cristal || 0) + 1; C.laurel = { name: D.name, glow: 6, until: S.night + SEASON_LEN };
     S.stats.concoursWon = (S.stats.concoursWon || 0) + 1;
-    report.push(['🏆', `Concours du Val, « ${D.name} » : premier prix ! (${score}). +${g} 💰, +3 notoriété, un Cristal à coller, +6 de rayonnement jusqu’au prochain concours, et tout le château fait la fête (+1 ❤️).`, 'good']); addLog(`Premier prix du concours : ${D.name}.`, 'good');
+    report.push(['🏆', `Concours du Val, « ${D.name} » : premier prix ! (${score}). +${g} 💰, +3 💬 de bouche-à-oreille, un Cristal à coller, +6 de notoriété jusqu’au prochain concours, et tout le château fait la fête (+1 ❤️).`, 'good']); addLog(`Premier prix du concours : ${D.name}.`, 'good');
   } else if (rank === 2) {
     const g = 4 + 2 * tier; S.gold += g; C.laurel = { name: D.name + ' (2e prix)', glow: 3, until: S.night + SEASON_LEN };
-    report.push(['🥈', `Concours du Val, « ${D.name} » : deuxième prix (${score}). +${g} 💰, +3 de rayonnement jusqu’au prochain concours, et tout le monde est content (+1 ❤️).`, 'good']);
+    report.push(['🥈', `Concours du Val, « ${D.name} » : deuxième prix (${score}). +${g} 💰, +3 de notoriété jusqu’au prochain concours, et tout le monde est content (+1 ❤️).`, 'good']);
   } else report.push(['🎗️', `Concours du Val, « ${D.name} » : ${rank}e place (${score}). Pas de prix, mais tes créatures ont bien ri (+1 ❤️). ${D.how ? `La prochaine fois : ${D.how}.` : ''}`, '']);
 }
 // l'aube : l'annonce du concours au 1er jour de la saison, le verdict le jour de la fête ; les paniers et le mécénat
@@ -96,7 +96,7 @@ dawn = function (report) {
     if (!s) st.cur = null;
     else if (st.cur.left <= 0) { const lv = st.cur.lv, nm = mecName(s, lv), txt = ((MECENAT[s.kind] || MECENAT.village)[lv] || [])[1] || ''; st.done[s.id] = lv + 1; st.cur = null; S.stats.mecenat = (S.stats.mecenat || 0) + 1;
       addGw(s, MEC_GW[lv]); S.hype += MEC_HYPE[lv]; const gift = MEC_GIFT[lv]; if (FURN[gift]) S.free[gift] = (S.free[gift] || 0) + 1; homeCreatures().forEach(c => { c.mood = clamp(c.mood + 1, 0, 5); });
-      lines.push(['🎀', `${s.name} inaugure ${nm.charAt(0).toLowerCase() + nm.slice(1)} ! ${txt} Bonne volonté +${MEC_GW[lv]}, +${MEC_HYPE[lv]} notoriété, +${MEC_GLOW[lv]} de rayonnement pour toujours, un sticker en souvenir (${FURN[gift] ? FURN[gift].name : '?'}), et tout le château est fier (+1 ❤️).`, 'good']); addLog(`Mécénat : ${nm} à ${s.name}.`, 'good'); }
+      lines.push(['🎀', `${s.name} inaugure ${nm.charAt(0).toLowerCase() + nm.slice(1)} ! ${txt} Bonne volonté +${MEC_GW[lv]}, +${MEC_HYPE[lv]} 💬 de bouche-à-oreille, +${MEC_GLOW[lv]} de notoriété pour toujours, un sticker en souvenir (${FURN[gift] ? FURN[gift].name : '?'}), et tout le château est fier (+1 ❤️).`, 'good']); addLog(`Mécénat : ${nm} à ${s.name}.`, 'good'); }
     else lines.push(['🔨', `Mécénat : ${mecName(s, st.cur.lv)} à ${s.name}, encore ${st.cur.left} nuit${st.cur.left > 1 ? 's' : ''}.`, '']); }
   if (S.night >= CONC_FROM && seasonDay() === 1 && (!S.concours || S.concours.season !== seasonIdx() || S.concours.done)) concAnnounce(lines);
   if (seasonDay() === 5) {
@@ -120,9 +120,9 @@ function prestigeHTML() {
           : `<button type="button" class="sbtn${canAfford(concFee()) ? ' pri' : ''}" data-conc="in" ${canAfford(concFee()) ? '' : 'disabled'}>${gi('trophy')} S’inscrire : ${costText(concFee())}</button>`}</div>`
     : `<p class="hint">${C && C.done ? 'Le jury a rendu son verdict. ' : ''}Prochain concours au début de la saison suivante (dans ${SEASON_LEN - seasonDay() + 1} nuit${SEASON_LEN - seasonDay() + 1 > 1 ? 's' : ''}).</p>`;
   const cur = st.cur && siteById(st.cur.site);
-  const rows = sites.map(s => { const lv = mecLv(s.id), w = mecWhy(s), c = mecCost(s); return `<div class="addrow${lv >= 3 ? ' done' : w ? ' off' : ''}"><div class="arhead">${gi(s.kind === 'village' ? 'house' : 'castle')}<b>${esc(s.name)}</b><span class="arcost">${lv >= 3 ? 'embelli' : `${costText(c)} · ${MEC_NIGHTS[lv]} nuits`}</span></div><p class="ardesc">${'★'.repeat(lv)}${'☆'.repeat(3 - lv)} ${lv < 3 ? `Prochain : <b>${esc(mecName(s, lv))}</b> (bonne volonté +${MEC_GW[lv]}, +${MEC_GLOW[lv]} de rayonnement, un ${FURN[MEC_GIFT[lv]].name}${lv === 2 ? ', et un panier à chaque fête' : ''}).` : `Un panier de ${MEC_BASKET[s.kind] || 6} 💰 à chaque fête de saison.`}</p>${lv < 3 ? `${w ? `<p class="arwhy">${gi('lock')} ${esc(w)}</p>` : ''}<button type="button" class="sbtn ${w ? '' : 'pri'}" data-mec="${s.id}" ${w ? 'disabled' : ''}>${gi('gift')} Offrir</button>${!st.cur && S.tier >= 1 ? goldBtn(c, `data-mec="${s.id}"`) : ''}` : ''}</div>`; }).join('');
-  return `<div class="chsec"><h3>${gi('trophy')} Le concours du Val</h3><p class="hint">Un par saison, sur un thème. Inscription et préparatifs avant la fête du 5e jour ; un prix, c’est de l’or, un sticker et du rayonnement jusqu’au concours suivant.</p>${conc}
-    <h3>${gi('gift')} Le mécénat du Val</h3><p class="hint">Offre aux lieux du Val des embellissements, surtout en bois : leur bonne volonté, un souvenir, du rayonnement, et au troisième, un panier à chaque fête. Un à la fois.</p>${cur ? `<p class="ok">${gi('hourglass')} En cours : <b>${esc(mecName(cur, st.cur.lv))}</b> à ${esc(cur.name)}, encore ${st.cur.left} nuit${st.cur.left > 1 ? 's' : ''}.</p>` : ''}
+  const rows = sites.map(s => { const lv = mecLv(s.id), w = mecWhy(s), c = mecCost(s); return `<div class="addrow${lv >= 3 ? ' done' : w && !whyPoor(w) ? ' off' : ''}"><div class="arhead">${gi(s.kind === 'village' ? 'house' : 'castle')}<b>${esc(s.name)}</b><span class="arcost">${lv >= 3 ? 'embelli' : `${costHTML(c)} · ${MEC_NIGHTS[lv]} nuits`}</span></div><p class="ardesc">${'★'.repeat(lv)}${'☆'.repeat(3 - lv)} ${lv < 3 ? `Prochain : <b>${esc(mecName(s, lv))}</b> (bonne volonté +${MEC_GW[lv]}, +${MEC_GLOW[lv]} de notoriété, un ${FURN[MEC_GIFT[lv]].name}${lv === 2 ? ', et un panier à chaque fête' : ''}).` : `Un panier de ${MEC_BASKET[s.kind] || 6} 💰 à chaque fête de saison.`}</p>${lv < 3 ? `${w && !whyPoor(w) ? `<p class="arwhy">${gi('lock')} ${esc(w)}</p>` : ''}<button type="button" class="sbtn ${w ? '' : 'pri'}" data-mec="${s.id}" ${w ? 'disabled' : ''}>${gi('gift')} Offrir</button>${!st.cur && S.tier >= 1 ? goldBtn(c, `data-mec="${s.id}"`) : ''}` : ''}</div>`; }).join('');
+  return `<div class="chsec"><h3>${gi('trophy')} Le concours du Val</h3><p class="hint">Un par saison, sur un thème. Inscription et préparatifs avant la fête du 5e jour ; un prix, c’est de l’or, un sticker et de la notoriété jusqu’au concours suivant.</p>${conc}
+    <h3>${gi('gift')} Le mécénat du Val</h3><p class="hint">Offre aux lieux du Val des embellissements, surtout en bois : leur bonne volonté, un souvenir, de la notoriété, et au troisième, un panier à chaque fête. Un à la fois.</p>${cur ? `<p class="ok">${gi('hourglass')} En cours : <b>${esc(mecName(cur, st.cur.lv))}</b> à ${esc(cur.name)}, encore ${st.cur.left} nuit${st.cur.left > 1 ? 's' : ''}.</p>` : ''}
     <div class="addlist">${rows || '<p class="hint">Découvre d’abord des villages sur la carte.</p>'}</div></div>`;
 }
 const openRoomPrestige = openRoom;
@@ -165,10 +165,10 @@ valNotifs = function (add) {
 WIKI.concours = { cat: 'val', t: 'Le concours du Val', x: () => `<p>À partir de la deuxième saison, chaque saison a son <b>concours</b>, annoncé dans la chronique le premier jour. Le jury rend son verdict le jour de la fête (5e nuit de la saison). Tout se passe dans la fiche du Cœur.</p>
   <ul>${Object.entries(CONCOURS).map(([k, D]) => `<li><b>${SEASONS.find(s => s.k === k).name} : « ${esc(D.name)} »</b>. Le jury juge ${esc(D.crit)} : ${esc(D.what)}, sur 10. Pour grimper : ${esc(D.how)}.</li>`).join('')}</ul>
   <p><b>S’inscrire</b> coûte un peu d’or (4 💰, +2 par palier). Les <b>préparatifs</b> (trois au plus, en bois ou tout en or, de plus en plus chers) ajoutent chacun 1 point. Le jury ajoute 0 à 2 points d’humeur. En face, trois donjons du Val, qui progressent au fil des nuits.</p>
-  <p><b>Premier prix</b> : de l’or (10 💰, +5 par palier), +3 notoriété, un Cristal à coller et +6 de rayonnement jusqu’au concours suivant. <b>Deuxième prix</b> : un peu d’or et +3 de rayonnement. Dans tous les cas, tes créatures s’amusent (+1 ❤️).</p>` };
+  <p><b>Premier prix</b> : de l’or (10 💰, +5 par palier), +3 💬 de bouche-à-oreille, un Cristal à coller et +6 de notoriété jusqu’au concours suivant. <b>Deuxième prix</b> : un peu d’or et +3 de notoriété. Dans tous les cas, tes créatures s’amusent (+1 ❤️).</p>` };
 WIKI.mecenat = { cat: 'eco', t: 'Le mécénat du Val', x: () => `<p>Dans la fiche du Cœur, dès le palier 1 : offre aux villages, villes et à la Cité que tu connais des <b>embellissements</b>, trois par lieu, de plus en plus beaux. Tes créatures les bâtissent en quelques nuits, un à la fois. C’est surtout du bois : de quoi faire quelque chose du tas qui grandit.</p>
-  <ul>${['village', 'ville', 'cite'].map(k => `<li><b>${{ village: 'Un village', ville: 'Une ville', cite: 'La Cité' }[k]}</b> : ${MECENAT[k].map((x, i) => `${i ? x[0].charAt(0).toLowerCase() + x[0].slice(1) : x[0]} (${costText({ g: Math.round(MEC_BASE[i].g * MEC_K[k]), s: Math.round(MEC_BASE[i].s * MEC_K[k]) })})`).join(', puis ')}.</li>`).join('')}</ul>
-  <p>Quand c’est l’or qui dort, on peut tout payer en or (1 bois = 1,5 or).</p><p>À chaque inauguration : la bonne volonté du lieu (+${MEC_GW.join(', +')}), de la notoriété, du rayonnement pour toujours (+${MEC_GLOW.join(', +')}), un sticker en souvenir, et tout le château est fier (+1 ❤️). Au troisième embellissement, le lieu t’envoie un <b>panier garni</b> à chaque fête de saison (${MEC_BASKET.village} 💰 pour un village, ${MEC_BASKET.ville} pour une ville, ${MEC_BASKET.cite} pour la Cité).</p>` };
+  <ul>${['village', 'ville', 'cite'].map(k => `<li><b>${{ village: 'Un village', ville: 'Une ville', cite: 'La Cité' }[k]}</b> : ${MECENAT[k].map((x, i) => `${i ? x[0].charAt(0).toLowerCase() + x[0].slice(1) : x[0]} (${costText({ g: Math.round(MEC_BASE[i].g * MEC_K[k]), s: Math.round(MEC_BASE[i].s * MEC_K[k]), a: Math.round(AMBER_COST.mec[i] * MEC_K[k]) })})`).join(', puis ')}.</li>`).join('')}</ul>
+  <p>Quand c’est l’or qui dort, on peut tout payer en or (1 bois = 1,5 or), sauf l’{c:ambre|Ambre}, qui ne s’achète pas.</p><p>À chaque inauguration : la bonne volonté du lieu (+${MEC_GW.join(', +')}), du bouche-à-oreille, de la notoriété pour toujours (+${MEC_GLOW.join(', +')}), un sticker en souvenir, et tout le château est fier (+1 ❤️). Au troisième embellissement, le lieu t’envoie un <b>panier garni</b> à chaque fête de saison (${MEC_BASKET.village} 💰 pour un village, ${MEC_BASKET.ville} pour une ville, ${MEC_BASKET.cite} pour la Cité).</p>` };
 // les articles voisins renvoient au concours et au mécénat
 { const ws = WIKI.saisons && WIKI.saisons.x; if (ws) WIKI.saisons.x = () => ws() + `<p>À partir de la deuxième saison, chaque saison a aussi son {c:concours|concours du Val}, jugé le jour de la fête.</p>`; }
 { const wm = WIKI.merveilles && WIKI.merveilles.x; if (wm) WIKI.merveilles.x = () => wm() + `<p>Le bois qui s’entasse peut aussi aller au {c:mecenat|mécénat du Val} (des embellissements pour les villages), aux préparatifs du {c:concours|concours de la saison}, ou aux {c:caravanes|caravanes} qui l’achètent.</p>`; }

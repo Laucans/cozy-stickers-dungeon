@@ -4,8 +4,8 @@
    puis le Cœur. Rien à poster : avant l'assaut, les défenseurs se
    rangent d'eux-mêmes, sans hasard, de la plus faible à la plus
    forte (les plus faibles dans la première pièce, les suivantes
-   dans la suivante…) ; les 3 plus fortes, reposées, tiennent le
-   Cœur. Une pièce défendue : un combat aux cartes (le moteur des
+   dans la suivante…), une par pièce d’abord, la plus forte
+   au Cœur ; le surplus renforce le Cœur, puis les pièces. Une pièce défendue : un combat aux cartes (le moteur des
    expéditions, retourné, avec les cartes que donne la pièce).
    Une pièce sans défenseurs : une rencontre. La bande ne fuit
    plus : elle va jusqu'au Cœur, sauf si tous ses héros tombent.
@@ -23,12 +23,12 @@ Object.assign(CRAWL_EN, {
 if (typeof CRAWL_LOOK !== 'undefined') ['paysan', 'voleuse', 'elfe', 'mage', 'paladin', 'barbare'].forEach(k => { CRAWL_LOOK['h_' + k] = ['hero', k]; });
 // les réglages (l'équilibrage se fait ici, par simulation)
 const INV_TUNE = {
-  lvl: 13, tier: .5, crew: .33, crewCap: 34, champ: .1, glow: 400, lvlMin: 2.2, crus: 10, rank: 0,   // le niveau de la bande grandit avec le château, sans marche : base, par palier, par créature (crewCap au plus), par niveau de tes champions (celui des expéditions), un point par tranche de rayonnement, la croisade en plus ; jamais sous lvlMin
-                     // (sans fuite, la bande va plus loin, mais la défense est sûre : base 7,2 → 8,3, palier ,3 → ,5, créature ,28 → ,33, champions ,35 → ,1, croisade +6 → +10 ; voir aussi rooms et trapK)
+  lvl: 13.5, tier: .5, crew: .25, crewCap: 34, champ: .1, lvlMin: 2.2, crus: 10, rank: 0,   // le niveau de la bande grandit avec le château, sans marche : base, par palier, par créature (crewCap au plus), par niveau de tes champions (celui des expéditions), la croisade en plus (et la notoriété : fame) ; jamais sous lvlMin
+                     // (sans fuite, la bande va plus loin, mais la défense est sûre : base 7,2 → 8,3, palier ,3 → ,5, créature ,28 → ,33, champions ,35 → ,1, croisade +6 → +10 ; voir aussi rooms et trapK ; la notoriété devient le moteur : créature ,33 → ,25)
   trapK: 2.5,        // un piège frappe comme au temps des couloirs, à l'échelle des cartes : sa force × trapK (2 avant la fin des fuites ; les textes disaient déjà × 2,5)
   lootPct: .04, lootPctS: .03,   // ce qu'une pièce pillée leur rapporte : une part de ton or et de ton bois
   buff: 1,           // +1 aux coups de toute la bande par pièce pillée
-  bounty: .5,        // la prime d'une bande repoussée : une part de ce qu'elle avait pillé (en plus de le récupérer), plus 2 💰 par héros et par rang
+  bounty: .5,        // la prime d'une bande repoussée : une part de ce qu'elle avait pillé (en plus de le récupérer), plus 2 💰 par héros (×2 d'une ville, ×3 de la cité)
   evP: .25, evD: 9, evN: 2,   // dans une pièce sans défenseurs, une créature restée à l'abri (evN au plus) croise la bande et tente un mauvais coup : chance de base, dégâts de base (+ sa garde)
   turns: 14,         // un combat qui s'éternise : la bande force le passage (dans une pièce, elle pille moitié moins ; au Cœur, il tombe)
   hold: 1, holdStop: 0,   // un héros à terre dans une pièce défendue : la pièce tient (ni pillage, ni coups plus forts) ; holdStop : le combat s'arrête là et la bande passe (sinon, il va jusqu'au bout) ; plus de fuite : elle va jusqu'au Cœur, sauf si tous ses héros tombent
@@ -39,20 +39,35 @@ const INV_TUNE = {
   bigBand: 12,       // un héros de plus dans la bande quand le château compte autant de créatures
   rooms: [2, 2, 3, 3],   // les pièces du parcours, selon le palier (0, 1, 2, 3 et plus), avant le Cœur (avant : 3, 3, 4, 5 ; chaque pièce défendue est un combat, et la bande va au bout)
   trials: 24,        // l’estimation de l’annonce : autant d’invasions jouées d’avance en combat auto, avec tes défenseurs déjà rangés
+  fame: .03,         // la notoriété (invFame : la jauge unique, éclat et bouche-à-oreille) attire des héros plus coriaces : fame × notoriété, en niveaux (+0,6 à 20, +3 à 100, +6 à 200)
+  rodage: { size: [2, 2], lvl: [8, 11], dK: .6, rooms: [1, 2], crew: 12, hero: 'paysan' },   // les premières invasions de la partie : size héros au plus, niveau lvl au plus (+ dK × le décalage de la difficulté), rooms pièces avant le Cœur ;
+                     // la toute première n'est que des villageois (hero, voir INV_VILLAGEOIS) ; ensuite, seulement tant que le château a moins de crew créatures. Les sabotages d'ici là sont aussi doux (pas plus de sbires que de héros)
 };
+const INV_VILLAGEOIS = ['Jacquot et sa fourche', 'Mathurin et son râteau', 'Berthe et son rouleau à pâtisserie'];   // la toute première bande : des villageois en colère, chacun son outil
 const invNum = x => String(x).replace('.', ',');
 if (typeof STAT_LABELS !== 'undefined' && STAT_LABELS.guard) STAT_LABELS.guard[1] = `garde (×${invNum(INV_TUNE.trapK)} dégâts au premier héros qui entre)`;   // le texte suit le réglage
 const INV_ROOMS = t => INV_TUNE.rooms[Math.max(0, Math.min(INV_TUNE.rooms.length - 1, t || 0))];   // les pièces du parcours selon le palier (puis le Cœur)
-// la bande grandit avec le château : ton palier, le nombre de tes créatures et la force de tes champions (le niveau des expéditions), sans marche brutale
-const invLevelParts = plan => { const T = INV_TUNE, n = Math.min(T.crewCap, S.creatures.length), cl = crawlLevel(), glow = typeof radiance === 'function' ? radiance() : 0;
-  return { tier: T.tier * (S.tier || 0), crew: T.crew * n, champ: T.champ * Math.max(0, cl - 1), glow: glow / T.glow, rank: T.rank * ((plan.rank || 1) - 1), crus: plan.crusade || (plan.origin && plan.origin.crusade) ? T.crus : 0 }; };
-// la difficulté de la partie (menu) : d décale le niveau de base des bandes (Normal = INV_TUNE.lvl), x celui des donjons d'expédition
-const INV_DIFFS = { facile: { name: 'Facile', ico: '🌱', d: -4, x: -3 }, normal: { name: 'Normal', ico: '⚔️', d: 0, x: -1.4 }, difficile: { name: 'Difficile', ico: '🔥', d: 2.5, x: .5 }, legende: { name: 'Légende', ico: '💀', d: 5, x: 2 } };
+// la notoriété qui attire les héros : le seul endroit où le moteur des invasions la lit
+const invFame = () => Math.max(0, typeof radiance === 'function' ? radiance() : 0);
+// le rodage : le rang de la prochaine invasion de la partie (0 : la toute première), tant qu'elle est encore douce ; -1 ensuite (plan : celui des sbires d'un sabotage, qui ne compte pas comme une invasion)
+const invRodage = plan => { const R = INV_TUNE.rodage, k = (S && S.stats && S.stats.invasions) || 0, sab = !!(plan && plan.party && plan.party.some(h => h.minion)); return k < R.size.length && (S.creatures.length < R.crew || (k === 0 && !sab)) ? k : -1; };
+// ce que l'annonce en dit, une fois la bande tirée (rien pour les sbires)
+const invRodageText = plan => { if (!plan || !plan.party || !plan.party.length || plan.party.some(h => h.minion)) return ''; const n = plan.party.length, one = n === 1;
+  if (plan.rodage === 0) return `${one ? 'Un villageois' : `${['', '', 'Deux', 'Trois', 'Quatre'][n] || n} villageois`} en colère pour commencer : ${invAnd(plan.party.map(h => h.name))}, ${one ? 'venu' : 'venus'} du village « voir ce qui se passe au château ». ${one ? 'Il n’est' : 'Ils ne sont'} pas bien ${one ? 'méchant' : 'méchants'} : tes créatures en viennent à bout si elles jouent bien leurs cartes (une Esquive ou une Parade quand un coup s’annonce, des Frappes le reste du temps). Les bandes suivantes grossiront avec ton château… et avec ta notoriété.`;
+  return plan.rodage === 1 ? `Le bouche-à-oreille fait son œuvre : de vrais aventuriers cette fois, mais ils ne sont que ${n}. Les bandes suivantes viendront au complet.` : ''; };
+// la bande grandit avec ta notoriété (invFame), et un peu avec le château : ton palier, le nombre de tes créatures et la force de tes champions (le niveau des expéditions), sans marche brutale
+const invLevelParts = plan => { const T = INV_TUNE, n = Math.min(T.crewCap, S.creatures.length), cl = crawlLevel();
+  const crus = !!(plan.crusade || (plan.origin && plan.origin.crusade));   // la croisade a sa propre marche (crus) : la notoriété n'y ajoute rien
+  return { tier: T.tier * (S.tier || 0), crew: T.crew * n, champ: T.champ * Math.max(0, cl - 1), fame: crus ? 0 : T.fame * invFame(), rank: T.rank * ((plan.rank || 1) - 1), crus: crus ? T.crus : 0 }; };
+// la difficulté de la partie (menu) : d décale le niveau de base des bandes (Normal = INV_TUNE.lvl), x celui des donjons d'expédition, amb multiplie l'Ambre qu'on y trouve (AMBER_GAIN, p35)
+const INV_DIFFS = { facile: { name: 'Facile', ico: '🌱', d: -4, x: -3, amb: 1 }, normal: { name: 'Normal', ico: '⚔️', d: 0, x: -1.4, amb: 1 }, difficile: { name: 'Difficile', ico: '🔥', d: 2.5, x: .5, amb: 1.25 }, legende: { name: 'Légende', ico: '💀', d: 5, x: 2, amb: 1.5 } };
 const DIFF_ORDER = ['facile', 'normal', 'difficile', 'legende'];
 const diffLowKey = () => (typeof S !== 'undefined' && S && S.stats && S.stats.diffLow) || (S && S.opts && S.opts.diff) || 'normal';   // la plus basse difficulté jouée dans la partie (ce que retiennent le Panthéon et le palmarès)
 const diffBadge = k => k && INV_DIFFS[k] ? ` <span class="dbadge" title="Difficulté : ${INV_DIFFS[k].name}">${INV_DIFFS[k].ico}</span>` : '';
 const invDiff = () => INV_DIFFS[(typeof S !== 'undefined' && S && S.opts && S.opts.diff) || 'normal'] || INV_DIFFS.normal;
-const invLevel = plan => { const P = invLevelParts(plan); return Math.round(Math.max(INV_TUNE.lvlMin || 1, INV_TUNE.lvl + invDiff().d + P.tier + P.crew + P.champ + P.glow + P.rank + P.crus) * 10) / 10; };
+const invLevel = plan => { const P = invLevelParts(plan), T = INV_TUNE, lo = T.lvlMin || 1, k = P.crus ? -1 : invRodage(plan); let v = Math.max(lo, T.lvl + invDiff().d + P.tier + P.crew + P.champ + P.fame + P.rank + P.crus);
+  if (k >= 0) v = Math.min(v, Math.max(lo, T.rodage.lvl[k] + T.rodage.dK * invDiff().d));   // le rodage : jamais plus fort que la bande ordinaire
+  return Math.round(v * 10) / 10; };
 const invPower = c => { const p = crawler(c); return p.hp * p.atk; };
 const invRoomOf = id => S.rooms.find(o => o.id === id);
 // les pièces que la bande peut traverser (une grande salle compte une fois)
@@ -64,10 +79,10 @@ function invCandidates() {
 // l'ancienne règle des gardes postés (c.guard) : gardée pour les vieux appels, elle ne décide plus de la défense (voir invLineup) ; le poste de travail (c.post) non plus
 const invGuards = r => r ? guardsOfRoom(r).filter(fitToFight).sort((a, b) => invPower(b) - invPower(a)).slice(0, INV_TUNE.roomCap) : [];
 // qui défendrait le Cœur ce soir (un aperçu : les plus fortes des créatures reposées)
-const invHeartCrew = () => invHeartPick(S.creatures.filter(fitToFight).sort((a, b) => invPower(a) - invPower(b)));
+const invHeartCrew = () => { try { const L = invLineup({ route: (S.rooms.filter(r => r.built && r.t !== 'coeur').slice(0, (INV_TUNE.rooms || [])[Math.min(3, S.tier || 0)] || 2).map(r => r.id)).concat((S.rooms.find(r => r.t === 'coeur') || {}).id) }); return L.heart.map(id => S.creatures.find(c => c.id === id)).filter(Boolean); } catch (e) { return invHeartPick(S.creatures.filter(fitToFight).sort((a, b) => invPower(a) - invPower(b))); } };   // ce que donnerait le rangement, sur un parcours type
 // le parcours : N pièces au hasard, puis le Cœur (la montée en force vient des paliers de défenseurs, pas de l'ordre des pièces)
 function invRoute() {
-  const pool = shuffle(invCandidates()).slice(0, INV_ROOMS(S.tier || 0));
+  const k = invRodage(), pool = shuffle(invCandidates()).slice(0, k >= 0 ? Math.min(INV_ROOMS(S.tier || 0), INV_TUNE.rodage.rooms[k]) : INV_ROOMS(S.tier || 0));
   const h = heartRoom(); return [...pool.map(r => r.id), ...(h ? [h.id] : [])];
 }
 
@@ -84,18 +99,18 @@ function invHeartPick(pool) {
   const n = invHeartN(), rested = pool.filter(c => !invTired(c));
   return (rested.length ? rested : pool).slice(-n).reverse();
 }
-// la défense, sans hasard : le Cœur d'abord (les plus fortes), puis les autres reposées, de la plus faible à la plus forte : la première pièce du parcours
-// reçoit les plus faibles, la suivante les suivantes… dans la limite des places. S'il y a plus de créatures que de places, les plus faibles restent à l'abri ;
-// s'il en manque, les dernières pièces n'ont personne (une rencontre). rooms[k] : les défenseurs de I.route[k] (vide pour le Cœur) ; spare : à l'abri.
+// le rangement : d’abord une créature par pièce (les plus faibles dans les premières), la plus forte au Cœur ; s’il en reste, le Cœur se renforce (invHeartN au plus), puis les pièces (invSeats) ; le reste, les plus faibles, à l’abri
 function invLineup(I) {
-  const pool = S.creatures.filter(fitToFight).sort((a, b) => invPower(a) - invPower(b) || (a.id < b.id ? -1 : 1));
-  const heart = invHeartPick(pool), inHeart = new Set(heart.map(c => c.id));
-  const rest = pool.filter(c => !inHeart.has(c.id) && !invTired(c));
-  const slots = I.route.map((id, k) => [id, k]).filter(([id]) => { const r = invRoomOf(id); return r && r.t !== 'coeur'; });
-  const seats = slots.map(([id]) => invSeats(invRoomOf(id))), on = rest.slice(Math.max(0, rest.length - seats.reduce((a, n) => a + n, 0)));
-  const rooms = I.route.map(() => []); let i = 0;
-  slots.forEach(([, k], j) => { rooms[k] = on.slice(i, i + seats[j]).map(c => c.id); i += seats[j]; });
-  return { rooms, heart: heart.map(c => c.id), spare: rest.slice(0, rest.length - on.length).map(c => c.id) };
+  const pool = S.creatures.filter(fitToFight).sort((a, b) => invPower(a) - invPower(b) || (a.id < b.id ? -1 : 1)), rested = pool.filter(c => !invTired(c));
+  const slots = I.route.map((id, k) => [id, k]).filter(([id]) => { const r = invRoomOf(id); return r && r.t !== 'coeur'; }), seats = slots.map(([id]) => invSeats(invRoomOf(id)));
+  if (!rested.length) return { rooms: I.route.map(() => []), heart: pool.slice(-1).map(c => c.id), spare: [] };   // tout le monde est épuisé : la plus forte tient le Cœur quand même
+  const n = rested.length, one = Math.min(slots.length, n - 1), hN = 1 + Math.min(invHeartN() - 1, n - 1 - one), extra = Math.min(seats.reduce((a, s) => a + s, 0) - one, n - hN - one);
+  const heart = rested.slice(n - hN).reverse(), on = rested.slice(n - hN - one - extra, n - hN);   // ceux qui défendent les pièces, du plus faible au plus fort
+  const cnt = slots.map((_, j) => j < one ? 1 : 0); let left = extra;
+  for (let j = 0; left > 0 && j < slots.length * 4; j++) { const k = j % slots.length; if (cnt[k] && cnt[k] < seats[k]) { cnt[k]++; left--; } }
+  const rooms = I.route.map(() => []); let p = 0;
+  slots.forEach(([, k], j) => { rooms[k] = on.slice(p, p + cnt[j]).map(c => c.id); p += cnt[j]; });
+  return { rooms, heart: heart.map(c => c.id), spare: rested.slice(0, n - hN - one - extra).map(c => c.id) };
 }
 // les pièges des couloirs qui bordent une pièce : ils frappent la bande à l'entrée, et donnent leur carte aux combats de la pièce
 function invTrapsNear(r) {
@@ -119,6 +134,8 @@ function invNew(plan) {
 }
 const invUp = I => I.foes.filter(f => f.hp > 0);
 const invDown = I => !invUp(I).length;   // plus un héros debout : la bande est repoussée (elle ne fuit plus)
+// les héros présents dans la pièce en cours : sans celui que le Sphinx a retenu (f.lag : l'index de la pièce qu'il manque), sauf s'il est le dernier debout
+const invHere = I => { const up = invUp(I), h = up.filter(f => f.lag !== I.idx); return h.length ? h : up; };
 // qui défend une pièce : les créatures rangées là (au Cœur, ses défenseuses), encore aptes et pas K.O. dans cette invasion
 function invInfo(I, id) {
   const r = invRoomOf(id), heart = !!r && r.t === 'coeur', L = I.lineup || (I.lineup = invLineup(I)), k = I.route.indexOf(id);
@@ -131,7 +148,7 @@ function invFightR(I, info) {
   return { dg: 'chateau', np: 1, lvl: I.lvl, floor: 1, step: 0, party: team.map(c => crawler(c)), deck: crawlDeck(team, crawlAutoBag(invRoomPool(info.r))), loot: I.bag, log: [], path: [], done: null };
 }
 // avant chaque combat : la bande garde ses blessures, mais pas ses parades ; ses coups grandissent avec le butin
-function invFoesForFight(I) { const up = invUp(I); up.forEach(f => { f.block = 0; f.st = f.stunNext ? { stun: 1 } : {}; f.stunNext = 0; f.buff = I.pow; f.ai = Math.floor(Math.random() * CRAWL_EN[f.k].acts.length); }); return up; }
+function invFoesForFight(I) { const up = invHere(I); up.forEach(f => { f.block = 0; f.st = f.stunNext ? { stun: 1 } : {}; f.stunNext = 0; f.buff = I.pow; f.ai = Math.floor(Math.random() * CRAWL_EN[f.k].acts.length); }); return up; }
 // dans le combat : la bande ne fuit jamais. Un héros à terre dans une pièce : elle renonce à la piller (la pièce tient) et passe à la suivante,
 // sans ses blessés ; tous ses héros à terre : elle est repoussée. Un combat trop long : elle force le passage (en avant, jamais en arrière)
 function invHook(I, B, heart) {
@@ -141,6 +158,7 @@ function invHook(I, B, heart) {
 }
 function invAfterFight(I, info, R, res) {
   if (!info.heart && INV_TUNE.hold && res !== 'won' && res !== 'held' && I.foes.filter(f => f.hp <= 0).length > (I.koF || 0)) res = 'held';   // un héros est tombé pendant le combat : la pièce tient, même si ses défenseurs finissent à terre
+  if (res === 'won' && !info.heart && invUp(I).length) res = 'held';   // ceux de la pièce sont à terre, mais le héros resté à la traîne (Sphinx) rattrape la bande : la pièce tient
   I.res = res; I.fights++; { const rc = invRec(I, info); rc.kind = 'fight'; rc.def = info.def.map(c => c.name); rc.res = res; rc.koH = I.foes.filter(f => f.hp <= 0 && !f.koSeen).length; rc.koD = R.party.filter(p => p.ko).length; if (info.heart) { rc.hpIn = I.heartHp; rc.powIn = I.pow; } }
   const ko = I.foes.filter(f => f.hp <= 0 && !f.koSeen); ko.forEach(f => { f.koSeen = true; const p = pick(R.party.filter(x => !x.ko)) || pick(R.party); if (p && critter(p.id)) I.kos[p.id] = (I.kos[p.id] || 0) + 1; }); I.log.push({ heart: info.heart, n: info.def.length, res, pow: I.pow });
   R.party.forEach(p => { I.fought.add(p.id); if (p.ko && res !== 'won') I.hurt.add(p.id); });
@@ -165,16 +183,26 @@ const invLootText = L => { const p = [L.g && `${L.g} 💰`, L.s && `${L.s} 🪵`
 function invTraps(I, info) {
   const out = [], hp0 = invHpLeft(I), ko0 = invUp(I).length;
   invTrapsNear(info.r).forEach(d => {
-    const D = DEFS[d.t]; if (!D || I.out || I.sprung.has(d.id) || (!D.str && !D.lost)) return; I.sprung.add(d.id);
-    const up = invUp(I); if (!up.length) return;
+    const D = DEFS[d.t]; if (!D || I.out || I.sprung.has(d.id) || !D.str) return; I.sprung.add(d.id);
+    const up = invHere(I); if (!up.length) return;
     if (!I.disarmed && D.kind === 'piège' && (I.nemDis || up.some(f => f.k === 'h_voleuse'))) { I.disarmed = true; out.push(['🗝️', `${I.nemDis ? 'Le héros némésis' : 'La voleuse'} désamorce ${D.name}.`, '']); return; }
-    const f = pick(up), dmg = Math.max(1, Math.round(defStr(d) * INV_TUNE.trapK * (f.k === 'h_barbare' && D.kind === 'verrou' ? .5 : 1)));
+    const dmgOf = f => Math.max(1, Math.round(defStr(d) * INV_TUNE.trapK * (f.k === 'h_barbare' && D.kind === 'verrou' ? .5 : 1)));
+    if (D.spring) {   // le Plancher à ressort : toute la bande part dans les douves
+      const hits = up.map(f => { const dmg = dmgOf(f); f.hp = Math.max(0, f.hp - dmg); return { f, dmg }; }); I.ev.push({ k: 'trap', t: d.t, id: d.id, hits: hits.map(h => ({ ko: h.f.hp <= 0 })) });
+      out.push(['🪤', `Boing ! ${D.name} envoie toute la bande dans les douves : ${hits.map(h => `−${h.dmg} PV à ${h.f.name}${h.f.hp <= 0 ? ' (K.O. !)' : ''}`).join(', ')}.`, 'good']); return;
+    }
+    const f = pick(up), dmg = dmgOf(f);
     f.hp = Math.max(0, f.hp - dmg); if (D.sticky) f.stunNext = 1; I.ev.push({ k: 'trap', t: d.t, id: d.id, hits: [{ ko: f.hp <= 0 }] });
     out.push(['🪤', `${D.name} : −${dmg} PV à ${f.name}${f.hp <= 0 ? ' (K.O. !)' : D.sticky ? ' (il reste à terre : il perdra son premier tour)' : ''}.`, 'good']);
-    if (D.lost && Math.random() < D.lost * .6) { I.out = 'lost'; out.push(['🌀', D.lostLine || `${D.name} : la bande en a assez et rebrousse chemin !`, 'good']); }
+    if (D.bait) { const rest = invUp(I); rest.forEach(x => { x.stunNext = 1; }); if (rest.length) out.push(['💰', rest.length > 1 ? 'La bande se dispute le faux butin : tous ses héros perdront leur premier tour au prochain combat.' : `${rest[0].name} s’attarde sur le faux butin : il perdra son premier tour au prochain combat.`, 'good']); }
+    if (D.lag && f.hp > 0) {   // le Sphinx : un héros reste planté devant l'énigme et manque la pièce suivante (au Cœur, ou s'il est seul : son premier tour)
+      const nx = invRoomOf(I.route[I.idx + 1]), alone = invUp(I).length < 2;
+      if (nx && nx.t !== 'coeur' && !alone) { f.lag = I.idx + 1; out.push(['🗿', `${f.name} reste planté devant l’énigme du Sphinx : la bande passe la pièce suivante sans lui.`, 'good']); }
+      else { f.stunNext = 1; out.push(['🗿', `${f.name} cherche encore la réponse de l’énigme : il perdra son premier tour au prochain combat.`, 'good']); }
+    }
   });
   // la garde de la pièce et de ses meubles (Corps de garde, armure, râtelier…) : un coup au premier héros qui entre
-  const gs = groupOf(info.r).rooms.reduce((a, o) => a + (rstat(o, 'guard') || 0), 0), up2 = invUp(I);
+  const gs = groupOf(info.r).rooms.reduce((a, o) => a + (rstat(o, 'guard') || 0), 0), up2 = invHere(I);
   if (gs > 0 && up2.length && !I.out && !I.guardHit.has(info.r.id)) { I.guardHit.add(info.r.id); const f = up2[0], dmg = Math.round(gs * INV_TUNE.trapK); f.hp = Math.max(0, f.hp - dmg); out.push(['🛡️', `${info.name.charAt(0).toUpperCase() + info.name.slice(1)} se défend : −${dmg} PV à ${f.name}${f.hp <= 0 ? ' (K.O. !)' : ''}.`, 'good']); }
   if (!I.out && invDown(I)) { I.out = 'repelled'; out.push(['🛡️', 'Plus un héros debout : la bande est repoussée !', 'good']); }
   if (out.length) { const rc = invRec(I, info); rc.trapD = hp0 - invHpLeft(I); rc.trapKO = ko0 - invUp(I).length; rc.trapN = out.filter(l => l[0] === '🪤').length; rc.disarm = out.some(l => l[0] === '🗝️'); rc.guard = out.some(l => l[0] === '🛡️' && /se défend/.test(l[1])); if (I.out) rc.end = I.out; }
@@ -193,7 +221,7 @@ function invEvent(I, info) {
     if (loy < 25 && Math.random() < .4) { k += .5; out.push(['😒', `${c.name} regarde ailleurs… et leur montre même où est rangé l’or.`, 'bad']); return; }
     if (has('radin') && !hidden) { hidden = true; out.push(['🪙', `${c.name} cache l’or sous son matelas.`, 'good']); }
     const p = Math.min(.75, INV_TUNE.evP + loy / 300 + ((c.mood || 0) - 2) * .05 + (has('farceur') ? .2 : 0) + (has('curieux') || has('maniaque') ? .06 : 0) - (has('solitaire') ? .1 : 0));
-    const up = invUp(I); if (!up.length) return;
+    const up = invHere(I); if (!up.length) return;
     if (Math.random() < p) {
       const f = pick(up), d = Math.round((INV_TUNE.evD + guardOf(c)) * (has('bagarreur') ? 1.5 : 1));
       f.hp = Math.max(0, f.hp - d); I.fought.add(c.id);
@@ -251,7 +279,6 @@ function invSummary(I, outcome) {
     } else if (rc.kind === 'empty') bits.push('personne pour le défendre');
     else if (!rc.trapN || rc.loot || rc.ev.length) { const acts = rc.ev.filter(l => l[0] !== '👀' && l[0] !== '🛡️').map(l => l[1].replace(/\.$/, '')); bits.push(acts.length ? `👀 rencontre : ${acts.slice(0, 2).join(' ; ')}` : '👀 personne pour la défendre, la bande fouille'); }
     if (rc.end === 'repelled' && rc.kind !== 'fight') bits.push('plus un héros debout, la bande est repoussée');
-    if (rc.end === 'lost') bits.push('la bande rebrousse chemin');
     if (rc.loot && invLootBits(rc.loot)) bits.push(`pillée : ${invLootBits(rc.loot)}`);
     out.push([rc.heart ? '❤️' : '▫️', `${rc.heart ? 'Le Cœur' : `${i + 1}. ${invCap(rc.name)}`} — ${bits.join(' ; ') || 'rien à signaler'}.`, rc.heart && out0 === 'robbed' ? 'bad' : rc.kind === 'fight' && rc.res !== 'won' && rc.res !== 'held' ? 'bad' : '']);
   });
@@ -270,7 +297,7 @@ function invWhy(I) {
   if (I.tired && I.tired.length) out.push(`${I.tired.length} créature${I.tired.length > 1 ? 's' : ''} épuisée${I.tired.length > 1 ? 's' : ''} n’${I.tired.length > 1 ? 'ont' : 'a'} pas défendu`);
   { const bare = I.lineup ? I.route.filter((id, k) => { const r = invRoomOf(id); return r && r.t !== 'coeur' && !(I.lineup.rooms[k] || []).length; }).length : 0; if (bare) out.push(`${bare > 1 ? `${bare} pièces` : 'une pièce'} du parcours sans défenseur (pas assez de créatures reposées)`); }
   if (I.away && I.away.length) out.push(`${invAnd(I.away.slice(0, 4))}${I.away.length > 4 ? '…' : ''} ${I.away.length > 1 ? 'étaient parties' : 'était partie'} (raid, expédition ou mission)`);
-  const bare = I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur' && !invTrapsNear(r).some(d => DEFS[d.t] && (DEFS[d.t].str || DEFS[d.t].lost)));
+  const bare = I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur' && !invTrapsNear(r).some(d => DEFS[d.t] && DEFS[d.t].str));
   if (bare.length) out.push(`aucun piège ne bordait ${bare.length > 1 ? `${bare.length} des ${I.route.length - 1} pièces` : 'une des pièces'} du parcours`);
   if (h && h.kind === 'fight' && out.length < 3 && !I.meal && invMealsReady().length) out.push(`pas de repas de veille pour les défenseurs (${invMealsReady().map(k => RECIPES[k].name).join(', ')} : de quoi cuisiner)`);
   return out.slice(0, 3);
@@ -308,9 +335,9 @@ function invAdvice(I, max = 4) {
     if (ready < seats) out.push(['🛡️', `${ready} créature${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à défendre pour environ ${seats} places (le Cœur, puis ${n} pièces) : les dernières pièces du parcours n’auront personne. Plus de créatures, ou moins de fatigue, et chaque pièce a ses défenseurs.`]); }
   if (hurt.length) out.push(['🤕', `${invAnd(hurt.slice(0, 3).map(c => c.name))} ${hurt.length > 1 ? 'sont sonnées' : 'est sonnée'} et ne défendr${hurt.length > 1 ? 'ont' : 'a'} rien cette nuit.`]);
   if (S.raid && S.raid.team && S.raid.team.length) { const t = S.raid.team.map(critter).filter(Boolean); if (t.length) out.push(['🗺️', `Ton ${S.raid.crawl ? 'expédition' : 'raid'} emmène ${invAnd(t.slice(0, 4).map(c => c.name))} : ${t.length > 1 ? 'ils ne défendront' : 'elle ne défendra'} pas le château cette nuit.`]); }
-  const rooms = I ? I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur') : invCandidates(), bare = rooms.filter(r => !invTrapsNear(r).some(d => DEFS[d.t] && (DEFS[d.t].str || DEFS[d.t].lost)));
+  const rooms = I ? I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur') : invCandidates(), bare = rooms.filter(r => !invTrapsNear(r).some(d => DEFS[d.t] && DEFS[d.t].str));
   if (bare.length) out.push(['🪤', `${I ? 'Sur leur parcours, pas' : 'Pas'} de piège autour ${bare.length > 3 ? `de ${bare.length} pièces sur ${rooms.length}` : `de : ${invAnd(bare.map(r => ROOMS[r.t].name))}`}. Un piège posé dans un couloir qui borde une pièce frappe la bande à l’entrée et donne sa carte au combat.`]);
-  if (builtCount('garde') === 0 && S.tier >= 1 && !availability('room', 'garde')) out.push(['🛡️', 'Un Corps de garde (4 💰, 4 🪵) : une place de défenseur de plus dans chaque pièce, et le métier du guet pour tes sentinelles.']);
+  if (builtCount('garde') === 0 && S.tier >= 1 && !availability('room', 'garde')) out.push(['🛡️', `Un Corps de garde (${costText(costOf('room', 'garde'))}) : une place de défenseur de plus dans chaque pièce, et le métier du guet pour tes sentinelles.`]);
   { const M = S.meal || {}, ready = invMealsReady(); if (ready.length && !(M.hp || M.atk || M.tok)) out.push(['🍲', `Pas de repas de veille, et de quoi cuisiner : ${ready.map(k => `${RECIPES[k].name} (${{ poisson: '+5 PV aux défenseurs', gateau: '+1 énergie au Cœur', brochettes: '+1 à leurs coups' }[k]})`).join(', ')}.`]); }
   if (!(S.world && S.world.merc > S.night) && typeof SHOPS !== 'undefined' && typeof settlements === 'function') { const t = settlements().find(s => siteKnown(s) && (SHOPS[s.kind] || []).some(sh => sh.items.includes('merco'))); if (t) out.push(['🗡️', `Un mercenaire (taverne de ${t.name}, ${typeof shopPrice === 'function' ? shopPrice(t, 'merco') : 10} 💰) défendrait le Cœur pendant 3 nuits.`]); }
   const sulky = fit.filter(c => (c.mood || 0) <= 1); if (sulky.length >= 2) out.push(['😠', `${sulky.length} créatures boudeuses frappent moins fort (−1) ; ravies (4 cœurs), elles frapperaient plus fort (+1).`]);
@@ -324,10 +351,14 @@ const invRansomBan = plan => plan && (plan.crusade || (plan.origin && plan.origi
 
 /* ---------- la bande : plus de chemin ni de but, le Cœur au bout des pièces ---------- */
 // la taille de la bande suit le château : un héros de plus au palier 1, et un autre quand le château compte une douzaine de créatures
-// (avant : dès 80 de rayonnement, même dans un château presque vide)
+// (avant : dès 80 de notoriété, même dans un château presque vide)
 const partyPreviewInv = partyPreview;
-partyPreview = function () { const p = partyPreviewInv(), o = p.origin, rank = p.rank || 1; p.size = Math.min(5, 1 + rank + (S.tier >= 1 ? 1 : 0) + (S.creatures.length >= INV_TUNE.bigBand ? 1 : 0)); return p; };
-planInvasion = function () { const p = planInvasionOuter(); p.goal = { k: 'coeur' }; p.prep = 1; p.v2 = true; p.crusade = !!(p.crusade || (p.origin && p.origin.crusade)); p.route = invRoute(); return p; };
+partyPreview = function () { const p = partyPreviewInv(), o = p.origin, rank = p.rank || 1, k = o && o.crusade ? -1 : invRodage(); p.size = Math.min(5, 1 + rank + (S.tier >= 1 ? 1 : 0) + (S.creatures.length >= INV_TUNE.bigBand ? 1 : 0)); if (k >= 0) { p.size = Math.min(p.size, INV_TUNE.rodage.size[k]); p.rodage = k; } return p; };
+// le rodage (voir invRodage) : la toute première bande n'est que des villageois (rodage.hero, noms d'INV_VILLAGEOIS) ; les suivantes ne dépassent pas leur taille
+planInvasion = function () { const p = planInvasionOuter(); p.goal = { k: 'coeur' }; p.prep = 1; p.v2 = true; p.crusade = !!(p.crusade || (p.origin && p.origin.crusade)); p.route = invRoute();
+  const k = p.crusade ? -1 : invRodage(), R = INV_TUNE.rodage;
+  if (k >= 0 && p.party.length) { p.rodage = k; p.party = p.party.slice(0, R.size[k]); if (k === 0) { const h = HEROES.find(x => x.k === R.hero) || HEROES[0]; p.party = Array.from({ length: R.size[0] }, (_, i) => ({ ...h, name: INV_VILLAGEOIS[i] || h.name, hp: p.party[0].hp, atk: p.party[0].atk })); p.foe = null; p.qband = null; p.bandName = null; } p.courage = p.party.reduce((a, h) => a + (h.hp || 0), 0); }
+  return p; };
 // à la fin : le butin de la bande revient au château si elle est repoussée (avec une prime), sinon elle l'emporte
 const applyInvasionV1 = applyInvasion;
 applyInvasion = function (plan, outcome) {

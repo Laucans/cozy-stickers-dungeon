@@ -55,7 +55,7 @@ const POWERS = {
   brume:      { ico: '🌫️', name: 'Brume soporifique', need: ['labo', 2], desc: 'Toute la bande s’assoupit : chaque héros perd son premier coup, et le plus dangereux ses deux premiers.' },
   elixir:     { ico: '⚗️', name: 'Élixir de bravoure', need: ['labo', 3], desc: 'Tes défenseurs gagnent 2 PV et frappent 2 de plus pendant ce combat.' },
 };
-// un jeton qu'on a le droit de jouer (ceux des alchimistes demandent leur savoir)
+// un geste du Cœur qu'on a le droit de jouer (ceux des alchimistes demandent leur savoir)
 const powerOK = k => { const p = POWERS[k]; return !!p && (!p.need || (typeof craftRank === 'function' && craftRank(p.need[0]) >= p.need[1])); };
 // les gestes du Maître pendant la balade de la bande, à tout moment (pas seulement avant un combat)
 const STEP_ACTS = {
@@ -63,7 +63,7 @@ const STEP_ACTS = {
   detour: { ico: '🚪', name: 'Claquer les portes', desc: 'Toutes les portes claquent : la bande se perd quelques pas et perd du temps avant l’aube.' },
 };
 const orCost = plan => 4 + 3 * (plan.rank || 1);
-// les jetons du Cœur : chaque geste en coûte un ; sans eux, la bande arrive à ses fins
+// l'énergie du Cœur : chaque geste en coûte une ; sans eux, la bande arrive à ses fins
 function heartTokens() { return Math.min(4, 2 + Math.floor(S.tier / 2)) + (typeof chantierDone === 'function' && chantierDone('pontlevis') ? 1 : 0); }
 const powerCharges = () => heartTokens();
 const TACTICS = {
@@ -153,7 +153,7 @@ function guardsIn(e) { const ids = new Set(e.rooms); return S.creatures.filter(c
 function freeCrew() { const built = new Set(S.rooms.filter(r => r.built).map(r => r.id)); return S.creatures.filter(c => fitToFight(c) && (!c.post || !built.has(c.post))); }
 function heartCrew(tactic) { const h = heartRoom(); return S.creatures.filter(c => fitToFight(c) && (tactic === 'cible' || !c.post || (h && c.post === h.id) || !S.rooms.some(r => r.id === c.post && r.built))); }
 
-// la bande : chaque héros reçoit ses PV et sa force (le palier et le rayonnement du château les endurcissent), puis un but
+// la bande : chaque héros reçoit ses PV et sa force (le palier et la notoriété du château les endurcissent), puis un but
 const planInvasionBase = planInvasion0;
 planInvasion0 = function () {
   const p = planInvasionBase(), glow = typeof radiance === 'function' ? radiance() : 0, n = p.party.length || 1;
@@ -164,7 +164,7 @@ planInvasion0 = function () {
   return p;
 };
 // la bande se prépare contre tes créatures et tes gardes, et en partie contre tes pièges et tes verrous (comptés à 60 %), sans compter
-// tes jetons du Cœur : si tu laisses faire, elle réussit près de 9 fois sur 10 ; ce sont tes gestes (et tes pièges) qui la font échouer
+// l'énergie du Cœur : si tu laisses faire, elle réussit près de 9 fois sur 10 ; ce sont tes gestes (et tes pièges) qui la font échouer
 const PREP_TARGET = { 1: .95, 2: .96, 3: .96 };
 function prepareParty(p, target) {
   if (!p || !p.party.length) return p;
@@ -590,9 +590,9 @@ function defenseSummary(plan) {
 }
 function goalLine(plan) { const g = plan.goal || { k: 'coeur', label: 'le Cœur' }, G = INV_GOALS[g.k]; return `${G.ico} <b>Leur but : ${esc(G.name.toLowerCase())}</b>${g.k === 'enlever' ? ` (${esc(g.label)})` : g.k === 'saccage' ? ` (${esc(g.label)})` : ''}. ${esc(G.desc)}`; }
 // combien de fois sur 20 la bande atteint son but, pour chaque tactique (tes pouvoirs lancés au bon moment)
-// leurs chances, tactique par tactique : si tu laisses faire, et si tu joues tes jetons du Cœur au bon moment
+// leurs chances, tactique par tactique : si tu laisses faire, et si tu dépenses l'énergie du Cœur au bon moment
 const oddsRand = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-// les mêmes tirages avec et sans jetons : l'écart mesure vraiment l'effet des jetons
+// les mêmes tirages avec et sans énergie : l'écart mesure vraiment son effet
 function invOdds(plan, n = 20) { const out = {}, rnd = Math.random; try { Object.keys(TACTICS).filter(k => k !== 'rancon').forEach(k => { let f = 0, f0 = 0; for (let i = 0; i < n; i++) { Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, autoPower).outcome === 'robbed') f++; Math.random = oddsRand(7919 * i + 17); if (resolveInvasion(plan, k, noPower).outcome === 'robbed') f0++; } out[k] = Math.min(f, f0) / n; out[k + '0'] = f0 / n; }); } finally { Math.random = rnd; } return out; }
 const oddsCls = v => v >= .45 ? 'bad' : v >= .2 ? 'mid' : 'good';
 function chooseTactic(plan, opts = {}) {
@@ -605,8 +605,8 @@ function chooseTactic(plan, opts = {}) {
     ${plan.prep > 1.15 ? `<p class="hint">🛡️ Ils ont étudié ta défense : armures, potions et provisions (PV ×${String(plan.prep).replace('.', ',')}). Repousse-les, et leur équipement sera à toi.</p>` : ''}
     <div class="hcards">${plan.party.map(heroCard).join('')}</div>
     <p>${defenseSummary(plan)}</p>
-    ${ch ? `<p class="hint">⚡ Tu as <b>${ch} jeton${ch > 1 ? 's' : ''} du Cœur</b>. Avant chaque combat : ${Object.keys(POWERS).filter(powerOK).map(k => `${POWERS[k].ico} ${esc(POWERS[k].name)}`).join(', ')}. À tout moment pendant leur balade : ${Object.values(STEP_ACTS).map(p => `${p.ico} ${esc(p.name)}`).join(', ')} (${orCost(plan)} or). <b>Sans tes gestes, ils arrivent presque toujours à leurs fins.</b></p>` : ''}
-    <h3>Ta tactique</h3><p class="hint">🎲 Leurs chances d’atteindre leur but avec tes pièges et tes gardes, sans rien faire, puis en jouant tes jetons au bon moment :</p><div class="tactics">${Object.entries(TACTICS).filter(([k]) => k !== 'rancon' || !opts.noRansom).map(([k, t]) => `<button type="button" class="choice tactic" data-tac="${k}" ${k === 'rancon' && S.gold < cost ? 'disabled' : ''}><span class="emo">${t.ico}</span><b>${esc(t.name)}${k === 'rancon' ? ` (${cost} 💰)` : ''}</b><small>${esc(t.desc)}</small>${k !== 'rancon' ? `<em class="odds ${oddsCls(odds[k + '0'])}">Si tu laisses faire : ≈ ${Math.round(odds[k + '0'] * 100)} % pour eux</em><em class="odds ${oddsCls(odds[k])}">Avec tes jetons : ≈ ${Math.round(odds[k] * 100)} %</em>` : ''}</button>`).join('')}</div>`, { noClose: true, wide: true, label: 'Invasion' });
+    ${ch ? `<p class="hint">⚡ Le Cœur a <b>${ch} d’énergie</b> en réserve. Avant chaque combat : ${Object.keys(POWERS).filter(powerOK).map(k => `${POWERS[k].ico} ${esc(POWERS[k].name)}`).join(', ')}. À tout moment pendant leur balade : ${Object.values(STEP_ACTS).map(p => `${p.ico} ${esc(p.name)}`).join(', ')} (${orCost(plan)} or). <b>Sans tes gestes, ils arrivent presque toujours à leurs fins.</b></p>` : ''}
+    <h3>Ta tactique</h3><p class="hint">🎲 Leurs chances d’atteindre leur but avec tes pièges et tes gardes, sans rien faire, puis en dépensant l’énergie du Cœur au bon moment :</p><div class="tactics">${Object.entries(TACTICS).filter(([k]) => k !== 'rancon' || !opts.noRansom).map(([k, t]) => `<button type="button" class="choice tactic" data-tac="${k}" ${k === 'rancon' && S.gold < cost ? 'disabled' : ''}><span class="emo">${t.ico}</span><b>${esc(t.name)}${k === 'rancon' ? ` (${cost} 💰)` : ''}</b><small>${esc(t.desc)}</small>${k !== 'rancon' ? `<em class="odds ${oddsCls(odds[k + '0'])}">Si tu laisses faire : ≈ ${Math.round(odds[k + '0'] * 100)} % pour eux</em><em class="odds ${oddsCls(odds[k])}">Avec l’énergie du Cœur : ≈ ${Math.round(odds[k] * 100)} %</em>` : ''}</button>`).join('')}</div>`, { noClose: true, wide: true, label: 'Invasion' });
   return new Promise(res => m.addEventListener('click', e => { const b = e.target.closest('[data-tac]'); if (!b || b.disabled) return; sfx('tick'); closeModal(true); res(b.dataset.tac); }));
 }
 
@@ -635,7 +635,7 @@ function invCam(on) {
 function actBar(R, plan) {
   const old = document.getElementById('actBar'); if (old) old.remove();
   const b = el('div', 'actbar panel', ''); b.id = 'actBar'; $('#game').appendChild(b);
-  const draw = () => { b.innerHTML = `<span class="ab-tok" title="Jetons du Cœur">${gi('heart')}<b>${R.charges}</b></span>${Object.entries(STEP_ACTS).map(([k, A]) => { const no = R.charges <= 0 || R.used.includes(k) || R.queue.includes(k) || (k === 'or' && S.gold - R.gold < orCost(plan)); return `<button type="button" class="sbtn ab" data-act="${k}" ${no ? 'disabled' : ''} title="${esc(A.desc)}">${A.ico} ${esc(A.name)}${k === 'or' ? ` <small>${orCost(plan)} 💰</small>` : ''}</button>`; }).join('')}`; };
+  const draw = () => { b.innerHTML = `<span class="ab-tok" title="Énergie du Cœur">${gi('heart')}<b>${R.charges}</b></span>${Object.entries(STEP_ACTS).map(([k, A]) => { const no = R.charges <= 0 || R.used.includes(k) || R.queue.includes(k) || (k === 'or' && S.gold - R.gold < orCost(plan)); return `<button type="button" class="sbtn ab" data-act="${k}" ${no ? 'disabled' : ''} title="${esc(A.desc)}">${A.ico} ${esc(A.name)}${k === 'or' ? ` <small>${orCost(plan)} 💰</small>` : ''}</button>`; }).join('')}`; };
   b.addEventListener('click', e => { const x = e.target.closest('[data-act]'); if (!x || x.disabled) return; R.queue.push(x.dataset.act); sfx('tick'); draw(); });
   draw();
   return { refresh: draw, hide: h => { b.hidden = h; }, remove: () => b.remove() };
@@ -644,8 +644,8 @@ function askPower(ask, R) {
   return new Promise(res => {
     const old = document.getElementById('powBar'); if (old) old.remove();
     const left = Object.entries(POWERS).filter(([k]) => !R.used.includes(k) && powerOK(k));
-    const bar = el('div', 'powbar panel', `<div class="pwhead"><b>⚡ Jetons du Cœur (${R.charges})</b><span>${esc(ask.label)} : ${ask.defs.length} défenseur${ask.defs.length > 1 ? 's' : ''} contre ${ask.party.length} héros${ask.final ? ' · <b>le combat décisif</b>' : ''}</span></div>
-      <div class="pwbtns">${left.map(([k, p]) => `<button type="button" class="choice pw" data-pw="${k}"><span class="emo">${p.ico}</span><b>${esc(p.name)}</b><small>${esc(p.desc)}</small></button>`).join('')}<button type="button" class="sbtn pri pwgo" data-pw="">⚔️ Combattre sans jeton</button></div>`);
+    const bar = el('div', 'powbar panel', `<div class="pwhead"><b>⚡ Énergie du Cœur (${R.charges})</b><span>${esc(ask.label)} : ${ask.defs.length} défenseur${ask.defs.length > 1 ? 's' : ''} contre ${ask.party.length} héros${ask.final ? ' · <b>le combat décisif</b>' : ''}</span></div>
+      <div class="pwbtns">${left.map(([k, p]) => `<button type="button" class="choice pw" data-pw="${k}"><span class="emo">${p.ico}</span><b>${esc(p.name)}</b><small>${esc(p.desc)}</small></button>`).join('')}<button type="button" class="sbtn pri pwgo" data-pw="">⚔️ Combattre sans rien dépenser</button></div>`);
     bar.id = 'powBar'; $('#game').appendChild(bar); sfx('tick');
     bar.addEventListener('click', e => { const b = e.target.closest('[data-pw]'); if (!b) return; bar.remove(); sfx(b.dataset.pw ? 'chime' : 'tick'); res(b.dataset.pw || null); });
   });

@@ -77,7 +77,7 @@ const RELICS_ERA = [
   { id: 'carnet', ico: '📓', name: 'Le Carnet d’envies', pw: ['conteur'], d: '+1 💰 pour chaque envie comblée.' },
   { id: 'mentorat', ico: '🎓', name: 'Le Bâton du mentor', pw: ['chouchou'], d: '+1 XP à chaque gain d’expérience.' },
   { id: 'ballade', ico: '🎻', name: 'La Ballade héroïque', pw: ['epopee'], d: '+1 dé à tous les raids.' },
-  { id: 'statue', ico: '🗿', name: 'La Statue au porche', pw: ['legende'], d: '+1 🔥 de notoriété chaque nuit.' },
+  { id: 'statue', ico: '🗿', name: 'La Statue au porche', pw: ['legende'], d: '+1 💬 de bouche-à-oreille chaque nuit.' },
   { id: 'huile', ico: '🫗', name: 'L’Huile à pièges', pw: ['repousse'], d: 'Tes pièges gagnent +1 en force.' },
   { id: 'sacoches', ico: '💰', name: 'Les Sacoches profondes', pw: ['pillard'], d: '+2 💰 de butin à chaque raid réussi.' },
   { id: 'trefle', ico: '🍀', name: 'Le Trèfle à quatre feuilles', pw: ['crit'], d: 'Une complication de raid sur deux est évitée.' },
@@ -90,7 +90,7 @@ const RELICS_ERA = [
 const RELIC_BY = Object.fromEntries(RELICS_ERA.map(r => [r.id, r]));
 // les pactes d'âge sombre : un vrai coup de pouce pour tout le chapitre suivant, contre une perte tout de suite
 const PACTS = [
-  { id: 'rangs', ico: '⚒️', name: 'Serrer les rangs', d: '+2 segments de travaux chaque nuit', pw: ['pierre', 'etages'], cost: '−25 % de notoriété', pay: () => { S.hype = Math.floor(S.hype * .75); } },
+  { id: 'rangs', ico: '⚒️', name: 'Serrer les rangs', d: '+2 segments de travaux chaque nuit', pw: ['pierre', 'etages'], cost: '−25 % du bouche-à-oreille', pay: () => { S.hype = Math.floor(S.hype * .75); } },
   { id: 'butin', ico: '🗡️', name: 'Tout pour le butin', d: '+1 dé et +2 💰 à chaque raid', pw: ['epopee', 'pillard'], cost: '+2 Menace', pay: () => { S.menace = Math.min(MENACE_MAX - 1, S.menace + 2); } },
   { id: 'portes', ico: '🚪', name: 'Portes ouvertes', d: 'les créatures viennent plus volontiers, +10 de réputation', pw: ['nuit20', 'menagerie'], cost: '−5 de loyauté pour toutes tes créatures', pay: () => { S.creatures.forEach(c => typeof addLoy === 'function' && addLoy(c, -5)); } },
   { id: 'guerre', ico: '🏗️', name: 'Économie de guerre', d: 'pièces 1 💰 moins chères, +1 🪵 chaque nuit', pw: ['archi', 'palier1'], cost: '−10 de bonne volonté dans chaque village', pay: () => { if (typeof settlements === 'function') settlements().forEach(s => addGw(s, -10)); } },
@@ -196,7 +196,7 @@ function bookTick(report) {
     }
     if (age === 'sombre') {
       const h = Math.floor(S.hype * .1); S.hype -= h; c.choices = shuffleB(PACTS.map(p => p.id)).slice(0, 3);
-      out.push(['🌑', `Âge sombre : −${h} 🔥 notoriété. Un pacte t’attend dans le Livre pour le chapitre suivant.`, 'bad']);
+      out.push(['🌑', `Âge sombre : −${h} 💬 de bouche-à-oreille. Un pacte t’attend dans le Livre pour le chapitre suivant.`, 'bad']);
       if (typeof headless === 'function' && headless()) bookPact(c.choices[0]);
       else B.pending = Object.assign(B.pending || {}, { pact: c.n });
     }
@@ -258,7 +258,7 @@ UNE_RULES.push([9, /Fin du chapitre|Relique d’ère|Âge sombre|Le Livre s’ou
 WIKI.hautsfaits = { cat: 'ames', t: 'Le Livre du Maître', x: () => `<p>Chaque moment marquant de ta partie devient un <b>sticker</b> collé dans le Livre du Maître (📖, à gauche) : un palier, un boss vaincu, une expédition sans un K.O., une espèce rare, une fête, un coup déjoué… Les anciens hauts faits en font partie. Ils n’ont plus de pouvoir par eux-mêmes, mais certaines rencontres finissent autrement quand tu les possèdes (« 📖 » dans le texte).</p>
   <p><b>Les « premiers du Val »</b> se disputent avec les rivaux : si l’un d’eux te devance, son sticker va dans sa marge, et le tien ne vaut plus qu’1 point.</p>
   <p><b>Chaque ère est un chapitre</b> de 8 à 14 nuits, avec son nom. Les quatre donjons rivaux remplissent aussi le leur. À la fin :</p>
-  <ul><li>${AGES.or.ico} <b>Âge d’or</b> si tu finis devant tous : une <b>relique d’ère</b> unique, avec son pouvoir (${RELICS_ERA.slice(0, 4).map(r => r.name).join(', ')}…).</li><li>${AGES.sombre.ico} <b>Âge sombre</b> si tu finis derrière tous : −10 % de notoriété, et un <b>pacte</b> à choisir parmi trois : un vrai coup de pouce pendant tout le chapitre suivant, contre une perte tout de suite (${PACTS.map(p => p.name).join(', ')}).</li><li>${AGES.heroique.ico} <b>Âge héroïque</b> : un âge d’or juste après un âge sombre, deux reliques.</li><li>Sinon, un âge ordinaire.</li></ul>
+  <ul><li>${AGES.or.ico} <b>Âge d’or</b> si tu finis devant tous : une <b>relique d’ère</b> unique, avec son pouvoir (${RELICS_ERA.slice(0, 4).map(r => r.name).join(', ')}…).</li><li>${AGES.sombre.ico} <b>Âge sombre</b> si tu finis derrière tous : −10 % du bouche-à-oreille, et un <b>pacte</b> à choisir parmi trois : un vrai coup de pouce pendant tout le chapitre suivant, contre une perte tout de suite (${PACTS.map(p => p.name).join(', ')}).</li><li>${AGES.heroique.ico} <b>Âge héroïque</b> : un âge d’or juste après un âge sombre, deux reliques.</li><li>Sinon, un âge ordinaire.</li></ul>
   <p>Le titre de Grand Maître du Val reste une course à part, plus longue : voir {c:victoires}.</p>` };
 WIKI.livre = WIKI.hautsfaits;
 { const t = TIPS.find(x => x.id === 'haut1'); if (t) { t.t = 'Ton premier sticker !'; t.x = 'Les moments marquants se collent dans le Livre du Maître (📖, à gauche). Chaque ère en est un chapitre : finis-le devant les rivaux pour gagner une relique d’ère.'; t.wiki = 'livre'; } }

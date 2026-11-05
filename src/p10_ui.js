@@ -7,9 +7,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 const UI = { tab: 'room', hand: null, busy: false, phase: 'roder', prev: {}, tracker: true };
 const PHASES = [['roder', 'Rôder'], ['calamite', 'Calamité'], ['raid', 'Raid'], ['contrecoup', 'Contrecoup'], ['aube', 'Aube']];
-const STAT_LABELS = { gold: ['💰', 'or / nuit'], mat: ['🪵', 'matériaux / nuit'], hype: ['🔥', 'notoriété / nuit'], food: ['🍲', 'repas'], beds: ['🛏️', 'lits'],
+const STAT_LABELS = { gold: ['💰', 'or / nuit'], mat: ['🪵', 'bois / nuit'], hype: ['💬', 'bouche-à-oreille / nuit'], food: ['🍲', 'repas'], beds: ['🛏️', 'lits'],
   amb: ['🕯️', 'ambiance'], cal: ['🌿', 'calamité en moins'], guard: ['🛡️', 'garde (×2,5 dégâts au premier héros qui entre)'], harass: ['🪨', 'harcèlement (×2,5 PV de cailloux sur la bande à son arrivée)'], dice: ['🎲', 'dé de raid'], cells: ['⛓️', 'places de prison'],
-  sight: ['🔭', 'cases de carte en vue'], glow: ['✨', 'rayonnement'] };
+  sight: ['🔭', 'cases de carte en vue'], glow: ['🔥', 'notoriété'] };
 const statTags = o => Object.keys(STAT_LABELS).filter(k => o[k]).map(k => `<span class="tag2">${STAT_LABELS[k][0]} ${o[k] > 0 ? '+' : ''}${o[k]} ${STAT_LABELS[k][1]}</span>`).join('');
 const hearts = m => `<span class="hearts" aria-label="Humeur ${m} sur 5">${'❤️'.repeat(m)}<span class="off">${'🤍'.repeat(5 - m)}</span></span>`;
 const moodWord = m => m >= 4 ? 'Ravi·e (compétence ×2)' : m >= 2 ? 'Content·e' : m === 1 ? 'Boudeur·se (compétence éteinte)' : 'Furieux·se (compétence éteinte)';
@@ -23,14 +23,17 @@ function clockSVG(n, f, col, size = 38) {
 }
 
 /* ---------- barre du haut ---------- */
+// le palier suivant n'attend plus que de l'Ambre : le compteur s'allume, une pastille mène aux expéditions
+const amberShort = () => { const st = tierStatus(); return !!(st && !st.ok && st.rows.every(r => r.ok || r.amber)); };
 function renderHUD() {
   $('#dname').textContent = S.name; $('#dtitle').textContent = castleTitle();
   const food = foodCap(), eat = eaters(), bd = beds(), n = S.creatures.length;
   const pr = payroll(), np = nightsToPay(), wd = wageDue(), debt = payDebt();
-  const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures, un peu chaque nuit. Gages à l’aube : ${wd} 💰${debt ? ` (dont ${debt} d’ardoise)` : ''} ; ${pr} 💰 pour ${PAY_EVERY} nuits. Jour de paie (les comptes de la semaine) ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`}.`, S.gold < wd], ['mat', 'Matériaux', S.mat, 'Matériaux (le bois) : bâtir les pièces et les couloirs. Quand il s’entasse : les Merveilles, le mécénat du Val et les préparatifs du concours (fiche du Cœur), ou le vendre aux caravanes qui passent.'],
-    ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus les héros qui viennent sont forts, et plus la carte se dévoile.'],
+  const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures, un peu chaque nuit. Gages à l’aube : ${wd} 💰${debt ? ` (dont ${debt} d’ardoise)` : ''} ; ${pr} 💰 pour ${PAY_EVERY} nuits. Jour de paie (les comptes de la semaine) ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`}.`, S.gold < wd], ['mat', 'Bois', S.mat, 'bâtir les pièces et les couloirs. Quand il s’entasse : les Merveilles, le mécénat du Val et les préparatifs du concours (fiche du Cœur), ou le vendre aux caravanes qui passent.'],
+    ['amber', 'Ambre', S.amber || 0, 'la ressource rare : on ne la trouve qu’en expédition aux cartes (bouton Raids). Elle paie ce qui est grand : paliers, étages, remparts, Coin aménagé, grands chantiers, Merveilles et mécénat.', amberShort()],
+    ['hype', 'Notoriété', radiance(), `l’éclat de ton château (${eclatPts()} : artefacts, trésors, créatures rares, légendes, étages…) et le bouche-à-oreille (+${wordPts()} : 💬 ${S.hype}, ${NOTO.word} pour un point, ${NOTO.wordCap} au plus). Elle débloque les paliers, plaît aux espèces, fait monter la Menace et attire des héros plus coriaces, venus de plus loin. Touche pour le détail.`],
     ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
-    (() => { const fc = typeof fameCap === 'function' ? fameCap() : bd, cap = Math.min(bd, fc); return ['beds', fc < bd ? 'Renommée' : 'Lits', `${n}/${cap}`, `Créatures / places. Une nouvelle créature ne s’installe que s’il reste un lit libre (${bd} lits) et si ton château est assez renommé (${fc} créatures au plus). Touche pour voir comment grandir.`, n >= cap]; })(), ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
+    (() => { const fc = typeof fameCap === 'function' ? fameCap() : bd, cap = Math.min(bd, fc); return ['beds', fc < bd ? 'Accueil' : 'Lits', `${n}/${cap}`, `Créatures / places. Une nouvelle créature ne s’installe que s’il reste un lit libre (${bd} lits) et une place d’accueil (${fc} : tes hauts faits en ajoutent). Touche pour voir comment grandir.`, n >= cap]; })(), ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
   const box = $('#res');
   if (box.children.length !== res.length) { box.innerHTML = ''; res.forEach(([k]) => { const c = el('div', 'res'); c.dataset.k = k; box.appendChild(c); }); }
   res.forEach(([k, label, val, tip, warn]) => {
@@ -66,7 +69,7 @@ function renderSheet() {
       const cost = costOf(kind, t), free = kind !== 'room' && S.free[t] > 0;
       const b = el('button', 'card' + (av && av.lock ? ' locked' : '') + (UI.hand && UI.hand.kind === kind && UI.hand.t === t ? ' sel' : ''));
       b.type = 'button'; b.dataset.kind = kind; b.dataset.t = t;
-      b.innerHTML = `${free ? `<span class="free">×${S.free[t]}</span>` : ''}${av && av.lock ? `<span class="lock">🔒 ${esc(av.reason)}</span>` : ''}<span class="pv">${imgThumb(kind, t)}</span><span class="nm">${esc(itemName(t))}</span><span class="cost ${canAfford(cost) ? '' : 'no'}">${costText(cost)}</span>`;
+      b.innerHTML = `${free ? `<span class="free">×${S.free[t]}</span>` : ''}${av && av.lock ? `<span class="lock">🔒 ${esc(av.reason)}</span>` : ''}<span class="pv">${imgThumb(kind, t)}</span><span class="nm">${esc(itemName(t))}</span><span class="cost">${costHTML(cost)}</span>`;
       b.setAttribute('aria-label', `${itemName(t)}, ${costText(cost)}${av && av.lock ? ', nécessite ' + av.reason : ''}`);
       sh.appendChild(b);
     }
@@ -79,32 +82,19 @@ function tipHTML(kind, t) {
   if (kind === 'room') {
     const r = ROOMS[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].from === t || (r.attracts || []).includes(s)), ups = (r.furn || []).filter(f => FURN[f] && FURN[f].size);
     html = `<b>${esc(r.name)}</b> <span class="hint">${r.size[0]}×${r.size[1]}${r.clock ? ` · chantier de ${r.clock} segments` : ' · posée tout de suite'}</span><p>${esc(r.desc || '')}</p>${statTags(r) ? `<div>${statTags(r)}</div>` : ''}`;
-    if (fans.length) li.push(`🐾 Attire : ${fans.map(spn).join(', ')} (une fois meublée).`);
     if (r.preset) li.push(`📦 Livrée meublée : ${r.preset.map(f => FURN[f] ? FURN[f].name : f).join(', ')}.`);
     if (r.syn) { const k = Object.keys(r.syn).find(x => x !== 'adj'); li.push(`🤝 Si elle touche ${ROOMS[r.syn.adj].name} : ${STAT_LABELS[k] ? `${STAT_LABELS[k][0]} +${r.syn[k]} ${STAT_LABELS[k][1]}` : '+' + r.syn[k] + ' ' + k}.`); }
     if (typeof ROOM_CLASH !== 'undefined') { const cl = ROOM_CLASH.filter(([x, y]) => x === t || y === t); if (cl.length) li.push(`🚫 Jamais au même étage que : ${cl.map(([x, y, why]) => `${ROOMS[x === t ? y : x].name} (${why})`).join(', ')}.`); }
-    if (ups.length) li.push(`🧩 Collée à une autre ${r.name} : grande salle, +1 Ambiance et stickers améliorés (${ups.map(f => FURN[f].name).join(', ')}).`);
-    if (t !== 'coeur' && !isHall({ t }) && !r.out && !r.stairs) li.push('⚔️ En invasion : si elle est sur le parcours et qu’il reste des défenseurs (rangés de la plus faible à la plus forte, pièce après pièce), un combat aux cartes (ses meubles donnent leurs cartes) ; sinon, une rencontre, puis la bande pille.');
     if (r.edge) li.push('📐 Doit toucher les remparts.'); if (r.far) li.push(`📐 À ${r.far} pas du porche au moins.`); if (r.unique) li.push('⭐ Unique.');
-    if (r.furn && !r.preset) li.push(`🪑 Meubles : ${r.furn.filter(f => FURN[f] && !FURN[f].size).map(f => FURN[f].name).join(', ')}.`);
-    if (!isHall({ t })) { const n = r.size[0] * r.size[1]; li.push(`📦 Place : ${Math.ceil(n / 2)} sticker${n > 2 ? 's' : ''} au plus (un pour deux cases ; une grande salle additionne ses pièces)${r.stairs ? '' : `, et jusqu’à ${typeof SHELF_TUNE !== 'undefined' ? SHELF_TUNE.max : 2} de plus avec des étagères (dans sa fiche)`}.`); }
   } else if (kind === 'def') {
     const f = DEFS[t];
     html = `<b>${esc(f.name)}</b><span class="hint">${f.kind}${f.str ? ` · force ${f.str} : ${Math.round(f.str * (typeof INV_TUNE !== 'undefined' ? INV_TUNE.trapK : 2.5))} dégâts` : ''}</span><p>${esc(f.desc)}</p>`;
-    if (f.kind === 'piège') li.push(`🎯 Blesse un héros au hasard (sa force × ${String(typeof INV_TUNE !== 'undefined' ? INV_TUNE.trapK : 2.5).replace('.', ',')} en dégâts). La voleuse, ou le héros némésis, désamorce le premier piège.`);
-    if (f.kind === 'verrou') li.push('🚪 Le barbare l’enfonce : moitié moins de dégâts pour lui.'); if (f.post) li.push('🛡️ La pièce voisine a une place de défenseur de plus quand une bande l’attaque.');
-    if (f.lost) li.push(`🌀 ${Math.round(f.lost * 60)} % de chances que la bande renonce et rentre.`);
+    if (f.post) li.push('🛡️ La pièce voisine a une place de défenseur de plus quand une bande l’attaque.');
+    if (f.lag) li.push('🗿 Un héros reste à la traîne : il manque la pièce suivante.'); if (f.bait) li.push('💰 Toute la bande perd son premier tour au combat suivant.'); if (f.spring) li.push('🌊 Chaque héros de la bande prend les dégâts.');
     if (f.sticky) li.push('🍌 La victime perd son premier tour au combat suivant.'); if (f.alarm) li.push('🔔 Où qu’elle soit : +1 énergie au premier tour du combat du Cœur.'); if (f.block) li.push('🧱 La bande perd du temps à l’enfoncer : elle pille moitié moins d’or dans la pièce voisine.');
-    li.push(f.post ? '📍 Se pose dans un couloir, contre une pièce.' : `📍 Se pose dans un couloir, contre une pièce : ${f.str || f.lost ? 'il frappe la bande quand elle y entre (une fois par invasion), et ' : ''}donne sa carte aux combats de cette pièce.`);
-    if (typeof CASTLE_CARDS !== 'undefined') { const k = Object.keys(CASTLE_CARDS).find(x => CASTLE_CARDS[x].from.includes(t)); if (k) li.push(`🃏 En expédition, une carte pour le sac : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name} (${cardText({ src: 'castle', key: k })})`); }
   } else {
     const f = FURN[t], fans = SPECIES_ORDER.filter(s => SPECIES[s].likes === t).map(spn);
     html = `<b>${esc(f.name)}</b><span class="hint">${f.room !== 'any' ? `pour : ${esc(ROOMS[f.room].name)}${f.size ? ` · sticker amélioré : ${f.size >= 3 ? 'salle immense (3 pièces collées)' : 'grande salle (2 pièces collées)'}` : ''}` : f.out ? 'déco des Jardins' : f.artefact ? 'trésor, partout' : 'déco, partout'}</span>${f.desc ? `<p>${esc(f.desc)}</p>` : ''}<div>${statTags(f)}</div>`;
-    if (fans.length) li.push(`💛 Adoré par : ${fans.join(', ')} (humeur +1).`);
-    if (t === 'toile') li.push('🕸️ Deux toiles attirent une Araignée.');
-    if (typeof ACTS !== 'undefined') { const acts = [...new Set(Object.values(ACTS).filter(A => A.items && A.items.includes(t)).map(A => (A.verbs && A.verbs[t]) || A.verb))]; if (acts.length) li.push(`🧸 Les créatures y viennent : ${acts.join(', ')}.`); }
-    // sa carte (ou ses cartes) au combat : le sac des expéditions, et les combats d'invasion dans sa pièce ; un meuble de qualité la donne améliorée
-    if (typeof CASTLE_CARDS !== 'undefined') { const up = typeof fineSrc === 'function' && fineSrc(t); Object.keys(CASTLE_CARDS).filter(x => CASTLE_CARDS[x].from.includes(t)).forEach(k => li.push(`🃏 Sa carte au combat (expéditions, invasions dans sa pièce) : ${CASTLE_CARDS[k].ico} ${CASTLE_CARDS[k].name}${up ? ' ✦' : ''} (${cardText({ src: 'castle', key: k, up })}${up ? ' Meuble de qualité : la carte arrive déjà améliorée.' : ''})`)); }
     if (f.unique) li.push('⭐ Unique.');
   }
   if (li.length) html += `<ul class="tipl">${li.map(x => `<li>${iconize(esc(x))}</li>`).join('')}</ul>`;
@@ -145,13 +135,14 @@ function notifList() {
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
   if (eaters() > foodCap()) add('food', '🍽️', 'Des ventres vides', () => openGrimoire('lits_repas'), 5, 'bad');
   const st = tierStatus(); if (st && st.ok) add('tier', '⭐', `Palier ${S.tier + 1} disponible : touche le Cœur`, openHeart, 4);
-  if (typeof fameCap === 'function' && S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds()) add('fame', '🌟', `Ta renommée n’attire plus personne (${S.creatures.length}/${fameCap()})`, () => openFame(), 2);
+  else if (amberShort()) add('amber', '🟠', `Palier ${S.tier + 1} : il manque ${st.next.cost.a - (S.amber || 0)} 🟠 d’Ambre (expédition aux cartes)`, () => { UI.raidTab = 'expe'; openRaid(); }, 3);
+  if (typeof fameCap === 'function' && S.night > 1 && S.creatures.length >= fameCap() && fameCap() < beds()) add('fame', '🌟', `Plus une place d’accueil (${S.creatures.length}/${fameCap()})`, () => openFame(), 2);
   if (S.night > 1 && S.creatures.length >= beds()) add('beds', '🛏️', 'Plus un lit de libre', () => { const r = roomForFurn(t => FURN[t].beds); if (r) openRoom(r.id); else { openBuild('room'); toast('Toutes tes chambres sont pleines : bâtis un autre Dortoir, puis touche-le pour y coller des lits.'); } }, 2);
   // des meubles offerts (butin, cadeaux, meubles décollés) attendent dans la fiche de leur pièce
   { const fr = Object.keys(S.free || {}).filter(k => S.free[k] > 0 && FURN[k] && !FURN[k].artefact && FURN[k].room !== 'any' && !TREASURES.includes(k)), r = fr.length && roomForFurn(t => fr.includes(t));
     if (r) add('freefurn', '🎁', `${fr.length > 1 ? `${fr.length} meubles offerts` : `${itemName(fr[0])} offert·e`} : touche ${ROOMS[r.t].name}`, () => openRoom(r.id), 2); }
   const arts = TREASURES.filter(k => (S.free[k] || 0) > 0); if (arts.length) add('art', '🏺', `${arts.length} artefact${arts.length > 1 ? 's' : ''} à exposer`, () => openBuild('arte'), 3);
-  if (S.raid) add('raid', '🗺️', `Raid prévu : ${(RAIDS[S.raid.target] || {}).name || 'une cible lointaine'}`, () => openRaid(), 1);
+  if (S.raid) add('raid', S.raid.crawl ? '🃏' : '🗺️', `${S.raid.crawl || (typeof isCrawlTarget === 'function' && isCrawlTarget(S.raid.target)) ? 'Expédition prévue' : 'Raid prévu'} : ${(RAIDS[S.raid.target] || {}).name || 'une cible lointaine'}`, () => openRaid(), 1);
   if (typeof VAL !== 'undefined' && VAL.unread) add('mail', '📬', `${VAL.unread} nouvelle${VAL.unread > 1 ? 's' : ''} du Val`, () => { VAL.unread = 0; openVal('courrier'); }, 2);
   const g = GOALS.find(x => !S.goals[x.id]); if (g && (S.ndis || {}).goal !== 'g:' + g.id) add('goal', '✦', `Envie : ${g.text}`, openMissions, 0, 'goal');
   const guest = typeof COOP !== 'undefined' && COOP.role === 'guest';
@@ -301,19 +292,18 @@ function openRoom(id) {
   if (!r.built) html += `<div class="clockrow">${clockSVG(d.clock, r.prog, '#d9542f', 80)}<p>Chantier : ${r.prog}/${d.clock} segments. Chaque nuit, tes ouvriers en remplissent ${workPerNight()}, en commençant par le plus ancien chantier${r.boost ? `, plus ${r.boost} de renfort` : ''}. Tu pourras la meubler une fois terminée.</p></div>`;
   else if (!isHall(r)) html += `<h3>Effets</h3><div>${statTags(roomStats(r)) || '<span class="hint">Aucun effet pour l’instant : ajoute des meubles.</span>'}</div>`;
   if (d.syn) html += `<p class="hint">${neighborsTypes(r).has(d.syn.adj) ? '✅' : '➕'} Bonus si elle touche : ${ROOMS[d.syn.adj].name}.</p>`;
-  if (d.attracts) html += `<p class="hint">Attire ${d.attracts.map(s => SPECIES[s].name + (SPECIES[s].tier && S.tier < SPECIES[s].tier ? ` (Palier ${SPECIES[s].tier})` : '')).join(' et ')} une fois meublée${furnished(r) ? ' ✅' : ''}.</p>`;
   if (d.stairs) { const z2 = zOf(r) + (r.land ? -d.stairs : d.stairs); html += `<p>${r.land ? 'Ce palier ramène' : r.built ? 'Cet escalier mène' : 'Une fois terminé, cet escalier mènera'} vers <b>${esc(FLOOR_NAMES[z2])}</b>.</p>${r.built ? `<div class="btnrow"><button class="sbtn pri" type="button" id="mGoFloor">${z2 > zOf(r) ? '▲ Monter' : '▼ Descendre'} : ${esc(FLOOR_NAMES[z2])}</button></div>` : ''}`; }
   else if (!isHall(r) && r.t !== 'porche') {
     html += `<h3>Meubles (${items.length}/${cap})</h3><div class="flist">${items.map(f => `<div class="frow">${imgThumb('furn', f.t)}<span><b>${esc(FURN[f.t].name)}</b><br>${statTags(FURN[f.t])}</span>${f.fixed ? '<span class="hint">fixe</span>' : `<button class="sbtn" type="button" data-unstick="${f.id}">Décoller</button>`}</div>`).join('') || '<p class="hint">Aucun meuble.</p>'}</div>`;
     // ce qu'on peut y coller : chaque sticker avec ses effets, et grisé (avec la raison) s'il ne se pose pas
     const can = (d.furn || []).filter(t => FURN[t]), full = furnCount(r) >= cap;
     const why = t => { const f = FURN[t], av = withZ(zOf(r), () => availability('furn', t)); if (!r.built) return 'Chantier en cours'; if (full) return `Pièce pleine (${furnCount(r)}/${cap})`; if (f.tier && S.tier < f.tier) return `Palier ${f.tier}`; if (f.size && groupSize(r) < f.size) return f.size >= 3 ? 'Salle immense (3 pièces collées)' : 'Grande salle (2 pièces collées)'; if (av && av.lock) return av.reason; if (av && av.poor || !canAfford(costOf('furn', t))) return `Il te faut ${costText(costOf('furn', t))}`; return ''; };
-    if (can.length) html += `<h3>Ajouter${full ? ' <small class="hint">· pièce pleine</small>' : ''}</h3><div class="addlist">${can.map(t => { const no = why(t), f = FURN[t]; return `<div class="addrow${no ? ' off' : ''}">
-      <div class="arhead">${imgThumb('furn', t, 'mini')}<b>${esc(f.name)}</b>${S.free[t] > 0 ? `<span class="arfree">${gi('gift')} offert ×${S.free[t]}</span>` : `<span class="arcost${canAfford(costOf('furn', t)) ? '' : ' no'}">${costText(costOf('furn', t))}</span>`}</div>
+    if (can.length) html += `<h3>Ajouter${full ? ' <small class="hint">· pièce pleine</small>' : ''}</h3><div class="addlist">${can.map(t => { const no = why(t), f = FURN[t]; return `<div class="addrow${no && !whyPoor(no) ? ' off' : ''}">
+      <div class="arhead">${imgThumb('furn', t, 'mini')}<b>${esc(f.name)}</b>${S.free[t] > 0 ? `<span class="arfree">${gi('gift')} offert ×${S.free[t]}</span>` : `<span class="arcost">${costHTML(costOf('furn', t))}</span>`}</div>
       <div class="artags">${statTags(f) || ''}</div><p class="ardesc">${esc(f.desc || '')}</p>
-      ${no ? `<p class="arwhy">${gi('lock')} ${esc(no)}</p>` : ''}
+      ${no && !whyPoor(no) ? `<p class="arwhy">${gi('lock')} ${esc(no)}</p>` : ''}
       <details class="ardet"><summary>${gi('info')} Tous ses effets</summary><div class="ardetb">${tipHTML('furn', t)}</div></details>
-      <button class="sbtn ${no ? '' : 'pri'}" type="button" data-take="${t}" ${no ? 'disabled' : ''}>${no ? 'Indisponible' : `${gi('pin')} Coller ici`}</button></div>`; }).join('')}</div>`;
+      <button class="sbtn ${no ? '' : 'pri'}" type="button" data-take="${t}" ${no ? 'disabled' : ''}>${no && !whyPoor(no) ? 'Indisponible' : `${gi('pin')} Coller ici`}</button></div>`; }).join('')}</div>`;
   }
   if (r.t === 'coeur') { const def = typeof invHeartCrew === 'function' ? invHeartCrew() : homeCreatures().filter(c => !c.post || c.post === r.id); html += `<h3>Défenseurs du Cœur</h3><p>${def.length ? def.map(c => esc(c.name)).join(', ') : 'Personne !'} <span class="hint">(si une bande attaquait ce soir : les plus fortes de tes créatures reposées ; les autres défendent les pièces du parcours, de la plus faible à la plus forte)</span></p>`; }
   else if (!isHall(r)) { const posted = S.creatures.filter(c => c.post === r.id); html += `<h3>Postes</h3><p>${posted.length ? posted.map(c => esc(c.name)).join(', ') : '<span class="hint">Personne. Donne un poste ici depuis la fiche d’une créature : elle y vit et y travaille (humeur, métier). Le poste ne change rien à la défense : face à une bande, tes créatures se rangent d’elles-mêmes.</span>'}</p>`; }
@@ -376,7 +366,7 @@ function openCreature(id) {
       <div><h2>${esc(c.name)}</h2><p><span class="tag2">${sp.name}</span><span class="tag2">Niv. ${c.lvl}</span>${c.legend ? '<span class="tag2 gold">🗿 Légende</span>' : ''}${sp.tag ? `<span class="tag2">${TAGS[sp.tag]}</span>` : ''}${c.away ? '<span class="tag2">🧭 en mission</span>' : c.raid ? '<span class="tag2">🗺️ en raid</span>' : ''}</p><div>${hearts(c.mood)} <span class="hint">${moodWord(c.mood)}</span></div></div></div>
     <div class="bubble" id="mLine">« ${esc(line)} »</div>
     ${c.tempt ? `<div class="tempt"><p>👀 <b>${esc(c.name)} lorgne vers ${esc(c.tempt.name)}</b> : là-bas, les ${esc(sp.name.toLowerCase())}s sont mieux reçus (${Math.round(c.tempt.v)} contre ${repOf(c.sp)} ici). Tant que sa loyauté reste sous 40, il·elle peut partir à l’aube. Pour la retenir : comble son envie, ou réalise son rêve secret.</p>
-      <div class="btnrow">${PW('palier2') ? `<button class="sbtn" type="button" id="mRappel" ${pwReady(ACH_BY.palier2) ? '' : 'disabled'}>🔔 Cloche du rappel</button>` : ''}<button class="sbtn" type="button" id="mRenown">⭐ Renommée</button></div></div>` : ''}
+      <div class="btnrow">${PW('palier2') ? `<button class="sbtn" type="button" id="mRappel" ${pwReady(ACH_BY.palier2) ? '' : 'disabled'}>🔔 Cloche du rappel</button>` : ''}<button class="sbtn" type="button" id="mRenown">⭐ Réputation</button></div></div>` : ''}
     ${q ? questCard(c, q) : `<p class="hint" id="mEnvie">${c.legend ? '🗿 Son histoire est devenue légende. Il·elle repartira parfois à l’aventure.' : `Son histoire : chapitre ${c.story || 0}/3. ${(c.story || 0) >= 2 && !c.dream ? 'La suite (une aventure) viendra quand son rêve secret sera réalisé.' : 'Une nouvelle envie viendra bientôt.'}`}</p>`}
     ${typeof secretHTML === 'function' ? secretHTML(c) : ''}
     <dl class="kv">${typeof persHTML === 'function' ? persHTML(c) : ''}<dt>Compétence</dt><dd><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</dd>
@@ -384,8 +374,12 @@ function openCreature(id) {
       <dt>Salaire</dt><dd>${salaryOf(c) ? `${salaryOf(c)} 💰 pour ${PAY_EVERY} nuits, versés un peu chaque nuit${c.unpaid && S.night - c.unpaid < PAY_EVERY ? ' · <span class="no">pas payé·e à la dernière paie</span>' : c.paidAt ? ' · payé·e à la dernière paie' : ''}` : 'Aucun : les diablotins travaillent pour le Cœur'}</dd>
       <dt>Poste</dt><dd><select class="sel" id="mPost" ${out ? 'disabled' : ''} aria-label="Poste de ${esc(c.name)}">${opts}</select></dd>
       <dt>Expérience</dt><dd>${c.lvl < 5 ? `${bar((c.xp - LVL_XP[c.lvl]) / (LVL_XP[c.lvl + 1] - LVL_XP[c.lvl]) * 100, '#8fb8ff', 'XP')} <span class="num">${c.xp}/${LVL_XP[c.lvl + 1]} XP</span>` : '<b>Niveau maximal</b>'}${perks.length ? `<br><span class="hint">${perks.map(esc).join(' · ')}</span>` : ''}</dd>
-      <dt>Loyauté</dt><dd>${bar(c.loy, '#e9b949', 'Loyauté')} <b class="num">${c.loy}</b> <span class="hint">${loyWord(c.loy)}</span></dd>
-      <dt>Épanouissement</dt><dd>${bar(c.epa, '#7fbf5a', 'Épanouissement')} <b class="num">${c.epa}</b> <span class="hint">${epaWord(c.epa)} · vise ${ef.target}</span></dd></dl>
+      </dl>
+    <h3>Comment il·elle va</h3><p class="hint">Chaque jauge nourrit la suivante : l’ambiance du château, puis l’humeur du soir, l’épanouissement, et enfin la loyauté.</p>
+    <dl class="kv"><dt>Ambiance</dt><dd>🕯️ <b class="num">${ambiance()}</b> <span class="hint">celle du château, pour tout le monde</span><br><small class="hint">À quoi ça sert : si elle atteint le nombre de créatures (${S.creatures.length}), +1 à l’humeur visée de chacune ; sous la moitié, la Calamité monte.</small></dd>
+      <dt>Humeur</dt><dd>${hearts(c.mood)} <span class="hint">${moodWord(c.mood)} · vise ${mf.target}/5 cette nuit</span><br><small class="hint">À quoi ça sert : ravi·e, sa compétence compte double et ses coups portent mieux ; boudeur·se, sa compétence s’éteint.</small></dd>
+      <dt>Épanouissement</dt><dd>${bar(c.epa, '#7fbf5a', 'Épanouissement')} <b class="num">${c.epa}</b> <span class="hint">${epaWord(c.epa)} · vise ${ef.target}</span><br><small class="hint">À quoi ça sert : son bonheur profond, nuit après nuit ; la loyauté le suit.</small></dd>
+      <dt>Loyauté</dt><dd>${bar(c.loy, '#e9b949', 'Loyauté')} <b class="num">${c.loy}</b> <span class="hint">${loyWord(c.loy)}</span><br><small class="hint">À quoi ça sert : sous 40, il·elle peut partir pour un château qui reçoit mieux son espèce ; fidèle (70), sa carte d’expédition est améliorée.</small></dd></dl>
     <h3>Humeur visée cette nuit : ${mf.target}/5</h3><div>${mf.f.map(([t, v]) => `<span class="tag2">${v > 0 ? '+' + v : v < 0 ? v : '·'} ${esc(t)}</span>`).join('')}</div>
     <details class="more"><summary>Ce qui l’épanouit (la loyauté suit l’épanouissement, nuit après nuit)</summary><div>${ef.f.map(([t, v]) => `<span class="tag2">${v > 0 ? '+' + v : v < 0 ? v : '·'} ${esc(t)}</span>`).join('')}</div></details>
     <div class="btnrow">
@@ -415,8 +409,8 @@ function openBestiary() {
   const list = [...S.creatures].sort((a, b) => SPECIES_ORDER.indexOf(a.sp) - SPECIES_ORDER.indexOf(b.sp)).map(c => { const sp = SPECIES[c.sp], post = c.post && S.rooms.find(r => r.id === c.post); return `<button class="crow" type="button" data-crit="${c.id}"><img class="th" alt="" src="${thumb('char', c.sp)}"><span class="who"><b>${esc(c.name)}${c.legend ? ' 🗿' : ''}</b><span>${sp.name} · niv. ${c.lvl || 1} · ${c.away ? '🧭 en mission' : c.raid ? '🗺️ en raid' : post ? '📍 ' + esc(ROOMS[post.t].name) : 'libre'}${c.tempt ? ' · 👀 tenté·e' : ''}</span></span><span class="loy" title="Loyauté ${c.loy}">${bar(c.loy, '#e9b949', 'Loyauté')}</span>${hearts(c.mood)}</button>`; }).join('');
   const album = SPECIES_ORDER.map(k => `<button class="s ${S.album[k] ? '' : 'no'}" type="button" data-album="${k}" title="${S.album[k] ? SPECIES[k].name : '???'}"><img class="th" alt="" src="${thumb('char', k)}"></button>`).join('');
   const wait = (S.waiting || []).length ? `<p class="hint">🚪 À la porte : ${S.waiting.map(w => esc(w.name) + ' (' + esc((SPECIES[w.sp] || { name: '?' }).name) + ')').join(', ')}. Ils entreront dès qu’un lit se libère.</p>` : '';
-  const m = openModal(`<h2>Bestiaire</h2><div class="btnrow"><button class="sbtn" type="button" id="bRenown">⭐ Renommée</button><button class="sbtn" type="button" id="bAch">🏆 Hauts faits</button></div><h3>Tes créatures (${S.creatures.length})</h3><div class="clist">${list || '<p class="hint">Personne pour l’instant.</p>'}</div>${wait}<h3>Album ${Object.keys(S.album).length}/${SPECIES_ORDER.length}</h3><div class="album">${album}</div>`, { wide: true, label: 'Bestiaire' });
-  m.addEventListener('click', e => { if (e.target.closest('#bRenown')) { openRenown(); return; } if (e.target.closest('#bAch')) { openAch(); return; } const c = e.target.closest('[data-crit]'); if (c) { openCreature(c.dataset.crit); return; } const a = e.target.closest('[data-album]'); if (a) openSpecies(a.dataset.album); });
+  const m = openModal(`<h2>🐾 Album des espèces</h2><div class="btnrow"><button class="sbtn" type="button" id="bRenown">⭐ Réputation</button><button class="sbtn" type="button" id="bAch">🏆 Hauts faits</button></div><h3>Tes créatures (${S.creatures.length})</h3><div class="clist">${list || '<p class="hint">Personne pour l’instant.</p>'}</div>${wait}<h3>Album ${Object.keys(S.album).length}/${SPECIES_ORDER.length}</h3><div class="album">${album}</div>`, { wide: true, label: 'Bestiaire' });
+  m.addEventListener('click', e => { if (e.target.closest('#bRenown')) { openRenown(); return; } if (e.target.closest('#bAch')) { if (typeof openFame === 'function') openFame(); else openAch(); return; } const c = e.target.closest('[data-crit]'); if (c) { openCreature(c.dataset.crit); return; } const a = e.target.closest('[data-album]'); if (a) openSpecies(a.dataset.album); });
 }
 function openSpecies(k) {
   const sp = SPECIES[k], has = S.album[k], hint = sp.from ? (sp.from === 'coeur' ? 'le Cœur du château' : ROOMS[sp.from].name + ' meublée') : 'deux stickers Toile';

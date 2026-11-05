@@ -5,7 +5,7 @@
    automatique), ou défendre lui-même, aux cartes. Chaque héros
    joue les cartes de sa classe (l'ordinateur les tient) ; tes
    défenseurs ont les leurs, plus les meubles du château, et
-   les jetons du Cœur qui restent deviennent des cartes.
+   l'énergie du Cœur qui reste devient des cartes.
    La bande se débande quand la moitié est à terre, comme à
    l'automatique ; le résultat repart dans la nuit.
    ========================================================= */
@@ -26,10 +26,10 @@ const HERO_CARDS = {
   h_hache:     { name: 'Coup de hache', ico: '🪓', cost: 1, tgt: 'enemy', dmg: 4, atk: 1, el: 'tranchant' },
   h_rage:      { name: 'Rage du barbare', ico: '😤', cost: 1, tgt: 'self', buff: 2 },
   h_tourbillon:{ name: 'Tourbillon', ico: '🌀', cost: 2, tgt: 'allfoes', dmg: 2, atk: 1, el: 'tranchant' },
-  // les jetons du Cœur, devenus cartes
-  p_eboul:     { name: 'Éboulement', ico: '🪨', cost: 0, tgt: 'enemy', dmg: 8, exhaust: 1, el: 'contondant', note: 'un jeton du Cœur' },
-  p_brume:     { name: 'Brume du Cœur', ico: '🌫️', cost: 1, tgt: 'allfoes', stun: 1, exhaust: 1, note: 'un jeton du Cœur' },
-  p_elixir:    { name: 'Élixir du Cœur', ico: '🧪', cost: 1, tgt: 'allies', heal: 4, buff: 1, exhaust: 1, note: 'un jeton du Cœur' },
+  // l'énergie du Cœur, devenue cartes
+  p_eboul:     { name: 'Éboulement', ico: '🪨', cost: 0, tgt: 'enemy', dmg: 8, exhaust: 1, el: 'contondant', note: 'l’énergie du Cœur' },
+  p_brume:     { name: 'Brume du Cœur', ico: '🌫️', cost: 1, tgt: 'allfoes', stun: 1, exhaust: 1, note: 'l’énergie du Cœur' },
+  p_elixir:    { name: 'Élixir du Cœur', ico: '🧪', cost: 1, tgt: 'allies', heal: 4, buff: 1, exhaust: 1, note: 'l’énergie du Cœur' },
 };
 Object.assign(CARD_BASE, HERO_CARDS);
 if (typeof BASE !== 'undefined' && BASE.CARD_BASE) Object.assign(BASE.CARD_BASE, structuredClone(HERO_CARDS));   // l'Atelier les règle comme les autres cartes
@@ -74,7 +74,7 @@ function defenseCards(ask, R, plan) {
     if ((S.opts || {}).cardDef === 'auto' || !ask.defs || !ask.defs.length || !ask.party || !ask.party.length) { resolve(null); return; }
     const m = openModal(`<h2>🏰 ${esc(ask.label || 'Le Cœur')} : la bande arrive !</h2>
       <p><b>${ask.party.length} aventurier${ask.party.length > 1 ? 's' : ''}</b> (${ask.party.map(h => esc(h.name)).join(', ')}) contre <b>${ask.defs.length} défenseur${ask.defs.length > 1 ? 's' : ''}</b> (${ask.defs.map(d => esc(d.name)).join(', ')}).</p>
-      <p class="hint">Aux cartes, c’est toi qui défends : chaque héros joue les cartes de sa classe, la bande fuit quand ${ask.need > 1 ? `${ask.need} des siens sont` : 'l’un des siens est'} à terre${R.charges ? `, et ${Math.min(3, R.charges) > 1 ? `${Math.min(3, R.charges)} de tes jetons du Cœur deviennent des cartes` : 'un de tes jetons du Cœur devient une carte'}` : ''}.</p>
+      <p class="hint">Aux cartes, c’est toi qui défends : chaque héros joue les cartes de sa classe, la bande fuit quand ${ask.need > 1 ? `${ask.need} des siens sont` : 'l’un des siens est'} à terre${R.charges ? `, et l’énergie du Cœur te donne ${Math.min(3, R.charges) > 1 ? `${Math.min(3, R.charges)} cartes` : 'une carte'} en plus` : ''}.</p>
       <label class="tutochk"><input type="checkbox" id="defAuto"> Ne plus demander : toujours laisser faire (le menu ☰ le remet)</label>
       <div class="btnrow"><button type="button" class="sbtn pri" id="defCards">🃏 Défendre aux cartes</button><button type="button" class="sbtn" id="defAutoBtn">⚡ Laisser faire</button></div>`, { label: 'Défense du Cœur', noClose: true });
     const go = cards => { if (m.querySelector('#defAuto').checked) { S.opts.cardDef = 'auto'; save(); } closeModal(true); if (!cards) { resolve(null); return; } play(); };

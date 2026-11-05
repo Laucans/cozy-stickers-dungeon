@@ -202,7 +202,7 @@ const builtCount = t => S.rooms.filter(r => r.t === t && r.built).length;
 const homeRooms = t => S.rooms.filter(r => r.t === t && r.built && furnished(r)).length;
 // pièces meublées qui attirent une espèce (sa pièce d'origine, plus celles qui la listent dans « attracts »)
 const nestsOf = sp => { const d = SPECIES[sp] || {}; return S.rooms.filter(r => r.built && furnished(r) && (r.t === d.from || (ROOMS[r.t].attracts || []).includes(sp))).length; };
-// une créature rare ne vient que si on l'a rencontrée sur la carte et que le château rayonne assez
+// une créature rare ne vient que si on l'a rencontrée sur la carte et que le château ait assez de notoriété
 const rareOK = sp => { const d = SPECIES[sp] || {}; if (!d.rare) return true; return (!d.site || (typeof worldMet === 'function' && worldMet(sp))) && (typeof radiance !== 'function' || radiance() >= (d.glow || 0)); };
 const mainRoomsBuilt = () => S.rooms.filter(r => r.built && !isHall(r) && r.t !== 'coeur').length;
 const homeCreatures = () => S.creatures.filter(c => !c.raid);
@@ -256,9 +256,13 @@ function costOf(kind, t) {
   if ((S.free[t] || 0) > 0) return {};
   return { ...(kind === 'def' ? DEFS[t].cost : FURN[t].cost) };
 }
-const canAfford = c => S.gold >= (c.g || 0) && S.mat >= (c.s || 0);
-function pay(c) { S.gold -= c.g || 0; S.mat -= c.s || 0; }
-function costText(c) { const p = []; if (c.g) p.push(c.g + ' 💰'); if (c.s) p.push(c.s + ' 🪵'); return p.length ? p.join(' ') : 'gratuit'; }
+// un coût : g (or), s (bois), a (Ambre 🟠, la ressource rare des expéditions : voir AMBER_COST, p3)
+// un prix ressource par ressource : seule celle qui manque passe en rouge (la carte n’est pas grisée pour autant)
+function costHTML(c) { const p = [], k = (n, have, ico) => p.push(`<span class="${have < n ? 'cno' : ''}">${n} ${ico}</span>`); if (c.g) k(c.g, S.gold, '💰'); if (c.s) k(c.s, S.mat, '🪵'); if (c.a) k(c.a, S.amber || 0, '🟠'); return p.length ? p.join(' ') : 'gratuit'; }
+const whyPoor = w => /^Il te faut /.test(w || '');
+const canAfford = c => S.gold >= (c.g || 0) && S.mat >= (c.s || 0) && (S.amber || 0) >= (c.a || 0);
+function pay(c) { S.gold -= c.g || 0; S.mat -= c.s || 0; if (c.a) { S.amber = (S.amber || 0) - c.a; S.stats.amberOut = (S.stats.amberOut || 0) + c.a; } }
+function costText(c) { const p = []; if (c.g) p.push(c.g + ' 💰'); if (c.s) p.push(c.s + ' 🪵'); if (c.a) p.push(c.a + ' 🟠'); return p.length ? p.join(' ') : 'gratuit'; }
 // dehors, la construction ne montre que les stickers d'extérieur ; dedans, ceux de l'intérieur
 const outdoorItem = (kind, t) => kind === 'room' ? !!ROOMS[t].out : kind === 'def' ? false : !!(FURN[t].out || (FURN[t].room !== 'any' && ROOMS[FURN[t].room] && ROOMS[FURN[t].room].out));
 function availability(kind, t) {
@@ -406,7 +410,7 @@ function removeCheck(r) {
 // les meubles retournent dans la planche ; la pièce rend la moitié de son prix (tout si chantier)
 function removeRoom(r) {
   const c = costOf('room', r.t), k = r.built ? .5 : 1;
-  S.gold += Math.floor((c.g || 0) * k) + (r.built ? 0 : 2 * (r.boost || 0)); S.mat += Math.floor((c.s || 0) * k);
+  S.gold += Math.floor((c.g || 0) * k) + (r.built ? 0 : 2 * (r.boost || 0)); S.mat += Math.floor((c.s || 0) * k); if (c.a) S.amber = (S.amber || 0) + Math.floor(c.a * k);
   S.furn = S.furn.filter(f => { if (!inRoomZ(r, f)) return true; if (!f.fixed) S.free[f.t] = (S.free[f.t] || 0) + 1; return false; });
   S.defs = S.defs.filter(d => { if (!inRoomZ(r, d)) return true; S.free[d.t] = (S.free[d.t] || 0) + 1; return false; });
   S.creatures.forEach(c => { if (c.post === r.id) c.post = null; });
@@ -423,10 +427,12 @@ function tierStatus() {
   const next = TIERS[S.tier + 1]; if (!next) return null;
   const n = next.need, rows = [];
   rows.push({ ok: mainRoomsBuilt() >= n.rooms, text: `${n.rooms} pièces terminées (${mainRoomsBuilt()})` });
-  rows.push({ ok: S.hype >= n.hype, text: `${n.hype} 🔥 de notoriété (${S.hype})` });
+  rows.push({ ok: radiance() >= n.hype, text: `${n.hype} 🔥 de notoriété (${radiance()})` });
   if (n.species) rows.push({ ok: Object.keys(S.album).length >= n.species, text: `${n.species} espèces dans l’album (${Object.keys(S.album).length})` });
   if (n.trone) rows.push({ ok: S.rooms.some(r => r.t === 'trone' && r.built) && hasItem('trone'), text: 'Une Salle du trône terminée avec son Trône' });
-  rows.push({ ok: canAfford(next.cost), text: `Payer ${costText(next.cost)}` });
+  const { a: amb, ...gs } = next.cost;   // l'ambre a sa ligne : elle se rapporte des expéditions aux cartes
+  rows.push({ ok: canAfford(gs), pay: true, text: `Payer ${costText(gs)}` });
+  if (amb) rows.push({ ok: (S.amber || 0) >= amb, amber: true, text: `${amb} 🟠 d’Ambre, rapportée des expéditions aux cartes (${S.amber || 0})` });
   return { next, rows, ok: rows.every(r => r.ok) };
 }
 function checkGoals() {
@@ -482,7 +488,7 @@ function applyRaid(roll) {
     const m = roll.res === 'crit' ? 1.5 : 1, g = Math.ceil((tg.reward.g || 0) * m) + (PW('pillard') ? 2 : 0), s = Math.ceil((tg.reward.s || 0) * m);
     S.gold += g; S.mat += s; S.hype += tg.hype; S.menace += tg.menace; S.stats.raidsWon++; if (roll.res === 'crit') S.stats.crits++;
     team.forEach(c => { c.raidsWon = (c.raidsWon || 0) + 1; addLoy(c, 3); gainXP(c, 1, lines); });
-    lines.push(['🎒', `Butin : ${costText({ g, s })}, +${tg.hype} 🔥 Notoriété, +${tg.menace} Menace.`, 'good']);
+    lines.push(['🎒', `Butin : ${costText({ g, s })}, +${tg.hype} 💬 de bouche-à-oreille, +${tg.menace} Menace.`, 'good']);
     if (tg.bonus && roll.res !== 'partial') { S.free[tg.bonus] = (S.free[tg.bonus] || 0) + 1; lines.push(['🎁', `Trophée : un sticker ${FURN[tg.bonus].name} gratuit !`, 'good']); }
     if (roll.res === 'crit') { const k = pick(['cristal','tableau','armure','citrouille']); S.free[k] = (S.free[k] || 0) + 1; lines.push(['✨', `Critique ! Butin ×1,5 et un sticker ${FURN[k].name} en prime.`, 'good']); }
     if (typeof worldAfterRaid === 'function') worldAfterRaid(S.raid.target, roll, lines);
@@ -498,9 +504,11 @@ function applyRaid(roll) {
 }
 
 /* ---------- invasion ---------- */
-// la bande d'aventuriers dépend du rayonnement : il attire des héros de plus en plus loin (village → ville → cité)
+// la bande d'aventuriers dépend de la notoriété : elle attire des héros de plus en plus loin (village → ville → cité)
 const HERO_RANK = { 1: { m: 1, label: 'Paysans et apprentis', pool: ['paysan', 'paysan', 'voleuse', 'elfe'] }, 2: { m: 1.5, label: 'Aventuriers aguerris', pool: ['paladin', 'mage', 'elfe', 'voleuse', 'barbare'] },
   3: { m: 2.2, label: 'Héros de légende', pool: ['paladin', 'mage', 'barbare', 'elfe', 'voleuse'] } };
+const BAND_FROM = { 1: 'd’un village', 2: 'd’une ville', 3: 'de la cité' };   // d'où vient une bande (son rang, dans le code)
+const bandFrom = r => BAND_FROM[r] || BAND_FROM[1];
 function partyPreview() {
   const o = typeof heroOrigin === 'function' ? heroOrigin() : null, rank = o ? o.rank : 1, glow = typeof radiance === 'function' ? radiance() : 0;
   const size = Math.min(5, 1 + rank + (S.tier >= 1 ? 1 : 0) + (glow >= 80 ? 1 : 0));
@@ -537,11 +545,11 @@ function applyInvasion(plan, outcome) {
   if (outcome !== 'robbed') {
     S.stats.repelled++; S.hype += 1;
     if (outcome === 'repelled') {
-      const purse = n * (plan.rank || 1); S.gold += purse; lines.push(['🛡️', `Les aventuriers sont tous à terre, et leurs bourses aussi : +${purse} 💰, +1 🔥.`, 'good']);
+      const purse = n * (plan.rank || 1); S.gold += purse; lines.push(['🛡️', `Les aventuriers sont tous à terre, et leurs bourses aussi : +${purse} 💰, +1 💬.`, 'good']);
       const room = Math.max(0, sumRooms('cells') - S.prisoners), caught = (plan.res ? plan.res.fallen.map(j => plan.party[j]) : room ? [pick(plan.party)] : []).slice(0, room);
       if (caught.length) { S.prisoners += caught.length; lines.push(['⛓️', `${caught.map(h => h.name).join(', ')} ${caught.length > 1 ? 'finissent' : 'finit'} aux Oubliettes. Rançon à l’aube !`, 'good']); }
       S.creatures.forEach(c => { if (!c.raid) { c.mood = clamp(c.mood + 1, 0, 5); addLoy(c, 2); gainXP(c, 1, lines); } });
-    } else lines.push(['🌀', 'Les aventuriers abandonnent et rentrent tout penauds. +1 🔥.', 'good']);
+    } else lines.push(['🌀', 'Les aventuriers abandonnent et rentrent tout penauds. +1 💬.', 'good']);
   } else {
     const steal = Math.min(S.gold, 5 + 3 * S.tier + Math.round(S.gold * .3));   // ils vident un bon tiers du trésor
     S.gold -= steal; S.calamity += 2; S.creatures.forEach(c => { c.mood = clamp(c.mood - 1, 0, 5); addLoy(c, -3); });
@@ -604,7 +612,7 @@ function dawn(report) {
   const ransom = S.prisoners * 4;
   S.gold += gold + ransom; S.mat += mat; S.hype += hype;
   report.push(['sec', 'Récoltes']);
-  report.push(['🌾', `+${gold} 💰, +${mat} 🪵${hype ? `, +${hype} 🔥` : ''}.`, 'good']);
+  report.push(['🌾', `+${gold} 💰, +${mat} 🪵${hype ? `, +${hype} 💬` : ''}.`, 'good']);
   if (ransom) { report.push(['⛓️', `Rançons : +${ransom} 💰. Les prisonniers rentrent chez eux en jurant de ne rien dire.`, 'good']); S.prisoners = 0; }
   if (typeof payday === 'function') payday(report);
   S.creatures.forEach(c => { if (c.raid && !c.away) { c.raid = false; c.back = true; } });
@@ -633,11 +641,11 @@ function dawn(report) {
   const cands = () => SPECIES_ORDER.filter(sp => !(SPECIES[sp].tier && S.tier < SPECIES[sp].tier) && rareOK(sp) && countSp(sp) < capOf(sp));
   let free = (typeof homeCap === 'function' ? homeCap() : beds()) - S.creatures.length; const arrived = [];
   const c0 = cands();
-  // une espèce commune jamais vue, sa pièce prête : elle vient au bout de 4 nuits au plus, même si la renommée est au plafond (il lui faut un lit)
+  // une espèce commune jamais vue, sa pièce prête : elle vient au bout de 4 nuits au plus, même sans place d'accueil (il lui faut un lit)
   const fresh = c0.filter(sp => !S.album[sp] && !SPECIES[sp].rare); S.albumWait = fresh.length ? (S.albumWait || 0) + 1 : 0;
   const pity = S.albumWait >= (Object.keys(S.album || {}).length <= 2 ? 2 : 4); if (pity && free <= 0 && beds() > S.creatures.length) free = 1;
   if (!c0.length) report.push(['🕸️', 'Personne de nouveau. Meuble une pièce pour attirer son espèce.', '']);
-  else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’est pas encore assez renommé pour les attirer (${fameCap()} créatures au plus). Accomplis de grandes choses !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
+  else if (free <= 0) report.push(beds() > S.creatures.length ? ['🌟', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais ton château n’a plus de place d’accueil (${fameCap()} créatures au plus). Accomplis un haut fait !`, 'bad'] : ['🛏️', `Des ${SPECIES[pick(c0)].name.toLowerCase()}s rôdent dehors, mais tous les lits sont pris.`, 'bad']);
   else {
     // une arrivée de temps en temps (une espèce nouvelle se laisse tenter un peu plus vite), rarement deux
     let chance = pity ? 1 : c0.some(sp => !S.album[sp]) ? .38 : Math.min(.3, .12 + amb * .004 + (S.theme === 'enclave' ? .06 : 0) + (PW('nuit20') ? .05 : 0));
@@ -651,7 +659,7 @@ function dawn(report) {
       if (!S.album[sp]) S.albumWait = 0;
       if (typeof nemSnatch === 'function' && nemSnatch(sp, report)) continue;   // le rival l'a attirée chez lui
       const c = addCreature(sp), d = SPECIES[sp]; c.isNew = true; free--; arrived.push(c);
-      const why = d.rare ? 'est attiré·e par le rayonnement de ton château' : repOf(sp) >= 70 ? `a entendu vanter ta réputation chez les ${d.name.toLowerCase()}s` : d.from === 'coeur' ? 'sort du Cœur en baillant' : d.fromDecor ? 'a suivi les toiles d’araignée' : `a entendu parler de ta pièce « ${ROOMS[d.from].name} »`;
+      const why = d.rare ? 'est attiré·e par la notoriété de ton château' : repOf(sp) >= 70 ? `a entendu vanter ta réputation chez les ${d.name.toLowerCase()}s` : d.from === 'coeur' ? 'sort du Cœur en baillant' : d.fromDecor ? 'a suivi les toiles d’araignée' : `a entendu parler de ta pièce « ${ROOMS[d.from].name} »`;
       report.push(['🆕', `${c.name} (${d.name}) ${why} et s’installe !`, 'good']);
       addLog(`${c.name} (${d.name}) arrive.`, 'good');
     }
@@ -685,7 +693,7 @@ const floorRoot = z => S.rooms.find(o => o.land && zOf(o) === z);
 // le point d'ancrage d'un étage : le Cœur s'il y est, sinon le porche (au rez) ou le palier de l'escalier
 const floorHome = z => { const h = heartRoom(); return h && zOf(h) === z ? h : z === 0 ? (S.rooms.find(o => o.t === 'porche') || h) : floorRoot(z); };
 const floorsOpen = () => [...new Set([0, ...S.rooms.map(zOf)])].filter(z => z !== EXT).sort((a, b) => b - a);
-const SIZE_MAX = 2, SIZE_COST = [null, { g: 12, s: 16 }, { g: 22, s: 28 }];
+const SIZE_MAX = 2, SIZE_COST = [null, { g: 12, s: 16, a: AMBER_COST.size[1] }, { g: 22, s: 28, a: AMBER_COST.size[2] }];
 function expandStatus() { const n = (S.size || 0) + 1; if (n > SIZE_MAX) return null; return { n, need: n, cost: SIZE_COST[n], ok: S.tier >= n && canAfford(SIZE_COST[n]) }; }
 // agrandir : une rangée de chaque côté et deux au fond ; tout le château glisse d'autant
 function expandCastle() {

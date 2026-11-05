@@ -10,9 +10,9 @@ const AIDE_TERMS = [
   [/^loyaute/, 'loyaute', 'la loyauté'], [/^epanouissement|epanouit/, 'loyaute', 'l’épanouissement'], [/^humeur/, 'humeur', 'l’humeur'],
   [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie|^gages|ardoise/, 'paie', 'le salaire et les gages'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et la défense'],
   [/^combat/, 'combat', 'le combat'], [/^competence/, 'creatures', 'les compétences'], [/^caractere|^occupation/, 'caracteres', 'le caractère'],
-  [/^reves? secrets?|^envies?\b/, 'missions', 'les envies et les rêves secrets'], [/^reputation/, 'reputation', 'la réputation'], [/^renommee/, 'renommee', 'la renommée'],
+  [/^reves? secrets?|^envies?\b/, 'missions', 'les envies et les rêves secrets'], [/^reputation/, 'reputation', 'la réputation'], [/^places? d.accueil|^accueil/, 'renommee', 'les places d’accueil'],
   [/^ambiance/, 'ambiance', 'l’ambiance'], [/^lits?\b|^repas/, 'lits_repas', 'les lits et les repas'], [/^calamite/, 'calamite', 'la Calamité'], [/^menace/, 'menace', 'la Menace'],
-  [/^notoriete/, 'ressources', 'la notoriété'], [/^rayonnement|^eclat/, 'rayonnement', 'le rayonnement'], [/^emotions?\b/, 'emotions', 'les émotions'], [/^saisons?\b/, 'saisons', 'les saisons'],
+  [/^notoriete|^eclat|^bouche-a-oreille/, 'notoriete', 'la notoriété'], [/^emotions?\b/, 'emotions', 'les émotions'], [/^saisons?\b/, 'saisons', 'les saisons'],
   [/^artefacts?\b/, 'artefacts', 'les artefacts'], [/^paliers?\b/, 'paliers', 'les paliers'], [/^elements?\b/, 'elements', 'les éléments'], [/^merveilles?\b/, 'merveilles', 'les Merveilles'],
   [/^(grands? )?chantiers?\b/, 'chantiers', 'les grands chantiers'], [/^etages?\b/, 'etages', 'les étages'], [/^remparts?\b/, 'remparts', 'les remparts'], [/^quetes?\b/, 'quetes', 'les quêtes'],
   [/^factions?\b|^territoires?\b/, 'factions', 'les factions'], [/^oeufs?\b/, 'oeufs', 'les œufs'], [/^metiers?\b|^artisanat/, 'artisanat', 'les métiers'], [/^risques?\b/, 'risques', 'les risques'],
@@ -50,7 +50,7 @@ openGrimoire = function () {
 /* ---------- la pastille au survol (souris seulement ; au doigt, c'est l'appui long) ---------- */
 const HOVER_NAMES = {
   btnMenu: 'Partie et sauvegardes', turn: 'Les victoires du Val', btnAdmin: 'L’Atelier du Maître', adminFab: 'L’Atelier du Maître', btnSound: 'Le son', btnHelp: 'Le Grimoire des règles',
-  btnCrit: 'Tes créatures', btnBest: 'L’album des espèces', btnRen: 'La renommée', btnAch: 'Le Livre du Maître', btnQuests: 'Le journal des quêtes',
+  btnCrit: 'Tes créatures', btnBest: 'L’album des espèces', btnRen: 'La réputation', btnAch: 'Le Livre du Maître', btnQuests: 'Le journal des quêtes',
   btnBuild: 'Construire', btnBuildClose: 'Fermer la construction', minimap: 'La carte du Val', zfit: 'Recadrer la vue',
   btnRaid: 'Raid et expéditions', btnTier: 'Le Cœur du donjon', btnVal: 'Le Val des Maîtres', btnNight: 'Finir la nuit',
 };

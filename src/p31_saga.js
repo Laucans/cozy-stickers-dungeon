@@ -16,7 +16,7 @@ const SAGAS = {
       { t: 'Des sujets', x: () => 'Pas de roi sans sujets : il faut 3 gobelins au château.', need: { sp: ['gobelin', 3] } },
       { t: 'Le couronnement', x: () => 'Tout est prêt. Grand banquet, ou couronnement à la Taverne ?', choice: [
         { t: 'Grand banquet', cost: { g: 15 }, fx: 'feast', then: 'toutes les créatures +1 ❤️' },
-        { t: 'Couronnement à la Taverne', need: { room: 'taverne' }, fx: 'hype', n: 3, then: '+3 🔥' }] },
+        { t: 'Couronnement à la Taverne', need: { room: 'taverne' }, fx: 'hype', n: 3, then: '+3 💬' }] },
     ] },
   grandpiege: { sp: ['kobold'], ico: '⚙️', name: 'Les Plans du Grand Piège', reward: { def: 'grandpiege' },
     hook: c => `${c.name} griffonne des plans toute la nuit en marmonnant « clac… CLAC… GRAND CLAC ». Il·elle prépare quelque chose.`,
@@ -42,7 +42,7 @@ const SAGAS = {
       { t: 'La fête', x: () => '5 créatures ravies, et la gigue peut commencer.', need: { happy: [5, 4] } },
       { t: 'Le grand bal', x: () => 'Le violon est prêt. On invite le village, ou on danse entre nous ?', choice: [
         { t: 'Inviter le village', fx: 'gw', n: 12, then: 'bonne volonté +12 au village le plus proche' },
-        { t: 'Bal privé', fx: 'hype', n: 3, then: '+3 🔥' }] },
+        { t: 'Bal privé', fx: 'hype', n: 3, then: '+3 💬' }] },
     ] },
   lunenoire: { sp: ['sorciere'], ico: '🌑', name: 'Le Grimoire de la Lune Noire', reward: { evo: 'lunenoire' },
     hook: c => `${c.name} a trouvé un grimoire dont les pages ne se lisent qu’à la lune noire. Il·elle veut le déchiffrer.`,
@@ -75,7 +75,7 @@ const SAGAS = {
     ch: [
       { t: 'Une salle digne', x: c => `${c.name} doit hanter la Bibliothèque 2 nuits d’affilée (poste).`, need: { post: ['bibli', 2] } },
       { t: 'Les portraits', x: () => 'Les spectres adorent les portraits : 2 Tableaux au château.', need: { furn: ['tableau', 2] } },
-      { t: 'La renommée', x: () => 'Le château doit être célèbre : 15 🔥 de notoriété.', need: { hype: 15 } },
+      { t: 'La notoriété', x: () => 'Le château doit être célèbre : 30 🔥 de notoriété.', need: { hype: 30 } },
       { t: 'Le bal', x: () => 'Deux nuits de valse, jusqu’à l’aube.', need: { wait: 2 } },
     ] },
 };
@@ -92,7 +92,7 @@ function sagaNeedMet(c, need, st) {
   if (need.furn) return countItem(need.furn[0]) >= need.furn[1];
   if (need.sp) return countSp(need.sp[0]) >= need.sp[1];
   if (need.lvl) return (c.lvl || 1) >= need.lvl;
-  if (need.hype) return S.hype >= need.hype;
+  if (need.hype) return radiance() >= need.hype;
   if (need.traps) return trapsOnPath() >= need.traps;
   if (need.happy) return S.creatures.filter(o => !isOut(o) && o.mood >= need.happy[1]).length >= need.happy[0];
   const goal = need.post ? need.post[1] : need.calm ? need.calm[1] : need.wait || need.raid || need.fight || need.ko || need.trapko || 1;
@@ -106,7 +106,7 @@ function sagaProgress(c, need, st) {
   if (need.sp) return `${countSp(need.sp[0])}/${need.sp[1]}`;
   if (need.furn) return `${countItem(need.furn[0])}/${need.furn[1]}`;
   if (need.lvl) return `niveau ${c.lvl || 1}/${need.lvl}`;
-  if (need.hype) return `${S.hype}/${need.hype} 🔥`;
+  if (need.hype) return `${radiance()}/${need.hype} 🔥`;
   if (need.traps) return `${trapsOnPath()}/${need.traps} pièges`;
   if (need.happy) return `${S.creatures.filter(o => !isOut(o) && o.mood >= need.happy[1]).length}/${need.happy[0]} ravies`;
   return '';

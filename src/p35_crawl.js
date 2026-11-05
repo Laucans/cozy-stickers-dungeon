@@ -19,7 +19,13 @@ const CRAWL_FLOORS = 3, CRAWL_STEPS = 3, STRESS_MAX = 10, HAND_SIZE = 5, ENERGY 
 const ENERGY_MAX = 6, POISON_MAX = 5, STUN_BLOCK = 3, HEAL_CURE = 2;
 // le manager du combat auto : un combat d'expédition joué en auto plus d'un tour sur deux lui laisse AUTO_FEE de l'or gagné
 const AUTO_FEE = .25;
-// le niveau du donjon suit la renommée de tes champions (tes 4 meilleures créatures) : plus ils sont forts, plus le donjon se prépare
+// l'Ambre 🟠 (AMBER_COST, p3) ne se trouve qu'ici, en expédition aux cartes : jamais en raid, au marché ni en invasion. Par combat gagné, sur une élite, sur un boss ;
+// deep : un éclat au fond du troisième étage, pour qui rentre en bon ordre (deux combats gagnés, sans fuir). Le manager du combat auto en prend sa part (AUTO_FEE), comme de l'or
+const AMBER_GAIN = { combat: 1, elite: 3, boss: 8, deep: 2 };
+// la difficulté de la partie (INV_DIFFS[…].amb, p69) : un peu plus d'ambre à qui prend plus de risques
+const amberDiff = () => typeof invDiff === 'function' ? (invDiff().amb || 1) : 1;
+const amberOf = k => Math.round((AMBER_GAIN[k] || 0) * amberDiff());
+// le niveau du donjon suit la force de tes champions (tes 4 meilleures créatures) : plus ils sont forts, plus le donjon se prépare
 const CRAWL_GOLD = .75;   // l'or des expéditions (combats, trésors, coffres)
 const CRAWL_TUNE = { hpL: .25, dmgL: .7, hpF: .5, dmgF: 3.5, boss: 1.25, p0: 220, pk: 160 };   // hpF : +50 % de PV par étage (65 % avant la version 30 : des combats plus courts, des coups plus lourds)
 function crawlChampions() { return S.creatures.filter(c => !isOut(c)).map(c => crawler(c)).map(p => p.hp * p.atk).sort((a, b) => b - a).slice(0, 4).reduce((a, v) => a + v, 0); }
@@ -290,10 +296,11 @@ const cardDef = c => c.src === 'sp' ? CRAWL_SK[c.key] : c.src === 'base' ? CARD_
 const cardKind = D => D.dmg != null || D.bribe ? 'atk' : D.blk != null || D.evade || D.decoy ? 'def' : D.heal != null || D.calm != null || D.revive ? 'heal' : 'skill';
 const cardName = c => cardDef(c).name + (c.up ? ' +' : '');
 // d'où vient une carte du château : le premier meuble ou piège qu'on a vraiment
-// un meuble de qualité (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée (✦) : le grand lustre fait une meilleure torche que la torche
+// un meuble de qualité (au moins FINE_PRICE 💰+🪵, ou de palier 2) donne sa carte déjà améliorée (✦) : le grand lustre fait une meilleure torche que la torche
+const FINE_PRICE = 10;   // aux prix de PRICE (p3) : les mêmes meubles qu'au seuil de 6 d'avant
 const srcPrice = k => { const c = (FURN[k] || DEFS[k] || {}).cost || {}; return (c.g || 0) + (c.s || 0); };
 const srcTier = k => { const f = FURN[k], r = f && ROOMS[f.room]; return Math.max((f || DEFS[k] || {}).tier || 0, (r && r.tier) || 0); };
-const fineSrc = k => !(FURN[k] && FURN[k].artefact) && (srcPrice(k) >= 6 || srcTier(k) >= 2);
+const fineSrc = k => !(FURN[k] && FURN[k].artefact) && (srcPrice(k) >= FINE_PRICE || srcTier(k) >= 2);
 const ownsSrc = k => hasItem(k) || S.defs.some(d => d.t === k);
 const castleUp = k => !!CASTLE_CARDS[k] && CASTLE_CARDS[k].from.some(x => ownsSrc(x) && fineSrc(x));
 const castleSrc = k => { const D = CASTLE_CARDS[k], f = D.from.find(x => ownsSrc(x) && fineSrc(x)) || D.from.find(ownsSrc) || D.from[0]; return FURN[f] ? FURN[f].name : DEFS[f] ? DEFS[f].name : ''; };
@@ -771,15 +778,16 @@ function crawlRewards(R, n = 3, up = false) {
 }
 // le butin d'un combat gagné
 // R.handFight : ce combat a été mené à la main (sans le combat auto) ; on le pose juste avant
-const crawlStickerLoot = () => pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && !FURN[t].artefact && (FURN[t].cost.g || 0) <= 6));
+const crawlStickerLoot = () => pick(FURN_ORDER.filter(t => !FURN[t].size && FURN[t].cost && !FURN[t].artefact && ((FURN[t].cost0 || FURN[t].cost).g || 0) <= 6));
 function crawlWinLoot(R, kind) {
   const k = crawlDepthK(R), g = Math.round((kind === 'boss' ? 18 : kind === 'elite' ? 9 : 3) * k * (.8 + Math.random() * .4) * CRAWL_GOLD), s = kind === 'combat' ? 0 : Math.round((kind === 'boss' ? 5 : 2) * k);
   const fee = R.handFight === false && R.dg !== 'chateau' ? Math.max(1, Math.round(g * AUTO_FEE)) : 0;   // les invasions n'ont pas de manager
-  R.loot.g += g - fee; R.loot.s += s; R.won = (R.won || 0) + 1; if (R.handFight) R.handWins = (R.handWins || 0) + 1;
+  const a = R.dg === 'chateau' ? 0 : amberOf(kind), fa = R.handFight === false ? Math.round(a * AUTO_FEE) : 0;   // l'ambre : en expédition seulement (une invasion n'en donne pas)
+  R.loot.g += g - fee; R.loot.s += s; R.loot.a = (R.loot.a || 0) + a - fa; R.won = (R.won || 0) + 1; if (R.handFight) R.handWins = (R.handWins || 0) + 1;
   const item = (kind === 'elite' && Math.random() < .35) || (kind === 'boss' && R.handFight) ? crawlStickerLoot() : null; if (item) R.loot.items.push(item);
   if (hasRelic('chope')) R.party.forEach(c => { if (!c.ko) c.hp = Math.min(c.max, c.hp + 3); });
   if (kind === 'boss') { const rl = CRAWL_DG[R.dg].relic; if (!hasRelic(rl)) R.relic = rl; }
-  return `Butin : +${g - fee} 💰${s ? `, +${s} 🪵` : ''}${fee ? ` (le manager du combat auto a pris sa part : −${fee} 💰)` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`;
+  return `Butin : +${g - fee} 💰${s ? `, +${s} 🪵` : ''}${a - fa ? `, +${a - fa} 🟠` : ''}${fee ? ` (le manager du combat auto a pris sa part : −${fee} 💰${fa ? `, −${fa} 🟠` : ''})` : ''}${item ? `, et un sticker ${FURN[item].name}` : ''}.`;
 }
 
 /* ---------- le joueur automatique (simulateur, et « combat auto ») ---------- */
@@ -856,6 +864,7 @@ function crawlXpAutoPick(B, p = 0) { B.instinct = true; try { return crawlAutoPi
 function crawlAutoTurn(B, p) { const ps = p == null ? [...Array(B.np).keys()] : [p]; for (const q of ps) for (let guard = 0; guard < 25 && !B.over; guard++) { const o = crawlAutoPick(B, q); if (!o) break; crawlAutoDo(B, o, q); } }
 function crawlXpAutoTurn(B, p) { B.instinct = true; try { crawlAutoTurn(B, p); } finally { B.instinct = false; } }
 // une expédition jouée sans affichage, avec une prudence donnée (seuil de PV moyen pour continuer) ; push : seul le boss compte (le Siège), on y va même avec une créature à terre
+// enough(R) : l'équipe rentre dès qu'elle a ce qu'elle était venue chercher (le simulateur : l'Ambre d'un palier)
 function crawlAuto(dg, team, opts = {}) {
   const R = crawlNew(dg, team, opts), prudence = opts.prudence == null ? .55 : opts.prudence, cautious = prudence >= .5;
   for (;;) {
@@ -883,14 +892,17 @@ function crawlAuto(dg, team, opts = {}) {
     crawlAdvance(R);
     const alive = R.party.filter(c => !c.ko), avg = alive.reduce((a, c) => a + c.hp / c.max, 0) / Math.max(1, R.party.length);
     const bossNext = R.floor > CRAWL_FLOORS;
-    if (alive.length < R.party.length * .5 || avg < prudence || (bossNext && !opts.push && (avg < (cautious ? .8 : .5) || alive.length < R.party.length))) { R.done = 'retreat'; break; }
+    if (alive.length < R.party.length * .5 || avg < prudence || (bossNext && !opts.push && (avg < (cautious ? .8 : .5) || alive.length < R.party.length)) || (opts.enough && opts.enough(R))) { R.done = 'retreat'; break; }
   }
   return R;
 }
 // au retour : fatigue (la peur se paie), bosses, expérience, butin
 function crawlApply(R, team, lines) {
   const kept = R.done === 'wipe' ? .25 : 1, g = Math.round(R.loot.g * kept), s = Math.round(R.loot.s * kept);   // terrassés : un quart du butin, ramassé dans la débandade
-  S.gold += g; S.mat += s; if (R.done !== 'wipe') R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
+  const deepA = R.done === 'retreat' && R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 ? amberOf('deep') : 0;   // un éclat d'ambre au fond du troisième étage, pour qui rentre en bon ordre
+  const a = Math.floor((R.loot.a || 0) * (R.done === 'fled' ? .5 : kept)) + deepA;   // l'ambre suit le butin : la moitié reste au donjon dans une fuite, un quart revient d'une débandade
+  S.gold += g; S.mat += s; if (a) { S.amber = (S.amber || 0) + a; S.stats.amberIn = (S.stats.amberIn || 0) + a; } if (R.done !== 'wipe') R.loot.items.forEach(k => { S.free[k] = (S.free[k] || 0) + 1; });
+  if (deepA) lines.push(['🟠', `Au fond du troisième étage, une coulée d’ambre figée dans la roche : l’équipe en détache un éclat (+${deepA} 🟠).`, 'good']);
   const deep = (R.floor - 1) * CRAWL_STEPS + R.step - (R.skip || 0);   // un raccourci (R.skip salles) ne compte pas comme du chemin parcouru
   team.forEach(c => {
     const p = R.party.find(x => x.id === c.id); if (!p) return;
@@ -902,8 +914,8 @@ function crawlApply(R, team, lines) {
   if (R.done !== 'wipe' && R.freed && typeof settlements === 'function') { const s0 = settlements().filter(siteKnown)[0]; if (s0) addGw(s0, 4 * R.freed); }
   S.stats.crawls = (S.stats.crawls || 0) + 1; if (R.done === 'boss') S.stats.crawlBoss = (S.stats.crawlBoss || 0) + 1;
   if (R.done === 'fled') lines.push(['🏃', R.fledBoss ? 'Face au boss, l’équipe a fui en laissant la moitié du butin et tous les stickers.' : 'Dans la fuite, la moitié du butin est restée au donjon.', 'bad']);
-  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? `L’équipe est terrassée : elle ne rapporte qu’un quart du butin (${costText({ g, s })}), et tout le monde rentre sonné.` : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} ${g || s ? 'avec ' + costText({ g, s }) : 'les mains vides'}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
-  return { deep, g, s };
+  lines.unshift([R.done === 'boss' ? '👑' : R.done === 'wipe' ? '💀' : '🏃', R.done === 'boss' ? `Le boss est vaincu ! Butin : ${costText({ g, s, a })}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.` : R.done === 'wipe' ? `L’équipe est terrassée : elle ne rapporte qu’un quart du butin (${costText({ g, s, a })}), et tout le monde rentre sonné.` : `L’équipe remonte de l’étage ${Math.min(R.floor, CRAWL_FLOORS)} ${g || s || a ? 'avec ' + costText({ g, s, a }) : 'les mains vides'}${R.loot.items.length ? ` et ${R.loot.items.length} sticker${R.loot.items.length > 1 ? 's' : ''}` : ''}.`, R.done === 'wipe' ? 'bad' : 'good']);
+  return { deep, g, s, a };
 }
 // la description d'une carte, avec les valeurs qu'elle aurait jouée par « me » (ou dans l'absolu)
 function cardText(c, me, B) {

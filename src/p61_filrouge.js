@@ -3,7 +3,7 @@
    Chaque étape a ses objectifs (une pastille 📜 à droite,
    son journal avec « Montre-moi ») et dévoile, une fois
    achevé, de nouveaux boutons : les pièges et la défense,
-   puis le Raid et la carte, la renommée, les quêtes et le Val,
+   puis le Raid et la carte, la réputation, les quêtes et le Val,
    la défense du Cœur aux cartes. Gribouille ouvre chaque
    chapitre ; le tutoriel pas à pas attend le chapitre de ses
    étapes. Une nouvelle partie avec « tutoriel » coché suit
@@ -28,11 +28,11 @@ const FIL = [
       { id: 'carte', t: 'Ouvre la carte du Val', ok: () => !!filFlag('map'), show: () => filGlow('#minimap'), wiki: 'carte' },
       { id: 'raid', t: 'Réussis un raid', ok: () => S.stats.raidsWon >= 1, show: () => filGlow('#btnRaid'), wiki: 'raids' },
       { id: 'cibles', t: 'Pille ou explore deux lieux différents (raid ou expédition)', ok: () => Object.keys((S.fil && S.fil.tg) || {}).length >= 2, n: () => [Object.keys((S.fil && S.fil.tg) || {}).length, 2], show: () => { openWorld(); toast('Sur la carte : un éclaireur ou une rumeur au village dévoile de nouvelles cibles.'); }, wiki: 'risques' },
-    ], reward: { g: 15, s: 20 }, unlock: 'la renommée et les hauts faits' },
-  { id: 'ames', t: 'Des âmes à choyer', intro: 'Tes créatures ne sont pas des meubles : chacune a ses envies, ses rêves, son humeur. Comble-les et elles te le rendront. Et un château heureux grandit : vise le Palier 1, puis offre-leur une fête.',
+    ], reward: { g: 15, s: 20 }, unlock: 'la réputation et les hauts faits' },
+  { id: 'ames', t: 'Des âmes à choyer', intro: 'Tes créatures ne sont pas des meubles : chacune a ses envies, ses rêves, son humeur. Comble-les et elles te le rendront. Et un château heureux grandit : vise le Palier 1 (il demande un peu d’Ambre 🟠, qu’on ne trouve qu’en expédition aux cartes : bouton Raids), puis offre-leur une fête.',
     goals: [
       { id: 'envies', t: 'Comble 2 envies de tes créatures (leur fiche dit ce qu’elles veulent)', ok: () => (S.stats.quests || 0) >= 2, n: () => [S.stats.quests || 0, 2], show: () => toggleLeft(true), wiki: 'missions' },
-      { id: 'palier', t: 'Atteins le Palier 1', ok: () => S.tier >= 1, show: () => openHeart(), wiki: 'paliers' },
+      { id: 'palier', t: 'Atteins le Palier 1 (l’Ambre 🟠 se trouve en expédition aux cartes)', ok: () => S.tier >= 1, show: () => openHeart(), wiki: 'ambre' },
       { id: 'fete', t: 'Donne une Grande fête (fiche du Cœur)', ok: () => !!S.feteAt, show: () => openHeart(), wiki: 'merveilles' },
     ], reward: { g: 20, s: 30 }, unlock: 'le journal des quêtes et le Val des Maîtres' },
   { id: 'val', t: 'Les gens du Val', intro: 'Les gens du Val ont toujours besoin de quelque chose : un objet fabriqué, une bête chassée, une escorte. Le journal des quêtes (le parchemin, à gauche) recueille leurs demandes. Et au village, avec une fausse moustache, on trouve de tout.',
@@ -41,7 +41,7 @@ const FIL = [
       { id: 'qok', t: 'Mène une quête à bien', ok: () => (S.stats.questsRP || 0) >= 1, show: () => openQuests('cours'), wiki: 'quetes' },
       { id: 'ville', t: 'Achète quelque chose au village ou en ville', ok: () => (S.stats.shopped || 0) >= 1, show: () => openWorld(), wiki: 'ville' },
     ], reward: { g: 25, s: 30 }, unlock: 'la défense du Cœur aux cartes' },
-  { id: 'profond', t: 'Les profondeurs', intro: 'Sous les collines dorment des donjons. Le bouton Raid te propose des expéditions en cartes : chaque créature y joue ses cartes. Et quand une bande atteint le Cœur, c’est toi qui le défends, aux cartes. Une répétition t’attend dans le journal.',
+  { id: 'profond', t: 'Les profondeurs', intro: 'Sous les collines dorment des donjons. Le bouton Raids, onglet « Expéditions aux cartes », te propose des expéditions : chaque créature y joue ses cartes. Et quand une bande atteint le Cœur, c’est toi qui le défends, aux cartes. Une répétition t’attend dans le journal.',
     goals: [
       { id: 'expe', t: 'Mène une expédition en cartes', ok: () => (S.stats.crawls || 0) >= 1, show: () => filGlow('#btnRaid'), wiki: 'expeditions' },
       { id: 'defc', t: 'Livre un combat d’invasion aux cartes (une vraie bande, ou une répétition)', ok: () => (S.stats.cardDefs || 0) >= 1, show: () => filDrill(), showLabel: '🃏 Répétition', wiki: 'invasion' },

@@ -114,7 +114,7 @@ function valMail(ev) {
     text = `✍️ ${who} (${castle}) a signé ton livre d’or : « ${l} »`;
   } else if (t === 'csd1-raid' && fresh) {
     const loot = clamp(+o.loot || 0, 0, 20);
-    if (o.res === 'fail') { S.hype += 1; S.gold += 2; homeCreatures().forEach(c => addLoy(c, 2)); text = `🛡️ Ton château a repoussé l’escarmouche de ${who} (${castle}) ! +1 🔥, +2 💰.`; }
+    if (o.res === 'fail') { S.hype += 1; S.gold += 2; homeCreatures().forEach(c => addLoy(c, 2)); text = `🛡️ Ton château a repoussé l’escarmouche de ${who} (${castle}) ! +1 💬, +2 💰.`; }
     else { const lost = Math.min(S.gold, Math.ceil(loot / 2), 4); S.gold -= lost; text = `🏹 ${who} (${castle}) a mené une escarmouche${lost ? ` et chapardé ${lost} 💰` : ''}. Un bouclier protège ton château pendant 12 h.`; }
   } else if (t === 'csd1-migr' && fresh && SPECIES[o.sp] && (S.waiting || []).length < 6) {
     S.waiting.push({ sp: o.sp, name: cleanName(o.name, 24) || pick(NAMES), lvl: clamp(+o.lvl || 1, 1, 5), xp: clamp(+o.xp || 0, 0, 99), story: clamp(+o.story || 0, 0, 3), legend: !!o.legend, loy: 45, from: castle });
@@ -242,7 +242,7 @@ function openGift(pk) {
   const m = openModal(`<h2>🎁 Offrir un cadeau</h2><p>Pour ${esc(c.master)}, au ${esc(c.name)}. Un cadeau par voisin et trois par jour.</p>
     ${already ? '<p class="hint">Tu lui as déjà fait un cadeau aujourd’hui.</p>' : nToday >= 3 ? '<p class="hint">Tu as déjà offert trois cadeaux aujourd’hui. Reviens demain !</p>' : `<div class="choices">
       <button type="button" class="choice" data-g="g" ${home.gold >= 3 ? '' : 'disabled'}><span class="emo">💰</span><b>3 pièces d’or</b><span>Tu en as ${home.gold}.</span></button>
-      <button type="button" class="choice" data-g="s" ${home.mat >= 3 ? '' : 'disabled'}><span class="emo">🪵</span><b>3 matériaux</b><span>Tu en as ${home.mat}.</span></button>
+      <button type="button" class="choice" data-g="s" ${home.mat >= 3 ? '' : 'disabled'}><span class="emo">🪵</span><b>3 bois</b><span>Tu en as ${home.mat}.</span></button>
       ${decor.map(k => `<button type="button" class="choice" data-g="f" data-t="${k}">${imgThumb('furn', k)}<b>${esc(FURN[k].name)}</b><span>Un de tes stickers en réserve (×${home.free[k]}).</span></button>`).join('')}</div>`}`, { label: 'Cadeau' });
   m.addEventListener('click', async e => {
     const b = e.target.closest('[data-g]'); if (!b || b.disabled) return;
@@ -274,7 +274,7 @@ async function openSkirmish(pk) {
     const team = crew.filter(x => sel.has(x.id)), malus = Math.floor(c.def / 6);
     let pool = team.reduce((a, x) => a + diceOf(x), 0) + ((home.ach || {}).escarmouche ? 1 : 0) + (home.theme === 'repaire' ? 1 : 0) - malus;
     m.querySelector('.mbody').innerHTML = `<h2>🏹 Escarmouche chez ${esc(c.master)}</h2>
-      <p>Une petite expédition taquine : tes créatures tentent de chaparder un peu d’or au ${esc(c.name)}. Leurs défenses comptent (force ${c.def} : −${malus} dé${malus > 1 ? 's' : ''}). Réussie, elle te rapporte de l’or et de la notoriété ; ratée, tes troupes rentrent vexées. Le château visé gagne un bouclier de 12 h.</p>
+      <p>Une petite expédition taquine : tes créatures tentent de chaparder un peu d’or au ${esc(c.name)}. Leurs défenses comptent (force ${c.def} : −${malus} dé${malus > 1 ? 's' : ''}). Réussie, elle te rapporte de l’or et du bouche-à-oreille ; ratée, tes troupes rentrent vexées. Le château visé gagne un bouclier de 12 h.</p>
       <h3>Équipe (${sel.size}/3)</h3><div class="choices">${crew.map(x => `<button type="button" class="choice" data-mate="${x.id}" aria-pressed="${sel.has(x.id)}" ${!sel.has(x.id) && sel.size >= 3 ? 'disabled' : ''}>${imgThumb('char', x.sp)}<b>${esc(x.name)}</b><span>${SPECIES[x.sp].name} · ${diceOf(x)} 🎲</span>${hearts(x.mood)}</button>`).join('') || '<p class="hint">Personne ne peut partir.</p>'}</div>
       ${sel.size ? `<p class="odds">${oddsText(pool)}</p>` : ''}
       <div class="mfoot"><button class="sbtn" type="button" data-close>Plus tard</button><button class="sbtn pri" type="button" id="skGo" ${sel.size ? '' : 'disabled'}>🏹 Lancer l’escarmouche</button></div>`;
@@ -290,7 +290,7 @@ async function openSkirmish(pk) {
     const lines = [];
     if (roll.res === 'fail') { team.forEach(x => { x.mood = clamp(x.mood - 1, 0, 5); }); home.menace += 1; lines.push('💨 Repoussés ! Tes troupes rentrent vexées (−1 ❤️) et le village jase (+1 Menace).'); }
     else { home.gold += loot; home.hype += roll.res === 'partial' ? 1 : 2; home.stats.skirmishWon++; team.forEach(x => { addLoy(x, 3); x.raidsWon = (x.raidsWon || 0) + 1; });
-      lines.push(`🎒 Butin : +${loot} 💰, +${roll.res === 'partial' ? 1 : 2} 🔥.`); if (roll.res === 'partial') { const x = pick(team); x.mood = clamp(x.mood - 1, 0, 5); lines.push(`🤕 ${x.name} s’est pris un balai sur la tête (−1 ❤️).`); } }
+      lines.push(`🎒 Butin : +${loot} 💰, +${roll.res === 'partial' ? 1 : 2} 💬.`); if (roll.res === 'partial') { const x = pick(team); x.mood = clamp(x.mood - 1, 0, 5); lines.push(`🤕 ${x.name} s’est pris un balai sur la tête (−1 ❤️).`); } }
     home.val.skirmish = home.night;
     valSend('raid', pk, { res: roll.res, loot }).catch(() => {});
     const titles = { crit: '✨ Coup de maître !', full: '🎉 Escarmouche réussie !', partial: '😬 Réussie… de justesse', fail: '💨 Échec' };
@@ -335,7 +335,7 @@ function renderVal() {
     <div id="valTab"></div>`;
   const t = box.querySelector('#valTab');
   if (VAL.tab === 'chateaux') {
-    t.innerHTML = `<div class="vtools"><input id="valQ" type="search" placeholder="Chercher un château ou un Maître" value="${esc(VAL.q)}" aria-label="Chercher"><select id="valSort" class="sel" aria-label="Trier"><option value="recent" ${VAL.sort === 'recent' ? 'selected' : ''}>Les plus récents</option><option value="glow" ${VAL.sort === 'glow' ? 'selected' : ''}>Rayonnement</option><option value="hype" ${VAL.sort === 'hype' ? 'selected' : ''}>Notoriété</option><option value="amb" ${VAL.sort === 'amb' ? 'selected' : ''}>Ambiance</option><option value="crit" ${VAL.sort === 'crit' ? 'selected' : ''}>Créatures</option></select><button class="sbtn" type="button" data-act="reload">↻</button></div><div class="vlist" id="valList"></div>
+    t.innerHTML = `<div class="vtools"><input id="valQ" type="search" placeholder="Chercher un château ou un Maître" value="${esc(VAL.q)}" aria-label="Chercher"><select id="valSort" class="sel" aria-label="Trier"><option value="recent" ${VAL.sort === 'recent' ? 'selected' : ''}>Les plus récents</option><option value="glow" ${VAL.sort === 'glow' ? 'selected' : ''}>Notoriété</option><option value="amb" ${VAL.sort === 'amb' ? 'selected' : ''}>Ambiance</option><option value="crit" ${VAL.sort === 'crit' ? 'selected' : ''}>Créatures</option></select><button class="sbtn" type="button" data-act="reload">↻</button></div><div class="vlist" id="valList"></div>
       <label class="tutochk"><input type="checkbox" id="valPvp" ${S.val.pvp ? 'checked' : ''}> Escarmouches entre voisins (décoche pour un château pacifique : on ne peut ni te viser, ni viser les autres)</label>`;
     renderValList();
   } else if (VAL.tab === 'palmares') t.innerHTML = renderBoard();
@@ -350,7 +350,7 @@ function castleCard(c) {
   const on = nowS() - c.at < ONLINE_S;
   return `<div class="vcard ${c.me ? 'me' : ''}"><div class="vtop">${c.top.map(([sp]) => `<img class="th" alt="" src="${thumb('char', sp)}">`).join('')}</div>
     <div class="vtxt"><b>${esc(c.name)}</b><span>${esc(c.master)} · <i class="dot ${on ? 'on' : ''}"></i>${agoText(c.at)}</span>
-    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · ✨ ${c.glow || 0}${c.wins && c.wins.length ? ' · 🏛️ ' + c.wins.map(k => VIC_BY[k].ico).join('') : ''} · 🕯️ ${c.amb} · 🔥 ${c.hype} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
+    <span>${THEMES[c.theme].emo} Palier ${c.tier} · Nuit ${c.night} · ${c.crit} créature${c.crit > 1 ? 's' : ''} · 🔥 ${c.glow || 0}${c.wins && c.wins.length ? ' · 🏛️ ' + c.wins.map(k => VIC_BY[k].ico).join('') : ''} · 🕯️ ${c.amb} · 🏆 ${c.ach}${c.pvp ? '' : ' · 🕊️ pacifique'}</span></div>
     <div class="vbtn">${c.me ? '<span class="tag2">C’est toi !</span>' : `<button class="sbtn pri" type="button" data-visit="${c.pk}">Visiter</button>`}</div></div>`;
 }
 function renderValList() {
@@ -361,7 +361,7 @@ function renderValList() {
 }
 function renderBoard() {
   const season = seasonId(), list = [...VAL.castles.values()].filter(c => c.season === season || seasonId(c.at * 1000) === season);
-  const cats = [['glow', '✨ Rayonnement'], ['hype', '🔥 Notoriété'], ['amb', '🕯️ Ambiance'], ['crit', '🐾 Créatures'], ['ach', '🏆 Hauts faits'], ['legends', '🗿 Légendes']];
+  const cats = [['glow', '🔥 Notoriété'], ['amb', '🕯️ Ambiance'], ['crit', '🐾 Créatures'], ['ach', '🏆 Hauts faits'], ['legends', '🗿 Légendes']];
   const k = VAL.board, top = [...list].sort((a, b) => b[k] - a[k]).slice(0, 10);
   const leaders = SPECIES_ORDER.map(sp => { let best = null; list.forEach(c => { const v = c.rep[sp] || 0; if (!best || v > best.v) best = { c, v }; }); return best && best.v > 0 ? [sp, best] : null; }).filter(Boolean);
   return `<p class="hint">Saison de ${SEASON_NAME(season)} : ${list.length} château${list.length > 1 ? 'x' : ''} actif${list.length > 1 ? 's' : ''} ce mois-ci.</p>

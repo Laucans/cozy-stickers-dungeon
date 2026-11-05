@@ -16,7 +16,7 @@ const RECIPES = {
   ragout:  { ico: 'mushroom', name: 'Ragoût de champignons douteux', need: { champi: 2, legume: 1 }, desc: 'Personne n’ose en reparler : la Calamité recule de 2.' },
   // les savoirs des cuisiniers (voir les métiers)
   brochettes: { ico: 'meat', name: 'Brochettes du troll', rank: 2, need: { poisson: 1, champi: 1, legume: 1 }, desc: 'À la prochaine invasion, tes défenseurs frappent 1 de plus.' },
-  banquet:    { ico: 'crown', name: 'Banquet du Maître', rank: 3, need: { legume: 3, oeuf: 2, miel: 1, poisson: 1 }, desc: 'Tout le château est ravi (+2 humeur), +5 notoriété, et la Calamité recule de 1.' },
+  banquet:    { ico: 'crown', name: 'Banquet du Maître', rank: 3, need: { legume: 3, oeuf: 2, miel: 1, poisson: 1 }, desc: 'Tout le château est ravi (+2 humeur), +5 💬 de bouche-à-oreille, et la Calamité recule de 1.' },
 };
 const recipeOK = k => !RECIPES[k].rank || (typeof craftRank === 'function' && craftRank('cuisine') >= RECIPES[k].rank);
 const pantry = () => (S.pantry = S.pantry || { legume: 0, poisson: 0, oeuf: 0, miel: 0, champi: 0 });
@@ -53,7 +53,7 @@ dawn = function (report) {
 function cookModal() {
   const P = pantry(), m = openModal(`<h2>${gi('food')} La cuisine</h2><p class="hint">Le garde-manger se remplit à chaque aube avec ce que produisent le potager, la mare, le poulailler et la ruche (${PANTRY_MAX} de chaque au plus).</p>
     <div class="pantry">${Object.entries(INGR).map(([k, I]) => `<span class="tag2">${gi(I.ico)} ${P[k] || 0} ${I.name}</span>`).join('')}</div>
-    <div class="addlist">${Object.entries(RECIPES).map(([k, R]) => { const ok = canCook(k); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(R.ico)}<b>${esc(R.name)}</b><span class="arcost">${Object.entries(R.need).map(([i, n]) => `${n} ${INGR[i].name}`).join(' + ')}</span></div><p class="ardesc">${esc(R.desc)}</p>${recipeOK(k) ? '' : `<p class="arwhy">${gi('lock')} Il faut un·e ${R.rank === 3 ? 'maître·sse' : 'compagnon·ne'} cuisinier·ère (les métiers).</p>`}<button type="button" class="sbtn ${ok ? 'pri' : ''}" data-cook="${k}" ${ok ? '' : 'disabled'}>${gi('food')} Cuisiner</button></div>`; }).join('')}</div>`, { label: 'Cuisine' });
+    <div class="addlist">${Object.entries(RECIPES).map(([k, R]) => { const ok = canCook(k); return `<div class="addrow${recipeOK(k) ? '' : ' off'}"><div class="arhead">${gi(R.ico)}<b>${esc(R.name)}</b><span class="arcost">${Object.entries(R.need).map(([i, n]) => `<span class="${(pantry()[i] || 0) < n ? 'cno' : ''}">${n} ${INGR[i].name}</span>`).join(' + ')}</span></div><p class="ardesc">${esc(R.desc)}</p>${recipeOK(k) ? '' : `<p class="arwhy">${gi('lock')} Il faut un·e ${R.rank === 3 ? 'maître·sse' : 'compagnon·ne'} cuisinier·ère (les métiers).</p>`}<button type="button" class="sbtn ${ok ? 'pri' : ''}" data-cook="${k}" ${ok ? '' : 'disabled'}>${gi('food')} Cuisiner</button></div>`; }).join('')}</div>`, { label: 'Cuisine' });
   m.addEventListener('click', e => { const b = e.target.closest('[data-cook]'); if (!b || b.disabled) return; if (run('cook', { id: b.dataset.cook })) { sfx('heal'); toast(`🍲 ${RECIPES[b.dataset.cook].name} : ${RECIPES[b.dataset.cook].desc}`); afterChange(); cookModal(); } });
 }
 const openRoomCook = openRoom;

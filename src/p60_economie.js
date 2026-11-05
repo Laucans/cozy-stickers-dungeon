@@ -2,8 +2,8 @@
    Dépenser son or et son bois
    - Les Merveilles : quatre grands ouvrages à niveaux, de plus
      en plus chers, sans fin. Remparts (de l'énergie au Cœur),
-     Cave à festins (de l'ambiance), Galerie des statues (du
-     rayonnement), Archives (de l'expérience chaque nuit).
+     Cave à festins (de l'ambiance), Galerie des statues (de la
+     notoriété), Archives (de l'expérience chaque nuit).
    - La Grande fête : de l'or et du bois contre de la bonne
      humeur et de l'épanouissement pour quelques nuits.
    Les deux vivent dans la fiche du Cœur, avec les grands
@@ -12,12 +12,13 @@
 const WONDERS = {
   remparts: { ico: 'shield', name: 'Les Remparts', desc: L => `+${Math.ceil(L / 2)} énergie au premier tour du combat du Cœur, à chaque invasion (une de plus tous les deux niveaux ; +3 au plus, tous bonus confondus)`, base: { g: 10, s: 60 }, k: 1.7 },
   cave:     { ico: 'mug', name: 'La Cave à festins', desc: L => `+${3 * L} d’ambiance`, base: { g: 15, s: 55 }, k: 1.6 },
-  galerie:  { ico: 'statue', name: 'La Galerie des statues', desc: L => `+${8 * L} de rayonnement`, base: { g: 30, s: 50 }, k: 1.6 },
+  galerie:  { ico: 'statue', name: 'La Galerie des statues', desc: L => `+${8 * L} de notoriété`, base: { g: 30, s: 50 }, k: 1.6 },
   archives: { ico: 'book', name: 'Les Archives', desc: L => `${L} créature${L > 1 ? 's' : ''} gagne${L > 1 ? 'nt' : ''} 1 d’expérience chaque nuit`, base: { g: 20, s: 55 }, k: 1.6 },
 };
+Object.values(WONDERS).forEach(W => { W.base = priceUp(W.base); });   // les prix suivent PRICE (p3)
 const wonderLv = k => ((S && S.wonders) || {})[k] || 0;
-const wonderGold = k => { const c = wonderCost(k); return { g: c.g + Math.ceil(c.s * 1.5), s: 0 }; };   // tout payer en or, quand c'est l'or qui dort
-const wonderCost = k => { const W = WONDERS[k], m = Math.pow(W.k, wonderLv(k)); return { g: Math.round(W.base.g * m), s: Math.round(W.base.s * m) }; };
+const wonderGold = k => { const c = wonderCost(k); return { g: c.g + Math.ceil(c.s * 1.5), s: 0, a: c.a }; };   // tout payer en or, quand c'est l'or qui dort (l'ambre, elle, ne s'achète pas)
+const wonderCost = k => { const W = WONDERS[k], m = Math.pow(W.k, wonderLv(k)); return { g: Math.round(W.base.g * m), s: Math.round(W.base.s * m), a: Math.round(AMBER_COST.wonder * m) }; };   // a : l'Ambre 🟠 (AMBER_COST, p3)
 CMD.wonder = a => {
   const W = WONDERS[a && a.id]; if (!W) return 'Merveille inconnue'; const cost = a.gold ? wonderGold(a.id) : wonderCost(a.id); if (!canAfford(cost)) return 'Pas assez';
   pay(cost); S.wonders = S.wonders || {}; S.wonders[a.id] = wonderLv(a.id) + 1; S.stats.wonders = (S.stats.wonders || 0) + 1;
@@ -51,7 +52,7 @@ soulsDawn = function (report) {
 function wondersHTML() {
   const fw = feteWhy(), fc = feteCost();
   return `<div class="chsec"><h3>${gi('crown')} Les Merveilles</h3><p class="hint">De grands ouvrages qu’on agrandit sans fin, de plus en plus chers, payés surtout en bois (au niveau ${WONDER_ART_LV}, chacune livre un artefact déterré dans ses fondations) : c’est là que dort le bois en trop.</p>
-    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow${ok ? '' : ' off'}"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costText(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button>${(() => { const cg = wonderGold(k), okg = canAfford(cg); return okg && !ok || okg && S.gold > 200 ? ` <button type="button" class="sbtn small" data-wonder="${k}" data-gold="1">… ou tout en or (${cg.g} 💰)</button>` : ''; })()}</div>`; }).join('')}</div>
+    <div class="addlist">${Object.entries(WONDERS).map(([k, W]) => { const L = wonderLv(k), c = wonderCost(k), ok = canAfford(c); return `<div class="addrow"><div class="arhead">${gi(W.ico)}<b>${esc(W.name)}${L ? ` · niv. ${L}` : ''}</b><span class="arcost">${costHTML(c)}</span></div><p class="hint">${L ? esc(W.desc(L)) + ' · ' : ''}niveau ${L + 1} : ${esc(W.desc(L + 1))}</p><button type="button" class="sbtn small${ok ? ' pri' : ''}" data-wonder="${k}" ${ok ? '' : 'disabled'}>${L ? 'Agrandir' : 'Bâtir'}</button>${(() => { const cg = wonderGold(k), okg = canAfford(cg); return okg && !ok || okg && S.gold > 200 ? ` <button type="button" class="sbtn small" data-wonder="${k}" data-gold="1">… ou tout en or (${cg.g} 💰)</button>` : ''; })()}</div>`; }).join('')}</div>
     <h3>${gi('music')} La Grande fête</h3><p class="hint">${costText(fc)} : toutes les créatures +1 de bonne humeur, et ${FETE_LAST} nuits d’épanouissement en plus (+12). Une fois toutes les ${FETE_EVERY} nuits.</p>
     <div class="btnrow"><button type="button" class="sbtn${fw ? '' : ' pri'}" data-fete="1" ${fw ? 'disabled' : ''}>${fw ? esc(fw) : '🎉 Donner une grande fête'}</button></div></div>`;
 }
@@ -73,7 +74,7 @@ valNotifs = function (add) {
   valNotifsW(add);
   if (S.night >= 12 && S.gold >= 250 && S.mat >= 250 && Object.keys(WONDERS).some(k => canAfford(wonderCost(k)))) add('wonder', '🏛️', 'Ton or dort : agrandis une Merveille (touche le Cœur)', () => { const h = heartRoom(); if (h) openRoom(h.id); }, 1);
 };
-WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin (au <b>niveau ${WONDER_ART_LV}</b>, chacune livre une fois un <b>artefact</b> déterré dans ses fondations) ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent. On les paie surtout en bois, ou tout en or (1 bois = 1,5 or) quand c’est l’or qui dort.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
+WIKI.merveilles = { cat: 'eco', t: 'Les Merveilles et la Grande fête', x: () => `<p>Dans la fiche du Cœur, quatre <b>Merveilles</b> s’agrandissent sans fin (au <b>niveau ${WONDER_ART_LV}</b>, chacune livre une fois un <b>artefact</b> déterré dans ses fondations) ; chaque niveau coûte ${WONDERS.cave.k === 1.6 ? 'environ 60 % de plus' : 'davantage'} que le précédent. On les paie surtout en bois, ou tout en or (1 bois = 1,5 or) quand c’est l’or qui dort, et toujours avec un peu d’{c:ambre|Ambre} : ${AMBER_COST.wonder} 🟠 au premier niveau, puis de plus en plus, comme le reste.</p><ul>${Object.values(WONDERS).map(W => `<li><b>${W.name}</b> (${costText(W.base)} au premier niveau) : ${W.desc(1)} au niveau 1, ${W.desc(4)} au niveau 4.</li>`).join('')}</ul><p>La <b>Grande fête</b> (une fois toutes les ${FETE_EVERY} nuits) met tout le monde de bonne humeur et donne ${FETE_LAST} nuits d’épanouissement en plus : de quoi rattraper une créature qui se sent délaissée.</p>` };
 
 /* ---------- la chronique de l'aube : d'abord ce qui compte ----------
    Les 1 à 3 événements marquants de la nuit en grand (« À la une »), le détail replié en dessous. */

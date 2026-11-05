@@ -1,9 +1,9 @@
 /* =========================================================
    Les visiteurs de la nuit (pas hostiles)
    À l'aube, parfois : un marchand ambulant (des stickers moins
-   chers), un barde (notoriété, bonne humeur), ou l'inspecteur
+   chers), un barde (bouche-à-oreille, bonne humeur), ou l'inspecteur
    du Guide des Donjons Douillets, qui note ton château et dont
-   les étoiles font rayonner ta réputation.
+   les étoiles font briller ta notoriété.
    ========================================================= */
 const VISITORS = {
   marchand: { ico: 'shop', name: 'Un marchand ambulant', w: 40 },
@@ -41,17 +41,17 @@ async function merchantModal(offer) {
   }
 }
 async function guideModal(g) {
-  await choiceModal(`${gi('book')} Le Guide des Donjons Douillets`, `L’inspecteur referme son carnet. <b>${'★'.repeat(g.stars)}${'☆'.repeat(5 - g.stars)}</b><br>${esc(GUIDE_LINES[g.stars])}<br><small>Confort ${g.comfort}/5 · Table ${g.table}/5 · Frissons ${g.thrill}/5. Chaque étoile ajoute 3 de rayonnement tant que la note tient.</small>`, [['ok', 'check', 'Merci, cher inspecteur', 'Il repart avec un sourire (et quelques biscuits).']]);
+  await choiceModal(`${gi('book')} Le Guide des Donjons Douillets`, `L’inspecteur referme son carnet. <b>${'★'.repeat(g.stars)}${'☆'.repeat(5 - g.stars)}</b><br>${esc(GUIDE_LINES[g.stars])}<br><small>Confort ${g.comfort}/5 · Table ${g.table}/5 · Frissons ${g.thrill}/5. Chaque étoile ajoute 3 de notoriété tant que la note tient.</small>`, [['ok', 'check', 'Merci, cher inspecteur', 'Il repart avec un sourire (et quelques biscuits).']]);
 }
 const dawnVisit = dawn;
 dawn = function (report) {
   const r = dawnVisit(report);
   if (S.night >= 4 && Math.random() < (typeof craftRank === 'function' && craftRank('taverne') >= 3 ? .45 : .3)) {   // la geste du Maître attire du monde
     const keys = Object.keys(VISITORS).filter(k => k !== 'inspecteur' || !S.guide || S.night - S.guide.n >= 10), k = wpick(keys, x => VISITORS[x].w);
-    if (k === 'barde') { S.hype += 2; S.creatures.forEach(c => { if (!isOut(c)) c.mood = Math.min(5, c.mood + 1); }); report.push(['🎵', `Un barde de passage chante les exploits de ${S.name} toute la nuit : +2 notoriété, et tout le monde a le sourire (+1 humeur).`, 'good']); }
+    if (k === 'barde') { S.hype += 2; S.creatures.forEach(c => { if (!isOut(c)) c.mood = Math.min(5, c.mood + 1); }); report.push(['🎵', `Un barde de passage chante les exploits de ${S.name} toute la nuit : +2 💬 de bouche-à-oreille, et tout le monde a le sourire (+1 humeur).`, 'good']); }
     else if (k === 'inspecteur') {
       const g = guideScore(); S.guide = { stars: g.stars, n: S.night }; S.gold += g.stars * 3; S.hype += g.stars;
-      report.push(['📖', `L’inspecteur du Guide des Donjons Douillets a passé la nuit ici : ${'★'.repeat(g.stars)} (+${g.stars * 3} or, +${g.stars} notoriété, +${g.stars * 3} rayonnement).`, 'good']);
+      report.push(['📖', `L’inspecteur du Guide des Donjons Douillets a passé la nuit ici : ${'★'.repeat(g.stars)} (+${g.stars * 3} or, +${g.stars} 💬 de bouche-à-oreille, +${g.stars * 3} de notoriété).`, 'good']);
       dawnChoice(() => guideModal(g));
     } else if (k === 'marchand') {
       const offer = merchantOffer(); if (offer.length) { S.visit = { k: 'marchand', n: S.night, offer }; report.push(['🏪', `Un marchand ambulant s’installe devant la porte pour la nuit : ${offer.map(o => `${itemName(o.k)} (${o.price} or)`).join(', ')}, à prix d’ami.`, 'ev']); dawnChoice(() => merchantModal(S.visit.offer)); }
@@ -59,4 +59,4 @@ dawn = function (report) {
   }
   return r;
 };
-WIKI.visiteurs = { cat: 'val', t: 'Les visiteurs de la nuit', x: () => `<p>À l’aube, parfois, quelqu’un frappe à la porte, et ce n’est pas un héros :</p><ul><li><b>Le marchand ambulant</b> propose trois stickers à prix d’ami (ils vont dans ta barre).</li><li><b>Le barde</b> chante tes exploits : +2 notoriété, et tout le monde a le sourire.</li><li><b>L’inspecteur du Guide des Donjons Douillets</b> note ton château sur 5 étoiles : le confort (ambiance), la table (repas en plus des besoins) et les frissons (pièges et créatures prêtes à défendre). Chaque étoile rapporte de l’or et de la notoriété, et ajoute 3 de rayonnement jusqu’à sa prochaine visite.</li></ul>` };
+WIKI.visiteurs = { cat: 'val', t: 'Les visiteurs de la nuit', x: () => `<p>À l’aube, parfois, quelqu’un frappe à la porte, et ce n’est pas un héros :</p><ul><li><b>Le marchand ambulant</b> propose trois stickers à prix d’ami (ils vont dans ta barre).</li><li><b>Le barde</b> chante tes exploits : +2 💬 de bouche-à-oreille, et tout le monde a le sourire.</li><li><b>L’inspecteur du Guide des Donjons Douillets</b> note ton château sur 5 étoiles : le confort (ambiance), la table (repas en plus des besoins) et les frissons (pièges et créatures prêtes à défendre). Chaque étoile rapporte de l’or et du bouche-à-oreille, et ajoute 3 de notoriété jusqu’à sa prochaine visite.</li></ul>` };

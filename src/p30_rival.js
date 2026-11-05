@@ -18,7 +18,7 @@ const DEFIS = {
   crit:  { t: n => `avoir ${n} créatures`, v: () => S.creatures.length, add: () => 2 },
   amb:   { t: n => `atteindre ${n} d’Ambiance`, v: () => ambiance(), add: () => 5 },
   rooms: { t: n => `avoir ${n} pièces terminées`, v: () => myRooms(), add: () => 2 },
-  hype:  { t: n => `atteindre ${n} 🔥 de notoriété`, v: () => S.hype, add: () => 4 },
+  hype:  { t: n => `atteindre ${n} 🔥 de notoriété`, v: () => radiance(), add: () => 4 },
   lvl:   { t: n => `avoir une créature de niveau ${n}`, v: () => Math.max(1, ...S.creatures.map(c => c.lvl || 1)), add: () => 1, ok: () => S.creatures.length >= 3 },
   repel: { t: () => 'repousser une invasion', v: () => S.stats.repelled || 0, add: () => 1, ok: () => S.menace >= MENACE_MAX - 3 },
 };
@@ -169,7 +169,7 @@ function openRival() {
   const site = world().sites.find(x => x.rival === r.id), canRaid = RAIDS['r_' + r.id] && raidKnown('r_' + r.id) && S.tier >= RAIDS['r_' + r.id].tier;
   const m = openModal(`<div class="cardhead"><div class="portrait rv">${r.emo}</div><div><h2>${esc(r.name)}</h2><p class="hint">Le donjon ${esc(deM(r.master))}, ton rival dans le Val. Il vise la ${esc(VIC_BY[raceGoal(r.id)].name.replace('Victoire', 'victoire'))}.</p></div></div>
     <div class="duels"><div class="duel head"><span></span><b>Toi</b><span></span><b>${esc(who)}</b></div>
-      ${duelRow('Prestige', myPres(), n.pres, 'Ambiance, créatures, pièces et palier. S’il te dépasse, il te vole des créatures à l’aube.')}
+      ${duelRow('👑 Prestige', myPres(), n.pres, 'Ce que pense de toi le Val, face à ton rival : ambiance, créatures, pièces et palier. S’il te dépasse, il te vole des créatures à l’aube.')}
       ${duelRow('Course à la victoire', mine, v.race[r.id] || 0, 'En %. S’il arrive à 100 avant toi, il devient Grand Maître du Val.')}
       ${duelRow('Sabotages repoussés', n.losses, n.wins, 'Ses sbires repoussés, contre ses coups réussis.')}
       ${duelRow('Défis', n.chWon, n.chLost, 'Défis relevés, contre défis perdus.')}</div>
@@ -195,9 +195,9 @@ function rivalNotifs(add) {
 
 /* ---------- le Grimoire et les conseils ---------- */
 WIKI.rival = { cat: 'val', t: 'Ton rival', x: () => `<p>Dès la première nuit, un des donjons du Val devient ton rival attitré. Son blason, en haut de l’écran, montre qui mène : la barre se remplit de ton côté quand ton prestige dépasse le sien.</p>
-  <ul><li><b>Prestige</b> : Ambiance + 2 par créature + 1 par pièce + 3 par palier. Le rival grandit en même temps que toi, un peu plus vite s’il gagne.</li>
+  <ul><li><b>👑 Prestige</b> : ce que pense de toi le Val, face à ton rival. Ambiance + 2 par créature + 1 par pièce + 3 par palier. Le rival grandit en même temps que toi, un peu plus vite s’il gagne.</li>
   <li><b>Créatures volées</b> : s’il a nettement plus de prestige que toi, il attire parfois chez lui une créature qui venait vers ton château.</li>
-  <li><b>Défis</b> : il te met régulièrement au défi (avoir tant de créatures, tant d’Ambiance…) avant une nuit donnée. Relevé : or, matériaux, et il recule dans la course à la victoire.</li>
+  <li><b>Défis</b> : il te met régulièrement au défi (avoir tant de créatures, tant d’Ambiance…) avant une nuit donnée. Relevé : or, bois, et il recule dans la course à la victoire.</li>
   <li><b>Sabotages</b> : toutes les 8 à 12 nuits, ses sbires traversent ton château comme une bande d’aventuriers : quelques pièces, puis le Cœur ({c:invasion}). La rumeur te prévient la veille, et pas question d’acheter leur départ.</li>
   <li><b>Le faire reculer</b> : repousser ses sbires, relever ses défis, et dès le Palier 1, piller sa tour. Trois raids réussis et il devient ton vassal ; un autre rival prend alors sa place.</li></ul>` };
 TIPS.push({ id: 'rival0', when: () => S.night >= 2 && !(S.tuto && S.tuto.on), t: 'Ton rival te surveille', x: 'Le blason en haut de l’écran, c’est ton rival : il te dispute les créatures, te lance des défis et enverra ses sbires. Touche-le pour voir qui mène.', wiki: 'rival' });

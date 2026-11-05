@@ -130,7 +130,7 @@ function foesAfter(plan, outcome, lines, room) {
     const f = h.foe && F.find(x => x.id === h.foe); if (!f) return;
     f.n++; f.last = S.night; const down = R.fallen.includes(j);
     if (outcome === 'robbed') { f.lvl = Math.min(4, f.lvl + 1); lines.push(['😠', `${h.name} se vante dans tout le Val. Il·elle reviendra, plus fort·e.`, 'bad']); }
-    else if (down && caught.has(j)) { f.gone = true; S.hype += 2; S.gold += 5 * f.lvl; lines.push(['🏆', `${h.name} finit aux Oubliettes et jure de prendre sa retraite : +2 🔥, +${5 * f.lvl} 💰. On ne le·la reverra plus.`, 'good']); }
+    else if (down && caught.has(j)) { f.gone = true; S.hype += 2; S.gold += 5 * f.lvl; lines.push(['🏆', `${h.name} finit aux Oubliettes et jure de prendre sa retraite : +2 💬, +${5 * f.lvl} 💰. On ne le·la reverra plus.`, 'good']); }
     else if (down) { f.lvl = Math.min(4, f.lvl + 1); lines.push(['😤', `${h.name}, K.O., est ramené·e par ses amis. Sans Oubliettes pour le·la garder, il·elle reviendra.`, '']); }
     else lines.push(['😤', `${h.name} repart bredouille, encore. On n’a pas fini de le·la voir.`, '']);
   });
