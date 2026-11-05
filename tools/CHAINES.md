@@ -23,6 +23,7 @@
 | `drawActor` | p8_render.js:274 | p31_saga.js:262 → p47_oeufs.js:45 → p53_emotions.js:143 | 3 |
 | `epaFactors` | p18_souls.js:147 | p26_life.js:138 → p58_risque.js:48 → p60_economie.js:44 | 3 |
 | `fighterOf` | p28_combat.js:89 | p32_raids.js:56 → p48_cuisine.js:42 → p50_artisanat.js:76 | 3 |
+| `lvArt` | p65_livre_ui.js:71 | p67_sticker_art.js:76 → p67_sticker_art.js:913 → p67_sticker_art.js:917 | 3 |
 | `partyPreview` | p4_engine.js:512 | p28_combat.js:182 → p69_invasion.js:356 → p71_defense.js:97 | 3 |
 | `raidBreakdown` | p4_engine.js:453 | p32_raids.js:45 → p33_val.js:91 → p58_risque.js:17 | 3 |
 | `renderHand` | p10_ui.js:184 | p38_heart.js:140 → p54_mobile.js:108 → p54_mobile.js:225 | 3 |
@@ -32,7 +33,7 @@
 | `ambiance` | p4_engine.js:238 | p45_saisons.js:21 → p60_economie.js:40 | 2 |
 | `applyOverrides` | p12_admin.js:50 | p56_admin_crawl.js:15 → p64_admin_livre.js:31 | 2 |
 | `baseOf` | p12_admin.js:25 | p56_admin_crawl.js:13 → p64_admin_livre.js:18 | 2 |
-| `bookAdd` | p63_livre.js:113 | p65_livre_ui.js:207 → p66_stickers.js:25 | 2 |
+| `bookAdd` | p63_livre.js:113 | p65_livre_ui.js:206 → p66_stickers.js:25 | 2 |
 | `calamityDelta` | p4_engine.js:576 | p33_val.js:44 → p50_artisanat.js:83 | 2 |
 | `crawlFoes` | p35_crawl.js:373 | p66_stickers.js:63 → p73_siege.js:110 | 2 |
 | `crawlNew` | p35_crawl.js:350 | p36_crawl_ui.js:54 → p73_siege.js:107 | 2 |
@@ -43,7 +44,6 @@
 | `invFightR` | p69_invasion.js:146 | p71_defense.js:39 → p71_defense.js:82 | 2 |
 | `invInfo` | p69_invasion.js:140 | p71_defense.js:32 → p71_defense.js:76 | 2 |
 | `invNew` | p69_invasion.js:128 | p70_invasion_ui.js:165 → p71_defense.js:18 | 2 |
-| `lvArt` | p65_livre_ui.js:72 | p67_sticker_art.js:73 → p67_sticker_art.js:734 | 2 |
 | `mapPanelClick` | p23_map.js:325 | p33_val.js:212 → p57_duel.js:421 | 2 |
 | `newState` | p4_engine.js:17 | p42_guards.js:48 → p51_renommee.js:50 | 2 |
 | `openMissions` | p18_souls.js:540 | p29_status.js:83 → p31_saga.js:250 | 2 |
@@ -61,7 +61,7 @@
 | `chronicle` | p11_night.js:201 | p43_nemesis.js:14 | 1 |
 | `chronicleHTML` | p11_night.js:192 | p60_economie.js:92 | 1 |
 | `cleanSummary` | p20_val.js:65 | p57_duel.js:412 | 1 |
-| `closeModal` | p10_ui.js:274 | p65_livre_ui.js:209 | 1 |
+| `closeModal` | p10_ui.js:274 | p65_livre_ui.js:208 | 1 |
 | `closeWorld` | p23_map.js:244 | p55_carte_tuto.js:72 | 1 |
 | `CMD.cook` | objet | p52_quetes.js:345 | 1 |
 | `CMD.pact` | objet | p66_stickers.js:56 | 1 |

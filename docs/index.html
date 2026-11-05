@@ -19424,23 +19424,22 @@ const crawlApplyBookUI = crawlApply;
 crawlApply = function (R, team, lines) {
   try { if (S && S.book && R) { S.book.lastParty = (R.party || []).map(p => p.sp).filter(Boolean); if (R.done === 'boss' && CRAWL_DG[R.dg]) S.book.lastBoss = CRAWL_DG[R.dg].boss; } } catch (e) {}
   const r = crawlApplyBookUI(R, team, lines);
-  try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+  try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: bk } }, lines); } } catch (e) { console.error(e); }
   try { if (R && R.done === 'boss' && CRAWL_DG[R.dg]) { const E = CRAWL_EN[CRAWL_DG[R.dg].boss] || {}, key = S.raid && S.raid.target, place = R.dg === 'cite' ? 'Mirebrume' : (RAIDS[key] || {}).name || (typeof racer === 'function' && racer(R.dg) ? racer(R.dg).name : R.dg);
-    bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+    bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: CRAWL_DG[R.dg].boss } }, lines); } } catch (e) { console.error(e); }
   return r;
 };
-// le contexte d'un sticker (qui, quoi) pour l'illustrer et le légender
+// le contexte d'un sticker (qui, quoi) pour l'illustrer et le légender ; les moments qui ont leur propre dessin (STK_ART, p67) n'en ont pas
 function bookCtx(id) {
   try {
-    const B = S.book || {}, home = S.creatures.filter(c => !isOut(c)), newest = home.slice().sort((a, b) => (b.joined || 0) - (a.joined || 0))[0], star = home.slice().sort((a, b) => ((b.legend || b.evo) ? 9 : 0) + (b.lvl || 1) - ((a.legend || a.evo) ? 9 : 0) - (a.lvl || 1))[0];
+    const B = S.book || {}, home = S.creatures.filter(c => !isOut(c)), star = home.slice().sort((a, b) => ((b.legend || b.evo) ? 9 : 0) + (b.lvl || 1) - ((a.legend || a.evo) ? 9 : 0) - (a.lvl || 1))[0];
     const spOf = c => c ? { art: { k: 'sp', key: c.sp }, sub: `${c.name}, ${SPECIES[c.sp].name.toLowerCase()}` } : {};
     if (id === 'f_dragon') { const c = home.find(x => x.sp === 'dragonnet'); return c ? spOf(c) : { art: { k: 'sp', key: 'dragonnet' } }; }
     if (id === 'f_rare') { const c = home.find(x => SPECIES[x.sp] && SPECIES[x.sp].rare); return spOf(c); }
-    if (['r_album', 'menagerie', 'album16', 'album24', 'accueil', 'pop30', 'aimant'].includes(id)) return spOf(newest);
-    if (['legende', 'r_legende', 'chouchou', 'fidele', 'epopee', 'calins', 'conteur'].includes(id)) return spOf(star);
-    if (['f_boss', 'r_boss', 'boss3'].includes(id) && B.lastBoss) { const E = CRAWL_EN[B.lastBoss] || {}; return { art: E.sp ? { k: 'char', key: E.sp } : null, sub: E.name || '' }; }
+    if (['legende', 'r_legende', 'chouchou', 'epopee'].includes(id)) return spOf(star);   // la star : la créature qui a atteint ce niveau, ou la légende
+    if (['f_boss', 'r_boss', 'boss3'].includes(id) && B.lastBoss) { const E = CRAWL_EN[B.lastBoss] || {}; return { art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: B.lastBoss }, sub: E.name || '' }; }
     if (['propre', 'r_expe'].includes(id) && B.lastParty && B.lastParty.length) return { art: { k: 'sp', key: B.lastParty[0] }, sub: id === 'propre' ? 'Toute l’équipe rentre debout' : '' };
-    if (['r_invasion', 'repousse', 'rempart', 'forteresse'].includes(id)) return { art: { k: 'hero', key: pick(['barbare', 'paladin', 'mage', 'voleuse', 'elfe']) }, sub: 'La bande est repoussée !' };
+    if (['r_invasion', 'repousse', 'rempart', 'forteresse'].includes(id)) return { sub: 'La bande est repoussée !' };
     if (['r_palier', 'f_palier1', 'f_palier2', 'f_palier3', 'palier1', 'palier2'].includes(id)) return { art: { k: 'room', key: 'coeur' }, sub: `Palier ${S.tier}` };
     if (['r_coup', 'coup'].includes(id)) return { sub: 'Le rival rentre bredouille' };
   } catch (e) {}
@@ -19451,7 +19450,7 @@ function bookCtx(id) {
 const LVCOL = { 'Premiers du Val': '#e9b949', 'Bâtisseur': '#c98b4a', 'Éleveur': '#7fbf5a', 'Missions': '#b48ad9', 'Stratège': '#e06a5a', 'Château': '#6aa0e0', 'Profondeurs': '#4fb3a9', 'Val': '#e9894a', 'Val des Maîtres': '#d77fa8', 'Rêves': '#c49bff', 'Donjons': '#8f6ad0', 'Quêtes': '#d9a441' };
 const lvMeta = x => MOM_BY[x.id] || { t: x.t || x.id, ico: x.ico || '✨', cat: x.cat };
 // les dessins du jeu (meubles, pièces) pour les stickers qui n'ont pas de créature ou de héros à montrer
-const ART_OF = { pierre: ['furn', 'caisse'], archi: ['room', 'atelier'], deco: ['furn', 'tableau'], cosy: ['furn', 'candelabre'], accueil: ['furn', 'paillasse'], conteur: ['furn', 'theiere'], zen: ['furn', 'theiere'], rempart: ['furn', 'armure'], forteresse: ['furn', 'armure'], pillard: ['furn', 'tasdor'], tresor: ['furn', 'tasdor'], crit: ['furn', 'cristal'], crit3: ['furn', 'cristal'], carto: ['furn', 'longuevue'], collec: ['furn', 'epeefaux'], nuit20: ['furn', 'citrouille'], grandesalle: ['room', 'taverne'], amb30: ['furn', 'candelabre'], f_ambiance: ['furn', 'candelabre'], deco40: ['furn', 'tapis'], fete: ['furn', 'chaudron'], r_fete: ['furn', 'chaudron'], quete: ['furn', 'caisse'], r_quete: ['furn', 'caisse'], f_merveille: ['room', 'coeur'], r_merveille: ['room', 'coeur'], r_artefact: ['furn', 'epeefaux'], r_envies: ['furn', 'plante'], etages: ['room', 'tour'] };
+const ART_OF = { pierre: ['furn', 'caisse'], archi: ['room', 'atelier'], deco: ['furn', 'tableau'], cosy: ['furn', 'candelabre'], zen: ['furn', 'theiere'], pillard: ['furn', 'tasdor'], tresor: ['furn', 'tasdor'], carto: ['furn', 'longuevue'], collec: ['furn', 'epeefaux'], grandesalle: ['room', 'taverne'], amb30: ['furn', 'candelabre'], f_ambiance: ['furn', 'candelabre'], deco40: ['furn', 'tapis'], fete: ['furn', 'chaudron'], r_fete: ['furn', 'chaudron'], r_artefact: ['furn', 'epeefaux'], etages: ['room', 'tour'] };
 function lvArt(x, m) {
   const a = x.art || (ART_OF[x.id] ? { k: ART_OF[x.id][0], key: ART_OF[x.id][1] } : null);
   try { if (a && a.k === 'furn' && FURN[a.key]) return `<img alt="" src="${thumb('furn', a.key, true)}">`; } catch (e) {}
@@ -19487,13 +19486,13 @@ function livrePages(fresh, L, nu) {
   const stickers = B.ch.reduce((a, c) => a + c.mine.filter(x => !lvHidden(x.id)).length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
   const pro = (B.prologue || []).filter(x => !lvHidden(x.id));
-  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(x, j, false, false, lvJit(x))).join('')}</div>` });
+  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(stkFix(x), j, false, false, lvJit(x))).join('')}</div>` });
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
     const all = c.mine.filter(x => x.stuck !== false && !lvHidden(x.id)).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
     for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
-      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
+      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(stkFix(x), q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
     const mine = chapScore(c), rank = [['moi', mine], ...Object.entries(c.rivals)].sort((a, b) => b[1] - a[1]);
     const race = `<ol class="lv-race">${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? esc(S.name) : `${racer(w).emo} ${esc(racer(w).name)}`}<span>${Math.round(p)}</span></li>`).join('')}</ol>`;
@@ -19705,7 +19704,8 @@ function openStickerBook() {
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
   const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
   for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const vk = /^vic:/.test(id) && VIC_BY[id.slice(4)] ? id.slice(4) : null;   // les anciens « Première victoire : … » prennent le nom de leur victoire
-    const x = { id, t: vk ? VIC_BY[vk].name : g.t, ico: g.ico, cat: g.cat, art: g.art, d: vk ? vicStkD(vk) : g.d, night: g.night, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}` }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
+    const x = stkFix({ id, t: vk ? VIC_BY[vk].name : g.t, ico: g.ico, cat: g.cat, art: g.art, d: vk ? vicStkD(vk) : g.d, night: g.night, sub: g.sub });   // les anciens stickers à créature prise au hasard prennent leur propre dessin (p67)
+    x.sub = g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
   const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
   P.push(`<div class="lvp blanc"><p class="lv-hand big">Encore ${Math.max(0, total - got.length)} stickers à découvrir…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand small">Personne ne sait vraiment ce qui les fait apparaître. Essaie des choses.</p></div>`);
   if (P.length % 2) P.push('<div class="lvp blanc"></div>'); P.push('<div class="lvp garde"></div>');
@@ -19772,9 +19772,12 @@ Object.assign(SKA, {
   intacte: g => { SKA.coup(g); },
 });
 SKA.intacte = g => { skPath(g, [[128, 40], [200, 64], [192, 148], [128, 214], [64, 148], [56, 64]]); skFS(g, skLG(g, 0, 40, 0, 214, '#9ae07a', '#2a8a4a')); skStar(g, 128, 124, 4, 46, 12, '#fff8d0', 5); skSparkle(g, 178, 62, 14); skSparkle(g, 80, 176, 10); skShine(g, 92, 82, 20, 9, .35); };
+// les moments qui ont leur propre dessin (lot 5) : plus de créature prise au hasard (la plus récente, la star) ni de vignette sans rapport
+const STK_ART = { accueil: 'mo_accueil', menagerie: 'mo_album8', album16: 'mo_album16', album24: 'mo_album24', pop30: 'mo_foule', aimant: 'mo_aimant', calins: 'mo_confident', fidele: 'mo_fidele', conteur: 'mo_conteur', r_envies: 'mo_envies', nuit20: 'mo_nuit20', f_merveille: 'mo_merveille', r_merveille: 'mo_merveille_up', crit: 'crit', crit3: 'mo_crit3', quete: 'quete', r_quete: 'quete', repousse: 'mo_repousse', r_invasion: 'mo_repousse', rempart: 'mo_rempart', forteresse: 'mo_forteresse' };
+const STK_NOSUB = ['accueil', 'menagerie', 'album16', 'album24', 'pop30', 'aimant', 'calins', 'fidele', 'conteur', 'r_album'];   // leur ancienne légende « Nom, espèce » n'avait rien à voir
 // la clé du dessin d'un sticker (null : il a déjà un vrai dessin du jeu)
 function stkArtKey(id) {
-  if (!id) return null;
+  if (!id) return null; if (STK_ART[id]) return STK_ART[id];
   if (id === 'heroique') return 'age_heroique'; if (id === 'sombre') return 'age_sombre'; if (/^or:/.test(id)) return 'or_' + eraArtKey(id.slice(3));
   if (/^vic:/.test(id)) return 'vic_' + id.slice(4); if (id === 'victoire') return 'vic_any';
   if (/^pacte:/.test(id)) return 'pac_' + id.slice(6);
@@ -20434,6 +20437,182 @@ Object.assign(SKA, {
 SKA.age_or_back = g => { for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; skPath(g, [[128 + Math.cos(a - .16) * 80, 128 + Math.sin(a - .16) * 80], [128 + Math.cos(a) * 124, 128 + Math.sin(a) * 124], [128 + Math.cos(a + .16) * 80, 128 + Math.sin(a + .16) * 80]]); skFS(g, i % 2 ? '#ffd24a' : '#ffb02a', 5); } skCirc(g, 128, 128, 96, skRG(g, 128, 128, 96, '#fff6c0', '#f0b02a'), 6); };
 SKA.age_normal = g => { skMedal(g, '#f0c890', '#8a5a2a'); skRot(g, 128, 128, .5, () => { g.beginPath(); g.moveTo(0, -62); g.bezierCurveTo(30, -40, 26, 20, 4, 50); g.lineTo(-4, 50); g.bezierCurveTo(-26, 20, -30, -40, 0, -62); skFS(g, skLG(g, -26, 0, 26, 0, '#ffffff', '#c8bca8'), 5); skLine(g, [[0, -50], [0, 64]], 4); }); skShine(g, 100, 86, 16, 7, .5); };
 
+/* ---------- lot 5 : les moments qui collaient une créature au hasard ou une vignette sans rapport ---------- */
+// une pantoufle vue de côté (la pointe à droite), son pompon sur le dessus
+const skSlipper = (g, x, y, s, c1, c2, pom) => {
+  g.beginPath(); g.moveTo(x - 28 * s, y - 4 * s); g.quadraticCurveTo(x - 30 * s, y + 8 * s, x - 18 * s, y + 8 * s); g.lineTo(x + 22 * s, y + 8 * s); g.quadraticCurveTo(x + 36 * s, y + 6 * s, x + 32 * s, y - 6 * s); g.quadraticCurveTo(x + 26 * s, y - 26 * s, x + 2 * s, y - 24 * s); g.quadraticCurveTo(x - 8 * s, y - 10 * s, x - 28 * s, y - 4 * s); g.closePath(); skFS(g, skLG(g, 0, y - 26 * s, 0, y + 8 * s, c1, c2), 5);
+  skLine(g, [[x - 26 * s, y + 3 * s], [x + 30 * s, y + 3 * s]], 4 * s, 'rgba(255,255,255,.7)'); skCirc(g, x + 8 * s, y - 22 * s, 9 * s, pom, 4); skShine(g, x + 18 * s, y - 14 * s, 6 * s, 3 * s, .5);
+};
+// un album ouvert : n cases sur 8 portent un sticker
+const skAlbum = (g, n) => {
+  skRot(g, 128, 136, -.06, () => {
+    g.scale(.92, .92); skRect(g, -112, -70, 224, 150, 12, skLG(g, 0, -70, 0, 80, '#8fd06a', '#3f8a3a'));
+    [-1, 1].forEach(k => { g.beginPath(); g.moveTo(0, -56); g.quadraticCurveTo(k * 50, -66, k * 100, -58); g.lineTo(k * 100, 66); g.quadraticCurveTo(k * 50, 58, 0, 70); g.closePath(); skFS(g, k < 0 ? '#fbf3e0' : '#f4e8cc', 4); });
+    skLine(g, [[0, -56], [0, 70]], 4);
+    const C = ['#f2a65a', '#9ad0f0', '#e88ab4', '#b8e07a', '#c9a0f0', '#ffd24a', '#7ad0c0', '#f07a6a'];
+    [[-72, -24], [-30, -24], [-72, 28], [-30, 28], [30, -24], [72, -24], [30, 28], [72, 28]].forEach(([x, y], i) => {
+      if (i < n) { skCirc(g, x, y, 17, skRG(g, x, y, 17, '#fff', C[i]), 4); skCirc(g, x - 5, y - 2, 2.6, SK_INK, 0); skCirc(g, x + 5, y - 2, 2.6, SK_INK, 0); skLine(g, [[x - 4, y + 6], [x, y + 8], [x + 4, y + 6]], 2.5); }
+      else { g.save(); g.setLineDash([5, 5]); skRect(g, x - 16, y - 16, 32, 32, 6, 'rgba(0,0,0,0)', 3); g.restore(); }
+    });
+  });
+};
+// une Merveille : un petit temple à colonnes, le ruban de l'inauguration
+const skTemple = g => {
+  skRect(g, 40, 196, 176, 22, 5, skLG(g, 0, 196, 0, 218, '#efe4cc', '#b8a888')); skRect(g, 52, 180, 152, 18, 4, '#e6dabe');
+  [70, 104, 138, 172].forEach(x => { skRect(g, x - 1, 96, 16, 84, 3, skLG(g, x - 1, 0, x + 15, 0, '#fffaf0', '#c8bca0'), 5); });
+  skRect(g, 50, 84, 156, 16, 4, '#e6dabe'); skPath(g, [[44, 86], [128, 38], [212, 86]]); skFS(g, skLG(g, 0, 38, 0, 86, '#ffe58a', '#d0901e')); skCirc(g, 128, 68, 9, '#fff3c0', 4);
+  g.beginPath(); g.moveTo(34, 128); g.quadraticCurveTo(128, 150, 222, 128); g.lineWidth = 14; g.strokeStyle = SK_INK; g.stroke(); g.lineWidth = 8; g.strokeStyle = '#e8402a'; g.stroke();
+  skEll(g, 112, 142, 16, 10, '#e8402a', 4, .5); skEll(g, 144, 142, 16, 10, '#e8402a', 4, -.5); skPath(g, [[122, 146], [110, 176], [124, 170], [128, 148]]); skFS(g, '#c8302a', 4); skPath(g, [[134, 146], [146, 176], [132, 170], [128, 148]]); skFS(g, '#c8302a', 4); skCirc(g, 128, 142, 8, '#ff6a50', 4);
+};
+// un dé, ses points
+const skDie = (g, x, y, r, n, col = '#c8302a') => skRot(g, x, y, r, () => { skRect(g, -30, -30, 60, 60, 12, skLG(g, -30, -30, 30, 30, '#ffffff', '#e2d8c2')); ({ 1: [[0, 0]], 3: [[-15, -15], [0, 0], [15, 15]], 5: [[-15, -15], [15, -15], [0, 0], [-15, 15], [15, 15]], 6: [[-15, -16], [15, -16], [-15, 0], [15, 0], [-15, 16], [15, 16]] }[n] || []).forEach(([a, b]) => skCirc(g, a, b, 5.5, col, 0)); });
+Object.assign(SKA, {
+  // Comité d'accueil : le paillasson « Bienvenue », la guirlande, et des pantoufles de toutes les tailles
+  mo_accueil: g => {
+    g.beginPath(); g.moveTo(74, 140); g.lineTo(74, 86); g.arc(128, 86, 54, Math.PI, 0); g.lineTo(182, 140); g.closePath(); skFS(g, skWood(g, 32, 140, '#c8844a', '#6a3a1e'));
+    [106, 128, 150].forEach(x => skLine(g, [[x, 44 + Math.abs(x - 128) * .5], [x, 140]], 3, 'rgba(42,26,12,.45)')); skCirc(g, 164, 108, 6, '#ffd24a', 3);
+    g.beginPath(); g.moveTo(30, 40); g.quadraticCurveTo(128, 104, 226, 40); g.lineWidth = 4; g.strokeStyle = SK_INK; g.stroke();
+    [.1, .26, .42, .58, .74, .9].forEach((t, i) => { const x = (1 - t) * (1 - t) * 30 + 2 * (1 - t) * t * 128 + t * t * 226, y = (1 - t) * (1 - t) * 40 + 2 * (1 - t) * t * 104 + t * t * 40; skPath(g, [[x - 12, y - 1], [x + 12, y - 1], [x, y + 22]]); skFS(g, ['#e8402a', '#ffd24a', '#5fa24a', '#3a8ae8', '#e88ab4', '#f0a020'][i], 3); });
+    skRect(g, 26, 128, 204, 54, 12, skLG(g, 0, 128, 0, 182, '#e8b26a', '#b07a3a')); skRect(g, 36, 136, 184, 38, 8, 'rgba(0,0,0,0)', 3);
+    skTxt(g, 'Bienvenue', 128, 156, 27, '#fff3c0', 6);
+    [[54, 206, 1.1, '#ff9aa8', '#d0506a', '#fff'], [140, 210, .85, '#9ad0f0', '#3a7ad8', '#ffd24a'], [208, 214, .62, '#b8e07a', '#4f9a3a', '#fff']].forEach(([x, y, s, a, b, p]) => { skSlipper(g, x - 8 * s, y - 6 * s, s, a, b, p); skSlipper(g, x + 6 * s, y + 10 * s, s, a, b, p); });
+  },
+  mo_album8: g => { skAlbum(g, 4); skSparkle(g, 214, 58, 11); },
+  mo_album16: g => {
+    skRot(g, 128, 146, .07, () => { skRect(g, -102, -62, 204, 140, 12, '#2f6a2a'); [0, 1, 2].forEach(i => skRect(g, -94 + i * 3, -54 - i * 4, 188, 126, 6, '#f4e8cc', 3)); });
+    skAlbum(g, 8); g.beginPath(); g.moveTo(178, 84); g.lineTo(178, 226); g.lineTo(187, 216); g.lineTo(196, 226); g.lineTo(196, 82); skFS(g, '#e8402a', 4); skSparkle(g, 36, 52, 11); skSparkle(g, 222, 46, 9);
+  },
+  mo_album24: g => {
+    skRect(g, 64, 44, 140, 180, 10, '#f4e8cc'); skRect(g, 56, 36, 140, 180, 12, skLG(g, 0, 36, 0, 216, '#8fd06a', '#3f8a3a')); skRect(g, 56, 36, 22, 180, 8, skLG(g, 56, 0, 78, 0, '#5fa24a', '#2f6a2a'), 4);
+    [[104, 70, '#f2a65a'], [170, 76, '#9ad0f0'], [98, 196, '#e88ab4'], [172, 190, '#c9a0f0']].forEach(([x, y, c]) => { skCirc(g, x, y, 13, skRG(g, x, y, 13, '#fff', c), 3); skCirc(g, x - 4, y - 1, 2, SK_INK, 0); skCirc(g, x + 4, y - 1, 2, SK_INK, 0); });
+    skStar(g, 136, 132, 16, 52, 44, skRG(g, 136, 132, 52, '#ffe58a', '#c48a22'), 5); skCirc(g, 136, 132, 34, skRG(g, 136, 132, 34, '#fff3c0', '#e0a830'), 4);
+    skLine(g, [[120, 132], [132, 144], [154, 118]], 8); skLine(g, [[120, 132], [132, 144], [154, 118]], 4, '#5fa24a');
+    skSparkle(g, 214, 40, 13); skSparkle(g, 36, 120, 9); skSparkle(g, 222, 214, 10);
+  },
+  // Château grouillant : une foule de petites têtes devant le château
+  mo_foule: g => {
+    skScene(g, '#bfe0f8', '#f4e2c0', () => {
+      skPath(g, [[70, 150], [70, 92], [62, 92], [62, 76], [74, 76], [74, 84], [86, 84], [86, 76], [98, 76], [98, 92], [158, 92], [158, 76], [170, 76], [170, 84], [182, 84], [182, 76], [194, 76], [194, 92], [186, 92], [186, 150]]); skFS(g, '#b8c0d8', 4);
+      skPath(g, [[112, 92], [112, 54], [104, 54], [128, 22], [152, 54], [144, 54], [144, 92]]); skFS(g, '#c8d0e4', 4);
+      const row = (y, r, cols, xs) => xs.forEach((x, i) => { const c = cols[i % cols.length]; if (i % 3 === 0) { skPath(g, [[x - r * .8, y - r * .5], [x - r * .5, y - r * 1.5], [x - r * .1, y - r * .8]]); skFS(g, c, 3); skPath(g, [[x + r * .8, y - r * .5], [x + r * .5, y - r * 1.5], [x + r * .1, y - r * .8]]); skFS(g, c, 3); } else if (i % 3 === 1) { skEll(g, x - r * .7, y - r * .7, r * .3, r * .45, c, 3, -.5); skEll(g, x + r * .7, y - r * .7, r * .3, r * .45, c, 3, .5); } skCirc(g, x, y, r, c, 3.5); skCirc(g, x - r * .32, y - r * .05, r * .2, '#fff', 0); skCirc(g, x + r * .32, y - r * .05, r * .2, '#fff', 0); skCirc(g, x - r * .3, y, r * .1, SK_INK, 0); skCirc(g, x + r * .34, y, r * .1, SK_INK, 0); });
+      row(150, 13, ['#8a7ab0', '#6a9aa0', '#b08a6a'], [44, 70, 96, 122, 148, 174, 200, 226]);
+      row(176, 17, ['#e88a5a', '#5fa24a', '#c9a0f0', '#3a8ae8'], [30, 64, 98, 132, 166, 200, 234]);
+    });
+    g.save(); g.beginPath(); g.rect(0, 0, 256, 256); g.clip();
+    [[58, 218, '#f2c04a'], [128, 222, '#e8607a'], [198, 218, '#7ad0c0']].forEach(([x, y, c], i) => { if (i === 1) { skPath(g, [[x - 18, y - 16], [x - 10, y - 44], [x - 2, y - 20]]); skFS(g, '#fff3c0', 4); skPath(g, [[x + 18, y - 16], [x + 10, y - 44], [x + 2, y - 20]]); skFS(g, '#fff3c0', 4); } else { skEll(g, x - 20, y - 18, 9, 13, c, 4, -.5); skEll(g, x + 20, y - 18, 9, 13, c, 4, .5); } skCirc(g, x, y, 26, skRG(g, x, y, 26, '#fff', c), 5); skCirc(g, x - 8, y - 2, 4, SK_INK, 0); skCirc(g, x + 8, y - 2, 4, SK_INK, 0); skLine(g, [[x - 6, y + 10], [x, y + 14], [x + 6, y + 10]], 3); });
+    g.restore();
+  },
+  // Chasseur de talents : un aimant qui attire une valise venue d'un autre château
+  mo_aimant: g => {
+    skRot(g, 92, 96, -.75, () => {
+      g.beginPath(); g.moveTo(-50, 50); g.lineTo(-50, 0); g.arc(0, 0, 50, Math.PI, 0); g.lineTo(50, 50); g.lineTo(24, 50); g.lineTo(24, 0); g.arc(0, 0, 24, 0, Math.PI, true); g.lineTo(-24, 50); g.closePath(); skFS(g, skLG(g, -50, 0, 50, 0, '#7ab8f0', '#2a5aa8'));
+      skRect(g, -50, 40, 26, 22, 3, '#e6eef6', 5); skRect(g, 24, 40, 26, 22, 3, '#e6eef6', 5); skShine(g, -30, -26, 14, 6, .5);
+    });
+    [[150, 120, 132, 108], [166, 106, 150, 92], [140, 140, 124, 130]].forEach(([a, b, c, d]) => skLine(g, [[a, b], [c, d]], 5, '#7ab8f0'));
+    skRot(g, 182, 172, .18, () => {
+      skRect(g, -16, -52, 32, 18, 8, 'rgba(0,0,0,0)', 6); skRect(g, -48, -38, 96, 72, 10, skLG(g, 0, -38, 0, 34, '#e8a05a', '#a8582a'));
+      [-30, 30].forEach(x => skRect(g, x - 5, -38, 10, 72, 2, '#7a3a1a', 3)); skCirc(g, -8, -6, 13, '#fff3c0', 3); skStar(g, -8, -6, 5, 9, 4, '#e8402a', 2); skRect(g, 8, 8, 26, 16, 3, '#9ad0f0', 3);
+    });
+    skSparkle(g, 222, 92, 11); skSparkle(g, 40, 200, 9);
+  },
+  // Confident : une bulle de pensée, une lettre scellée d'un cœur
+  mo_confident: g => {
+    skBlob(g, [[128, 104, 76, 60], [72, 92, 40], [184, 92, 40], [96, 60, 36], [158, 58, 38], [128, 140, 54, 34]], skRG(g, 128, 96, 100, '#ffffff', '#d8ccf0'), 5);
+    skCirc(g, 64, 182, 16, '#ece6f8', 5); skCirc(g, 42, 214, 10, '#ece6f8', 4); skCirc(g, 28, 236, 6, '#ece6f8', 3);
+    skRot(g, 128, 104, -.08, () => {
+      skRect(g, -48, -32, 96, 64, 6, skLG(g, 0, -32, 0, 32, '#fffaf0', '#efe2c4'), 5); skPath(g, [[-48, -32], [0, 6], [48, -32]]); skFS(g, 'rgba(0,0,0,0)', 4); skLine(g, [[-48, 32], [-14, 4]], 3); skLine(g, [[48, 32], [14, 4]], 3);
+      skHeart(g, 0, 8, 30, skRG(g, -4, 0, 20, '#ff9aa8', '#d02a46'), 4);
+    });
+    skTxt(g, 'chut…', 196, 168, 22, '#fff', 5); skSparkle(g, 42, 52, 9);
+  },
+  // À la vie, à la mort : un cadenas en cœur, sa petite clé
+  mo_fidele: g => {
+    g.beginPath(); g.arc(128, 84, 40, Math.PI, 0); g.lineTo(168, 110); g.moveTo(88, 110); g.lineTo(88, 84); g.lineWidth = 22; g.strokeStyle = SK_INK; g.lineCap = 'round'; g.stroke(); g.lineWidth = 12; g.strokeStyle = '#c8ccd4'; g.stroke(); skShine(g, 104, 58, 10, 4, .6);
+    skHeart(g, 128, 156, 140, skRG(g, 104, 126, 100, '#ff9aa8', '#c8203e'), 6); skShine(g, 82, 120, 16, 9, .5);
+    skCirc(g, 128, 146, 13, SK_INK, 0); skPath(g, [[122, 150], [134, 150], [138, 176], [118, 176]]); skFS(g, SK_INK, 0);
+    g.beginPath(); g.moveTo(196, 60); g.quadraticCurveTo(220, 100, 206, 150); g.lineWidth = 4; g.strokeStyle = '#e8402a'; g.stroke();
+    skRot(g, 206, 170, .25, () => { skCirc(g, 0, -14, 12, skGold(g, -26, -2), 5); skCirc(g, 0, -14, 5, '#fff3c0', 3); skRect(g, -4, -2, 8, 36, 2, skGold(g, -2, 34), 4); skRect(g, 4, 20, 10, 6, 1, '#ffd24a', 3); skRect(g, 4, 28, 7, 5, 1, '#ffd24a', 3); });
+    skSparkle(g, 48, 56, 11); skSparkle(g, 40, 206, 8);
+  },
+  // Conteur : un livre de contes ouvert, la lune et les étoiles qui en sortent
+  mo_conteur: g => {
+    [[56, 64, 16], [96, 42, 11], [168, 38, 12], [212, 76, 9]].forEach(([x, y, r]) => skStar(g, x, y, 5, r, r * .45, '#ffd24a', 3));
+    g.beginPath(); g.arc(128, 84, 34, .6, Math.PI * 2 - .6); g.arc(146, 74, 26, Math.PI * 2 - .9, .9, true); g.closePath(); skFS(g, skRG(g, 120, 80, 40, '#fff6c0', '#f0c040'), 5);
+    g.save(); g.globalAlpha = .5; [[80, 112], [104, 120], [152, 120], [176, 112]].forEach(([x, y]) => skCirc(g, x, y, 3, '#ffd24a', 0)); g.restore();
+    skRect(g, 22, 132, 212, 96, 12, skLG(g, 0, 132, 0, 228, '#c8402a', '#7a1c14'));
+    [-1, 1].forEach(k => { g.beginPath(); g.moveTo(128, 142); g.quadraticCurveTo(128 + k * 50, 124, 128 + k * 100, 134); g.lineTo(128 + k * 100, 214); g.quadraticCurveTo(128 + k * 50, 206, 128, 220); g.closePath(); skFS(g, k < 0 ? '#fbf3e0' : '#f4e8cc', 5); });
+    skLine(g, [[128, 142], [128, 220]], 4);
+    [[50, 154], [50, 172], [50, 190], [144, 154], [144, 172], [144, 190]].forEach(([x, y], i) => skLine(g, [[x, y], [x + (i % 3 === 2 ? 40 : 62), y]], 4, '#a8987a'));
+  },
+  // Cinq envies comblées : la liste, cinq coches, et l'étoile filante des vœux
+  mo_envies: g => {
+    skRot(g, 116, 140, -.08, () => {
+      skRect(g, -66, -82, 132, 170, 10, skLG(g, 0, -82, 0, 88, '#fffaf0', '#efe2c4'));
+      [-52, -22, 8, 38, 68].forEach(y => { skRect(g, -48, y - 11, 22, 22, 5, '#fff', 4); skLine(g, [[-44, y], [-37, y + 7], [-24, y - 10]], 7); skLine(g, [[-44, y], [-37, y + 7], [-24, y - 10]], 3.5, '#5fa24a'); skLine(g, [[-12, y], [46, y]], 4, '#a8987a'); });
+    });
+    g.beginPath(); g.moveTo(82, 34); g.quadraticCurveTo(150, 16, 196, 52); g.lineWidth = 12; g.strokeStyle = 'rgba(255,210,74,.55)'; g.lineCap = 'round'; g.stroke();
+    skStar(g, 200, 58, 4, 34, 10, skRG(g, 200, 58, 34, '#fffbe0', '#f0b02a'), 5); skSparkle(g, 226, 120, 9); skSparkle(g, 44, 70, 8);
+  },
+  // Increvable : la nuit 20, comptée à la craie sur une ardoise, sous la lune
+  mo_nuit20: g => {
+    skScene(g, '#3a4a8e', '#1a2150', () => { [[56, 64], [96, 40], [200, 132], [40, 120], [150, 34]].forEach(([x, y]) => skSparkle(g, x, y, 6)); });
+    g.beginPath(); g.arc(170, 74, 40, .5, Math.PI * 2 - .5); g.arc(190, 62, 32, Math.PI * 2 - .95, .95, true); g.closePath(); skFS(g, skRG(g, 160, 70, 46, '#fff6c0', '#e8c060'), 5);
+    skCirc(g, 150, 76, 4, SK_INK, 0); skLine(g, [[146, 96], [156, 100], [164, 96]], 3.5);
+    skRect(g, 28, 120, 200, 112, 10, skWood(g, 120, 232)); skRect(g, 40, 132, 176, 88, 5, skLG(g, 0, 132, 0, 220, '#3e4a44', '#25302a'), 4);
+    [0, 1, 2, 3].forEach(i => { const x = 54 + i * 41; [0, 1, 2, 3].forEach(j => skLine(g, [[x + j * 7, 152], [x + j * 7 - 2, 198]], 4, '#f4f0e6')); skLine(g, [[x - 6, 188], [x + 28, 160]], 4, '#f4f0e6'); });
+  },
+  // une Merveille du Val : le petit temple et son ruban
+  mo_merveille: g => { skTemple(g); skSparkle(g, 218, 52, 12); skSparkle(g, 38, 60, 9); },
+  mo_merveille_up: g => {
+    g.save(); g.translate(112, 136); g.scale(.82, .82); g.translate(-128, -128); skTemple(g); g.restore();
+    skCirc(g, 196, 66, 32, skRG(g, 196, 66, 32, '#b8f08a', '#3f8a3a')); skPath(g, [[196, 44], [216, 66], [204, 66], [204, 88], [188, 88], [188, 66], [176, 66]]); skFS(g, '#fff', 4);
+  },
+  // La main heureuse : trois dés, trois six
+  mo_crit3: g => {
+    skStar(g, 128, 124, 12, 106, 70, skRG(g, 128, 124, 106, '#fff3a0', '#f0b02a'), 5);
+    skDie(g, 88, 160, -.2, 6); skDie(g, 168, 160, .18, 6); skDie(g, 128, 98, .05, 6);
+    skSparkle(g, 214, 62, 11); skSparkle(g, 40, 76, 9);
+  },
+  // Pas de quartier : le casque d'un héros qui s'envole, avec des étoiles
+  mo_repousse: g => {
+    [[60, 120, 34, 92], [52, 152, 20, 152], [66, 182, 32, 206]].forEach(([a, b, c, d]) => skLine(g, [[a, b], [c, d]], 6));
+    skStar(g, 98, 148, 9, 46, 26, '#ffd24a', 5);
+    skRot(g, 150, 126, .35, () => {
+      g.beginPath(); g.moveTo(-58, 30); g.lineTo(-58, 0); g.bezierCurveTo(-58, -64, 58, -64, 58, 0); g.lineTo(58, 30); g.closePath(); skFS(g, skLG(g, -58, 0, 58, 0, '#f2f6fa', '#8a96a6'));
+      skRect(g, -64, 22, 128, 18, 6, skLG(g, 0, 22, 0, 40, '#dfe6ee', '#8a96a6')); skRect(g, -6, -10, 12, 46, 3, '#5a6676', 4); [-30, 30].forEach(x => skRect(g, x - 16, 0, 32, 8, 3, SK_INK, 0));
+      g.beginPath(); g.moveTo(0, -46); g.bezierCurveTo(-10, -86, 30, -100, 50, -82); g.bezierCurveTo(30, -74, 18, -60, 8, -44); skFS(g, '#e8402a', 5);
+      skLine(g, [[20, -32], [28, -18], [18, -8]], 4);
+    });
+    [[196, 46], [222, 84], [176, 30]].forEach(([x, y], i) => skStar(g, x, y, 5, 13 - i * 2, 5, '#fff3a0', 4));
+  },
+  // Inviolable : le rempart, sa porte bardée, et les flèches qui n'ont rien percé
+  mo_rempart: g => {
+    skPath(g, [[24, 222], [24, 84], [24, 66], [52, 66], [52, 84], [72, 84], [72, 66], [100, 66], [100, 84], [156, 84], [156, 66], [184, 66], [184, 84], [204, 84], [204, 66], [232, 66], [232, 84], [232, 222]]); skFS(g, skLG(g, 0, 66, 0, 222, '#d8d0c0', '#988c7c'));
+    g.save(); g.globalAlpha = .45; [[40, 108, 32], [176, 116, 40], [40, 168, 26], [188, 176, 30], [120, 100, 26]].forEach(([x, y, w]) => skRect(g, x, y, w, 16, 3, 'rgba(0,0,0,0)', 3)); g.restore();
+    g.beginPath(); g.moveTo(84, 222); g.lineTo(84, 150); g.arc(128, 150, 44, Math.PI, 0); g.lineTo(172, 222); g.closePath(); skFS(g, skWood(g, 106, 222));
+    [128].forEach(x => skLine(g, [[x, 108], [x, 222]], 4)); [142, 186].forEach(y => skRect(g, 84, y, 88, 10, 2, '#5a6676', 4)); [[96, 147], [160, 147], [96, 191], [160, 191]].forEach(([x, y]) => skCirc(g, x, y, 3, '#dfe6ee', 0));
+    skCirc(g, 144, 166, 6, '#ffd24a', 3);
+    [[66, 140, -.5], [196, 132, .4], [204, 196, -.3]].forEach(([x, y, a]) => skRot(g, x, y, a, () => { skDuo(g, [[0, 0], [-38, 0]], 4, '#c99a5a'); skPath(g, [[-38, 0], [-52, -9], [-48, 0], [-52, 9]]); skFS(g, '#f2f6fa', 3); skLine(g, [[2, -6], [-4, 6]], 3); }));
+  },
+  // Forteresse : le donjon, sa bannière, et le blason des dix bandes repoussées
+  mo_forteresse: g => {
+    skLine(g, [[128, 52], [128, 16]], 6); g.beginPath(); g.moveTo(130, 18); g.quadraticCurveTo(160, 10, 184, 24); g.quadraticCurveTo(160, 34, 130, 44); skFS(g, '#6aa0e0', 4);
+    skPath(g, [[56, 226], [62, 78], [56, 78], [56, 52], [80, 52], [80, 64], [100, 64], [100, 52], [120, 52], [120, 64], [136, 64], [136, 52], [156, 52], [156, 64], [176, 64], [176, 52], [200, 52], [200, 78], [194, 78], [200, 226]]); skFS(g, skLG(g, 56, 0, 200, 0, '#c8c0b0', '#6e6658'));
+    g.save(); g.globalAlpha = .4; [[74, 96, 28], [150, 110, 32], [82, 196, 30], [152, 204, 26]].forEach(([x, y, w]) => skRect(g, x, y, w, 14, 3, 'rgba(0,0,0,0)', 3)); g.restore();
+    skRect(g, 120, 88, 16, 28, 8, '#2a1a0c', 0); skRect(g, 108, 196, 40, 30, 6, '#5a3a22', 4);
+    skPath(g, [[128, 126], [180, 140], [174, 184], [128, 214], [82, 184], [76, 140]]); skFS(g, skLG(g, 0, 126, 0, 214, '#e8554a', '#8a1c1c'));
+    skTxt(g, 'X', 128, 168, 44, '#ffe58a', 6); skSparkle(g, 220, 92, 11); skSparkle(g, 36, 112, 9);
+  },
+  // une expédition menée : l'entrée du donjon, la lanterne, des pas qui en reviennent
+  mo_expe: g => {
+    skPath(g, [[20, 214], [36, 112], [70, 64], [128, 46], [186, 64], [220, 112], [236, 214]]); skFS(g, skLG(g, 0, 46, 0, 214, '#a8a090', '#5e584e'));
+    g.beginPath(); g.moveTo(82, 214); g.lineTo(82, 140); g.arc(128, 140, 46, Math.PI, 0); g.lineTo(174, 214); g.closePath(); skFS(g, skLG(g, 0, 94, 0, 214, '#1a1424', '#3a2e4a'));
+    g.beginPath(); g.moveTo(10, 214); g.quadraticCurveTo(128, 196, 246, 214); g.quadraticCurveTo(128, 250, 10, 214); skFS(g, skLG(g, 0, 200, 0, 240, '#c8b088', '#8a7450'), 5);
+    [[116, 178, .35, .5], [140, 196, .55, .7], [110, 220, .8, .95]].forEach(([x, y, s, a]) => { g.save(); g.globalAlpha = a; skEll(g, x, y, 9 * s / .6, 7 * s / .6, '#5a4630', 0); [-1, 0, 1].forEach(k => skCirc(g, x + k * 8 * s / .6, y - 10 * s / .6, 3.4 * s / .6, '#5a4630', 0)); g.restore(); });
+    skLine(g, [[196, 96], [196, 74], [214, 74]], 5); skRect(g, 184, 96, 24, 8, 3, '#3a2a2a', 4); skRect(g, 182, 104, 28, 36, 6, skRG(g, 196, 120, 26, '#fff3a0', '#f0a020')); skRect(g, 184, 140, 24, 8, 3, '#3a2a2a', 4); skGlow(g, 196, 122, 40, 'rgba(255,220,120,.45)');
+  },
+});
+
 /* ---------- l'ouverture d'un chapitre : un grand sticker, l'enseigne de l'ère en haut, son dessin en bas ---------- */
 // le dessin recadré au plus près (sans marge transparente), pour que l'enseigne vienne se poser dessus
 function stkArtTrim(key) {
@@ -20452,9 +20631,24 @@ function lvEraSticker(name, n = 0) {
 // le sceau de l'âge, en bas de la page de chapitre
 function lvAgeArt(c) { const k = c.age === 'or' ? 'or_' + eraArtKey(c.name) : 'age_' + c.age, u = stkArt(k); return u ? `<img alt="" src="${u}">` : `<span>${AGES[c.age].ico}</span>`; }
 // dernier recours, quand un moment n'a ni dessin du jeu ni contexte (boss oublié, créature partie)
-const STK_FALLBACK = { f_boss: 'age_heroique', r_boss: 'age_heroique', boss3: 'age_heroique', f_rare: 'vic_menagerie', f_dragon: 'vic_menagerie' };
+const STK_FALLBACK = { f_boss: 'age_heroique', r_boss: 'age_heroique', boss3: 'age_heroique', f_rare: 'vic_menagerie', f_dragon: 'vic_menagerie', r_expe: 'mo_expe', propre: 'mo_expe' };
 const lvArtSka2 = lvArt;
 lvArt = function (x, m) { const h = lvArtSka2(x, m); if (!/lvs-emo/.test(h)) return h; const u = stkArt(STK_FALLBACK[x.id] || 'vic_any'); return u ? `<img alt="" src="${u}">` : h; };
+// un boss ou une élite sans espèce du château : son propre dessin d'expédition
+const lvFoeArt = k => { const L = CRAWL_LOOK[k], src = L ? thumb(L[0], L[1], true) : FOE_ART[k] ? thumb('foe', k, true) : null; return src ? `<img alt="" src="${src}"${L && L[2] ? ` style="filter:${L[2]} drop-shadow(0 3px 2px rgba(0,0,0,.35))"` : ''}>` : ''; };
+const lvArtFoe = lvArt;
+lvArt = function (x, m) { const h = x.art && x.art.k === 'foe' && lvFoeArt(x.art.key); return h || lvArtFoe(x, m); };
+// les stickers déjà gagnés, à l'affichage : leur propre dessin plutôt que la créature collée au hasard, et le boss retrouvé par son nom
+const stkFoeKey = x => {
+  const id = x.id || '', e = /^(?:boss|elite):([^:]+)/.exec(id), d = /^donjon:(.+)$/.exec(id);
+  if (e) return CRAWL_EN[e[1]] ? e[1] : null; if (d) return (CRAWL_DG[d[1]] || {}).boss || null;
+  return ['f_boss', 'r_boss', 'boss3'].includes(id) && x.sub ? Object.keys(CRAWL_EN).find(k => CRAWL_EN[k].name === x.sub) || null : null;
+};
+function stkFix(x) {
+  if (!x || !x.id) return x;
+  if (STK_ART[x.id]) return { ...x, art: null, sub: STK_NOSUB.includes(x.id) ? '' : x.sub };
+  const k = !x.art && stkFoeKey(x); return k ? { ...x, art: { k: 'foe', key: k } } : x;
+}
 /* =========================================================
    L'aide en jeu
    - un « ? » à côté des mots des fiches (loyauté, humeur,

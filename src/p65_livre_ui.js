@@ -41,23 +41,22 @@ const crawlApplyBookUI = crawlApply;
 crawlApply = function (R, team, lines) {
   try { if (S && S.book && R) { S.book.lastParty = (R.party || []).map(p => p.sp).filter(Boolean); if (R.done === 'boss' && CRAWL_DG[R.dg]) S.book.lastBoss = CRAWL_DG[R.dg].boss; } } catch (e) {}
   const r = crawlApplyBookUI(R, team, lines);
-  try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+  try { if (R && R.path && R.path.includes('boss') && CRAWL_DG[R.dg]) { const bk = CRAWL_DG[R.dg].boss, E = CRAWL_EN[bk] || {}; bookEarnDyn('boss:' + bk, { t: `Face à ${E.name || 'un boss'}`, ico: '⚔️', cat: 'Donjons', pts: 1, d: `Affronter ${E.name || 'ce boss'} au bout d’une expédition.`, sub: R.done === 'boss' ? 'et il·elle est tombé·e' : R.done === 'wipe' ? 'l’équipe a mordu la poussière' : 'on a préféré s’enfuir', art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: bk } }, lines); } } catch (e) { console.error(e); }
   try { if (R && R.done === 'boss' && CRAWL_DG[R.dg]) { const E = CRAWL_EN[CRAWL_DG[R.dg].boss] || {}, key = S.raid && S.raid.target, place = R.dg === 'cite' ? 'Mirebrume' : (RAIDS[key] || {}).name || (typeof racer === 'function' && racer(R.dg) ? racer(R.dg).name : R.dg);
-    bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : null }, lines); } } catch (e) { console.error(e); }
+    bookEarnDyn('donjon:' + R.dg, { t: `Vainqueur de ${place}`, ico: CRAWL_DG[R.dg].emo || '🏰', cat: 'Donjons', pts: BOOK_DYN.donjon, d: `Vaincre le boss de ${place}.`, sub: E.name ? `${E.name} est tombé·e` : '', art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: CRAWL_DG[R.dg].boss } }, lines); } } catch (e) { console.error(e); }
   return r;
 };
-// le contexte d'un sticker (qui, quoi) pour l'illustrer et le légender
+// le contexte d'un sticker (qui, quoi) pour l'illustrer et le légender ; les moments qui ont leur propre dessin (STK_ART, p67) n'en ont pas
 function bookCtx(id) {
   try {
-    const B = S.book || {}, home = S.creatures.filter(c => !isOut(c)), newest = home.slice().sort((a, b) => (b.joined || 0) - (a.joined || 0))[0], star = home.slice().sort((a, b) => ((b.legend || b.evo) ? 9 : 0) + (b.lvl || 1) - ((a.legend || a.evo) ? 9 : 0) - (a.lvl || 1))[0];
+    const B = S.book || {}, home = S.creatures.filter(c => !isOut(c)), star = home.slice().sort((a, b) => ((b.legend || b.evo) ? 9 : 0) + (b.lvl || 1) - ((a.legend || a.evo) ? 9 : 0) - (a.lvl || 1))[0];
     const spOf = c => c ? { art: { k: 'sp', key: c.sp }, sub: `${c.name}, ${SPECIES[c.sp].name.toLowerCase()}` } : {};
     if (id === 'f_dragon') { const c = home.find(x => x.sp === 'dragonnet'); return c ? spOf(c) : { art: { k: 'sp', key: 'dragonnet' } }; }
     if (id === 'f_rare') { const c = home.find(x => SPECIES[x.sp] && SPECIES[x.sp].rare); return spOf(c); }
-    if (['r_album', 'menagerie', 'album16', 'album24', 'accueil', 'pop30', 'aimant'].includes(id)) return spOf(newest);
-    if (['legende', 'r_legende', 'chouchou', 'fidele', 'epopee', 'calins', 'conteur'].includes(id)) return spOf(star);
-    if (['f_boss', 'r_boss', 'boss3'].includes(id) && B.lastBoss) { const E = CRAWL_EN[B.lastBoss] || {}; return { art: E.sp ? { k: 'char', key: E.sp } : null, sub: E.name || '' }; }
+    if (['legende', 'r_legende', 'chouchou', 'epopee'].includes(id)) return spOf(star);   // la star : la créature qui a atteint ce niveau, ou la légende
+    if (['f_boss', 'r_boss', 'boss3'].includes(id) && B.lastBoss) { const E = CRAWL_EN[B.lastBoss] || {}; return { art: E.sp ? { k: 'char', key: E.sp } : { k: 'foe', key: B.lastBoss }, sub: E.name || '' }; }
     if (['propre', 'r_expe'].includes(id) && B.lastParty && B.lastParty.length) return { art: { k: 'sp', key: B.lastParty[0] }, sub: id === 'propre' ? 'Toute l’équipe rentre debout' : '' };
-    if (['r_invasion', 'repousse', 'rempart', 'forteresse'].includes(id)) return { art: { k: 'hero', key: pick(['barbare', 'paladin', 'mage', 'voleuse', 'elfe']) }, sub: 'La bande est repoussée !' };
+    if (['r_invasion', 'repousse', 'rempart', 'forteresse'].includes(id)) return { sub: 'La bande est repoussée !' };
     if (['r_palier', 'f_palier1', 'f_palier2', 'f_palier3', 'palier1', 'palier2'].includes(id)) return { art: { k: 'room', key: 'coeur' }, sub: `Palier ${S.tier}` };
     if (['r_coup', 'coup'].includes(id)) return { sub: 'Le rival rentre bredouille' };
   } catch (e) {}
@@ -68,7 +67,7 @@ function bookCtx(id) {
 const LVCOL = { 'Premiers du Val': '#e9b949', 'Bâtisseur': '#c98b4a', 'Éleveur': '#7fbf5a', 'Missions': '#b48ad9', 'Stratège': '#e06a5a', 'Château': '#6aa0e0', 'Profondeurs': '#4fb3a9', 'Val': '#e9894a', 'Val des Maîtres': '#d77fa8', 'Rêves': '#c49bff', 'Donjons': '#8f6ad0', 'Quêtes': '#d9a441' };
 const lvMeta = x => MOM_BY[x.id] || { t: x.t || x.id, ico: x.ico || '✨', cat: x.cat };
 // les dessins du jeu (meubles, pièces) pour les stickers qui n'ont pas de créature ou de héros à montrer
-const ART_OF = { pierre: ['furn', 'caisse'], archi: ['room', 'atelier'], deco: ['furn', 'tableau'], cosy: ['furn', 'candelabre'], accueil: ['furn', 'paillasse'], conteur: ['furn', 'theiere'], zen: ['furn', 'theiere'], rempart: ['furn', 'armure'], forteresse: ['furn', 'armure'], pillard: ['furn', 'tasdor'], tresor: ['furn', 'tasdor'], crit: ['furn', 'cristal'], crit3: ['furn', 'cristal'], carto: ['furn', 'longuevue'], collec: ['furn', 'epeefaux'], nuit20: ['furn', 'citrouille'], grandesalle: ['room', 'taverne'], amb30: ['furn', 'candelabre'], f_ambiance: ['furn', 'candelabre'], deco40: ['furn', 'tapis'], fete: ['furn', 'chaudron'], r_fete: ['furn', 'chaudron'], quete: ['furn', 'caisse'], r_quete: ['furn', 'caisse'], f_merveille: ['room', 'coeur'], r_merveille: ['room', 'coeur'], r_artefact: ['furn', 'epeefaux'], r_envies: ['furn', 'plante'], etages: ['room', 'tour'] };
+const ART_OF = { pierre: ['furn', 'caisse'], archi: ['room', 'atelier'], deco: ['furn', 'tableau'], cosy: ['furn', 'candelabre'], zen: ['furn', 'theiere'], pillard: ['furn', 'tasdor'], tresor: ['furn', 'tasdor'], carto: ['furn', 'longuevue'], collec: ['furn', 'epeefaux'], grandesalle: ['room', 'taverne'], amb30: ['furn', 'candelabre'], f_ambiance: ['furn', 'candelabre'], deco40: ['furn', 'tapis'], fete: ['furn', 'chaudron'], r_fete: ['furn', 'chaudron'], r_artefact: ['furn', 'epeefaux'], etages: ['room', 'tour'] };
 function lvArt(x, m) {
   const a = x.art || (ART_OF[x.id] ? { k: ART_OF[x.id][0], key: ART_OF[x.id][1] } : null);
   try { if (a && a.k === 'furn' && FURN[a.key]) return `<img alt="" src="${thumb('furn', a.key, true)}">`; } catch (e) {}
@@ -104,13 +103,13 @@ function livrePages(fresh, L, nu) {
   const stickers = B.ch.reduce((a, c) => a + c.mine.filter(x => !lvHidden(x.id)).length, 0);
   P.push({ k: 'titre', html: `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre du Maître</h1><p class="lv-castle">${esc(S.name)}</p><div class="lv-orn">❧</div><p class="lv-hand">Commencé à la nuit 1${B.ch.length > 1 ? `, ${B.ch.length} chapitres` : ''}${stickers ? `, ${stickers} sticker${stickers > 1 ? 's' : ''} collé${stickers > 1 ? 's' : ''}` : ''}.</p><p class="lv-hand small">Chaque ère est un chapitre. Finis-le devant les rivaux : âge d’or et relique.</p></div></div>` });
   const pro = (B.prologue || []).filter(x => !lvHidden(x.id));
-  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(x, j, false, false, lvJit(x))).join('')}</div>` });
+  for (let i = 0; i < pro.length; i += L.cap) P.push({ k: 'prologue', html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Prologue</div>${pro.slice(i, i + L.cap).map((x, j) => lvSticker(stkFix(x), j, false, false, lvJit(x))).join('')}</div>` });
   B.ch.forEach(c => {
     const live = c === bookCur(), seal = c.age ? `<div class="lv-seal ${c.age}">${lvAgeArt(c)}<b>${AGES[c.age].name}</b></div>` : '';
     P.push({ k: 'chap', n: c.n, html: `<div class="lvp chap"><div class="lv-orn">❦</div><div class="lv-chapn">Chapitre ${ROMAN(c.n)}</div>${lvEraSticker(c.name, c.n)}<p class="lv-hand">Nuits ${c.from} à ${c.to}</p>${seal}${live && !c.mine.length ? '<p class="lv-hand small">Les pages de ce chapitre attendent leurs premiers stickers…</p>' : ''}</div>` });
     const all = c.mine.filter(x => x.stuck !== false && !lvHidden(x.id)).map((x, o) => [x, o]).sort((a, b) => a[0].night - b[0].night || a[1] - b[1]).map(a => a[0]);
     for (let i = 0, pgi = 0; i < all.length; i += L.cap, pgi++) { const on = all.slice(i, i + L.cap); let k = 0;
-      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(x, q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
+      P.push({ k: 'st', n: c.n, pg: pgi, on, html: `<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">L’Ère ${esc(c.name)}</div>${on.map((x, q) => { const nw = isNew(x); return lvSticker(stkFix(x), q, nw, false, lvJit(x, nw ? (L.d0 || .25) + (k++) * .5 : null)); }).join('')}</div>` }); }
     const notes = (c.rmom || []).map((x, j) => `<div class="lv-note" style="--rot:${j % 2 ? 4 : -5}deg">Nuit ${x.night} · ${esc(racer(x.who).master)} t’a devancé : « ${esc((MOM_BY[x.id] || {}).t || '')} »</div>`).join('');
     const mine = chapScore(c), rank = [['moi', mine], ...Object.entries(c.rivals)].sort((a, b) => b[1] - a[1]);
     const race = `<ol class="lv-race">${rank.map(([w, p]) => `<li class="${w === 'moi' ? 'me' : ''}">${w === 'moi' ? esc(S.name) : `${racer(w).emo} ${esc(racer(w).name)}`}<span>${Math.round(p)}</span></li>`).join('')}</ol>`;
