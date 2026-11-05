@@ -3,7 +3,7 @@
    Ce fichier est injecté APRÈS le code du jeu, dans le même
    contexte : il voit toutes ses fonctions et variables.
    ========================================================= */
-var SIM = { m: null };
+var SIM = { m: null, careful: false };
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 // l'affichage n'existe pas ici : on neutralise les effets visuels qui accumuleraient des données
 poof = function () {}; floatText = function () {}; say = function () {}; critterLeave = function () {}; toast = function () {}; sfx = function () {};
@@ -14,12 +14,13 @@ function simNewGame(seed, theme) {
   newState('Château simulé', theme || pick(Object.keys(THEMES)));
   S.started = true; S.tuto = { on: false, done: true, i: 99 }; S.tipsOff = true;
   worldInit();
-  SIM.m = { seed, theme: S.theme, wins: {}, eras: [], inv: 0, inv_repelled: 0, inv_lost: 0, inv_robbed: 0, invRank: { 1: 0, 2: 0, 3: 0 }, raids: 0, raidsWon: 0, calamities: 0, curve: {}, tierAt: {}, floorsAt: {}, firstRare: null };
+  SIM.careful = false; SIM.m = { seed, theme: S.theme, wins: {}, eras: [], inv: 0, inv_repelled: 0, inv_lost: 0, inv_robbed: 0, invRank: { 1: 0, 2: 0, 3: 0 }, raids: 0, raidsWon: 0, calamities: 0, curve: {}, tierAt: {}, floorsAt: {}, firstRare: null };
   return S;
 }
 // une nuit, comme endNight() mais sans fenêtres ni animations
 function simInvasion(plan) {
-  if (S.opts && S.opts.cliTac === 'rancon' && typeof payOff === 'function') { payOff(plan); SIM.m.inv_bought = SIM.m.inv_bought || 0; return 'bought'; }   // la tactique « rançon » de la ligne de commande
+  // la tactique « rançon » de la ligne de commande : comme dans le jeu, rien d'autre que l'or versé (ni Menace, ni victoire) ; jamais contre la croisade
+  if (S.opts && S.opts.cliTac === 'rancon' && typeof payOff === 'function') { const ban = typeof invRansomBan === 'function' ? invRansomBan(plan) : ''; if (ban) plan.banned = ban; else { plan.bought = payOff(plan); SIM.m.inv_bought = (SIM.m.inv_bought || 0) + 1; return 'bought'; } }
   if (typeof invResolve === 'function') { const R = invResolve(plan); plan.res = R; return R.outcome; }   // les invasions aux cartes (p69) : la bande traverse les pièces, l'ordinateur joue les combats
   if (typeof resolveInvasion === 'function') { const R = resolveInvasion(plan, (S.opts && S.opts.cliTac) || 'postes'); plan.res = R; return R.outcome; }   // les vrais combats
   if (!plan.path) return 'lost';
@@ -35,12 +36,14 @@ function simNight() {
   const M = SIM.m, report = [];
   if (typeof filNightStart === 'function') filNightStart();
   const cd = calamityDelta(); S.calamity = Math.max(0, S.calamity + cd.d);
-  if (S.calamity >= CAL_MAX) { const ev = pick(CALAMITIES.filter(c => c.when())); ev.run(); S.calamity = 0; S.stats.calmNights = 0; M.calamities++; } else S.stats.calmNights++;
+  if (S.calamity >= CAL_MAX) { const ev = pick(CALAMITIES.filter(c => c.when())), txt = ev.run(); report.push(['💥', 'Calamité ! ' + txt, 'bad']); S.calamity = 0; S.stats.calmNights = 0; M.calamities++; } else S.stats.calmNights++;   // comme dans le jeu (p11) : la calamité a sa ligne dans la chronique
   if (S.raid && S.raid.played) { /* expédition déjà jouée à la main (sim/crawl_cli.js) */ }
   else if (S.raid && S.raid.crawl && typeof simCrawlNight === 'function') { const o = simCrawlNight(report); M.crawls = (M.crawls || 0) + 1; if (o) M['crawl_' + o] = (M['crawl_' + o] || 0) + 1; }
   else if (S.raid) { const team = S.raid.team.map(critter).filter(Boolean); if (team.length) { const b = raidBreakdown(S.raid.target, S.raid.team), extra = typeof simRaidExtras === 'function' ? simRaidExtras(b, team, report) : 0, roll = rollPool(b.pool + extra), tg = RAIDS[S.raid.target]; report.push(['🎲', `Raid sur ${tg ? tg.name : S.raid.target} : ${b.pool} dés → ${roll.dice.join(', ')} (${roll.res === 'fail' ? 'échec' : roll.res === 'partial' ? 'réussite partielle' : roll.res === 'crit' ? 'critique' : 'réussite'})`, '']); applyRaid(roll).forEach(l => report.push(l)); M.raids++; if (roll.res !== 'fail') M.raidsWon++; } }
   if (S.hype >= 3) S.menace += 1;
-  if (S.menace >= MENACE_MAX) { S.menace = 0; const plan = planInvasion(), out = simInvasion(plan); if (plan.res) { M.hurt = (M.hurt || 0) + plan.res.hurt.length; M.heroKO = (M.heroKO || 0) + plan.res.fallen.length; M.fought = (M.fought || 0) + plan.res.fought.length; } report.push(['⚔️', `Invasion : ${plan.party.length} héros (rang ${plan.rank || 1}), courage ${plan.courage} contre ${plan.steps.reduce((a, st) => a + st.dmg, 0)} de défense → ${out === 'repelled' ? 'repoussés' : out === 'lost' ? 'perdus en route' : 'le Cœur est pillé'}`, out === 'robbed' ? 'bad' : 'good']); applyInvasion(plan, out).forEach(l => report.push(l)); M.inv++; M['inv_' + out]++; M.invRank[plan.rank || 1]++; (M.invLog = M.invLog || []).push([S.night, plan.rank || 1, plan.courage, plan.steps.reduce((a, st) => a + st.dmg, 0), out, vicState().croisade && !vicState().won.legende ? 1 : 0]); }
+  if (S.menace >= MENACE_MAX) { S.menace = 0; const plan = planInvasion(), out = simInvasion(plan); if (plan.res) { M.hurt = (M.hurt || 0) + plan.res.hurt.length; M.heroKO = (M.heroKO || 0) + plan.res.fallen.length; M.fought = (M.fought || 0) + plan.res.fought.length; } report.push(['⚔️', `Invasion : ${plan.party.length} héros (rang ${plan.rank || 1}) → ${out === 'repelled' ? 'repoussés' : out === 'lost' ? 'perdus en route' : out === 'bought' ? 'leur départ est acheté' : 'le Cœur est pillé'}${plan.res && plan.res.inv2 ? ` (${plan.res.inv2.fights} combat${plan.res.inv2.fights > 1 ? 's' : ''} aux cartes, ${plan.res.fallen.length} héros à terre sur ${plan.party.length})` : plan.res && plan.res.fought ? ` (${plan.res.fought.length} combat${plan.res.fought.length > 1 ? 's' : ''}, ${plan.res.fallen.length} héros à terre)` : ''}`, out === 'robbed' ? 'bad' : 'good']); if (plan.banned) report.push(['💰', plan.banned + ' Ta tactique « rançon » attendra la prochaine bande.', '']);
+    if (plan.res && plan.res.inv2 && typeof invSummary === 'function') invSummary(plan.res.inv2, out).forEach(l => report.push(l));   // le résumé, pièce par pièce
+    (out === 'bought' ? plan.bought || [] : applyInvasion(plan, out)).forEach(l => report.push(l)); M.inv++; M['inv_' + out] = (M['inv_' + out] || 0) + 1; M.invRank[plan.rank || 1]++; (M.invLog = M.invLog || []).push([S.night, plan.rank || 1, plan.courage, (plan.steps || []).reduce((a, st) => a + st.dmg, 0), out, vicState().croisade && !vicState().won.legende ? 1 : 0]); }
   if (typeof rivalNightSim === 'function') { const o = rivalNightSim(report); if (o) { M.nemRaids = (M.nemRaids || 0) + 1; if (o === 'robbed') M.nemRobbed = (M.nemRobbed || 0) + 1; } }
   dawn(report);
   S.rooms.forEach(r => { delete r.justBuilt; });   // comme à la fin de la chronique dans le jeu
@@ -84,27 +87,63 @@ A.build = (t, z = 0) => { let av = withZ(z, () => availability('room', t));
   if (av && av.clash) { const alt = floorsOpen().filter(f => f !== z).find(f => !withZ(f, () => availability('room', t))); if (alt != null) { z = alt; av = null; } }   // incompatible ici : on essaie un autre étage
   if (av) return av.reason || 'indisponible'; const s = A.spot(t, z); if (!s) { SIM.noRoom = S.night; return typeof EXT !== 'undefined' && z === EXT ? 'pas de place dehors (achète la forêt : foret)' : 'pas de place (agrandis les remparts : expand)'; } return cmd('place', { kind: 'room', t, x: s.x, y: s.y, w: s.w, h: s.h, z }); };
 // meuble une pièce : priorité aux besoins (lits, repas), puis au sticker préféré des occupants, puis à l'ambiance
-A.furnish = (r, budget = 99) => {
-  const d = ROOMS[r.t]; if (!d.furn || !r) return 0; let n = 0;
+// o.fit (ligne de commande) : saute les meubles qui ne tiennent pas ici (grande salle requise…) au lieu de s'arrêter au premier refus ; les IA gardent l'ancien comportement
+A.furnish = (r, budget = 99, o = {}) => {
+  const d = ROOMS[r.t]; if (!d.furn || !r) return 0; let n = 0; const bad = new Set();
   const cells = cellsOf(r).filter(([x, y]) => !furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r)));
-  for (const [x, y] of cells) {
+  for (let ci = 0; ci < cells.length; ci++) { const [x, y] = cells[ci];
     const needBeds = beds() - S.creatures.length < 3, needFood = foodCap() < eaters() + 2;
-    const opts = d.furn.filter(t => !withZ(zOf(r), () => availability('furn', t)) && canAfford(costOf('furn', t)));   // on regarde depuis l'étage de la pièce (dehors : les meubles du dehors)
+    const opts = d.furn.filter(t => !withZ(zOf(r), () => availability('furn', t)) && canAfford(costOf('furn', t)) && !(o.fit && (bad.has(t) || (FURN[t].size && groupSize(r) < FURN[t].size))));   // on regarde depuis l'étage de la pièce (dehors : les meubles du dehors)
     if (!opts.length || S.gold - (costOf('furn', opts[0]).g || 0) < 0) break;
     const liked = new Set(S.creatures.map(c => (SPECIES[c.sp] || {}).likes));
     const score = t => { const f = FURN[t], have = countItem(t); return (needBeds ? (f.beds || 0) * 4 : (f.beds || 0)) + (needFood ? (f.food || 0) * 3 : (f.food || 0)) + (f.gold || 0) * 2.5 + (f.mat || 0) * 2 + (f.amb || 0) * 1.5 + (f.hype || 0) * 1.5 + (f.dice || 0) + (f.guard || 0) * .5 + (f.cal || 0) * 1.5 + (f.cells || 0) + (f.harass || 0) + (liked.has(t) && !have ? 4 : 0) - have * .3; };
     const t = opts.sort((a, b) => score(b) - score(a))[0]; const c = costOf('furn', t);
     if ((c.g || 0) > budget) break;
-    if (!cmd('place', { kind: 'furn', t, x, y, z: zOf(r) })) { n++; budget -= c.g || 0; } else break;
+    const e = cmd('place', { kind: 'furn', t, x, y, z: zOf(r) });
+    if (!e) { n++; budget -= c.g || 0; } else if (o.fit && !/Pièce pleine/.test(e)) { bad.add(t); ci--; } else break;
   }
   return n;
 };
-A.decorate = (t, budget = 6, roomT = null) => {   // pose un sticker de déco (ou un artefact en réserve) quelque part (dans une pièce de ce type si roomT)
+// pourquoi une pièce n'a rien reçu (pour la ligne de commande)
+A.furnWhy = r => { const nm = ROOMS[r.t].name;
+  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `pièce pleine, ${nm} (${furnCount(r)}/${furnCap(r)} stickers : un pour deux cases, déco et artefacts compris ; retire une déco, ou bâtis une pièce de plus de ce type)`;
+  if (!cellsOf(r).some(([x, y]) => !furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r)))) return `${nm} : plus une case libre`;
+  const opts = (ROOMS[r.t].furn || []).filter(t => !withZ(zOf(r), () => availability('furn', t)));
+  if (!opts.length) return `${nm} : aucun meuble disponible ici pour l’instant (palier ?)`;
+  const cheap = opts.map(t => costOf('furn', t)).sort((a, b) => (a.g || 0) - (b.g || 0))[0];
+  if (!opts.some(t => canAfford(costOf('furn', t)))) return `${nm} : pas assez pour le moins cher (${costText(cheap)} ; tu as ${S.gold} 💰 ${S.mat} 🪵)`;
+  return `${nm} : rien d’utile à ajouter`; };
+// o.cli (ligne de commande) : sans pièce précisée, la déco évite les dortoirs, potagers et cuisines (leurs places servent aux lits et aux repas) ; un refus explique quoi faire
+const ROOM_NEEDS = ['dortoir', 'potager', 'cuisine'];
+A.decorate = (t, budget = 6, roomT = null, o = {}) => {   // pose un sticker de déco (ou un artefact en réserve) quelque part (dans une pièce de ce type si roomT)
   const spots = []; S.rooms.filter(r => r.built && (!roomT || r.t === roomT) && !ROOMS[r.t].fixed && !ROOMS[r.t].stairs).forEach(r => cellsOf(r).forEach(([x, y]) => { if (!furnAt(x, y, zOf(r)) && !defAt(x, y, zOf(r))) spots.push([x, y, zOf(r), r]); }));
-  const pref = FURN[t] && FURN[t].artefact ? spots.filter(s => s[3].t === 'reliquaire').concat(spots.filter(s => s[2] !== 0), spots) : spots.filter(s => !isHall(s[3])).concat(spots);
+  const pref = FURN[t] && FURN[t].artefact ? spots.filter(s => s[3].t === 'reliquaire').concat(spots.filter(s => s[2] !== 0), spots) : o.cli && !roomT ? spots.filter(s => !isHall(s[3]) && !ROOM_NEEDS.includes(s[3].t)).concat(spots.filter(s => isHall(s[3])), spots) : spots.filter(s => !isHall(s[3])).concat(spots);
   for (const [x, y, z] of pref) { const c = costOf('furn', t); if ((c.g || 0) > budget) return 'trop cher'; const e = cmd('place', { kind: 'furn', t, x, y, z }); if (!e) return null; }
-  return 'pas de place';
+  if (!o.cli) return 'pas de place';
+  return roomT ? `pas de place dans : ${(ROOMS[roomT] || {}).name || roomT} (une pièce prend un sticker pour deux cases, meubles compris ; essaie sans préciser la pièce, ou bâtis un couloir : build couloir [étage])`
+    : `pas de place : tes pièces sont pleines (un sticker pour deux cases, meubles et déco compris) et tes couloirs sont pris (pièges, déco). Bâtis un couloir (build couloir [étage]) : ses cases sans piège acceptent déco et artefacts sans limite${FURN[t] && FURN[t].artefact ? ' ; à l’étage, un artefact ne craint pas les héros' : ''}`;
 };
+// les leviers d'avant l'invasion (v32), pour les IA qui soignent leur château (common) :
+// un piège à la porte des pièces qui n'en ont pas (la bande traverse des pièces tirées au hasard, à tous les étages)
+A.roomTraps = (maxSpend = 12) => {
+  if (typeof invCandidates !== 'function') return 0;
+  const kinds = ['machoire', 'automate', 'meule', 'herse', 'hache', 'ressort', 'trappe', 'sphinx', 'porte', 'leurre', 'banane'].filter(t => DEFS[t] && !availability('def', t));
+  let n = 0, dug = 0;
+  for (const r of invCandidates()) {
+    if (invTrapsNear(r).some(d => DEFS[d.t] && (DEFS[d.t].str || DEFS[d.t].lost))) continue;
+    const t = kinds.find(k => canAfford(costOf('def', k)) && (costOf('def', k).g || 0) <= maxSpend); if (!t) break;
+    const z = zOf(r), cells = [];
+    groupOf(r).rooms.forEach(o => { const w = o.w || 1, h = o.h || 1; for (let x = o.x; x < o.x + w; x++) cells.push([x, o.y - 1], [x, o.y + h]); for (let y = o.y; y < o.y + h; y++) cells.push([o.x - 1, y], [o.x + w, y]); });
+    let free = cells.find(([x, y]) => withZ(z, () => { const c = roomAt(x, y, z); return c && c.t === 'couloir' && !defAt(x, y) && !furnAt(x, y, z); }));
+    if (!free && dug < 2 && S.mat >= 3) { free = cells.find(([x, y]) => x >= 0 && y >= 0 && x < W && y < H && !roomAt(x, y, z) && !cmd('place', { kind: 'room', t: 'couloir', x, y, w: 1, h: 1, z })); if (free) dug++; }   // un bout de couloir à sa porte (1 🪵)
+    if (free && !cmd('place', { kind: 'def', t, x: free[0], y: free[1], z })) { n++; maxSpend -= costOf('def', t).g || 0; }
+  }
+  return n;
+};
+// un mercenaire au Cœur quand une bande arrive et que l'or ne manque pas
+A.merc = (reserve = 80) => { if (!invasionSoon() || (S.world && S.world.merc > S.night)) return; const t = A.knownTowns().find(s => (SHOPS[s.kind] || []).some(sh => sh.items.includes('merco'))); if (t && S.gold - shopPrice(t, 'merco') >= reserve + payReserve()) A.shop(t.id, 'merco'); };
+// un Corps de garde dès le palier 1 (une place de défenseur de plus par pièce)
+A.garde = () => { if (S.tier >= 1 && !availability('room', 'garde') && !S.rooms.some(r => r.t === 'garde') && S.gold >= (costOf('room', 'garde').g || 0) + 10 + payReserve() && S.mat >= (costOf('room', 'garde').s || 0)) A.build('garde'); };
 A.traps = (maxSpend = 12) => {
   const p = heroPath() || []; let n = 0;
   const kinds = ['machoire', 'automate', 'meule', 'herse', 'hache', 'ressort', 'trappe', 'sphinx', 'porte', 'leurre', 'banane'].filter(t => DEFS[t] && !availability('def', t));
@@ -136,7 +175,7 @@ A.care = () => {
   });
 };
 A.acceptQuests = (expe = true) => S.creatures.forEach(c => { const q = questOf(c); if (q && (q.st === 'offered' || q.st === 'ready') && (expe || !QT[q.k].away)) cmd('qAccept', { id: c.id }); });
-const invasionSoon = () => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) >= MENACE_MAX;
+const invasionSoon = (extra = 0) => S.menace + (S.hype >= 3 ? 1 : 0) + (S.raid && RAIDS[S.raid.target] ? RAIDS[S.raid.target].menace || 0 : 0) + extra >= MENACE_MAX;
 // plus de gardes à poster : les défenseurs sont tirés au sort par palier de force (invLineup) ; on lève les vieux postes, sans plus (SIM_GUARD n'a plus d'effet)
 A.guards = () => { S.creatures.forEach(c => { if (c.guard) c.guard = null; }); };
 // les grands chantiers quand l'or s'accumule ; la cuisine quand le garde-manger le permet ; les caravanes selon la stratégie
@@ -147,6 +186,48 @@ A.fete = () => { if (typeof feteWhy === 'undefined' || feteWhy()) return; if (S.
 A.chantier = (reserve = 60) => { if (typeof CHANTIERS === 'undefined' || chantierState().cur) return; const k = Object.keys(CHANTIERS).filter(x => !chantierWhy(x)).sort((a, b) => CHANTIERS[a].cost.g - CHANTIERS[b].cost.g)[0]; if (k && S.gold - CHANTIERS[k].cost.g >= reserve) cmd('chantier', { id: k }); };
 A.cook = () => { if (typeof RECIPES === 'undefined' || !hasKitchen()) return; const order = [eaters() > foodCap() ? 'tourte' : null, invasionSoon() ? 'gateau' : null, invasionSoon() ? 'poisson' : null, S.calamity >= CAL_MAX - 3 ? 'ragout' : null, 'soupe'].filter(Boolean); for (const k of order) if (canCook(k)) { cmd('cook', { id: k }); return; } };
 A.caravan = how => { if (typeof activeCaravans === 'undefined') return; const cv = activeCaravans().find(x => !x.done); if (cv && (how !== 'pille' || caravanOdds(cv) >= .5)) cmd('caravan', { id: cv.id, how }); };
+// le mécénat (v29) : le bois et l'or en trop (au-delà d'une réserve) vont à l'embellissement le moins cher d'un lieu connu
+A.mecenat = (reserve = 60) => { if (typeof mecState !== 'function' || mecState().cur) return; const s = mecSites().filter(x => mecLv(x.id) < 3 && S.tier >= 1).sort((a, b) => (mecCost(a).g + mecCost(a).s) - (mecCost(b).g + mecCost(b).s))[0]; if (!s) return; const c = mecCost(s);
+  if (S.gold - c.g >= reserve && S.mat - c.s >= reserve) cmd('mecenat', { id: s.id });
+  else if (S.gold - allGold(c).g >= 250) cmd('mecenat', { id: s.id, gold: true }); };   // l'or déborde (les pillards) : tout en or
+// le concours de saison (v29) : on s'inscrit si on a une chance, puis on prépare avec le bois en trop
+A.concours = () => { if (typeof concOpen !== 'function' || !concOpen()) return; const C = S.concours, lvl = concRivalLevel() + 2.2;
+  if (!C.in && concMine() + 4 >= lvl && S.gold - concFee().g >= 25) cmd('concours');
+  while (C.in && concPrepCost() && concMine() < lvl + 1 && S.mat - concPrepCost().s >= 40) if (cmd('concours', { prep: true })) break; };
+// les caravanes (v29) : on leur vend le bois qui s'entasse, ou un peu plus quand l'or manque
+A.trade = () => { if (typeof caravanBuys !== 'function') return; const cv = activeCaravans().find(x => !x.done && caravanBuys(x) > 0); if (!cv) return;
+  const keep = S.gold < 25 ? 30 : 150; if (S.mat - keep >= 10) cmd('caravan', { id: cv.id, how: 'commerce', n: S.mat - keep }); };
+// les décisions qui attendent le joueur (ligne de commande, sondes)
+A.pending = () => {
+  const out = [];
+  if (typeof concOpen === 'function' && concOpen()) { const C = S.concours, D = concDef(); out.push(`🏆 Concours « ${D.name} » (${D.crit} : ${D.what}) : ${C.in ? `inscrit·e, préparatifs ${C.prep}/3${concPrepCost() ? ' (concours preparer : ' + costText(concPrepCost()) + ', +1 point)' : ''}` : `inscription ${costText(concFee())} (concours inscrire)`} · ta note ${D.score()}/10${C.prep ? ' +' + C.prep : ''}, les favoris vers ${String(concRivalLevel() + 1.5).replace('.', ',')} · inscriptions jusqu’à la nuit ${concFete() - 1}, verdict à l’aube de la nuit ${concFete()}`); }
+  if (typeof activeCaravans === 'function') activeCaravans().filter(cv => !cv.done).forEach(cv => out.push(`🛒 Caravane de ${cv.fromN} vers ${cv.toN} (encore ${CARAVAN_NIGHTS - (S.night - cv.n)} nuit(s), ${cv.guard} gardes) : caravane pille (${Math.round(caravanOdds(cv) * 100)} %) | caravane escorte (+5 or, bonne volonté) | caravane commerce [bois] (elle achète ${caravanBuys(cv)} 🪵 au plus, ${CARAVAN_RATE} pour 1 or)`));
+  if (typeof merchantHere === 'function' && merchantHere()) out.push(`🏪 Marchand ambulant, cette nuit seulement : ${merchantHere().map(o => `${o.k} = ${itemName(o.k)} (${o.price} or${o.sold ? ', vendu' : ''})`).join(', ')} → marchand <objet>`);
+  if (typeof qState === 'function') { const Q = qState(), wait = Q.cur.filter(q => { const st = qStep(q); return st && (st.k === 'choice' || st.k === 'pay'); }); if (Q.offers.length || wait.length) out.push(`📜 Journal : ${Q.offers.length} quête(s) au tableau, ${wait.length} étape(s) qui attendent ton choix ou ta livraison → journal`); }
+  if (typeof chantierState === 'function') { const c = chantierState().cur; if (c) out.push(`🏗️ Grand chantier en cours : ${CHANTIERS[c.id].name}, encore ${c.left} nuit(s)`); }
+  if (typeof mecState === 'function') { const c = mecState().cur, s = c && siteById(c.site); if (s) out.push(`🎀 Mécénat en cours : ${mecName(s, c.lv)} à ${s.name}, encore ${c.left} nuit(s)`); }
+  return out;
+};
+// le journal des quêtes, en texte (ligne de commande)
+A.journalText = () => {
+  const Q = qState(); questSync(); const strip = t => String(t).replace(/<\/span> <span class="tag2">/g, ', ').replace(/<[^>]+>/g, '').trim();
+  const step = (q, st) => { if (!st) return 'finie';
+    if (st.k === 'pay') return `livrer ${strip(costTags(st.cost))}${CMDcheckPay(q) ? ' (' + CMDcheckPay(q) + ')' : ''} → journal payer ${Q.cur.indexOf(q) + 1}`;
+    if (st.k === 'choice') return `choisir → ${st.opts.map((o, i) => `journal choisir ${Q.cur.indexOf(q) + 1} ${i + 1} : ${o.t} (${o.d})`).join(' | ')}`;
+    if (st.k === 'raid' || st.k === 'boss') return `${st.k === 'boss' ? 'expédition' : 'raid'} à lancer → raid ${st.target}`;
+    if (st.k === 'cook') return `cuisiner : ${Object.entries(st.dishes).map(([k, n]) => `${RECIPES[k].name} ${Math.min(n, q.prog[k] || 0)}/${n}`).join(', ')}`;
+    if (st.k === 'craft') return `fabriquer : ${st.items.map((it, i) => `${it.name} ${Math.min(it.n, Math.floor((q.prog['i' + i] || 0) / QUEST_UNIT))}/${it.n} (${ROOMS[it.w].name})`).join(', ')} (poste des créatures dans ces pièces)`;
+    if (st.k === 'defend') return `une bande attaque dans ${Math.max(0, (q.at || S.night) - S.night)} nuit(s)`;
+    if (st.k === 'wait') return `encore ${Math.max(0, q.at - S.night)} nuit(s)`;
+    return st.k; };
+  const L = [`Quêtes en cours (${Q.cur.length}/${QUEST_MAX}) :`];
+  Q.cur.forEach((q, i) => { const st = qStep(q); L.push(`  ${i + 1}. ${q.def.title}${q.def.main ? ' [grande quête]' : ''} — étape ${q.i + 1}/${q.def.steps.length} « ${st ? st.t : ''} » : ${step(q, st)}${q.until ? ` · encore ${q.until - S.night} nuit(s)` : ''} · récompense : ${strip(rewardTags(q.def.reward))}`); });
+  if (!Q.cur.length) L.push('  aucune');
+  L.push(`Au tableau (${Q.offers.length}) :`);
+  Q.offers.forEach((o, i) => L.push(`  ${i + 1}. ${o.def.title}${o.def.main ? ' [grande quête]' : ''} (${o.def.giver}, ${o.def.steps.length} étape(s)${o.until ? `, reste au tableau ${o.until - S.night} nuit(s)` : ''}) · récompense : ${strip(rewardTags(o.def.reward))} → journal accepter ${i + 1} | journal refuser ${i + 1}`));
+  if (!Q.offers.length) L.push('  rien (une nouvelle quête arrive de temps en temps)');
+  return L.join('\n');
+};
 A.posts = () => {   // chaque créature dans sa pièce préférée (humeur), ou à l'atelier de son métier (le guet : au Corps de garde)
   A.guards();
   if (invasionSoon()) return;
@@ -213,7 +294,7 @@ A.dreams = () => S.creatures.forEach(c => {
   else if (d.t === 'poste') { const r = S.rooms.find(o => o.t === d.k && o.built); if (r) cmd('post', { id: c.id, post: r.id }); }
   else if (d.t === 'seul') { const r = S.rooms.find(o => o.built && !isHall(o) && o.t !== 'coeur' && !ROOMS[o.t].stairs && !S.creatures.some(x => x.post === o.id)); if (r) cmd('post', { id: c.id, post: r.id }); }
 });
-A.quests = () => {
+A.quests = (o = {}) => {   // o.noBuild : ne bâtit pas la pièce qu'une créature réclame (la nuit de la ligne de commande)
   S.creatures.forEach(c => {
     const q = questOf(c); if (!q) return;
     if (q.st === 'offered') { cmd(A.questDoable(c, q) ? 'qAccept' : 'qDecline', { id: c.id }); return; }   // v10
@@ -221,7 +302,7 @@ A.quests = () => {
     if (q.st !== 'active') return;
     if (q.k === 'objet') A.placeItem(q.item);
     else if (q.k === 'deco') { const r = S.rooms.find(x => x.id === q.roomId); for (let i = 0; r && i < 3 && decorIn(r) < q.goal; i++) { const t = DECOR_ORDER.find(k => !availability('furn', k) && canAfford(costOf('furn', k))); if (!t || A.placeIn(r, t)) break; } }
-    else if (q.k === 'piece') { const mine = S.rooms.filter(r => r.t === q.room); const todo = mine.find(r => !r.built || !furnished(r)); if (!todo) A.build(q.room); else if (todo.built) A.furnish(todo, S.gold); }
+    else if (q.k === 'piece') { const mine = S.rooms.filter(r => r.t === q.room); const todo = mine.find(r => !r.built || !furnished(r)); if (!todo) { if (!o.noBuild) A.build(q.room); } else if (todo.built) A.furnish(todo, S.gold); }
     else if (q.k === 'ami') { const s = A.knownTowns().find(x => x.kind !== 'village'); if (s) A.shop(s.id, 'recrue', q.sp); }
     else if (q.k === 'ravi' && c.mood < 5 && S.gold > 4 && OLD_SOULS()) cmd('treat', { id: c.id });
     else if (q.k === 'poste') { const r = S.rooms.find(o => o.t === q.room && o.built); if (r) cmd('post', { id: c.id, post: r.id }); }
@@ -240,7 +321,7 @@ function simState(full) {
   const reqs = openReqs().map(q => `${q.id}:${siteById(q.site).name}:${q.req}(${REQ[q.req].kind}${q.st === 'sent' ? ', en cours' : ''})`);
   const lines = [
     `NUIT ${S.night} · palier ${S.tier} · or ${S.gold} · matériaux ${S.mat} · notoriété ${S.hype} · rayonnement ${radiance()} · ambiance ${ambiance()} · lits ${S.creatures.length}/${beds()} · repas ${eaters()}/${foodCap()} · calamité ${S.calamity}/${CAL_MAX} · menace ${S.menace}/${MENACE_MAX}`,
-    `Prochains héros : ${pp.size} ${HERO_RANK[pp.rank].label} de ${h ? h.name : '?'}, courage ~${pp.courage} · défense actuelle (somme des dégâts sur le chemin) ${defenseScore()} · pièges ${S.defs.length}`,
+    `Prochains héros : ${pp.size} ${HERO_RANK[pp.rank].label} de ${h ? h.name : '?'} · pièges ${S.defs.length} (l’estimation sur 24 essais s’affiche quand une bande approche)`,
     `Étages ${floorsOpen().join(',')} (max ${Math.min(3, S.tier)} en plus) · remparts ${12 + 2 * (S.size || 0)}×${12 + 2 * (S.size || 0)} · palier suivant : ${tierStatus() ? tierStatus().rows.map(r => (r.ok ? '✓' : '✗') + r.text).join(' ; ') : 'max'}`,
     `Pièces : ${Object.entries(rooms).map(([k, n]) => n > 1 ? k + '×' + n : k).join(', ') || 'aucune'}`,
     `Créatures (${S.creatures.length}) : ${crit.join(' ; ')}`,

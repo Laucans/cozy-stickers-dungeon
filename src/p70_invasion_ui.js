@@ -41,13 +41,14 @@ async function invRun(I, api) {
       const who = info.def.map(c => esc(c.name)).join(', ');
       invScreen(api, I, info.heart ? `Le Cœur ! ${who} ${info.def.length > 1 ? 'défendent' : 'défend'} le château. Ici, la bande se bat jusqu’au bout.` : `Le sort a désigné ${who} pour défendre <b>${esc(info.name)}</b> : au combat ! Les cartes viennent de la pièce (ses meubles et les pièges qui la bordent).`, [], [['go', '⚔️ Jouer le combat', true], ['auto', '🤖 Combat auto']], info.def);
       const how = S.opts && S.opts.cardDef === 'auto' ? (await sleep(1100), 'auto') : await invWaitFor(api, 'go', 'auto'); api.ui.autoNext = how === 'auto';
+      if (info.heart) I.heartHp = invHpLeft(I);
       const R = invFightR(I, info); api.setR(R);
       const res = await api.fight('inv', invFoesForFight(I), B => invHook(I, B, info.heart));
       api.page.classList.remove('battle'); S.stats.cardDefs = (S.stats.cardDefs || 0) + 1;
       const l = invAfterFight(I, info, R, res); I.lines.push(...l);
-      invScreen(api, I, res === 'won' ? `${gi('trophy')} La bande est repoussée !` : `La bande passe ${esc(info.name)}.`, l, [['next', nextLbl(), true]]); await invWaitFor(api, 'next');
+      invScreen(api, I, res === 'won' ? `${gi('trophy')} La bande est repoussée !` : res === 'held' ? `${gi('shield')} ${esc(invCap(info.name))} tient bon : la bande passe son chemin sans rien piller.` : `La bande passe ${esc(info.name)}.`, l, [['next', nextLbl(), true]]); await invWaitFor(api, 'next');
     } else if (info.heart) {
-      I.out = 'robbed'; const l = [['💔', 'Personne pour défendre le Cœur : la bande se sert.', 'bad']]; I.lines.push(...l);
+      I.out = 'robbed'; I.heartHp = invHpLeft(I); invRec(I, info).kind = 'empty'; const l = [['💔', 'Personne pour défendre le Cœur : la bande se sert.', 'bad']]; I.lines.push(...l);
       invScreen(api, I, 'Le Cœur est désert…', l, [['next', nextLbl(), true]]); await invWaitFor(api, 'next');
     } else {
       const l = invEvent(I, info); I.lines.push(...l); sfx(I.out ? 'chime' : 'tick');
@@ -58,6 +59,7 @@ async function invRun(I, api) {
   const T = { repelled: '🛡️ La bande est repoussée !', lost: '🌀 Ils rebroussent chemin', robbed: '💔 Le Cœur est pillé' }[I.out];
   api.head(); api.page.classList.remove('battle');
   api.body.innerHTML = `<div class="cmap"><h2 class="cp-end">${T}</h2>${invHeroesRow(I)}<p class="cmsg2">${I.out === 'robbed' ? 'Ils emportent ce qu’ils ont pillé en chemin, et se servent au Cœur.' : `Tout ce qu’ils avaient pillé reste au château${I.looted && !I.plan.party.some(h => h.minion) ? ', avec une prime : plus la bande était chargée, plus elle rapporte' : ''}.`}</p>
+    <h3>Pièce par pièce</h3>${invLinesHTML(invSummary(I, I.out))}
     <div class="btnrow cp-foot"><button type="button" class="sbtn pri" data-a="end">Retour au château</button></div></div>`;
   sfx(I.out === 'robbed' ? 'defeat' : 'victory'); await invWaitFor(api, 'end');
 }
@@ -70,10 +72,30 @@ async function invPlay(plan) {
     track: () => invTrack(I), run: api => invRun(I, api) });
   return invFinish(I);
 }
+// la force des deux camps et l'estimation (des invasions jouées d'avance en combat auto, avec les défenseurs tirés)
+function invForceHTML(I, F, B) {
+  const pct = Math.round(100 * F.rob), n = F.n || 1;
+  return `<h3>La force des deux camps</h3><ul class="chron invlines">
+    <li>⚔️ <b>La bande</b> : ${B.band.n} héros, ${B.band.hp} ❤️ en tout, environ ${B.band.hit} par coup${I.lines.length ? ' (cailloux compris)' : ''}.</li>
+    <li class="${B.heart.names.length ? '' : 'bad'}">❤️ <b>Ton Cœur</b> : ${B.heart.names.length ? `${B.heart.names.map(esc).join(', ')} — ${B.heart.hp} ❤️ en tout, ${String(B.heart.atk).replace('.', ',')} en attaque` : 'personne pour le défendre !'}.</li>
+    <li>🛡️ <b>Les pièces</b> : ${B.rooms} défendue${B.rooms > 1 ? 's' : ''} sur ${B.roomsN} (${B.defs} créature${B.defs > 1 ? 's' : ''}) ; ailleurs, des rencontres.</li>
+    <li class="${pct >= 20 ? 'bad' : pct < 8 ? 'good' : ''}">🎲 <b>Estimation</b> : sur ${n} invasions jouées d’avance en combat auto, le Cœur tombe ${F.robbed} fois (${pct} %) : risque ${invRiskWord(F.rob)}. Jouer les combats à la main fait souvent mieux.</li></ul>`;
+}
+// avant l'assaut, depuis la pastille « Des aventuriers approchent » : ce qui arrive, qui tiendrait le Cœur, et les leviers
+function openInvPrep() {
+  const pp = partyPreview(), heart = invHeartCrew(), adv = invAdvice(null, 6), lvl = invLevel({ rank: pp.rank || 1, origin: pp.origin }), hp = heart.reduce((a, c) => a + crawler(c).hp, 0);
+  const m = openModal(`<h2>⚔️ Des aventuriers approchent</h2>
+    <p class="hint">Menace ${S.menace}/${MENACE_MAX} : une bande attaquera ${S.menace >= MENACE_MAX - 1 ? 'sans doute à la fin de cette nuit' : 'bientôt'}${pp.origin && pp.origin.name ? `, partie de ${esc(pp.origin.name)}` : ''} : environ ${pp.size} héros de rang ${pp.rank || 1}${pp.origin && pp.origin.crusade ? ' (la croisade : elle ne se vend pas)' : ''}, niveau ${String(lvl).replace('.', ',')} (il grandit avec ton château : ses créatures, ton palier, tes champions).</p>
+    <ul class="chron invlines"><li class="${heart.length ? '' : 'bad'}">❤️ <b>Au Cœur, ce soir</b> : ${heart.length ? `${heart.map(c => esc(c.name)).join(', ')} (${hp} ❤️), tes créatures les plus fortes parmi les reposées` : 'personne !'}.</li></ul>
+    ${adv.length ? `<h3>Pour bien les recevoir</h3>${invLinesHTML(adv.map(a => [a[0], a[1], '']))}` : '<p class="hint">Rien à redire : ton château est prêt.</p>'}
+    <div class="btnrow"><button type="button" class="sbtn" data-a="wiki">📖 Le Grimoire : les invasions</button><button type="button" class="sbtn pri" data-a="ok">Compris</button></div>`, { wide: true, cls: 'invintro', label: 'Une bande approche' });
+  m.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; closeModal(true); if (b.dataset.a === 'wiki') openGrimoire('invasion'); });
+}
+if (typeof notifList === 'function') { const notifListInv = notifList; notifList = function () { const n = notifListInv(); n.forEach(x => { if (x.k === 'men') { x.act = () => openInvPrep(); x.text = 'Des aventuriers approchent : prépare ta défense'; } }); return n; }; }
 // l'annonce : la bande, son parcours, et une seule question (les recevoir, ou acheter leur départ)
 function invIntro(plan, o = {}) {
   if (typeof document === 'undefined') return Promise.resolve('fight');
-  const I = plan.I = invNew(plan), cost = ransomCost(plan);
+  const I = plan.I = invNew(plan), cost = ransomCost(plan), ban = o.noRansom ? '' : invRansomBan(plan), F = invForecast(plan, I), Bal = invBalance(I), adv = invAdvice(I);
   const route = I.route.map(id => { const info = invInfo(I, id), r = info.r, heart = info.heart, d = info.def; if (!r) return '';
     return `<li class="${heart ? 'heart' : d.length ? 'guarded' : ''}"><b>${esc(heart ? 'Le Cœur' : ROOMS[r.t].name)}</b> <span class="hint">${d.length ? `${heart ? '❤️ ' : '🛡️ '}${d.map(c => esc(c.name)).join(', ')}` : heart ? 'personne pour le défendre !' : '👀 personne : une rencontre'}</span></li>`; }).join('');
     const tired = S.creatures.filter(c => fitToFight(c) && invTired(c));
@@ -81,18 +103,20 @@ function invIntro(plan, o = {}) {
     const m = openModal(`<h2>${o.title || `⚔️ ${esc(plan.foe || 'Des aventuriers')} attaquent !`}</h2>
       <p class="hint">${o.sub ? o.sub + ' ' : ''}${plan.party.length} ${o.sub ? 'sbires' : `héros, une bande de rang ${plan.rank || 1}${plan.crusade ? ' (la croisade)' : ''}`}, niveau ${String(I.lvl).replace('.', ',')}.</p>
       <div class="hcards">${I.foes.map(f => `<div class="hcard">${f.sp ? imgThumb('char', f.sp) : imgThumb('hero', CRAWL_EN[f.k].hero)}<b>${esc(f.name)}</b><span class="hst">❤️ ${f.hp} · ⚔️ +${f.plus}</span><small>${esc(CRAWL_EN[f.k].name)}</small></div>`).join('')}</div>
-      ${invLinesHTML(I.lines)}<h3>Leur parcours</h3><ol class="invroute">${route}</ol>
-      <p class="hint">Tes défenseurs sont tirés au sort par palier de force : les plus faibles dans les premières pièces, les plus fortes à la fin ; les ${INV_TUNE.heartCap} plus fortes tiennent le Cœur. Une pièce avec des défenseurs : un combat aux cartes, avec les cartes qu’elle donne. Une pièce où personne n’est tiré : tes créatures y agissent à leur idée. Chaque pièce pillée rend la bande plus forte… et plus riche à rattraper. Au Cœur, elle se bat jusqu’au bout.${tired.length ? ` Épuisé·e${tired.length > 1 ? 's' : ''}, ${tired.map(c => esc(c.name)).join(', ')} se repose${tired.length > 1 ? 'nt' : ''}.` : ''}</p>
-      <div class="btnrow"><button type="button" class="sbtn pri" data-inv="fight">⚔️ Les recevoir</button>${o.noRansom ? '' : `<button type="button" class="sbtn" data-inv="rancon" ${S.gold >= cost ? '' : 'disabled'}>💰 Acheter leur départ (${cost} 💰)</button>`}</div>`, { noClose: true, wide: true, cls: 'invintro', label: 'Une invasion' });
+      ${invLinesHTML(I.lines)}${invForceHTML(I, F, Bal)}<h3>Leur parcours</h3><ol class="invroute">${route}</ol>
+      <p class="hint">Tes défenseurs sont tirés au sort par palier de force : les plus faibles dans les premières pièces, les plus fortes à la fin ; les ${INV_TUNE.heartCap} plus fortes tiennent le Cœur. Une pièce avec des défenseurs : un combat aux cartes, avec les cartes qu’elle donne ; un héros à terre, et la pièce tient (elle n’est pas pillée). Une pièce où personne n’est tiré : tes créatures y agissent à leur idée. Chaque pièce pillée rend la bande plus forte… et plus riche à rattraper. Au Cœur, elle se bat jusqu’au bout.${tired.length ? ` Épuisé·e${tired.length > 1 ? 's' : ''}, ${tired.map(c => esc(c.name)).join(', ')} se repose${tired.length > 1 ? 'nt' : ''}.` : ''}</p>
+      ${adv.length ? `<h3>Tes leviers, pour cette fois ou la prochaine</h3>${invLinesHTML(adv.map(a => [a[0], a[1], '']))}` : ''}<p class="hint">Tout est expliqué dans le Grimoire, article <b>Invasions</b>.</p>
+      <div class="btnrow"><button type="button" class="sbtn pri" data-inv="fight">⚔️ Les recevoir</button>${o.noRansom ? '' : ban ? `<button type="button" class="sbtn" disabled title="${esc(ban)}">💰 ${esc(ban)}</button>` : `<button type="button" class="sbtn" data-inv="rancon" ${S.gold >= cost ? '' : 'disabled'}>💰 Acheter leur départ (${cost} 💰${S.gold >= cost ? '' : `, il t’en manque ${cost - S.gold}`})</button>`}</div>`, { noClose: true, wide: true, cls: 'invintro', label: 'Une invasion' });
     m.addEventListener('click', e => { const b = e.target.closest('[data-inv]'); if (!b || b.disabled) return; closeModal(true); res(b.dataset.inv); });
   });
 }
 runInvasion = async function (report) {
   const plan = planInvasion(); sfx('horn'); V.invPath = null; V.invGoal = null;
   const ch = await invIntro(plan);
-  if (ch === 'rancon') { const lines = payOff(plan); lines.forEach(l => report.push(l)); addLog('Tu as acheté le départ des aventuriers.', ''); renderAll(); await banner('💰 Marché conclu', esc(lines[0][1]), 1800); return; }
+  if (ch === 'rancon' && !invRansomBan(plan)) { const lines = payOff(plan); lines.forEach(l => report.push(l)); addLog('Tu as acheté le départ des aventuriers.', ''); renderAll(); await banner('💰 Marché conclu', esc(lines[0][1]), 1800); return; }
   const R = await invPlay(plan); plan.res = R; const I = R.inv2;
-  report.push(['⚔️', `Invasion : ${I.route.length - 1} pièce${I.route.length > 2 ? 's' : ''} sur leur route, ${I.looted} pillée${I.looted > 1 ? 's' : ''}, ${I.fights} combat${I.fights > 1 ? 's' : ''}.`, R.outcome === 'robbed' ? 'bad' : 'good']);
+  report.push(['⚔️', `Invasion : ${I.route.length - 1} pièce${I.route.length > 2 ? 's' : ''} sur leur route, ${I.looted} pillée${I.looted > 1 ? 's' : ''}, ${I.fights} combat${I.fights > 1 ? 's' : ''} aux cartes.`, R.outcome === 'robbed' ? 'bad' : 'good']);
+  invSummary(I, R.outcome).forEach(l => report.push(l));
   const lines = applyInvasion(plan, R.outcome); lines.forEach(l => report.push(l));
   addLog(R.outcome === 'robbed' ? 'Des héros ont pillé le Cœur.' : 'Invasion repoussée !', R.outcome === 'robbed' ? 'bad' : 'good');
   if (R.outcome !== 'robbed') sfx('chime');
@@ -103,24 +127,32 @@ runInvasion = async function (report) {
 if (typeof V !== 'undefined') V.showPath = false;
 /* ---------- le Grimoire ---------- */
 if (typeof WIKI !== 'undefined') {
-  WIKI.invasion = { cat: 'danger', t: 'Invasions', x: () => `<p>Quand la {c:menace|Menace} est pleine, une bande d’aventuriers attaque. Avant l’assaut, tu vois la bande, son niveau et son parcours. Une seule question : <b>les recevoir</b>, ou <b>acheter leur départ</b> (ils empochent l’or et rentrent chez eux, sans butin ni gloire).</p>
-    <ul><li><b>Leur parcours</b> : ${INV_ROOMS(1)} pièces de ton château au palier 1, ${INV_ROOMS(2)} au palier 2, ${INV_ROOMS(3)} à partir du palier 3, tirées au hasard, puis <b>le Cœur</b>.</li>
+  WIKI.invasion = { cat: 'danger', t: 'Invasions', x: () => `<p>Quand la {c:menace|Menace} est pleine, une bande d’aventuriers attaque. Une pastille « Des aventuriers approchent » te prévient la veille : touche-la pour voir qui tiendrait le Cœur et ce qui manque à ta défense. Avant l’assaut, l’annonce montre la bande, son parcours, la force des deux camps et une <b>estimation</b> (${INV_TUNE.trials} invasions jouées d’avance en combat auto, avec tes défenseurs déjà tirés). Puis une seule question : <b>les recevoir</b>, ou <b>acheter leur départ</b> (le prix est sur le bouton : ${ransomCost({ party: [1, 2, 3], rank: 1 })} 💰 pour 3 héros de rang 1, 4 💰 par héros et par rang ; ils empochent l’or et rentrent chez eux, sans butin ni gloire). <b>La croisade de Mirebrume ne se vend pas</b> : elle se combat ({c:v_legende}).</p>
+    <ul><li><b>Une bande qui grandit avec toi</b> : son niveau suit ton château — le nombre de tes créatures (au-delà de ${INV_TUNE.crewCap}, il ne compte plus), ton palier et la force de tes champions — sans marche brutale d’un palier à l’autre. Elle compte un héros de plus au palier 1, et un autre quand ton château abrite ${INV_TUNE.bigBand} créatures ; les héros de rang 2 et 3 sont plus nombreux. Dès les premières bandes, un château négligé peut se faire piller.</li>
+    <li><b>Leur parcours</b> : ${INV_ROOMS(1)} pièces de ton château au palier 1, ${INV_ROOMS(2)} au palier 2, ${INV_ROOMS(3)} à partir du palier 3, tirées au hasard (à tous les étages), puis <b>le Cœur</b>.</li>
     <li><b>Qui défend ?</b> Plus de gardes à poster : tes créatures se défendent d’elles-mêmes, <b>rangées par palier de force</b>. Avant l’assaut (tu le vois dans l’annonce), on tire au sort :
       <ul><li><b>le Cœur</b> : tes ${INV_TUNE.heartCap} créatures les plus fortes, toujours (parmi celles qui ne sont pas épuisées) ;</li>
-      <li><b>les pièces</b> : les autres, rangées de la plus faible à la plus forte, sont découpées en autant de paliers que de pièces sur le parcours. La première pièce tire dans le palier le plus faible, la dernière dans le plus fort : la bande affronte des défenseurs de plus en plus coriaces. Chaque créature du palier y défend avec ${Math.round(INV_TUNE.drawP * 100)} % de chances, ${INV_TUNE.teamMax} au plus par pièce : +1 place si tu as bâti un {room:garde}, +1 si un {def:poste} borde la pièce ;</li>
-      <li><b>toutes ne défendent pas</b> : une pièce peut ne tirer personne, et une créature ne défend qu’une pièce par invasion ;</li>
-      <li><b>la fatigue</b> (raids, expéditions) compte : une créature fatiguée a moins de chances d’être tirée (−${Math.round(100 / invFatMax())} % de sa chance par point de fatigue) ; <b>épuisée</b> (${invFatMax()} de fatigue), elle se repose et ne défend aucune pièce. Au Cœur, une épuisée ne vient que s’il ne reste personne d’autre.</li></ul></li>
-    <li><b>Une pièce avec des défenseurs</b> : un <b>combat aux cartes</b>, comme en {c:expeditions|expédition}, mais à l’envers : tes défenseurs contre la bande. Tu vois ce que chaque héros va faire. <b>Tes cartes dépendent de la pièce</b> : chaque défenseur apporte ses Frappes, sa Parade et la carte de son espèce ; la pièce ajoute les cartes de ses meubles et des pièges qui la bordent. Tu joues à la main, ou en combat auto (qui te rend la main si ça tourne mal).</li>
-    <li><b>Une pièce où personne n’est tiré</b> : une rencontre. Les créatures qui y travaillent agissent <b>à leur idée</b>, selon leur caractère, leur loyauté et leur humeur : un piège de fortune, une farce, un coup de poing… ou se cacher, dormir, et même leur montrer où est l’or si elles t’en veulent. Puis la bande fouille.</li>
+      <li><b>les pièces</b> : les autres, rangées de la plus faible à la plus forte, sont découpées en autant de paliers que de pièces sur le parcours. Chaque pièce est défendue ${Math.round(INV_TUNE.roomP * 100)} fois sur 100 par des créatures de son palier, ${INV_TUNE.teamMax} au plus : +1 place si tu as bâti un {room:garde}, +1 si un {def:poste} borde la pièce ; sinon, c’est une rencontre ;</li>
+      <li><b>la fatigue</b> (raids, expéditions) compte : une créature fatiguée y va moins souvent (−${Math.round(100 / invFatMax())} % par point de fatigue) ; <b>épuisée</b> (${invFatMax()} de fatigue), elle se repose et ne défend aucune pièce. Une créature en raid, en mission ou sonnée ne défend rien cette nuit-là.</li></ul></li>
+    <li><b>Une pièce défendue</b> : un <b>combat aux cartes</b>, comme en {c:expeditions|expédition}, mais à l’envers ({c:combat}). Dès qu’un héros tombe, <b>la pièce tient</b> : la bande renonce à la piller et passe à la suivante, un blessé de plus sur les bras. Si tes défenseurs tombent, elle pille la pièce.</li>
+    <li><b>Une rencontre</b> (personne de tiré) : les créatures qui y travaillent agissent <b>à leur idée</b>, selon leur caractère, leur loyauté et leur humeur : un piège de fortune, une farce, un coup de poing… ou se cacher, dormir, et même leur montrer où est l’or si elles t’en veulent. Puis la bande fouille.</li>
     <li><b>Une pièce pillée</b> : la bande emporte un peu de ton or et de ton bois, parfois un meuble, et <b>frappe plus fort</b> (+${INV_TUNE.buff} à tous ses coups par pièce). Ses blessures, elle les garde.</li>
-    <li><b>Les pièges</b> posés dans les couloirs qui bordent une pièce frappent la bande quand elle y entre (une fois chacun ; la voleuse en désamorce un) et donnent leur carte aux combats de la pièce.</li>
-    <li><b>Des héros à terre</b> : la bande fuit dès que ${[2, 3, 4, 5].map(n => `${Math.max(1, Math.ceil(n * INV_TUNE.rout))} sur ${n}`).join(', ')} de ses héros sont K.O. (${[3, 4, 5].map(n => `${Math.max(1, Math.ceil(n * INV_TUNE.rout3))} sur ${n}`).join(', ')} pour une bande de légende). <b>Tout ce qu’elle avait pillé reste au château</b>, avec une prime : plus elle était chargée, plus elle rapporte. Les K.O. finissent aux {room:oubliettes} s’il y a de la place.</li>
-    <li><b>Au Cœur</b>, la bande se bat jusqu’au bout, contre tes ${INV_TUNE.heartCap} créatures les plus fortes (et le mercenaire, si tu l’as payé). S’il tombe, elle se sert, et repart avec tout ce qu’elle a pillé en chemin ; +2 Calamité.</li>
-    <li>Une créature K.O. dans un combat perdu est sonnée : une nuit de repos, sans défense ni raid.</li></ul>` };
-  WIKI.combat = { cat: 'danger', t: 'Le combat', x: () => `<p>Les combats d’invasion se jouent aux cartes, sur l’écran des {c:expeditions|expéditions}, dans le décor de la pièce. Chaque tour : 3 d’énergie, 5 cartes ; puis chaque héros fait ce qu’il annonçait (au-dessus de sa tête).</p>
+    <li><b>Les pièges</b> posés dans les couloirs qui bordent une pièce frappent la bande quand elle y entre (une fois chacun ; la voleuse en désamorce un) et donnent leur carte aux combats de la pièce. Un bout de couloir (1 🪵) à la porte d’une pièce suffit pour y poser un piège.</li>
+    <li><b>Des héros à terre</b> : la bande fuit dès que ${[3, 4, 5].map(n => `${Math.max(1, Math.ceil(n * INV_TUNE.rout))} sur ${n}`).join(', ')} de ses héros sont K.O. (${[4, 5].map(n => `${Math.max(1, Math.ceil(n * INV_TUNE.rout3))} sur ${n}`).join(', ')} pour une bande de légende). <b>Tout ce qu’elle avait pillé reste au château</b>, avec une prime : plus elle était chargée, plus elle rapporte. Les K.O. finissent aux {room:oubliettes} s’il y a de la place.</li>
+    <li><b>Au Cœur</b>, la bande se bat jusqu’au bout, contre tes ${INV_TUNE.heartCap} créatures les plus fortes (et le mercenaire, si tu l’as payé). S’il tombe, elle se sert (un bon tiers de ton or), et repart avec tout ce qu’elle a pillé en chemin ; +2 Calamité.</li>
+    <li><b>À la fin</b>, un résumé pièce par pièce (aussi dans la chronique) : qui a défendu où, ce qui a été pillé ou repris, et, si le Cœur est tombé, pourquoi.</li></ul>
+    <p><b>Tes leviers, avant l’assaut</b> :</p><ul><li><b>Du repos</b> : pas de raid ni d’expédition pour tes plus fortes la veille d’une invasion (épuisées ou parties, elles ne défendent pas).</li>
+    <li><b>Des pièges</b> à la porte des pièces, à tous les étages.</li><li><b>Un repas de veille</b> ({c:cuisine}) : Poisson grillé, Gâteau au miel, Brochettes.</li>
+    <li><b>Le guet</b> : un {room:garde} (une place de plus par pièce) et ses sentinelles ({c:artisanat}) ; <b>le Labo</b> (la Brume soporifique dans chaque combat) ; <b>un mercenaire</b> au Cœur (taverne d’une ville).</li>
+    <li><b>Des créatures heureuses</b> : ravies, elles frappent plus fort ; postées dans leur pièce, elles s’y battent mieux ; fidèles, elles ne te trahissent pas dans les rencontres.</li></ul>` };
+  WIKI.combat = { cat: 'danger', t: 'Le combat', x: () => `<p>Les combats d’invasion se jouent aux cartes, sur l’écran des {c:expeditions|expéditions}, dans le décor de la pièce. Chaque tour : 3 d’énergie, 5 cartes ; puis chaque héros fait ce qu’il annonçait (au-dessus de sa tête). Tu joues à la main, ou en combat auto (qui te rend la main si ça tourne mal) ; les combats d’invasion n’ont pas de commission.</p>
     <ul>${['paysan', 'voleuse', 'elfe', 'mage', 'paladin', 'barbare'].map(k => { const E = CRAWL_EN['h_' + k]; return `<li><b>${esc(E.name)}</b> : ${E.hp} PV de base, ${E.acts.map(a => ({ atk: `frappe ${a[1]}`, multi: `${a[2]} coups de ${a[1]}`, aoe: `frappe tout le monde (${a[1]})`, execute: `achève la plus amochée (${a[1]})`, smash: `enfonce (${a[1]})`, block: `se protège (${a[1]})`, heal: `soigne la bande (${a[1]})`, stun: 'immobilise une créature' }[a[0]] || a[0])).join(', ')}.</li>`; }).join('')}</ul>
-    <p>La bande grandit avec la force de tes meilleures créatures (comme un donjon) et avec ton palier ; une bande de rang plus élevé compte plus de héros. Chaque pièce pillée la rend plus forte.</p>` };
+    <p><b>Dans une pièce</b>, un seul héros à terre suffit : la pièce tient, la bande passe son chemin sans la piller. Si assez de héros tombent, elle détale. Un combat qui dure plus de ${INV_TUNE.turns} tours : elle force le passage (et ne pille que la moitié). <b>Au Cœur</b>, elle se bat jusqu’au bout.</p>
+    <p>La bande grandit avec ton château (tes créatures, ton palier, tes champions) ; une bande de rang plus élevé compte plus de héros. Chaque pièce pillée la rend plus forte. L’estimation de l’annonce joue l’invasion d’avance en combat auto : à la main, tu fais souvent mieux.</p>` };
 }
+
+// la rançon refusée par la croisade (la finale de la Légende se combat)
+if (typeof payOff === 'function') { const payOffInv = payOff; payOff = function (plan) { const ban = invRansomBan(plan); return ban ? [['💰', ban, '']] : payOffInv(plan); }; }
 
 /* ---------- les sabotages du rival : ses sbires traversent le château de la même façon ---------- */
 CRAWL_EN.h_sbire = { name: 'Sbire', hp: 12, acts: [['atk', 4], ['multi', 2, 2], ['block', 4]] };

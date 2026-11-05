@@ -72,3 +72,19 @@ TIPS.push({ id: 'renommee', when: () => S.night > 1 && S.creatures.length >= fam
 WIKI.renommee = { cat: 'crea', t: 'La renommée (places au château)', x: () => `<p>Une nouvelle créature ne s’installe que s’il reste <b>un lit libre</b> et si ton château est <b>assez renommé</b> pour l’attirer. Au départ, ta renommée attire ${FAME_BASE} créatures ; chaque haut fait ajoute des places, pour toujours :</p>
   <ul>${[...new Set(FAME.map(f => f.fam))].map(k => { const l = FAME.filter(f => f.fam === k); return `<li>${l.map(f => `<b>${esc(f.t)}</b> (${esc(f.need)}) : +${f.n}`).join(' ; ')}</li>`; }).join('')}</ul>
   <p>Ta renommée actuelle : <b>${fameCap()}</b> créatures au plus. Touche le compteur de créatures, en haut, pour voir les prochains hauts faits. Les œufs qui éclosent au château n’ont besoin que d’un lit. Si ton château est plein, tu peux toujours renvoyer une créature depuis sa fiche.</p>` };
+
+/* ---------- le bestiaire « qui attire qui » : tiré des données (SPECIES, ROOMS.attracts, sites des rares) ---------- */
+const roomWhere = t => { const r = ROOMS[t] || {}; return r.out ? 'dehors, aux Jardins' : r.high === 2 ? 'dans les Cimes' : r.high ? 'en hauteur' : r.deep === 2 ? 'dans les Profondeurs' : r.deep ? 'sous terre' : ''; };
+const nestRooms = sp => Object.keys(ROOMS).filter(t => t !== 'coeur' && (SPECIES[sp].from === t || (ROOMS[t].attracts || []).includes(sp)));
+WIKI.bestiaire = { cat: 'crea', t: 'Qui attire qui (bestiaire)', x: () => {
+  const roomL = t => `{room:${t}|${esc(ROOMS[t].name)}}${roomWhere(t) ? ` (${roomWhere(t)})` : ''}${ROOMS[t].saga ? ' (née d’une intrigue)' : ''}`;
+  const line = k => { const d = SPECIES[k], rooms = nestRooms(k), how = [];
+    if (d.from === 'coeur') how.push(`sort du Cœur (${2} + ton palier, au plus)`);
+    if (d.fromDecor) how.push(Object.entries(d.fromDecor).map(([f, n]) => `${n} {furn:${f}|${esc(FURN[f] ? FURN[f].name : f)}} n’importe où (une par lot de ${n})`).join(', '));
+    if (rooms.length) how.push(rooms.map(roomL).join(' ou ') + (d.rare ? ', une par pièce' : ', deux par pièce'));
+    const cond = [d.tier ? `Palier ${d.tier}` : '', d.rare ? `rare : la rencontrer d’abord en expédition (${esc(SITE_KINDS[d.site] ? SITE_KINDS[d.site].label.toLowerCase() : d.site)}), et ${d.glow} ✨ de rayonnement` : ''].filter(Boolean).join(' ; ');
+    return `<li>{sp:${k}|${esc(d.name)}} : ${how.join(' ; ') || '?'}${cond ? ` — ${cond}` : ''}${d.likes && FURN[d.likes] ? `. Déco préférée : {furn:${d.likes}|${esc(FURN[d.likes].name)}}` : ''}.</li>`; };
+  const byRoom = Object.keys(ROOMS).map(t => [t, SPECIES_ORDER.filter(k => nestRooms(k).includes(t))]).filter(([, l]) => l.length);
+  return `<p>Chaque espèce vient pour <b>une pièce terminée et meublée</b> (au moins un meuble), deux créatures par pièce de ce type (une seule pour une rare), ou pour un décor. Il faut aussi un lit libre et assez de {c:renommee|renommée} ; certaines attendent un {c:paliers|palier}, et les {c:rares|rares} une rencontre en expédition. Une espèce jamais vue se laisse tenter plus vite. Une fois là, sa <b>déco préférée</b> la rend plus heureuse ({c:humeur}). Attention aux {c:voisinages|voisins difficiles}.</p>
+    <h3>Par espèce</h3><ul>${SPECIES_ORDER.map(line).join('')}</ul>
+    <h3>Par pièce</h3><ul>${byRoom.map(([t, l]) => `<li>${roomL(t)} : ${l.map(k => `{sp:${k}|${esc(SPECIES[k].name)}}`).join(', ')}</li>`).join('')}<li>Les {furn:toile|Toiles d’araignée}, n’importe où : ${SPECIES_ORDER.filter(k => SPECIES[k].fromDecor).map(k => `{sp:${k}|${esc(SPECIES[k].name)}}`).join(', ')}</li></ul>` } };

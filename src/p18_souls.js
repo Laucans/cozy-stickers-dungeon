@@ -22,6 +22,7 @@ function upgradeState(s) {
   s.rep = s.rep || {}; s.ach = s.ach || {}; s.pwcd = s.pwcd || {}; s.waiting = s.waiting || []; s.desertLog = s.desertLog || [];
   s.opts = Object.assign({ desert: 'on' }, s.opts || {});
   s.val = Object.assign({ claimed: [], sent: {}, visited: [], pvp: true, inboxAt: 0 }, s.val || {});
+  s.payAcc = s.payAcc || 0; s.payDebt = s.payDebt || 0; s.payWeek = s.payWeek || 0;   // la paie de chaque nuit (v29)
   (s.creatures || []).forEach(upgradeCreature);
   return s;
 }
@@ -163,25 +164,41 @@ const loyDelta = c => { let d = Math.round((c.epa - 50) / 8); if (S.night - (c.j
 const loyWord = v => v >= 85 ? 'Dévoué·e corps et âme' : v >= 65 ? 'Fidèle' : v >= 45 ? 'Attaché·e' : v >= 25 ? 'Hésitant·e' : 'Prêt·e à partir';
 const epaWord = v => v >= 80 ? 'Rayonnant·e' : v >= 60 ? 'Épanoui·e' : v >= 40 ? 'Ça va' : v >= 20 ? 'Morose' : 'Malheureux·se';
 
-/* ---------- jour de paie ---------- */
-// tous les 5 nuits, à l'aube, chaque créature vient chercher son or ; les diablotins, nés du Cœur, travaillent pour rien
+/* ---------- la paie ---------- */
+// chaque créature a un salaire pour 5 nuits, mais elle en touche un peu chaque nuit, à l'aube (les gages du jour) :
+// plus de gros coup tous les 5 nuits. Une nuit sans le sou, ce qui manque va sur l'ardoise ; au jour de paie (toutes les 5 nuits),
+// on fait les comptes : si l'ardoise n'est pas soldée, les dernières venues repartent sans paie (−1 ❤️, −10 loyauté).
+// Les diablotins, nés du Cœur, travaillent pour rien.
 const PAY_EVERY = 5;
 const salaryOf = c => { const d = SPECIES[c.sp] || {}; if (c.sp === 'diablotin') return 0; return 1 + (d.tier || 0) + (d.rare ? 2 : 0) + ((c.lvl || 1) >= 4 ? 1 : 0) + (c.legend ? 1 : 0); };
-const payroll = () => S.creatures.filter(c => !c.away).reduce((a, c) => a + salaryOf(c), 0);
-const nightsToPay = () => (PAY_EVERY - S.night % PAY_EVERY) % PAY_EVERY;   // 0 : la paie tombe à l'aube de cette nuit
+const payroll = () => S.creatures.filter(c => !c.away).reduce((a, c) => a + salaryOf(c), 0);   // la paie de 5 nuits
+const payDebt = () => (S && S.payDebt) || 0;   // l'ardoise : les gages pas encore versés
+const wageToday = () => Math.floor((S.payAcc || 0) + payroll() / PAY_EVERY + 1e-9);   // ce que coûteront les gages à la prochaine aube
+const wageDue = () => wageToday() + payDebt();   // ce qu'il faut avoir en caisse à l'aube pour que tout le monde soit payé
+const nightsToPay = () => (PAY_EVERY - S.night % PAY_EVERY) % PAY_EVERY;   // 0 : le jour de paie tombe à l'aube de cette nuit
 function payday(report) {
-  if (S.night % PAY_EVERY !== 0) return;
+  const acc = (S.payAcc || 0) + payroll() / PAY_EVERY, w = Math.floor(acc + 1e-9); S.payAcc = Math.max(0, acc - w);
+  const owe = w + payDebt(), paid = Math.min(Math.max(0, S.gold), owe);
+  S.gold -= paid; S.payDebt = owe - paid; S.payWeek = (S.payWeek || 0) + paid; S.stats.wages = (S.stats.wages || 0) + paid;
+  if (S.night % PAY_EVERY !== 0) {
+    if (owe) report.push(['💰', S.payDebt ? `Gages du jour : ${paid} 💰 versés sur ${owe}. Il manque ${S.payDebt} 💰, notés sur l’ardoise : à solder d’ici le jour de paie (dans ${nightsToPay()} nuit${nightsToPay() > 1 ? 's' : ''}).` : `Gages du jour : ${paid} 💰${owe > w ? ` (dont ${owe - w} de l’ardoise, soldée)` : ''}.`, S.payDebt ? 'bad' : '']);
+    return;
+  }
+  // le jour de paie : on fait les comptes de la semaine
   const due = S.creatures.filter(c => !c.away && salaryOf(c) > 0).sort((a, b) => (a.joined || 1) - (b.joined || 1));   // les anciens d'abord
-  if (!due.length) return;
-  const paid = [], unpaid = []; let total = 0;
-  due.forEach(c => { const w = salaryOf(c); if (S.gold >= w) { S.gold -= w; total += w; paid.push(c); c.paidAt = S.night; addLoy(c, 2); } else unpaid.push(c); });
+  const week = S.payWeek; S.payWeek = 0;
+  if (!due.length) { S.payDebt = 0; return; }
+  let debt = Math.min(S.payDebt, payroll()); const unpaid = [];
+  for (let i = due.length - 1; i >= 0 && debt > 0; i--) { unpaid.push(due[i]); debt -= salaryOf(due[i]); }   // l'ardoise retombe sur les dernières venues
+  const paid2 = due.filter(c => !unpaid.includes(c));
+  paid2.forEach(c => { c.paidAt = S.night; addLoy(c, 2); });
   unpaid.forEach(c => { c.unpaid = S.night; c.mood = clamp(c.mood - 1, 0, 5); addLoy(c, -10); });
-  S.pay = { night: S.night, paid: paid.map(c => c.id), unpaid: unpaid.map(c => c.id) };
-  S.stats.wages = (S.stats.wages || 0) + total; S.stats.unpaid = (S.stats.unpaid || 0) + unpaid.length;
+  S.pay = { night: S.night, paid: paid2.map(c => c.id), unpaid: unpaid.map(c => c.id) };
+  S.stats.unpaid = (S.stats.unpaid || 0) + unpaid.length; S.payDebt = 0;   // l'ardoise est effacée : les impayées boudent à la place
   report.push(['sec', 'Jour de paie']);
-  if (paid.length) report.push(['💰', `${total} 💰 versés à ${paid.length} créature${paid.length > 1 ? 's' : ''}, qui viennent chercher leur paie.`, 'good']);
-  if (unpaid.length) { report.push(['😠', `Caisses vides ! ${unpaid.length} créature${unpaid.length > 1 ? 's n’ont' : ' n’a'} pas été payée${unpaid.length > 1 ? 's' : ''} (−1 ❤️, −10 loyauté) : ${unpaid.slice(0, 5).map(c => c.name).join(', ')}${unpaid.length > 5 ? '…' : ''}.`, 'bad']); addLog(`Jour de paie : ${unpaid.length} créature(s) impayée(s).`, 'bad'); }
-  else addLog(`Jour de paie : ${total} 💰 versés.`, 'ev');
+  if (paid2.length) report.push(['💰', `Jour de paie : ${paid2.length} créature${paid2.length > 1 ? 's ont touché tous leurs' : ' a touché tous ses'} gages de la semaine (${week} 💰 versés en ${PAY_EVERY} nuits).`, 'good']);
+  if (unpaid.length) { report.push(['😠', `Caisses vides ! L’ardoise n’est pas soldée : ${unpaid.length} créature${unpaid.length > 1 ? 's n’ont' : ' n’a'} pas été payée${unpaid.length > 1 ? 's' : ''} (−1 ❤️, −10 loyauté) : ${unpaid.slice(0, 5).map(c => c.name).join(', ')}${unpaid.length > 5 ? '…' : ''}.`, 'bad']); addLog(`Jour de paie : ${unpaid.length} créature(s) impayée(s).`, 'bad'); }
+  else addLog(`Jour de paie : ${week} 💰 versés cette semaine.`, 'ev');
 }
 
 /* ---------- désertions ---------- */

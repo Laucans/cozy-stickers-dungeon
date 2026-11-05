@@ -6,7 +6,7 @@
    bureau de placement pour monstres
    ========================================================= */
 const SHOP = {
-  don: { name: 'Don pour la fête', ico: '🎪', price: 6, per: 1, desc: 'Une belle obole pour la prochaine fête : bonne volonté +10.' },
+  don: { name: 'Don pour la fête', ico: '🎪', price: 6, per: 1, desc: 'Une belle obole pour la prochaine fête : bonne volonté +10. Un seul don par nuit, tous lieux confondus.' },
   rumeur: { name: 'Rumeurs de comptoir', ico: '🍺', price: 3, per: 1, desc: 'Contre une pinte, on te raconte où se trouve un endroit que tu ne connais pas encore.' },
   humeur: { name: 'Potion de bonne humeur', ico: '🧪', price: 6, per: 1, desc: 'Toutes tes créatures gagnent 1 ❤️. Goût framboise-soufre.' },
   fidelite: { name: 'Élixir de fidélité', ico: '💞', price: 8, per: 1, desc: '+12 loyauté pour toutes tes créatures. Ne surtout pas en boire soi-même.' },
@@ -49,10 +49,11 @@ function shopStock(site) {
   const R = rng(seedOf(site.id + ':' + S.night + ':' + S.world.seed)), own = ownedArtefacts(), arts = ARTEFACTS.filter(k => !own.has(k)).sort(() => R() - .5);
   return { deco: DECOR_ORDER.slice().sort(() => R() - .5).slice(0, 3), arts: arts.slice(0, site.kind === 'cite' ? 2 : 1), stolen: (S.world.stolen || []).filter(k => !own.has(k)) };
 }
+const ART_RISE = .15;   // +15 % par artefact déjà acheté
 function shopPrice(site, item, arg) {
   const m = townMarkup(site).k;
   if (item === 'deco') return Math.ceil(Math.max(2, (FURN[arg].cost.g || 1) * 1.5) * m);
-  if (item === 'artefact') return Math.ceil((24 + FURN[arg].glow * 2) * m * (1 + .25 * ((S.stats && S.stats.artBought) || 0)));   // chaque artefact acheté renchérit les suivants (+25 %)
+  if (item === 'artefact') return Math.ceil((24 + FURN[arg].glow * 2) * m * (1 + ART_RISE * ((S.stats && S.stats.artBought) || 0)));   // chaque artefact acheté renchérit les suivants
   if (item === 'rachat') return Math.ceil(20 * m);
   if (item === 'vendre') return -(12 + FURN[arg].glow);
   if (item === 'recrue') return Math.ceil((8 + ((SPECIES[arg] || {}).tier || 0) * 4) * m);
@@ -64,7 +65,7 @@ function shopBuy(a) {
   const site = siteById(a.site); if (!site || !SITE_KINDS[site.kind].shop || !siteKnown(site)) return 'Tu ne connais pas le chemin';
   const item = a.item, arg = a.arg, shops = SHOPS[site.kind] || [];
   if (!SHOP[item] || !shops.some(s => s.items.includes(item))) return 'Ce n’est pas vendu ici';
-  if (shopLeft(item)) return `Revenez dans ${shopLeft(item)} nuit(s)`;
+  if (shopLeft(item)) return item === 'don' ? `Un seul don par nuit, tous lieux confondus : revenez dans ${shopLeft(item)} nuit${shopLeft(item) > 1 ? 's' : ''}` : `Revenez dans ${shopLeft(item)} nuit${shopLeft(item) > 1 ? 's' : ''} (${SHOP[item].per > 1 ? `une fois toutes les ${SHOP[item].per} nuits` : 'une fois par nuit'}, tous lieux confondus)`;
   const stock = shopStock(site);
   if (item === 'deco' && !stock.deco.includes(arg)) return 'Plus en stock';
   if (item === 'artefact' && !stock.arts.includes(arg)) return 'Déjà vendu';
@@ -154,10 +155,12 @@ Object.assign(WIKI, {
     <li>En échange, les héros forts sèment plus d’or en fuyant, laissent plus souvent tomber un artefact, et leurs carnets de route dévoilent la carte.</li></ul>` },
   artefacts: { cat: 'eco', t: 'Artefacts', x: () => `<p>Des trésors uniques qui font rayonner le château et donnent un petit bonus. Ils ne s’achètent pas dans la barre : on les trouve.</p>
     <ul><li>Les héros repoussés en abandonnent parfois (surtout les forts).</li><li>Les {c:expeditions|expéditions} en rapportent.</li><li>Les bazars de la {c:ville} en vendent, à prix d’or.</li></ul>
-    <p>Pose-les depuis l’onglet <b>Trésors</b> de la barre. Au {room:reliquaire}, ils rayonnent moitié plus. Attention : si des héros pillent le Cœur, ils emportent un artefact du rez-de-chaussée (on peut le racheter au brocanteur). Aux étages, rien ne craint.</p>
+    <p>Pose-les depuis l’onglet <b>Trésors</b> de la barre, sur une <b>place libre</b> : dans une pièce terminée qui n’a pas atteint sa limite (un sticker pour deux cases, meubles et déco compris), ou dans un {room:couloir|couloir}, sur une case sans piège : les couloirs n’ont pas de limite. Si toutes tes pièces sont pleines, bâtis un bout de couloir pour faire de la place. Au {room:reliquaire}, ils rayonnent moitié plus.</p>
+    <p><b>⚠️ Les artefacts du rez-de-chaussée peuvent être volés.</b> Si des héros pillent le Cœur, ils en emportent un (on peut le racheter au brocanteur, en ville). Aux étages, ils ne craignent pas les héros ; seuls les spectres de Morgrave, quand elle prépare un {c:coups|coup}, en volent un où qu’il soit. Le pouvoir des Vitrines blindées met fin aux vols des héros.</p>
     <ul>${ARTEFACTS.map(k => `<li><b>${esc(FURN[k].name)}</b> (✨ ${FURN[k].glow}) : ${esc(FURN[k].desc)}</li>`).join('')}</ul>` },
-  rares: { cat: 'crea', t: 'Créatures rares', x: () => `<p>Quatre créatures ne viennent qu’à trois conditions : les avoir <b>rencontrées en expédition</b>, que ton château <b>rayonne</b> assez, et leur offrir <b>leur pièce</b>, meublée.</p>
-    <ul>${SPECIES_ORDER.filter(k => SPECIES[k].rare).map(k => { const d = SPECIES[k]; return `<li>{sp:${k}} : rencontre à ${esc(SITE_KINDS[d.site] ? SITE_KINDS[d.site].label.toLowerCase() : d.site)}, rayonnement ${d.glow}, pièce {room:${d.from}}.</li>`; }).join('')}</ul><p>Chaque créature rare fait rayonner ton château de 10.</p>` },
+  rares: { cat: 'crea', t: 'Créatures rares', x: () => `<p>Quatre créatures ne viennent qu’à trois conditions : les avoir <b>rencontrées en expédition</b>, que ton château <b>rayonne</b> assez, et leur offrir <b>leur pièce</b>, meublée (une seule par pièce de ce type).</p>
+    <ul>${SPECIES_ORDER.filter(k => SPECIES[k].rare).map(k => { const d = SPECIES[k]; return `<li>{sp:${k}} : rencontre à ${esc(SITE_KINDS[d.site] ? SITE_KINDS[d.site].label.toLowerCase() : d.site)}, rayonnement ${d.glow}, pièce {room:${d.from}}${d.tier ? `, Palier ${d.tier}` : ''}.</li>`; }).join('')}</ul>
+    <p><b>Et une place au château</b>, comme pour toute créature : un lit libre, et assez de {c:renommee|renommée}. <b>Si ta renommée est au plafond, aucune rare ne viendra</b>, même si tout le reste est prêt : le coup de pouce qui fait venir une espèce commune jamais vue au bout de quelques nuits ne vaut pas pour elles. Accomplis un haut fait de renommée, ou renvoie une créature, pour leur faire de la place${typeof fameCap === 'function' && S && S.started ? ` (aujourd’hui : ${S.creatures.length} créatures pour ${Math.min(beds(), fameCap())} places)` : ''}.</p><p>Chaque créature rare fait rayonner ton château de 10. Voir aussi {c:bestiaire}.</p>` },
   carte: { cat: 'val', t: 'La carte du Val', x: () => `<p>Le bouton <b>Carte</b> montre ton château au milieu du Val, en hexagones. Le brouillard cache ce que tu ne connais pas ; le cercle doré, c’est ton {c:rayonnement}.</p><p>Chaque partie tire son propre Val : le relief, la mer (d’un côté, de deux, ou pas du tout), les lacs et les rivières qui descendent des montagnes, puis des lieux posés là où ils ont du sens (le moulin sur une rivière, la cité au bord de l’eau, les grottes au pied des montagnes) avec des noms tirés au sort. À la création, tu peux tirer un autre Val ou en reprendre un avec sa graine.</p>
     <ul><li><b>Villages, ville, cité</b> : c’est de là que partent les aventuriers. On peut y faire ses courses ({c:ville}).</li><li><b>Fermes, moulin, auberge, monastère, château du baron</b> : cibles de raid. Il faut les avoir découvertes pour les piller.</li>
     <li><b>Donjons</b> : les quatre rivaux du jeu (un raid réussi ternit leur réputation six nuits) et les châteaux des autres Maîtres du Val.</li><li><b>Forêt enchantée, grottes, ruines, pic du dragon, lac</b> : lieux d’{c:expeditions|expédition}.</li></ul>

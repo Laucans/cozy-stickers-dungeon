@@ -105,6 +105,9 @@ function citeSync() {
 citeSync();
 const crawlNewSiege = crawlNew;
 crawlNew = function (dg, team, opts) { if (dg === 'cite') citeSync(); return crawlNewSiege(dg, team, opts); };
+// au Palais, le troisième étage n'est que l'antichambre : la garde d'élite est déjà auprès du Bourgmestre, il n'y reste que des gardes du deuxième étage
+const crawlFoesSiege = crawlFoes;
+crawlFoes = function (R, kind) { if (R && R.dg === 'cite' && kind !== 'boss' && R.floor >= CRAWL_FLOORS && siegeQ().id === 'palais') return crawlFoesSiege(Object.assign({}, R, { floor: CRAWL_FLOORS - 1 }), kind); return crawlFoesSiege(R, kind); };
 const openCrawlPageSiege = openCrawlPage;
 openCrawlPage = function (dg) { if (dg === 'cite') citeSync(); return openCrawlPageSiege(dg); };
 
@@ -112,7 +115,7 @@ openCrawlPage = function (dg) { if (dg === 'cite') citeSync(); return openCrawlP
 const raidPlanSiege = CMD.raidPlan;
 CMD.raidPlan = function (a) {
   const tg = a && RAIDS[a.target];
-  if (tg && tg.siege) { if (vicState().siege >= 3) return 'Mirebrume t’a déjà remis ses clés'; if (!raidKnown(a.target)) return 'Il faut d’abord soumettre les quatre donjons rivaux, et trouver la cité sur la carte'; }
+  if (tg && tg.siege) { if (vicState().siege >= 3) return 'Mirebrume t’a déjà remis ses clés'; if (!raidKnown(a.target)) return 'Il faut d’abord soumettre les quatre donjons rivaux, et trouver la cité sur la carte'; if (siegeShut()) return `Après ta fuite, Mirebrume a fermé ses portes : prochain assaut à la nuit ${siegeShut()}`; }
   return raidPlanSiege.call(this, a);
 };
 // une partie reprise avec un assaut prévu du temps des dés : il se joue désormais aux cartes

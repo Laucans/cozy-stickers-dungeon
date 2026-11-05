@@ -172,7 +172,7 @@ async function endNight() {
   if (typeof victoryAfterNight === 'function') victoryAfterNight();
 }
 /* ---------- la chronique de la nuit : un parchemin illustré ---------- */
-const CHRON_SEC = [[/^Métiers/, 'anvil'], [/^Quêtes/, 'scroll'], [/^Renommée/, 'legend'], [/calamit/i, 'cal'], [/raid/i, 'raid'], [/contrecoup|invasion|assaut|croisade/i, 'swords'], [/rival|sabotage/i, 'flag'], [/r[ée]colte/i, 'gold'], [/travaux|chantier/i, 'anvil'], [/paie/i, 'purse'], [/arriv/i, 'door'], [/[âa]mes|cr[ée]ature/i, 'heart'], [/intrigue/i, 'scroll'], [/hauts? faits/i, 'trophy'], [/exp[ée]dition/i, 'expe'], [/envie/i, 'spark'], [/victoire/i, 'crown'], [/val/i, 'map']];
+const CHRON_SEC = [[/^Métiers/, 'anvil'], [/^Quêtes/, 'scroll'], [/^Renommée/, 'legend'], [/calamit/i, 'cal'], [/raid/i, 'raid'], [/contrecoup|invasion|assaut|croisade/i, 'swords'], [/rival|sabotage/i, 'flag'], [/r[ée]colte/i, 'gold'], [/travaux|chantier/i, 'anvil'], [/paie/i, 'purse'], [/arriv/i, 'door'], [/[âa]mes|cr[ée]ature/i, 'heart'], [/intrigue/i, 'scroll'], [/hauts? faits/i, 'trophy'], [/exp[ée]dition/i, 'expe'], [/envie/i, 'spark'], [/victoire/i, 'crown'], [/en f[êe]te/i, 'trophy'], [/val/i, 'map']];
 const chronSecIk = t => { const f = CHRON_SEC.find(([re]) => re.test(t)); return f ? f[1] : 'bookopen'; };
 // le bilan de la nuit en quelques pastilles : ce qui a bougé depuis le soir
 function chronSummary(snap, now) {

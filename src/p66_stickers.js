@@ -5,8 +5,8 @@
    légende de chaque espèce, chaque élite terrassée (une fois,
    cinq fois), chaque classe de héros vaincue, les invasions
    marquantes, les choix des rencontres d'expédition (certains
-   exclusifs : soigner le blessé ferme la bourse), la première
-   victoire (une seule par partie), chaque relique, chaque
+   exclusifs : soigner le blessé ferme la bourse), chacune des
+   cinq victoires du Val, chaque relique, chaque
    Merveille, chaque pacte, l'âge d'or de chaque ère.
    Sous chaque sticker collé : comment il a été débloqué.
    Le Livre des stickers garde tout ce qui a été découvert,
@@ -54,9 +54,10 @@ bookTick = function (report) {
 };
 const cmdPactStk = CMD.pact;
 CMD.pact = a => { const e = cmdPactStk(a); if (!e && PACT_BY[a.id]) stk('pacte:' + a.id, PACT_BY[a.id].name, PACT_BY[a.id].ico, 'Âges', 1, `Choisir ce pacte pour traverser un âge sombre.`); return e; };
-// la première victoire : une seule par partie
+// chaque victoire du Val a son sticker, chaque fois qu'elle est remportée (même la deuxième d'une partie)
 const winVictoryStk = winVictory;
-winVictory = function (id, out) { const first = !(S.stats.victories || 0); winVictoryStk(id, out); try { if (first && VIC_BY[id]) stk('vic:' + id, `Première victoire : ${VIC_BY[id].name.replace(/^Victoire (de la |de |des )?/, '')}`, VIC_BY[id].ico, 'Victoires', 5, `Faire de la ${VIC_BY[id].name.replace('Victoire', 'victoire')} la première victoire de la partie.`, { excl: 'victoire1', lines: out }); } catch (e) { console.error(e); } };
+const vicStkD = id => `Remporter la ${VIC_BY[id].name.replace('Victoire', 'victoire')}.`;
+winVictory = function (id, out) { const had = !!(S.vic && S.vic.won && S.vic.won[id]); winVictoryStk(id, out); try { if (!had && VIC_BY[id] && S.vic.won[id]) stk('vic:' + id, VIC_BY[id].name, VIC_BY[id].ico, 'Victoires', 5, vicStkD(id), { lines: out }); } catch (e) { console.error(e); } };
 // les élites terrassées (une fois, puis cinq fois)
 const crawlFoesStk = crawlFoes;
 crawlFoes = function (R, kind) { const f = crawlFoesStk(R, kind); try { R._foes = f.map(x => x.k); } catch (e) {} return f; };
@@ -111,7 +112,8 @@ function openStickerBook() {
   const M = metaLoad(), got = Object.entries(M.got || {}).filter(([id]) => id !== 'r_album' && id !== 'espece:diablotin').sort((a, b) => (a[1].date || 0) - (b[1].date || 0)), total = Math.max(stkCatalogSize(), got.length), single = innerWidth < 760;
   const P = ['<div class="lvp garde"></div>', `<div class="lvp titre"><div class="lv-frame"><div class="lv-orn">❦</div><h1>Le Livre des stickers</h1><p class="lv-castle">toutes tes parties</p><div class="lv-orn">❧</div><p class="lv-hand">${got.length} sticker${got.length > 1 ? 's' : ''} découvert${got.length > 1 ? 's' : ''} sur ${total}.</p><p class="lv-hand small">Chaque partie en révèle d’autres. Certains sont rares, d’autres s’excluent : il faudra rejouer pour tous les trouver.</p></div></div>`];
   const L = lvLayout(single);   // autant de stickers par page que l'écran en laisse la place
-  for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const x = { id, t: g.t, ico: g.ico, cat: g.cat, art: g.art, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}`, d: g.d, night: g.night }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
+  for (let i = 0; i < got.length; i += L.cap) P.push(`<div class="lvp st grid" style="--cols:${L.cols}; --rows:${L.rows}; --stw:${L.w}px"><div class="lv-runhead">Le Livre des stickers</div>${got.slice(i, i + L.cap).map(([id, g], j) => { const vk = /^vic:/.test(id) && VIC_BY[id.slice(4)] ? id.slice(4) : null;   // les anciens « Première victoire : … » prennent le nom de leur victoire
+    const x = { id, t: vk ? VIC_BY[vk].name : g.t, ico: g.ico, cat: g.cat, art: g.art, d: vk ? vicStkD(vk) : g.d, night: g.night, sub: g.n > 1 ? `trouvé ${g.n} fois` : `chez ${g.castle || '?'}` }; return lvSticker(x, j, false, false, lvJit(x)); }).join('')}</div>`);
   const slots = n => Array.from({ length: n }, (_, i) => `<div class="lv-slot" style="--rot:${[-3, 2, -1, 3, -2, 1][i % 6]}deg"><span>?</span></div>`).join('');
   P.push(`<div class="lvp blanc"><p class="lv-hand big">Encore ${Math.max(0, total - got.length)} stickers à découvrir…</p><div class="lv-slots">${slots(6)}</div><p class="lv-hand small">Personne ne sait vraiment ce qui les fait apparaître. Essaie des choses.</p></div>`);
   if (P.length % 2) P.push('<div class="lvp blanc"></div>'); P.push('<div class="lvp garde"></div>');

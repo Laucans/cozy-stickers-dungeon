@@ -17,7 +17,7 @@ const FLOOR_SHORT = { 9: 'Dehors', 2: 'Cimes', 1: 'Hauteurs', 0: 'Rez', '-1': 'C
 const zOK = z => Number.isInteger(z) && ((z >= -DEPTH_MAX && z <= HEIGHT_MAX) || z === EXT);
 const HEART = { x: 5, y: 1, w: 2, h: 2 };
 let CAL_MAX = 8, MENACE_MAX = 6;
-const CONSTS = { START_GOLD: 16, START_MAT: 12, WORK: 2 };
+const CONSTS = { START_GOLD: 20, START_MAT: 18, WORK: 2 };
 
 // stats : gold 💰, mat 🪵, hype 🔥, food repas, beds lits, amb ambiance, cal calamité en moins,
 // guard garde, harass harcèlement, dice dés de raid, cells places de prison
@@ -26,8 +26,8 @@ const ROOMS = {
               desc: 'Relie les pièces entre elles. Les pièges se posent dans les couloirs.' },
   porche:   { name: 'Porche', size: [1,1], fixed: true, floor: 'flag', color: '#c9bfae',
               desc: 'L’entrée du château. Les nouvelles recrues passent par ici… les aventuriers aussi.' },
-  coeur:    { name: 'Cœur du château', size: [2,2], fixed: true, floor: 'magic', color: '#7b52b8', gold: 2, beds: 2, food: 3,
-              desc: 'Le cristal qui fait battre ton château. Chaque bande finit son parcours ici : si elle gagne, elle pille ton or. Tes 3 créatures les plus fortes (et pas épuisées) le défendent jusqu’au bout.' },
+  coeur:    { name: 'Cœur du château', size: [2,2], fixed: true, floor: 'magic', color: '#7b52b8', gold: 2, mat: 1, beds: 2, food: 3,
+              desc: 'Le cristal qui fait battre ton château. Chaque nuit, il rapporte un peu d’or, et les diablotins ramassent du petit bois tout autour. Chaque bande finit son parcours ici : si elle gagne, elle pille ton or. Tes 3 créatures les plus fortes (et pas épuisées) le défendent jusqu’au bout.' },
   dortoir:  { name: 'Dortoir', size: [3,2], cost: { g: 3, s: 3 }, clock: 4, floor: 'straw', color: '#b9a4e6',
               furn: ['paillasse','litsup','baldaquin','coffre','grandlit'], attracts: ['gobelin'], desc: 'Pose des lits pour loger tes créatures. Attire les Gobelins.' },
   cuisine:  { name: 'Cuisine', size: [2,2], cost: { g: 3, s: 2 }, clock: 4, floor: 'checker', color: '#f2c48d',

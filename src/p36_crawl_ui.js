@@ -16,27 +16,57 @@ function ensureCrawlSites() {
   w.sites.forEach(s => { if (CRAWL_SITES.includes(s.expe) && !RAIDS['x_' + s.id]) RAIDS['x_' + s.id] = { name: s.name, emo: CRAWL_DG[s.expe].emo, tier: 0, risk: 1, tag: (EXPE_SITES[s.expe] || {}).tag || 'ruse', reward: { g: 0 }, hype: 1, menace: 0, dg: s.expe, site: s.id, desc: CRAWL_DG[s.expe].desc }; });
 }
 const isCrawlTarget = k => { if (!RAIDS[k] && /^x_/.test(k || '')) ensureCrawlSites(); const d = crawlDgOf(k); return !!(d && CRAWL_DG[d]); };
-// soumettre un rival : un boss vaincu vaut 2 points ; le troisième étage atteint, puis rentrer sans fuir, 1 point (3 points : vassal)
+// soumettre un rival : un boss vaincu vaut 2 points ; le troisième étage atteint, puis rentrer sans fuir, 1 point, une seule fois par rival (3 points : vassal)
 function crawlVictory(dg, R, lines) {
   if (!CRAWL_DG[dg] || CRAWL_DG[dg].site) return;
+  // les blessures du boss (ou du chef du quartier) restent : il ne les panse que peu à peu (rivalBossHp, plus bas)
+  const bk = bossKey(dg), v0 = vicState();
+  if (R.bossFoe && bk && !(dg !== 'cite' && isVassal(dg))) { const bh = v0.bossHp = v0.bossHp || {}; if (R.done === 'boss') delete bh[bk]; else if (R.bossFoe.hp < R.bossFoe.max) { bh[bk] = Math.max(.05, Math.round(R.bossFoe.hp / R.bossFoe.max * 100) / 100); lines.push(['🩹', `${CRAWL_EN[R.bossFoe.k].name} garde ses blessures (${Math.round(bh[bk] * 100)} % de ses PV) : il en reprend ${Math.round(bossRegen(bk) * 100)} % par nuit. Reviens vite l’achever !`, 'good']); } }
   if (dg === 'cite') return siegeAssault(R, lines);   // le Siège de Mirebrume (p25) : seul le chef du quartier compte, le 3e étage ne vaut rien
-  const v = vicState(), door = R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 && R.done !== 'wipe' && R.done !== 'fled', pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat
-  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', `${r.name} ne cède rien : il faut atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir (1 point), ou vaincre le boss (2 points).`, '']);
+  const v = vicState(), doors = vicDoor(), reached = R.floor >= CRAWL_FLOORS && (R.won || 0) >= 2 && R.done !== 'wipe' && R.done !== 'fled', door = reached && doors[dg] == null, pts = R.done === 'boss' ? 2 : door ? 1 : 0, r = racer(dg);   // 1 point : atteindre le troisième étage et rentrer en bon ordre, sans fuir un combat (une fois)
+  if (!pts && !isVassal(dg) && R.done !== 'wipe') lines.push(['🛡️', reached ? `${r.name} ne cède rien : le point du troisième étage est déjà pris. Désormais, seul son boss vaincu (2 points) le fera plier.` : `${r.name} ne cède rien : il faut vaincre son boss (2 points)${doors[dg] == null ? ', ou atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer sans fuir (1 point, une seule fois par rival)' : ' ; le point du troisième étage est déjà pris'}.`, '']);
   if (S.world) S.world.hit[dg] = S.night + (pts ? 6 : 3);
   if (!pts || isVassal(dg)) return;
+  if (door) doors[dg] = S.night;
   v.vassals[dg] = Math.min(3, (v.vassals[dg] || 0) + pts); v.race[dg] = Math.max(0, (v.race[dg] || 0) - 6 * pts);
   if (S.nem && S.nem.id === dg) { S.nem.pres = Math.max(6, S.nem.pres - 4 * pts); if (typeof facTick === 'function') facTick('nem', -2 * pts); }
   if (isVassal(dg)) { lines.push(['🏳️', `Reddition ! ${r.name} : te voilà suzerain. Un tribut chaque nuit.`, 'good']); addLog(`Vassal : ${r.name}.`, 'ev'); }
-  else lines.push(['🏴', `${r.name} vacille : ${v.vassals[dg]}/3 vers la vassalité, et il recule dans la course.`, 'good']);
+  else lines.push(['🏴', `${r.name} vacille : ${v.vassals[dg]}/3 vers la vassalité, et il recule dans la course.${door ? ' C’était le point du troisième étage, une seule fois par rival : la suite passe par son boss.' : ''}`, 'good']);
 }
+// le boss d'un donjon rival, comme le chef d'un quartier de Mirebrume, garde ses blessures d'une expédition à l'autre
+// (S.vic.bossHp[clé] : la part de ses PV qu'il lui reste) et en reprend un peu chaque nuit (RIVAL_TUNE.regen)
+const bossKey = dg => typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === dg) ? dg : dg === 'cite' && typeof siegeQ === 'function' ? 'cite_' + siegeQ().id : null;
+const bossRegen = k => /^cite_/.test(k) && typeof SIEGE_TUNE !== 'undefined' ? SIEGE_TUNE.regen : RIVAL_TUNE.regen;
+const rivalBossHp = dg => { const v = vicState(), k = bossKey(dg); return k && v.bossHp && v.bossHp[k] != null ? v.bossHp[k] : 1; };
+const crawlBattleRival = crawlBattle;
+crawlBattle = function (R, foes) {
+  const b = R && bossKey(R.dg) ? foes.find(f => f.boss) : null, k = b ? rivalBossHp(R.dg) : 1;
+  if (b) { if (k < 1) b.hp = Math.max(1, Math.round(b.max * k)); R.bossFoe = b; }
+  const B = crawlBattleRival(R, foes);
+  if (b && k < 1) B.log(`${b.name} porte encore les blessures de ta dernière visite (${b.hp}/${b.max} PV).`, 'good', { k: 'trap' });
+  return B;
+};
+const dawnRivalBoss = dawn;
+dawn = function (report) { const r = dawnRivalBoss(report), bh = S.vic && S.vic.bossHp; if (bh) Object.keys(bh).forEach(k => { bh[k] = Math.round((bh[k] + bossRegen(k)) * 100) / 100; if (bh[k] >= 1) delete bh[k]; }); return r; };
+// le chemin est connu : une fois le point du troisième étage pris chez un rival, ses expéditions vont tout droit à la porte du boss (plus de butin des étages, mais seul le boss compte désormais)
+const RIVAL_SHORTCUT = CRAWL_FLOORS + 1;   // l'étage où commencent ces expéditions (CRAWL_FLOORS + 1 : la porte du boss)
+const crawlNewRival = crawlNew;
+crawlNew = function (dg, team, opts) {
+  const R = crawlNewRival(dg, team, opts);
+  if (RIVAL_SHORTCUT > 1 && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === dg) && typeof doorTaken === 'function' && doorTaken(dg) && !isVassal(dg)) { R.floor = RIVAL_SHORTCUT; R.step = 0; R.skip = (RIVAL_SHORTCUT - 1) * CRAWL_STEPS; R.choices = crawlChoices(R); }
+  return R;
+};
 // la Forêt, les Grottes et les Ruines : leurs trésors (un artefact, une rencontre) et le temps qu'il faut pour y retourner
+const SITE_DEEP_ART = .3;
 function crawlSiteResult(key, R, team, lines) {
   const tg = RAIDS[key]; if (!tg || !tg.site || !R.path || !R.path.length) return;   // rentré avant la première salle : rien ne se passe, le lieu reste ouvert
   const s = siteById(tg.site), X = EXPE_SITES[tg.dg] || {}; if (!s) return;
   S.world.cd[s.id] = S.night + 5; S.stats.expeditions = (S.stats.expeditions || 0) + 1;
   discover(discAround(s.q, s.r, 2), 'expédition');
   if (R.done === 'wipe') return;
-  if (R.done === 'boss' && Math.random() < .6) { const a = giveArtefact(randomArtefact(X.arts) || randomArtefact(), 'expédition'); if (a) lines.push(['🏺', `Dans les profondeurs de ${s.name}, l’équipe trouve un artefact : ${FURN[a].name}.`, 'good']); }
+  // un artefact : souvent chez le boss, parfois au fond du troisième étage (pour qui rentre sans fuir)
+  const deep = R.done !== 'boss' && R.done !== 'fled' && R.floor >= 3;
+  if ((R.done === 'boss' && Math.random() < .6) || (deep && Math.random() < SITE_DEEP_ART)) { const a = giveArtefact(randomArtefact(X.arts) || randomArtefact(), 'expédition'); if (a) lines.push(['🏺', deep ? `Au fond du troisième étage de ${s.name}, l’équipe déniche un artefact : ${FURN[a].name}.` : `Dans les profondeurs de ${s.name}, l’équipe trouve un artefact : ${FURN[a].name}.`, 'good']); }
   if ((R.done === 'boss' || (R.floor >= 3 && Math.random() < .3)) && X.meet && !worldMet(X.meet)) { S.world.met[X.meet] = S.night; lines.push(['🤝', `Une rencontre : ${SPECIES[X.meet].name}, qui viendra s’installer si ton château rayonne à ${SPECIES[X.meet].glow} ✨ et lui offre sa pièce.`, 'good']); }
   team.forEach(c => addLoy(c, R.done === 'boss' ? 4 : 2));
 }
@@ -45,17 +75,17 @@ function crawlSiteResult(key, R, team, lines) {
 function intentVM(B, f, it, leg) {
   if (!it) return null;
   const tg = it.t && B.party.find(c => c.id === it.t && !c.ko), w = f.st.weak || 0, v = Math.max(0, (it.v || 0) - w), name = actName(it), el = ACT_EL[it.k] || (FOE_ELEM[f.k] || {}).el;
-  const num = { atk: v, execute: v, smash: v, grab: v, drain: v, multi: `${v}×${it.n}`, throw: `${v}×${it.n}`, swarm: `${v}×${it.n}`, aoe: `${v} à tous`, tailall: `${v} à tous`, roots: `${v} à tous`, shatter: `${v} à tous`, souldrain: `${v} à tous`, block: it.v, heal: it.v, round: it.v, serve: it.v, buff: `+${it.v}`, fear: `+${it.v}`, fearall: `+${it.v} à tous`, poison: it.v, poisonall: `${it.v} à tous`, toxic: `${it.v} à tous`, steal: 'vol', summon: 'renforts', spawn: 'renfort', cocoon: '2 tours', petrify: '2 tours', decree: '−1 énergie' }[it.k];
-  const cls = DMG_K.includes(it.k) || it.k === 'steal' ? 'hurt' : ['fear', 'fearall', 'stun', 'poison', 'poisonall', 'toxic', 'cocoon', 'petrify', 'blind', 'charm', 'decree'].includes(it.k) ? 'curse' : 'calm';
+  const num = { wind: `élan → ${v}`, heavy: it.half ? Math.ceil(v / 2) : v, atk: v, execute: v, smash: v, grab: v, drain: v, multi: `${v}×${it.n}`, throw: `${v}×${it.n}`, swarm: `${v}×${it.n}`, aoe: `${v} à tous`, tailall: `${v} à tous`, roots: `${v} à tous`, shatter: `${v} à tous`, souldrain: `${v} à tous`, block: it.v, heal: it.v, round: it.v, serve: it.v, buff: `+${it.v}`, fear: `+${it.v}`, fearall: `+${it.v} à tous`, poison: it.v, poisonall: `${it.v} à tous`, toxic: `${it.v} à tous`, steal: 'vol', summon: 'renforts', spawn: 'renfort', cocoon: '2 tours', petrify: '2 tours', decree: '−1 énergie' }[it.k];
+  const cls = DMG_K.includes(it.k) || it.k === 'steal' || it.k === 'wind' ? 'hurt' : ['fear', 'fearall', 'stun', 'poison', 'poisonall', 'toxic', 'cocoon', 'petrify', 'blind', 'charm', 'decree'].includes(it.k) ? 'curse' : 'calm';
   const special = !!(ELITE_ACT[it.k] || LEG_ACT[it.k]);
   return { ik: INT_IK[it.k] || 'question', num: num == null ? '' : String(num), tgt: tg ? tg.name : '', cls, leg: !!leg, special, name: special ? name : '', el: DMG_K.includes(it.k) && el ? el : '',
-    title: `${leg ? '⚡ Action légendaire : ' : special ? '★ Action d’élite : ' : ''}${name}${num != null && num !== '' ? ' (' + num + ')' : ''}${tg ? ' → ' + tg.name : ''}${DMG_K.includes(it.k) && el ? ' · ' + ELEM[el][1] : ''}` };
+    title: `${leg ? '⚡ Action légendaire : ' : special ? '★ Action d’élite : ' : ''}${name}${num != null && num !== '' ? ' (' + num + ')' : ''}${tg ? ' → ' + tg.name : ''}${DMG_K.includes(it.k) && el ? ' · ' + ELEM[el][1] : ''}${it.k === 'roots' ? ' · et −1 énergie pour toi au prochain tour' : ''}${it.k === 'wind' ? ' · le coup part au prochain tour : sonne-le pour lui faire perdre son élan, ou pare-le (parade, leurre, une créature qui attire les coups)' : it.k === 'heavy' ? (it.half ? ' · sans élan : la moitié seulement' : ' · un gros coup, préparé au tour d’avant') : ''}` };
 }
 function figVM(B, o, side) {
   const foe = side === 'foe', E = elemOf(o), P = foe && o.pow ? ELITE_POW[o.pow] : null, C = foe ? CRAWL_EN[o.k] : null;
   return { id: foe ? o.uid : o.id, side, name: o.name, sp: o.sp || '', k: o.k || '', emo: o.emo || '', hp: Math.max(0, o.hp), max: o.max, block: o.block || 0, stress: o.stress || 0, down: foe ? o.hp <= 0 : !!o.ko,
     boss: !!o.boss, elite: !!o.elite, phase: o.phase || 1, st: stList(o), stunned: !!(o.st && o.st.stun),
-    intent: foe && B && o.hp > 0 ? (o.st.stun ? { ik: 'dizzy', num: 'sonné', cls: 'calm', title: 'Il perd sa prochaine action', tgt: '' } : intentVM(B, o, o.st.confuse ? null : o.int, false)) : null,
+    intent: foe && B && o.hp > 0 ? (o.st.stun ? { ik: 'dizzy', num: 'sonné', cls: 'calm', title: `Il perd sa prochaine action. Déjà sonné : un nouvel étourdissement se change en parade pour l’équipe (${STUN_BLOCK} par action).`, tgt: '' } : intentVM(B, o, o.st.confuse ? null : o.int, false)) : null,
     leg: foe && B && o.hp > 0 && !o.st.stun && o.lint ? intentVM(B, o, o.lint, true) : null,
     pow: P ? { ik: POW_IK[o.pow] || 'spark', name: P.name, desc: powDesc(o.pow) } : null, legN: C && C.leg ? Math.min(3, (B && B.np) || 1) : 0, p2: C && C.p2 ? BOSS_P2[C.p2] : '',
     vuln: E.vuln || [], res: E.res || [], imm: E.imm || [], nofear: !!E.nofear };
@@ -110,7 +140,7 @@ function morphHTML(box, html) {
 
 /* ---------- l'affichage : figurines, cartes, secret du décor ---------- */
 const crawlFace = o => foeImg(o);
-const stList = o => [o.st.stun && ['dizzy', '', 'Immobilisé·e'], o.st.poison && ['poison', o.st.poison, 'Empoisonné·e'], o.st.song && ['up', '+' + o.st.song, 'Force en plus'], o.st.evade && ['feather', '', 'Esquivera la prochaine attaque'], o.st.taunt && ['target', '', 'Attire les coups'], o.st.weak && ['down', '−' + o.st.weak, 'Frappe moins fort'], o.st.confuse && ['psy', '', 'Embrouillé'], o.st.mist && ['cloud', o.st.mist, 'Changé en brume'], o.stress >= STRESS_MAX && ['fear', '', 'Panique']].filter(Boolean);
+const stList = o => [o.st.stun && ['dizzy', '', o.k ? 'Sonné : perd sa prochaine action (un nouvel étourdissement se change en parade)' : 'Immobilisé·e'], o.st.poison && ['poison', o.st.poison, `Empoisonné·e : perd ${o.st.poison} PV au début du tour, puis 1 de moins${o.k ? '' : ` (au plus ${POISON_MAX} ; un soin le fait reculer de ${HEAL_CURE})`}`], o.st.crack && ['crystal', '', 'Cristal fêlé : ses coups ne sont plus amortis'], o.st.unseal && ['lock', '', 'Sceau brisé : plus de limite aux dégâts'], o.st.burnt && ['fire', o.st.burnt, 'Écorce brûlée : elle ne repousse pas'], o.st.song && ['up', '+' + o.st.song, 'Force en plus'], o.st.evade && ['feather', '', 'Esquivera la prochaine attaque'], o.st.taunt && ['target', '', 'Attire les coups'], o.st.weak && ['down', '−' + o.st.weak, 'Frappe moins fort'], o.st.confuse && ['psy', '', 'Embrouillé'], o.st.mist && ['cloud', o.st.mist, 'Changé en brume'], o.stress >= STRESS_MAX && ['fear', '', 'Panique']].filter(Boolean);
 const stHTML = L => (L || []).filter(x => Array.isArray(x) && ICON_DRAW[x[0]]).map(([k, n, t]) => `<span class="sti" title="${esc(String(t || ''))}">${gi(k)}${n !== '' && n != null ? esc(String(n)) : ''}</span>`).join('');
 const safeKey = (tbl, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(tbl, k) ? k : '';
 const phaseDl = p => `animation-delay:-${((performance.now() / 1000) % p).toFixed(2)}s`;
@@ -164,7 +194,7 @@ function handHTML(vm, p, st = {}) {
   const others = (vm.names || []).map((nm, q) => q === p ? '' : `<span class="pready${vm.ready[q] ? ' on' : ''}" title="${vm.ready[q] ? 'a fini son tour' : 'joue encore'}">${gi(vm.ready[q] ? 'flag' : 'cards')} ${esc(nm)} · ${+(vm.nrg[q] || 0)}${gi('energy')} · ${((vm.hands || [])[q] || []).length} cartes</span>`).filter(Boolean).join('');
   return `<div class="hz-left"><div class="energy${vm.nrg[p] ? '' : ' empty'}" title="Énergie"><b>${+(vm.nrg[p] || 0)}</b><small>/${ENERGY}</small></div><div class="piles" title="Pioche · défausse · mises de côté"><span class="pile"><i class="kback"></i>${+vm.draw}</span><span class="pile disc"><i class="kback"></i>${+vm.disc}</span>${vm.exh ? `<span class="pile ex" title="Mises de côté">${gi('hourglass')}${+vm.exh}</span>` : ''}</div></div>
     <div class="hand">${H.map((c, i) => cardHTML(c, { a: st.enemy || st.done ? 'noop' : 'card', v: c.uid, sel: st.sel && st.sel.uid === c.uid, drawn: seen.has(c.uid) ? 0 : ++n })).join('') || '<p class="hint">Plus de cartes en main.</p>'}</div>
-    <div class="hz-btns">${others ? `<div class="others">${others}</div>` : ''}${st.sel ? '<button type="button" class="sbtn" data-a="cancel">Annuler</button>' : ''}<button type="button" class="sbtn pri endturn" data-a="end" ${st.enemy || st.done ? 'disabled' : ''}>${gi('hourglass')} ${st.done ? 'On attend les autres' : 'Fin du tour'}</button>${st.host ? `<button type="button" class="sbtn" data-a="auto" aria-label="${st.auto ? 'Reprendre la main' : 'Combat auto'}">${gi('gear')}<span class="lbl">${st.auto ? ' Reprendre la main' : ' Combat auto'}</span></button><button type="button" class="sbtn danger" data-a="flee" aria-label="Fuir" ${st.enemy ? 'disabled' : ''} title="${st.boss ? 'Fuir le boss : tout le butin est perdu, mais l’équipe rentre entière' : 'Fuir : la moitié du butin reste au donjon'}">${gi('flag')}<span class="lbl"> Fuir</span></button>` : ''}</div>`;
+    <div class="hz-btns">${others ? `<div class="others">${others}</div>` : ''}${st.sel ? '<button type="button" class="sbtn" data-a="cancel">Annuler</button>' : ''}<button type="button" class="sbtn pri endturn" data-a="end" ${st.enemy || st.done ? 'disabled' : ''}>${gi('hourglass')} ${st.done ? 'On attend les autres' : 'Fin du tour'}</button>${st.host ? `<button type="button" class="sbtn" data-a="auto" aria-label="${st.auto ? 'Reprendre la main' : 'Combat auto'}"${st.xp ? ' title="Combat auto : tes créatures jouent à l’instinct (sans chercher les faiblesses, ni toucher au décor). Plus d’un tour sur deux en auto : le manager prend 25 % de l’or du combat."' : ''}>${gi('gear')}<span class="lbl">${st.auto ? ' Reprendre la main' : ' Combat auto'}</span></button><button type="button" class="sbtn danger" data-a="flee" aria-label="Fuir" ${st.enemy ? 'disabled' : ''} title="${st.boss ? 'Fuir le boss : la moitié du butin et tous les stickers restent là-bas, mais l’équipe rentre entière' : 'Fuir : la moitié du butin reste au donjon'}">${gi('flag')}<span class="lbl"> Fuir</span></button>` : ''}</div>`;
 }
 function battleHTML(vm, p, st) {
   const sel = st.sel, info = st.enemy ? `${gi('hourglass')} Au tour des ennemis…` : st.done ? `${gi('hourglass')} Ton tour est fini : les autres Maîtres jouent encore.` : sel ? `<b>${esc(sel.name)}</b> : ${esc(sel.text)} ${['enemy', 'ally', 'ko'].includes(sel.tgt) ? `Choisis ${sel.tgt === 'enemy' ? 'un ennemi' : sel.tgt === 'ko' ? 'une alliée K.O.' : 'une alliée'}.` : 'Touche-la encore pour la jouer.'}` : st.info ? esc(st.info) : `Tour ${+vm.turn} · joue tes cartes (touche-les${typeof TOUCHUI !== 'undefined' && TOUCHUI.on ? '' : ', ou 1 à 9'}), puis « Fin du tour ». Au-dessus des ennemis : ce qu’ils vont faire.`;
@@ -298,7 +328,7 @@ async function runCrawl(report, SCN) {
       head();
       body.innerHTML = `<div class="cmap"><p class="cmsg2">${esc(DG.desc)}</p>
         <h3>${gi('bag')} Le sac : choisis ${BAG_SIZE} cartes du château (${pick0.size}/${BAG_SIZE})</h3>
-        <p class="hint cp-hint">Chaque créature apporte deux Frappes, une Parade et la carte de son espèce. Le reste vient de ton château : tes meubles et tes pièges (un meuble de qualité donne sa carte améliorée ✦). Après chaque combat gagné, tu pourras ajouter une carte au deck.</p>
+        <p class="hint cp-hint">Chaque créature apporte une Frappe (son arme), un Coup de tête (contondant), une Parade et la carte de son espèce ; l’équipe emporte un Brandon (feu). Le reste vient de ton château : tes meubles et tes pièges (un meuble de qualité donne sa carte améliorée ✦). Après chaque combat gagné, tu pourras ajouter une carte au deck.</p>
         <div class="cdeck">${pool.map(k => cardHTML(cardVM(null, newCard('castle', k, null, castleUp(k)), 0, null), { a: 'bag', v: k, pressed: pick0.has(k) })).join('')}</div>
         <div class="btnrow cp-foot"><button type="button" class="sbtn pri" data-a="go" ${pick0.size ? '' : 'disabled'}>${gi('door')} Partir avec ce sac</button></div></div>`;
       const ch = await wait(); if (ch.p) continue;
@@ -310,14 +340,14 @@ async function runCrawl(report, SCN) {
   R = SCN ? SCN.R : crawlNew(dg, team, { bag, np: players.length });
 
   // 2. la carte du donjon : où aller ?
-  const track = () => { if (SCN) return SCN.track ? SCN.track() : ''; const out = []; for (let f = 1; f <= CRAWL_FLOORS; f++) for (let s = 0; s < CRAWL_STEPS; s++) { const i = (f - 1) * CRAWL_STEPS + s, done = i < R.path.length, cur = i === R.path.length && R.floor <= CRAWL_FLOORS; out.push(`<span class="st${done ? ' done' : ''}${cur ? ' cur' : ''}" title="Étage ${f}, salle ${s + 1}">${done ? gi(NODE_IK[R.path[i]]) : cur ? '?' : ''}</span>${s === CRAWL_STEPS - 1 ? '<i class="sep"></i>' : ''}`); } out.push(`<span class="st boss${R.floor > CRAWL_FLOORS ? ' cur' : ''}" title="Le boss">${gi('crown')}</span>`); return `<div class="ctrack">${out.join('')}</div>`; };
+  const track = () => { if (SCN) return SCN.track ? SCN.track() : ''; const out = []; for (let f = 1; f <= CRAWL_FLOORS; f++) for (let s = 0; s < CRAWL_STEPS; s++) { const i = (f - 1) * CRAWL_STEPS + s, done = i < (R.skip || 0) + R.path.length, cur = i === (R.skip || 0) + R.path.length && R.floor <= CRAWL_FLOORS; out.push(`<span class="st${done ? ' done' : ''}${cur ? ' cur' : ''}" title="Étage ${f}, salle ${s + 1}${i < (R.skip || 0) ? ' (raccourci : le chemin est connu)' : ''}">${done ? gi(i < (R.skip || 0) ? 'door' : NODE_IK[R.path[i - (R.skip || 0)]]) : cur ? '?' : ''}</span>${s === CRAWL_STEPS - 1 ? '<i class="sep"></i>' : ''}`); } out.push(`<span class="st boss${R.floor > CRAWL_FLOORS ? ' cur' : ''}" title="Le boss">${gi('crown')}</span>`); return `<div class="ctrack">${out.join('')}</div>`; };
   const NODE_TXT = { combat: 'Des ennemis, un peu de butin, une carte à gagner.', elite: 'Un ennemi d’élite et sa capacité redoutable : beau butin, belle carte.', tresor: 'De l’or, peut-être un sticker.', repos: 'Soigner, se calmer, ou aiguiser une carte.', event: 'Une rencontre étrange : un choix à faire.' };
   const mapView = msg => {
     head(); page.classList.remove('battle');
-    const B0 = CRAWL_EN[DG.boss];
-    body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${msg || esc(DG.desc)}</p>${partyRow()}
-      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(B0.name)} est redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${R.dg === 'cite' ? ', mais l’assaut ne comptera pas : à Mirebrume, seul le chef du quartier compte' : CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? ', et compte déjà 1 point contre ce rival' : ''}.</p>` : ''}
-      <div class="cnodes2">${R.choices.map((c, i) => `<button type="button" class="cnode2${c.k === 'boss' ? ' boss' : ''}" data-a="go" data-v="${i}">${gi(NODE_IK[c.k], 'big')}<b>${NODES[c.k].name}</b><small>${c.k === 'boss' ? `${esc(B0.name)}. Chaque tour, une action légendaire en plus ; à mi-vie, la fureur. Vaincu, il rapporte gros, et une relique.` : NODE_TXT[c.k]}</small></button>`).join('')}</div>
+    const B0 = CRAWL_EN[DG.boss], bossTxt = crawlPeekText(R, 'boss');
+    body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${msg || esc(DG.desc)}</p>${R.floor <= CRAWL_FLOORS && bossTxt ? `<p class="hint cp-hint">${gi('crown')} Au bout du donjon : ${esc(bossTxt)}.</p>` : ''}${partyRow()}
+      <h3>${R.floor > CRAWL_FLOORS ? 'Le boss vous attend' : 'Où aller ?'}</h3>${R.floor > CRAWL_FLOORS ? `<p class="cmsg2 warn">⚠️ ${esc(bossTxt || B0.name)} : redoutable. Terrassée, l’équipe ne rapporte qu’un quart du butin (${R.loot.g} 💰 en jeu) ; rentrer maintenant garde tout${R.dg === 'cite' ? ', mais l’assaut ne comptera pas : à Mirebrume, seul le chef du quartier compte' : CRAWL_DG[R.dg] && !CRAWL_DG[R.dg].site && typeof RIVALS !== 'undefined' && RIVALS.some(r => r.id === R.dg) ? `, ${(R.won || 0) < 2 ? 'mais il faut au moins deux combats gagnés pour prendre un point à ce rival' : doorTaken(R.dg) ? 'mais le point du troisième étage est déjà pris : contre ce rival, seul le boss compte désormais' : 'et compte 1 point contre ce rival (une seule fois)'}` : ''}.</p>` : ''}
+      <div class="cnodes2">${R.choices.map((c, i) => `<button type="button" class="cnode2${c.k === 'boss' ? ' boss' : ''}" data-a="go" data-v="${i}">${gi(NODE_IK[c.k], 'big')}<b>${NODES[c.k].name}</b><small>${c.k === 'boss' ? `${esc(bossTxt || B0.name)}. Chaque tour, une action légendaire en plus ; à mi-vie, la fureur. Vaincu, il rapporte gros, et une relique.` : c.k === 'elite' && crawlPeekText(R, 'elite') ? `${esc(crawlPeekText(R, 'elite'))}. Beau butin, belle carte, parfois un sticker.` : NODE_TXT[c.k]}</small></button>`).join('')}</div>
       <div class="btnrow cp-foot"><button type="button" class="sbtn" data-a="deck">${gi('cards')} Le deck (${R.deck.length})</button><button type="button" class="sbtn" data-a="retreat">${gi('door')} Rentrer au château avec le butin</button></div></div>`;
     waitCast(`${names[0] || 'L’hôte'} choisit la prochaine salle…`);
   };
@@ -329,9 +359,9 @@ async function runCrawl(report, SCN) {
   };
   const panel = async (text, buttons) => { head(); body.innerHTML = `<div class="cmap">${track()}<p class="cmsg2">${text}</p>${partyRow()}<div class="cnodes2">${buttons.map(([a, v, label, sub]) => `<button type="button" class="cnode2 small" data-a="${a}" data-v="${v}"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`).join('')}</div></div>`; for (;;) { const ch = await wait(); if (!ch.p) return ch; } };
   const rewardView = async kind => {
-    const offer = crawlRewards(R, 3); if (!offer.length) return null;
+    const clean = R.handFight && R.flawless, offer = crawlRewards(R, clean ? 4 : 3, clean); if (!offer.length) return null;
     head();
-    body.innerHTML = `<div class="cmap"><h3>${gi(kind === 'elite' ? 'skull' : 'trophy')} ${kind === 'elite' ? 'Élite vaincue !' : 'Victoire !'} Une carte pour le deck ?</h3><p class="hint cp-hint">Elle rejoint ta pioche pour la suite de l’expédition. Un deck plus gros, c’est aussi tes meilleures cartes moins souvent en main.</p>
+    body.innerHTML = `<div class="cmap"><h3>${gi(kind === 'elite' ? 'skull' : 'trophy')} ${kind === 'elite' ? 'Élite vaincue !' : 'Victoire !'} Une carte pour le deck ?</h3><p class="hint cp-hint">${clean ? 'Sans faute, et mené à la main : une carte de plus au choix, la première déjà améliorée. ' : ''}Elle rejoint ta pioche pour la suite de l’expédition. Un deck plus gros, c’est aussi tes meilleures cartes moins souvent en main.</p>
       <div class="cdeck">${offer.map((c, i) => cardHTML(cardVM(null, c, 0, R), { a: 'rw', v: i })).join('')}</div>
       <div class="btnrow cp-foot"><button type="button" class="sbtn" data-a="skip">Passer</button></div></div>`;
     waitCast(`${names[0] || 'L’hôte'} choisit une carte pour le deck…`);
@@ -340,8 +370,10 @@ async function runCrawl(report, SCN) {
 
   // 3. le combat : l'arène en haut, les mains en bas
   const fight = async (kind, foesIn, onB) => {
-    const B = crawlBattle(R, foesIn || crawlFoes(R, kind)); if (onB) onB(B); ui.auto = !!ui.autoNext; ui.autoNext = false; ui.autoWarned = false; page.classList.add('battle');
-    const st = { sel: null, info: '', seen: new Set(), host: true, boss: kind === 'boss' }, ready = Array(B.np).fill(false);
+    const B = crawlBattle(R, foesIn || crawlFoes(R, kind)); if (onB) onB(B); ui.auto = !!ui.autoNext; ui.autoNext = false; ui.autoWarned = false; ui.usedAuto = ui.auto; ui.nT = 0; ui.nA = 0; ui.autoTurn = false; page.classList.add('battle');
+    // xp : une expédition (les invasions empruntent cet écran avec dg « chateau » : leur combat auto reste le joueur attentif, sans manager)
+    const xp = !(B.R && B.R.dg === 'chateau'), autoPick = xp ? crawlXpAutoPick : crawlAutoPick;
+    const st = { sel: null, info: '', seen: new Set(), host: true, boss: kind === 'boss', xp }, ready = Array(B.np).fill(false);
     let sentEv = 0, castT = null;
     const vmNow = enemy => battleVM(B, { p: 0, ready, names });
     const castBattle = (enemy, extra = {}) => { if (!coop) return; clearTimeout(castT); castT = setTimeout(() => { const vm = vmNow(enemy); cast({ view: 'battle', vm, ev: B.ev.slice(sentEv).map(e => ({ t: e.t, cls: e.cls, fx: e.fx })), enemy: !!enemy, ...extra }); sentEv = B.ev.length; }, 60); };
@@ -358,17 +390,20 @@ async function runCrawl(report, SCN) {
     if (boss) { A.figEl(boss.uid) && A.figEl(boss.uid).classList.add('enter'); sfx('boss'); A.banner(`${gi('crown')} ${esc(boss.name)}<small>Actions légendaires · fureur à mi-vie</small>`, 'leg big', 2000); A.quake(true); await sleep(1500); }
     else if (B.foesL.some(f => f.elite)) { const e = B.foesL.find(f => f.elite), P = ELITE_POW[e.pow]; A.banner(`${gi('skull')} ${esc(e.name)}${P ? `<small>${gi(POW_IK[e.pow])} ${esc(P.name)} : ${esc(powDesc(e.pow))}</small>` : ''}`, 'elite big', 1700); sfx('horn'); await sleep(1000); }
     for (let turn = 0; turn < 60 && !B.over; turn++) {
-      const n0 = B.ev.length; B.startTurn(); st.sel = null; ready.fill(false); ui.phase = 'players'; ui.secretReq = null;
+      const n0 = B.ev.length; B.startTurn(); st.sel = null; st.endOk = false; ready.fill(false); ui.phase = 'players'; ui.secretReq = null;
       if (ui.auto && !ui.autoWarned && B.party.reduce((a, c) => a + (c.ko ? 0 : c.hp / c.max), 0) / B.party.length < .45) { ui.auto = false; ui.autoWarned = true; st.info = '⚠️ Ça tourne mal : le combat auto te rend la main.'; }   // une fois par combat
       players.forEach((id, p) => { if (p > 0 && !COOP.peers.has(id)) ready[p] = true; });   // un Maître parti ne bloque personne
       render(); castBattle(false); A.banner(`${gi('swords')} Tour ${B.turn}${coop ? ' — à vous !' : ' — à toi !'}`, 'mine', 900); sfx('turn'); await A.play(B.ev.slice(n0), 1); if (B.over) break;
       // le tour des Maîtres : chacun joue sa main ; on passe aux ennemis quand tout le monde a fini
       for (let guard = 0; guard < 400 && !B.over && !ready.every(Boolean); guard++) {
         if (ui.secretReq) { const q = ui.secretReq; ui.secretReq = null; await doSecret(q.p, +q.v || 0); continue; }
-        if (ui.auto && !ready[0]) { const o = crawlAutoPick(B, 0); if (o) { await doPlay(0, o.env != null ? { env: o.env } : o.c, o.t, null); continue; } ready[0] = true; render(); castBattle(false); continue; }
+        if (ui.auto) { ui.usedAuto = true; ui.autoTurn = true; }
+        if (ui.auto && !ready[0]) { const o = autoPick(B, 0); if (o) { await doPlay(0, o.env != null ? { env: o.env } : o.c, o.t, null); continue; } ready[0] = true; render(); castBattle(false); continue; }
         render(); const ch = await wait(); st.info = '';
         const p = ch.p || 0; if (p >= B.np) continue;
         if (ch.a === 'auto' && p === 0) { ui.auto = true; st.sel = null; continue; }
+        // de l'énergie et des cartes jouables : on le dit une fois, le deuxième « Fin du tour » passe
+        if (ch.a === 'end' && p === 0 && xp && !st.endOk && B.nrg[0] > 0 && B.hands[0].some(c => !B.why(c, 0))) { st.endOk = true; st.info = `Il te reste ${B.nrg[0]} énergie et des cartes jouables. « Fin du tour » encore une fois pour passer quand même.`; sfx('tick'); continue; }
         if (ch.a === 'end') { ready[p] = true; sfx('tick'); render(); castBattle(false); continue; }
         if (ch.a === 'flee' && p === 0) { B.flee(); break; }
         if (ch.a === 'cancel') { if (p === 0) st.sel = null; continue; }
@@ -399,6 +434,7 @@ async function runCrawl(report, SCN) {
       // la main part à la défausse, puis le tour des ennemis, un par un
       page.querySelectorAll('.hand .kcard').forEach((k, i) => { k.style.animationDelay = `${i * 40}ms`; k.classList.add('toss'); }); sfx('draw');
       await sleep(ui.auto ? 120 : 280);
+      ui.nT++; if (ui.autoTurn || ui.auto) ui.nA++; ui.autoTurn = false;   // les tours joués en auto (le manager se paie au-delà de la moitié)
       B.endTurn(); render(true); castBattle(true); A.banner(`${gi('skull')} Tour des ennemis`, 'foe', 800); sfx('eturn'); await sleep(ui.auto ? 250 : 650);
       B.enemyStart();
       for (const f of B.queue) { if (B.over) break; const n1 = B.ev.length; B.enemyAct(f); render(true); castBattle(true); await A.play(B.ev.slice(n1), ui.auto ? .5 : 1); await sleep(ui.auto ? 60 : 180); }
@@ -406,7 +442,7 @@ async function runCrawl(report, SCN) {
     }
     ui.phase = null; ui.secretReq = null;
     R.party.forEach(c => { c.block = 0; c.st = {}; });
-    const res = B.over || 'lost';
+    const res = B.over || 'lost'; R.handFight = (ui.nA + (ui.autoTurn ? 1 : 0)) * 2 <= ui.nT + 1; R.flawless = B.flawless();
     if (res === 'won') { A.banner(`${gi('trophy')} Victoire !`, 'win big', 1600); sfx('victory'); A.figEl && body.querySelectorAll('.fig.ally:not(.down) .fspr').forEach(x => x.classList.add('cheer')); }
     else if (res === 'lost') { A.banner(`${gi('skull')} Terrassés…`, 'lose big', 1800); sfx('defeat'); }
     castBattle(false, { result: res }); await sleep(1500);
@@ -556,28 +592,31 @@ renderAll = function () { if (typeof S !== 'undefined' && S && S.raid && S.raid.
 function simCrawlNight(report) {
   const key = S.raid.target, dg = crawlDgOf(key), tg = dg === 'cite' ? { ...RAIDS[key], name: siegeTitle() } : RAIDS[key], team = S.raid.team.map(critter).filter(Boolean);
   if (!team.length || !CRAWL_DG[dg]) return null;
-  // au Siège, seul le chef compte : le joueur automatique pousse jusqu'à lui
-  const R = crawlAuto(dg, team, dg === 'cite' ? { prudence: .35, push: true } : { prudence: .5 }), lines = []; crawlApply(R, team, lines); crawlVictory(dg, R, lines); crawlSiteResult(key, R, team, lines);
+  // au Siège, seul le chef compte : le joueur automatique pousse jusqu'à lui ; de même chez un rival dont le point du troisième étage est déjà pris
+  const bossOnly = dg === 'cite' || (RIVALS.some(r => r.id === dg) && doorTaken(dg));
+  const R = crawlAuto(dg, team, bossOnly ? { prudence: .35, push: true } : { prudence: .5 }), lines = []; crawlApply(R, team, lines); crawlVictory(dg, R, lines); crawlSiteResult(key, R, team, lines);
   report.push(['🏰', `Expédition ${tg.name} (niv. ${R.lvl}) : ${R.done}`, R.done === 'wipe' ? 'bad' : 'good']); lines.forEach(l => report.push(l));
   return R.done;
 }
 
 /* ---------- le Grimoire ---------- */
 WIKI.expeditions = { cat: 'danger', t: 'Expéditions en cartes', x: () => `<p>Les donjons rivaux, la Forêt enchantée, les Grottes, les Ruines et le Siège de Mirebrume ne se pillent pas aux dés : on y envoie une <b>expédition</b> de 4 créatures au plus (donjon rival : bouton Raid, dès le Palier 1 ; Forêt, Grottes et Ruines : depuis la carte du Val ; Mirebrume : bouton Raid ou carte du Val, au Palier 2, une fois les quatre rivaux soumis, voir {c:v_terreur}). Elle se joue pendant la nuit, sur un écran à part, comme Slay the Spire. Les raids aux dés restent pour les lieux des humains (fermes, moulins, auberges…).</p>
-  <ul><li><b>Le deck vient de ton château.</b> Chaque créature apporte deux Frappes, une Parade et la carte de son espèce (${Object.entries(CRAWL_SK).slice(0, 5).map(([k, s]) => `{sp:${k}} : ${s.ico} ${esc(s.name)}`).join(', ')}…), améliorée si elle est fidèle (70 de loyauté) ; une légende ou une créature évoluée ajoute un Coup de légende. Avant de partir, tu remplis le <b>sac</b> avec ${BAG_SIZE} cartes tirées de tes meubles et de tes pièges : le ${CASTLE_CARDS.chou.ico} Chou du potager soigne, la ${CASTLE_CARDS.hallebarde.ico} Hallebarde du râtelier frappe, la ${CASTLE_CARDS.trappe.ico} Trappe à pics mord le prochain ennemi qui attaque… Un <b>meuble de qualité</b> (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée ✦ : le grand lustre fait une meilleure torche que la simple torche, la catapulte lance de vrais boulets.</li>
-  <li><b>Le combat</b> : ${ENERGY} énergie et ${HAND_SIZE} cartes par tour. Une carte de créature se joue par elle (sa force s’ajoute à ses coups) ; si elle est K.O., ses cartes sont mises de côté ; immobilisée, ses cartes attendent ; en panique, elles coûtent 1 de plus. Au-dessus de chaque ennemi, sa prochaine action et sa cible : protège-la, immobilise-le, ou tue-le d’abord.</li>
+  <ul><li><b>Le deck vient de ton château.</b> Chaque créature apporte une Frappe (son arme naturelle), un ${CARD_BASE.tete.ico} Coup de tête (contondant, quelle que soit son arme), une Parade et la carte de son espèce (${Object.entries(CRAWL_SK).slice(0, 5).map(([k, s]) => `{sp:${k}} : ${s.ico} ${esc(s.name)}`).join(', ')}…), améliorée si elle est fidèle (70 de loyauté) ; une légende ou une créature évoluée ajoute un Coup de légende ; l’équipe emporte aussi un ${CARD_BASE.brandon.ico} Brandon (feu), de quoi venir à bout des gelées et des ronces. Avant de partir, tu remplis le <b>sac</b> avec ${BAG_SIZE} cartes tirées de tes meubles et de tes pièges : le ${CASTLE_CARDS.chou.ico} Chou du potager soigne, la ${CASTLE_CARDS.hallebarde.ico} Hallebarde du râtelier frappe, la ${CASTLE_CARDS.trappe.ico} Trappe à pics mord le prochain ennemi qui attaque… Un <b>meuble de qualité</b> (au moins 6 💰+🪵, ou de palier 2) donne sa carte déjà améliorée ✦ : le grand lustre fait une meilleure torche que la simple torche, la catapulte lance de vrais boulets.</li>
+  <li><b>Le combat</b> : ${ENERGY} énergie et ${HAND_SIZE} cartes par tour. Une carte de créature se joue par elle (sa force s’ajoute à ses coups) ; si elle est K.O., ses cartes sont mises de côté ; immobilisée, ses cartes attendent ; en panique, elles coûtent 1 de plus. Au-dessus de chaque ennemi, sa prochaine action et sa cible : protège-la, immobilise-le, ou tue-le d’abord. L’énergie monte jusqu’à ${ENERGY_MAX} au plus, et les cartes qui en donnent font aussi piocher.</li>
+  <li><b>Se défendre</b> : les élites, les boss et quelques brutes <b>prennent leur élan</b> (⚠️ « élan → 20 ») : le gros coup part au tour suivant, sur la cible annoncée. Sonné entre-temps, l’ennemi perd son élan (et sans élan, le coup ne fait que la moitié) ; sinon, une parade, un leurre ou une créature qui attire les coups l’encaissent. Un <b>soin</b> fait reculer le poison de ${HEAL_CURE}, et ce qui dépasse les PV max devient de la parade : une carte de soin n’est jamais perdue. Le poison sur tes créatures monte à ${POISON_MAX} au plus. Un ennemi <b>déjà sonné</b> ne l’est pas deux fois : l’étourdissement se change en ${STUN_BLOCK} de parade pour toute l’équipe (l’intention « sonné » le rappelle).</li>
   <li><b>Trois étages</b> de 3 salles, puis le boss. À chaque pas, deux salles au choix : ${Object.entries(NODES).filter(([k]) => k !== 'boss').map(([, n]) => `${n.ico} ${n.name}`).join(', ')}. Après chaque combat gagné, une carte à ajouter au deck (ou pas). Au repos : se soigner, se calmer, ou aiguiser une carte.</li>
   <li><b>Après chaque salle</b>, tu continues ou tu rentres avec le butin. En plein combat, tu peux fuir : la moitié du butin reste là-bas (et les stickers, si c’est le boss qu’on fuit). Si l’équipe est terrassée, tout est perdu et tout le monde rentre sonné.</li>
   <li><b>La peur</b> monte avec les spectres, les K.O. et les cris ; à ${STRESS_MAX}, une créature panique. Au retour, la peur se change en fatigue (et parfois en cicatrice).</li>
-  <li><b>Les élites</b> ont une capacité qui ne les quitte pas (${Object.values(ELITE_POW).map(P => `${P.ico} ${esc(P.name)}`).join(', ')}) et une action d’élite redoutable dans leur répertoire. <b>Les boss</b> ont en plus une <b>action légendaire</b> à chaque tour, annoncée d’avance (⚡), et à mi-vie ils entrent en <b>fureur</b> : un coup d’éclat, et un répertoire plus dur. Un boss sonné perd aussi son action légendaire.</li>
+  <li><b>Les élites</b> ont une capacité qui ne les quitte pas (${Object.values(ELITE_POW).map(P => `${P.ico} ${esc(P.name)}`).join(', ')}) et une action d’élite redoutable dans leur répertoire ; chaque donjon a la sienne, annoncée sur la porte avec ses PV. Les plus coriaces ont une parade : le Golem de cristal se fêle sous un coup contondant ou de tonnerre, le Gardien du sceau lâche son sceau quand on le sonne, l’écorce du Vieux Chêne brûle. Les PV du boss sont annoncés dès la carte du donjon. <b>Les boss</b> ont en plus une <b>action légendaire</b> à chaque tour, annoncée d’avance (⚡), et à mi-vie ils entrent en <b>fureur</b> : un coup d’éclat, et un répertoire plus dur. Un boss sonné perd aussi son action légendaire.</li>
   <li><b>Les secrets du décor</b> : de temps en temps (pas souvent !), un détail du décor cache quelque chose : un tonneau prêt à exploser, un chandelier mal accroché, un vieux puits à vœux… Rien ne le signale, sauf un petit reflet qui passe. Touche-le pendant le tour des Maîtres : il sert une fois, ne coûte pas d’énergie et vise tout seul au mieux. Le combat auto ne les cherche pas : c’est un coup de pouce pour les yeux attentifs, pas une carte sur laquelle compter.</li>
+  <li><b>Le combat auto</b> (bouton ⚙️, et les expéditions que tes créatures font seules) : elles jouent <b>à l’instinct</b>. Elles évitent ce qui ne fait rien et parent un coup qui mettrait K.O., mais ne cherchent pas les faiblesses, étourdissent le plus petit ennemi plutôt que le plus dangereux et ne savent rien des parades des élites. Mais il faut payer le <b>manager</b> : un combat joué en auto <b>plus d’un tour sur deux</b> lui laisse ${Math.round(AUTO_FEE * 100)} % de l’or gagné (les expéditions que tes créatures font seules aussi). Un combat <b>mené à la main</b> sans faute (personne K.O.) offre une carte de plus au choix, déjà améliorée ; un boss vaincu à la main laisse en plus un sticker.</li>
   <li><b>Les éléments</b> : chaque coup a un type de dégâts, comme dans Donjons et Dragons ; voir {c:elements}.</li>
   <li><b>À plusieurs Maîtres</b> (château partagé) : chacun tire sa propre main et joue ses cartes depuis son écran ; les ennemis attendent que tout le monde ait fini. En contrepartie, les monstres sont plus coriaces, plus nombreux, frappent plus fort, et les boss ont une action légendaire de plus par Maître.</li>
   <li><b>Le niveau</b> suit la renommée de tes 4 meilleures créatures : le donjon se prépare à tes champions.</li>
-  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors, et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')} ; à Mirebrume, seul le dernier chef en laisse une). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point ; à 3 points, il devient ton vassal. Chaque point pris rend ce rival plus coriace. À Mirebrume, rien de tout ça : un assaut ne compte que si le chef du quartier tombe.</li></ul>` };
+  <li><b>Les récompenses</b> : or et matériaux qui grossissent avec la profondeur, des stickers dans les trésors (et parfois sur une élite), et sur chaque boss une relique unique (${Object.values(RELICS).map(r => `${r.ico} ${esc(r.name)}`).join(', ')} ; à Mirebrume, seul le dernier chef en laisse une). Dans la Forêt, les Grottes et les Ruines, des artefacts et une rencontre (la Fée grincheuse, le Golem de mousse, la Liche frileuse) ; il faut ensuite 5 nuits pour y retourner. Soumettre un rival : un boss vaincu vaut 2 points ; atteindre le troisième étage avec au moins deux combats gagnés, puis rentrer en bon ordre (sans fuir un combat), 1 point, une seule fois par rival ; à 3 points, il devient ton vassal. Il faut donc vaincre chaque boss au moins une fois : ce point pris, tes expéditions chez ce rival vont droit à la porte de son boss, et un boss (comme un chef de Mirebrume) garde ses blessures d’une expédition à l’autre, n’en reprenant que ${Math.round(RIVAL_TUNE.regen * 100)} % de ses PV par nuit. Chaque point pris rend ce rival plus coriace. À Mirebrume, rien de tout ça : un assaut ne compte que si le chef du quartier tombe.</li></ul>` };
 WIKI.elements = { cat: 'danger', t: 'Les éléments', x: () => `<p>En expédition, chaque coup a un <b>type de dégâts</b>, comme dans Donjons et Dragons : ${Object.values(ELEM).map(([i, n]) => `${i} ${n}`).join(', ')}.</p>
   <ul><li><b>Vulnérable</b> : les dégâts sont doublés (×2, et un « Vulnérable ! » s’affiche). <b>Résistant</b> : moitié moins. <b>Immunisé</b> : rien du tout. Sous chaque ennemi, ses faiblesses et ses résistances.</li>
   <li><b>La Frappe</b> prend l’arme naturelle de la créature qui la joue : le troll et le golem cognent (contondant), le squelette et l’orque tranchent, le gobelin et le vampire percent, le fantôme et la liche frappent nécrotique, la fée frappe de force. Les cartes du château ont leur propre type : Braises et Sort de flammes (feu), Fiole explosive (acide), Éclair de l’archimage (foudre), Épée qui chante faux (tonnerre), Relique bénite (radiant), Eau glacée du lac (froid), Malédiction de la tombe (nécrotique)…</li>
-  <li><b>Quelques repères</b> : les squelettes craignent le contondant et ignorent le poison ; les spectres résistent aux coups physiques et craignent le radiant ; les morts-vivants et les vampires craignent le radiant ; les plantes, les araignées et les loups-garous craignent le feu ; le Golem de cristal et les gargouilles craignent le tonnerre ; les crapauds et le Basilic craignent le froid ; dans les Ruines, les momies craignent le feu, les armures vides le contondant et la foudre, et le Roi sans Couronne le radiant (son Gardien du sceau, lui, n’encaisse jamais plus de 8 par coup : mieux vaut beaucoup de petits coups) ; à Mirebrume, les gardes en armure craignent le contondant et la foudre, les arbalétrières le froid (des doigts gelés sur les créneaux) et les percepteurs le feu (la paperasse, ça brûle).</li>
+  <li><b>Quelques repères</b> : les squelettes craignent le contondant et ignorent le poison ; les spectres résistent aux coups physiques et craignent le radiant ; les morts-vivants et les vampires craignent le radiant ; les plantes, les araignées et les loups-garous craignent le feu ; le Golem de cristal et les gargouilles craignent le tonnerre ; les crapauds et le Basilic craignent le froid ; dans les Ruines, les momies craignent le feu, les armures vides le contondant et la foudre, et le Roi sans Couronne le radiant (son Gardien du sceau, lui, n’encaisse jamais plus de 8 par coup tant qu’on ne l’a pas sonné : beaucoup de petits coups, ou un étourdissement d’abord ; le Golem de cristal amortit chaque coup jusqu’à ce qu’un coup contondant le fêle) ; à Mirebrume, les gardes en armure craignent le contondant et la foudre, les arbalétrières le froid (des doigts gelés sur les créneaux) et les percepteurs le feu (la paperasse, ça brûle).</li>
   <li><b>Tes créatures aussi</b> : le squelette, le golem, la gargouille et la liche sont immunisés contre le poison et ne connaissent pas la peur ; le diablotin et le dragonnet ne craignent pas le feu ; le troll craint le feu et l’acide ; le fantôme et le vampire craignent le radiant.</li></ul>` };
 TIPS.push({ id: 'crawl0', when: () => S.tier >= 1 && !(S.stats.crawls) && !(S.tuto && S.tuto.on), t: 'Expéditions en cartes', x: 'Dès le Palier 1, le bouton Raid te propose une expédition dans un donjon rival, et la carte du Val t’envoie dans la Forêt enchantée, les Grottes ou les Ruines : un combat en cartes, avec un deck fait de tes créatures et de ton château.', wiki: 'expeditions' });

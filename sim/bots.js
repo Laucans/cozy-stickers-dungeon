@@ -7,8 +7,8 @@ const themeRoom = () => THEMES[S.theme].room;
 const hasRoom = t => S.rooms.some(r => r.t === t);
 const roomsOf = t => S.rooms.filter(r => r.t === t && r.built);
 const fullRoom = r => (typeof furnCap === 'function' && furnCount(r) >= furnCap(r)) || cellsOf(r).every(([x, y]) => furnAt(x, y, zOf(r)));   // une pièce se remplit à moitié
-// l'or de la paie : on le garde de côté la veille (dans les versions sans paie, rien ne change)
-const payReserve = () => typeof payroll === 'function' && nightsToPay() <= 1 ? payroll() : 0;
+// l'or de la paie : les gages de l'aube et l'ardoise (v29) ; avant, toute la paie la veille du jour de paie (dans les versions sans paie, rien ne change)
+const payReserve = () => typeof wageDue === 'function' ? wageDue() + Math.ceil(payroll() / PAY_EVERY) : typeof payroll === 'function' && nightsToPay() <= 1 ? payroll() : 0;
 function econ(o = {}) {
   const reserve = Math.max(o.reserve || 0, payReserve());
   if (!hasRoom('dortoir')) A.build('dortoir');
@@ -35,12 +35,20 @@ function defend(budget) {   // des pièges quand des héros approchent ; plus on
   const pp = partyPreview(), def = defenseScore();
   if (S.menace >= MENACE_MAX - 3 && def < pp.courage + 4) A.traps(Math.max(budget, Math.floor(S.gold * .3)));
 }
+// avant une invasion (v32) : un piège à la porte des pièces qui n'en ont pas, un Corps de garde, un mercenaire si l'or abonde
+function prepare(o = {}) {
+  if (typeof A.roomTraps !== 'function') return;
+  A.garde();
+  if (S.menace >= MENACE_MAX - 3) A.roomTraps(Math.max(8, Math.floor((S.gold - payReserve()) * .2)));
+  A.merc(o.mercReserve || 80);
+}
 function common(o = {}) {
+  SIM.careful = true;
   A.care(); A.quests();
   if (typeof sagaBotStep === 'function') sagaBotStep();   // les intrigues : on les suit, on paie, on choisit
   if (typeof qState === 'function') A.questStep();   // les quêtes du journal : on accepte, on livre, on choisit, on lance raids et expéditions
   if (tierStatus() && tierStatus().ok && S.gold - tierStatus().next.cost.g > (o.tierReserve || 0)) cmd('tierUp');
-  econ(o); defend(o.trap || 10); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60); A.wonder(o.wonderReserve || 200); A.fete(); A.spy();
+  econ(o); defend(o.trap || 10); prepare(o); A.posts(); A.cook(); A.chantier(o.chantierReserve || 60); A.concours(); A.trade(); A.mecenat(o.mecenatReserve || 60); A.wonder(o.wonderReserve || 200); A.fete(); A.spy();
   if (roomsOf('trone').length && !hasItem('trone')) A.placeItem('trone');   // palier 3 : le Trône dans sa salle
   const ex = expandStatus(); if (ex && ex.ok && SIM.noRoom && S.night - SIM.noRoom < 3 && S.gold > (ex.cost.g || 0) + 30) { cmd('expand'); SIM.noRoom = 0; }   // à l'étroit : on agrandit les remparts
 }
@@ -57,18 +65,20 @@ function outdoors(list) {   // les Jardins : un enclos après l'autre, et la for
   S.rooms.filter(r => r.built && zOf(r) === EXT && ROOMS[r.t].furn && !fullRoom(r)).forEach(r => A.furnish(r, S.gold - 2));
 }
 function expeditions(n = 2, pref) {
-  if (A.free().length < 4) return;
+  if (A.free().length < 4 || (typeof invTired === 'function' && invasionSoon(2))) return;   // pas d'expédition la veille d'une invasion : les champions restent frais
   const sites = world().sites.filter(s => s.expe && siteKnown(s) && expeReady(s)).sort((a, b) => (pref ? pref(b) - pref(a) : 0) || hdist(a.q, a.r) - hdist(b.q, b.r));
   if (sites[0]) A.expedition(sites[0].id, n);
 }
-function raidFor(targets, minPool = 3) { if (S.raid) return; for (const t of targets) { if (!RAIDS[t] || !raidKnown(t) || RAIDS[t].tier > S.tier) continue; if (A.raidPool(t) >= minPool) { A.raid(t); return; } } }
+// une IA soigneuse (common) ne vide pas le château la veille d'une invasion : il faut au moins de quoi tenir le Cœur, et une créature de plus
+const keepHome = () => SIM.careful && typeof invHeartN === 'function' && invasionSoon(2) && S.creatures.filter(fitToFight).length - 3 < invHeartN() + 1;
+function raidFor(targets, minPool = 3) { if (S.raid || keepHome()) return; for (const t of targets) { if (!RAIDS[t] || !raidKnown(t) || RAIDS[t].tier > S.tier) continue; if (A.raidPool(t) >= minPool) { A.raid(t); return; } } }
 const FARM = ['ferme', 'moulin', 'auberge', 'monastere', 'chateau'];
 
 const BOTS = {
   // ne fait rien : la course des rivaux et les invasions à l'état brut
   idle() {},
   // bâtit et pille comme « tranquille », mais ne s'occupe jamais de ses créatures (ni caresses, ni friandises, ni missions)
-  negligent() { if (tierStatus() && tierStatus().ok) cmd('tierUp'); econ(); defend(10); grow(BASE_ROOMS); if (S.night % 3 === 0) raidFor(FARM, 3); },
+  negligent() { SIM.careful = false; if (tierStatus() && tierStatus().ok) cmd('tierUp'); econ(); defend(10); grow(BASE_ROOMS); if (S.night % 3 === 0) raidFor(FARM, 3); },
   // joueur tranquille : bâtit, meuble, caresse, pille un peu les fermes
   casual() { common(); grow(BASE_ROOMS); if (S.night % 3 === 0) raidFor(FARM, 3); },
   legende() {
@@ -87,7 +97,11 @@ const BOTS = {
     // le Siège de Mirebrume : une expédition par nuit (les dés n'y comptent plus), avec les 4 créatures les plus solides qui ne sont pas blessées
     if (!S.raid && raidKnown('mirebrume') && S.tier >= RAIDS.mirebrume.tier) { const crew = A.free().filter(c => !injured(c)).map(c => [c, crawler(c)]).sort((a, b) => b[1].hp * b[1].atk - a[1].hp * a[1].atk).slice(0, 4).map(x => x[0].id); if (crew.length >= 4) cmd('raidPlan', { target: 'mirebrume', team: crew }); }
     const rivals = RIVALS.filter(r => !isVassal(r.id)).map(r => 'r_' + r.id).sort((a, b) => A.raidPool(b) - A.raidPool(a));
-    raidFor(rivals, 4); raidFor([...rivals, 'chateau', 'auberge', 'ferme', 'moulin'], 3);
+    // un rival dont le point du troisième étage est déjà pris : seul son boss compte, on n'y va qu'avec quatre créatures en forme (le moins coriace d'abord)
+    const bossOnly = k => typeof doorTaken === 'function' && doorTaken(k.slice(2));
+    if (!S.raid) { const fit = A.free().filter(c => !injured(c)).map(c => [c, crawler(c)]).sort((a, b) => b[1].hp * b[1].atk - a[1].hp * a[1].atk).slice(0, 4).map(x => x[0].id), boss = rivals.filter(bossOnly).sort((a, b) => crawlResist(a.slice(2)) - crawlResist(b.slice(2)))[0];
+      if (boss && fit.length >= 4 && raidKnown(boss)) cmd('raidPlan', { target: boss, team: fit }); }
+    raidFor(rivals.filter(k => !bossOnly(k)), 4); raidFor([...rivals.filter(k => !bossOnly(k)), 'chateau', 'auberge', 'ferme', 'moulin'], 3);
     if (allVassals()) { const c = world().sites.find(s => s.kind === 'cite'); if (c && !siteKnown(c)) A.scout(); }
     else if (S.night % 5 === 0) A.scout();
   },
@@ -117,6 +131,7 @@ const BOTS = {
     if (S.night % 5 === 0) A.scout();
   },
   secrets() {
+    if (typeof WONDER_ART_LV !== 'undefined' && artFound() < 12) { const w = Object.keys(WONDERS).filter(k => wonderLv(k) < WONDER_ART_LV).map(k => [k, wonderCost(k)]).sort((x, y) => (x[1].g + x[1].s) - (y[1].g + y[1].s))[0]; if (w && S.night >= 12 && S.gold - w[1].g >= 25 && S.mat >= w[1].s) cmd('wonder', { id: w[0] }); }   // les fondations des Merveilles cachent un artefact   // avant common() : le bois va aux fondations avant le mécénat
     common({ trap: 12 }); grow(BASE_ROOMS, { reserve: 6 });
     floors(false, true); buildOn(-1, ['reliquaire', 'reliquaire', 'mine']); if (roomsOf('reliquaire').length && roomsOf('reliquaire').length < 2 && S.gold > 20) A.build('reliquaire', -1);
     A.scout(); if (S.night % 2 === 0) A.scout();

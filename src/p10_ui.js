@@ -26,8 +26,8 @@ function clockSVG(n, f, col, size = 38) {
 function renderHUD() {
   $('#dname').textContent = S.name; $('#dtitle').textContent = castleTitle();
   const food = foodCap(), eat = eaters(), bd = beds(), n = S.creatures.length;
-  const pr = payroll(), np = nightsToPay();
-  const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures. Prochain jour de paie ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`} : ${pr} 💰.`, np <= 1 && S.gold < pr], ['mat', 'Matériaux', S.mat, 'Matériaux : bâtir les pièces et les couloirs.'],
+  const pr = payroll(), np = nightsToPay(), wd = wageDue(), debt = payDebt();
+  const res = [['gold', 'Or', S.gold, `Or : construire, meubler, monter de palier… et payer tes créatures, un peu chaque nuit. Gages à l’aube : ${wd} 💰${debt ? ` (dont ${debt} d’ardoise)` : ''} ; ${pr} 💰 pour ${PAY_EVERY} nuits. Jour de paie (les comptes de la semaine) ${np === 0 ? 'à l’aube de cette nuit' : np === 1 ? 'à l’aube de la nuit prochaine' : `dans ${np} nuits`}.`, S.gold < wd], ['mat', 'Matériaux', S.mat, 'Matériaux (le bois) : bâtir les pièces et les couloirs. Quand il s’entasse : les Merveilles, le mécénat du Val et les préparatifs du concours (fiche du Cœur), ou le vendre aux caravanes qui passent.'],
     ['hype', 'Notoriété', S.hype, 'Notoriété : débloque les paliers… et attire les aventuriers.'], ['glow', 'Éclat', radiance(), 'Rayonnement : artefacts, trésors, créatures rares… Plus ton château brille, plus les héros qui viennent sont forts, et plus la carte se dévoile.'],
     ['amb', 'Ambiance', ambiance(), 'Ambiance : meubles et déco douillets. Rend les créatures heureuses.'],
     (() => { const fc = typeof fameCap === 'function' ? fameCap() : bd, cap = Math.min(bd, fc); return ['beds', fc < bd ? 'Renommée' : 'Lits', `${n}/${cap}`, `Créatures / places. Une nouvelle créature ne s’installe que s’il reste un lit libre (${bd} lits) et si ton château est assez renommé (${fc} créatures au plus). Touche pour voir comment grandir.`, n >= cap]; })(), ['food', 'Repas', `${eat}/${food}`, 'Bouches à nourrir / repas produits.', eat > food]];
@@ -138,7 +138,8 @@ function notifList() {
     if (c.tempt) add('tm' + c.id, '👀', `${c.name} lorgne vers ${c.tempt.name}`, () => openCreature(c.id), 6, 'bad');
     const q = questOf(c); if (q && q.st === 'ready' && !isOut(c)) add('qa' + c.id, '🧭', `${c.name} rêve d’aventure`, () => openCreature(c.id), 3);
   });
-  { const pr = payroll(), np = nightsToPay(); if (pr && np <= 1) add('pay', '💰', `Jour de paie ${np === 0 ? 'à l’aube' : 'demain'} : ${pr} 💰${S.gold < pr ? ` (tu n’as que ${S.gold})` : ''}`, () => openGrimoire('paie'), S.gold < pr ? 6 : 2, S.gold < pr ? 'bad' : ''); }
+  { const wd = wageDue(), debt = payDebt(), np = nightsToPay(); if (debt) add('pay', '💰', `Ardoise des gages : ${debt} 💰 à solder ${np === 0 ? 'à l’aube (jour de paie)' : `d’ici le jour de paie (${np} nuit${np > 1 ? 's' : ''})`}${S.gold < wd ? ` ; tu n’as que ${S.gold} 💰` : ''}`, () => openGrimoire('paie'), np <= 1 && S.gold < wd ? 6 : 3, 'bad');
+    else if (wd && S.gold < wd) add('pay', '💰', `Caisses vides : les gages de l’aube coûtent ${wd} 💰 (tu en as ${S.gold})`, () => openGrimoire('paie'), 4, 'bad'); }
   if (S.menace >= MENACE_MAX - 1) add('men', '⚔️', 'Des aventuriers approchent', () => openGrimoire('invasion'), 6, 'bad');
   if (typeof RECIPES !== 'undefined' && hasKitchen() && Object.keys(RECIPES).some(canCook) && Object.values(pantry()).reduce((a, b) => a + b, 0) >= 10) add('cook', '🍲', 'Le garde-manger déborde : cuisine !', () => cookModal(), 1);
   if (S.calamity >= CAL_MAX - 2) add('cal', '🌀', 'La Calamité gronde', () => openGrimoire('calamite'), 5, 'bad');
@@ -380,7 +381,7 @@ function openCreature(id) {
     ${typeof secretHTML === 'function' ? secretHTML(c) : ''}
     <dl class="kv">${typeof persHTML === 'function' ? persHTML(c) : ''}<dt>Compétence</dt><dd><b>${esc(sp.skill)}</b> : ${esc(sp.sd)}</dd>
       <dt>Combat</dt><dd>${(() => { const f = crawler(c); return `❤️ ${f.max} PV · ⚔️ ${f.atk}`; })()} · ${guardOf(c)} 🛡️ garde · ${diceOf(c)} 🎲 en raid${sp.eats > 1 ? ' · mange pour deux' : ''}${injured(c) ? '<br><span class="no">🤕 Sonné·e : se repose jusqu’à l’aube, ni garde ni raid.</span>' : ''}</dd>
-      <dt>Salaire</dt><dd>${salaryOf(c) ? `${salaryOf(c)} 💰 tous les ${PAY_EVERY} nuits${c.unpaid && S.night - c.unpaid < PAY_EVERY ? ' · <span class="no">pas payé·e à la dernière paie</span>' : c.paidAt ? ' · payé·e à la dernière paie' : ''}` : 'Aucun : les diablotins travaillent pour le Cœur'}</dd>
+      <dt>Salaire</dt><dd>${salaryOf(c) ? `${salaryOf(c)} 💰 pour ${PAY_EVERY} nuits, versés un peu chaque nuit${c.unpaid && S.night - c.unpaid < PAY_EVERY ? ' · <span class="no">pas payé·e à la dernière paie</span>' : c.paidAt ? ' · payé·e à la dernière paie' : ''}` : 'Aucun : les diablotins travaillent pour le Cœur'}</dd>
       <dt>Poste</dt><dd><select class="sel" id="mPost" ${out ? 'disabled' : ''} aria-label="Poste de ${esc(c.name)}">${opts}</select></dd>
       <dt>Expérience</dt><dd>${c.lvl < 5 ? `${bar((c.xp - LVL_XP[c.lvl]) / (LVL_XP[c.lvl + 1] - LVL_XP[c.lvl]) * 100, '#8fb8ff', 'XP')} <span class="num">${c.xp}/${LVL_XP[c.lvl + 1]} XP</span>` : '<b>Niveau maximal</b>'}${perks.length ? `<br><span class="hint">${perks.map(esc).join(' · ')}</span>` : ''}</dd>
       <dt>Loyauté</dt><dd>${bar(c.loy, '#e9b949', 'Loyauté')} <b class="num">${c.loy}</b> <span class="hint">${loyWord(c.loy)}</span></dd>

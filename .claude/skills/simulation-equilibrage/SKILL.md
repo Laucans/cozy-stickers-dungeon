@@ -95,7 +95,8 @@ node sim/play.mjs wiki v_menagerie
 - `furnish <pièce|all> [or]` accepte un plafond de dépense ; `build <pièce> 9` construit dans les Jardins (dehors) et `foret` rachète une parcelle de forêt pour les agrandir.
 - `new partie.json 4242 fil` crée une partie avec le fil rouge des nouveaux joueurs (chapitres et objectifs, affichés dans l'état ; pas d'aventuriers au chapitre 1, première bande forcée au chapitre 2). Actions ajoutées : `journal` (quêtes du Val), `wonder <remparts|cave|galerie|archives>`, `fete`, `victoires`, `fil`, `drill` (répétition de défense aux cartes, jouée par l'ordinateur).
 - `state` réaffiche l'état ; `help` liste les actions (build, furnish, decor, traps, posts, raid, expe, scout, shop, stock, request, tier, expand, floorup, floordown, project, power, care, quests).
-- `night` fait d'abord les soins et les missions, rappelle les gardes si des héros arrivent, joue jusqu'à 10 nuits et s'arrête plus tôt si un raid est prévu.
+- `night` fait d'abord les soins et les missions, rappelle les gardes si des héros arrivent, joue jusqu'à 10 nuits et s'arrête plus tôt si un raid est prévu, ou si une nouvelle décision arrive (marchand ambulant, caravane, concours, étape de quête à choisir).
+- L'état se termine par « À décider ». Actions de la version 29 : `journal` montre le tableau et les étapes (`journal accepter|refuser|choisir|payer <n>`, `journal auto` pour l'ancien comportement), `chantier [id]`, `mecenat [lieu] [or]`, `concours [inscrire|preparer [or]]`, `caravane [pille|escorte|commerce [bois]]`, `marchand [objet]`. La paie est versée un peu chaque nuit (gages et ardoise, comptes au jour de paie).
 - `wiki` sans argument liste les articles du Grimoire.
 
 Pour faire jouer Sonnet, lance un agent avec l'outil Agent (`model: "sonnet"`, en arrière-plan), un fichier de partie par agent dans le dossier temporaire, et une consigne de ce type :

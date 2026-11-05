@@ -29,12 +29,15 @@ function merchantOffer() {
   const out = []; while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return out.map(k => ({ k, price: Math.max(1, Math.round(((FURN[k].cost.g || 0) + (FURN[k].cost.s || 0)) * .6)) }));
 }
+// le marchand reste devant la porte toute la nuit de sa visite (S.visit) : on peut lui acheter depuis sa fenêtre, ou plus tard (ligne de commande)
+const merchantHere = () => (S.visit && S.visit.k === 'marchand' && S.visit.n === S.night ? S.visit.offer : null);
+CMD.merchant = a => { const offer = merchantHere(); if (!offer) return 'Le marchand ambulant est reparti'; const o = offer.find(x => x.k === (a && a.k)); if (!o) return 'Il ne vend pas ça'; if (o.sold) return 'Déjà vendu'; if (S.gold < o.price) return 'Pas assez d’or';
+  S.gold -= o.price; S.free[o.k] = (S.free[o.k] || 0) + 1; o.sold = true; addLog(`Acheté au marchand ambulant : ${itemName(o.k)} (${o.price} or).`, 'ev'); return null; };
 async function merchantModal(offer) {
   for (;;) {
     const k = await choiceModal(`${gi('shop')} Un marchand ambulant`, `« Des stickers d’occasion, presque neufs, à prix d’ami ! » Ils iront dans ta barre, offerts (tu as ${S.gold} or).`, [...offer.map(o => [o.k, 'gift', `${itemName(o.k)} : ${o.price} or`, FURN[o.k].room === 'any' ? 'Déco : se pose partout.' : `Se pose dans : ${ROOMS[FURN[o.k].room] ? ROOMS[FURN[o.k].room].name : 'sa pièce'}.`, S.gold < o.price || o.sold]), ['bye', 'door', 'Merci, au revoir', 'Le marchand reprend la route.']]);
     if (k === 'bye') return;
-    const o = offer.find(x => x.k === k); if (!o || o.sold || S.gold < o.price) continue;
-    S.gold -= o.price; S.free[k] = (S.free[k] || 0) + 1; o.sold = true; sfx('coin'); renderAll(); save();
+    if (cmd('merchant', { k })) continue; sfx('coin'); renderAll(); save();
   }
 }
 async function guideModal(g) {
@@ -51,7 +54,7 @@ dawn = function (report) {
       report.push(['📖', `L’inspecteur du Guide des Donjons Douillets a passé la nuit ici : ${'★'.repeat(g.stars)} (+${g.stars * 3} or, +${g.stars} notoriété, +${g.stars * 3} rayonnement).`, 'good']);
       dawnChoice(() => guideModal(g));
     } else if (k === 'marchand') {
-      const offer = merchantOffer(); if (offer.length) { report.push(['🏪', `Un marchand ambulant s’installe devant la porte : ${offer.map(o => itemName(o.k)).join(', ')}, à prix d’ami.`, 'ev']); dawnChoice(() => merchantModal(offer)); }
+      const offer = merchantOffer(); if (offer.length) { S.visit = { k: 'marchand', n: S.night, offer }; report.push(['🏪', `Un marchand ambulant s’installe devant la porte pour la nuit : ${offer.map(o => `${itemName(o.k)} (${o.price} or)`).join(', ')}, à prix d’ami.`, 'ev']); dawnChoice(() => merchantModal(S.visit.offer)); }
     }
   }
   return r;

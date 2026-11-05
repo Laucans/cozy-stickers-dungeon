@@ -356,7 +356,7 @@ function checkFurn(t, x, y) {
   if (!r.built) return 'Chantier en cours : la pièce se meuble une fois terminée (après la nuit)';
   if (f.size && groupSize(r) < f.size) return f.size >= 3 ? `Il faut une salle immense : 3 pièces « ${ROOMS[f.room].name} » collées ou plus` : `Il faut une grande salle : 2 pièces « ${ROOMS[f.room].name} » collées`;
   if (furnAt(x, y)) return 'Il y a déjà quelque chose ici';
-  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `Pièce pleine : ${furnCap(r)} sticker${furnCap(r) > 1 ? 's' : ''} au plus (un pour deux cases)`;
+  if (!isHall(r) && furnCount(r) >= furnCap(r)) return `Pièce pleine : ${furnCap(r)} sticker${furnCap(r) > 1 ? 's' : ''} au plus (un pour deux cases)${f.room === 'any' ? `. ${f.artefact ? 'Un artefact' : 'Une déco'} se pose aussi dans un couloir, sans limite : bâtis-en un bout s’il le faut` : ''}`;
   if (f.room === 'any') { if (defAt(x, y)) return 'Un piège occupe déjà ce couloir'; return null; }
   if (r.t !== f.room && ROOMS[r.t].like !== f.room) return `Ce meuble va dans : ${ROOMS[f.room].name}`;
   return null;

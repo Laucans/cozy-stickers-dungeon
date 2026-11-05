@@ -115,11 +115,12 @@ function importSave(file) {
 }
 
 Object.assign(WIKI, {
-  paie: { cat: 'eco', t: 'Le jour de paie', x: () => `<p>Tous les <b>${PAY_EVERY} nuits</b>, à l’aube, c’est jour de paie : chaque créature vient chercher son or à la {room:tresor} (ou au Cœur s’il n’y en a pas). Les plus anciennes sont payées en premier.</p>
-    <ul><li><b>Salaire</b> : 1 💰 pour une créature commune, +1 par {c:paliers|palier} de son espèce, +2 pour une créature rare, +1 au niveau 4 et +1 pour une légende. Les diablotins, nés du Cœur, travaillent pour rien.</li>
-    <li><b>Payée</b> : +2 loyauté et un peu d’épanouissement jusqu’à la paie suivante.</li>
-    <li><b>Impayée</b> (caisses vides) : −1 ❤️, −10 loyauté et −15 d’épanouissement jusqu’à la paie suivante. De quoi donner envie d’aller voir ailleurs…</li></ul>
-    <p>Une pastille 💰 te prévient la veille. Le montant de la prochaine paie s’affiche aussi en survolant ton or, en haut de l’écran, et le salaire de chaque créature sur sa fiche.</p>` },
+  paie: { cat: 'eco', t: 'Les gages et le jour de paie', x: () => `<p>Chaque créature a un <b>salaire pour ${PAY_EVERY} nuits</b>, mais elle en touche <b>un peu chaque nuit</b>, à l’aube : ce sont les <b>gages du jour</b> (un cinquième de la paie de la semaine), versés à la {room:tresor} ou au Cœur. Pas de gros coup d’un seul jour : la caisse baisse doucement.</p>
+    <ul><li><b>Salaire</b> : 1 💰 pour ${PAY_EVERY} nuits pour une créature commune, +1 par {c:paliers|palier} de son espèce, +2 pour une créature rare, +1 au niveau 4 et +1 pour une légende. Les diablotins, nés du Cœur, travaillent pour rien.</li>
+    <li><b>L’ardoise</b> : une nuit où la caisse est vide, ce qui manque est noté sur l’ardoise. Elle se solde toute seule, en premier, dès que l’or revient.</li>
+    <li><b>Le jour de paie</b> (toutes les ${PAY_EVERY} nuits) : on fait les comptes de la semaine. Ardoise soldée : tout le monde est <b>payé</b> (+2 loyauté, et un peu d’épanouissement jusqu’à la paie suivante).</li>
+    <li><b>Ardoise pas soldée</b> : les dernières arrivées repartent <b>sans paie</b> (−1 ❤️, −10 loyauté et −15 d’épanouissement jusqu’à la paie suivante), autant qu’il faut pour couvrir ce qui manque. L’ardoise est alors effacée. De quoi donner envie d’aller voir ailleurs…</li></ul>
+    <p>Les gages de l’aube et l’ardoise s’affichent en survolant ton or, en haut de l’écran ; une pastille 💰 prévient quand la caisse ne suffit plus ; le salaire de chaque créature est sur sa fiche.</p>` },
   fusion: { cat: 'build', t: 'Grandes salles (fusion)', x: () => `<p>Colle deux pièces <b>du même type</b> l’une contre l’autre : une fois les chantiers terminés, le mur qui les sépare tombe et elles ne font plus qu’<b>une grande salle</b>. Trois pièces ou plus : une <b>salle immense</b>.</p>
     <ul><li>Une grande salle donne <b>+1 Ambiance</b>, une salle immense <b>+2</b>. On y circule librement.</li>
     <li>Elle débloque des <b>stickers améliorés</b>, plus puissants, qu’on ne peut poser que dans une salle assez grande :</li></ul>

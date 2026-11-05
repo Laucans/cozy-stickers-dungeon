@@ -224,7 +224,7 @@
 // les clés d'icône pour les éléments, les intentions, les états, les salles, les reliques, les donjons
 const ELEM_IK = { acide: 'acid', contondant: 'hammer', froid: 'cold', feu: 'fire', force: 'force', foudre: 'bolt', necrotique: 'necro', perforant: 'arrow', poison: 'poison', psychique: 'psy', radiant: 'sun', tranchant: 'slash', tonnerre: 'thunder' };
 const INT_IK = { atk: 'sword', multi: 'swords', aoe: 'boom', drain: 'blood', block: 'shield', heal: 'heart', buff: 'up', fear: 'fear', fearall: 'fear', stun: 'dizzy', poison: 'poison', poisonall: 'poison', steal: 'purse', summon: 'horn',
-  execute: 'axe', smash: 'hammer', cocoon: 'web', serve: 'teapot', roots: 'root', shatter: 'crystal', raise: 'coffin', souldrain: 'soul', round: 'mug', throw: 'mug', grab: 'tongue', spawn: 'egg', swarm: 'bat', charm: 'charm', blind: 'sun', petrify: 'eye', tailall: 'boom', toxic: 'poison', mist: 'cloud', decree: 'crown' };
+  execute: 'axe', smash: 'hammer', cocoon: 'web', serve: 'teapot', roots: 'root', shatter: 'crystal', raise: 'coffin', souldrain: 'soul', round: 'mug', throw: 'mug', grab: 'tongue', spawn: 'egg', swarm: 'bat', charm: 'charm', blind: 'sun', petrify: 'eye', tailall: 'boom', toxic: 'poison', mist: 'cloud', decree: 'crown', wind: 'warn', heavy: 'hammer' };
 const NODE_IK = { combat: 'swords', elite: 'skull', tresor: 'chest', repos: 'campfire', event: 'question', boss: 'crown' };
 const RELIC_IK = { grimoireys: 'book', chope: 'mug', champi: 'mushroom', cape: 'bat', gland: 'acorn', pierre: 'stone', couronne: 'crown' };
 const POW_IK = { riposte: 'shield', rage: 'up', venin: 'poison', service: 'teapot', ecorce: 'root', cristal: 'crystal', sceau: 'lock' };

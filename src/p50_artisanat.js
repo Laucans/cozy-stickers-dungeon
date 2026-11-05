@@ -33,7 +33,7 @@ const WORKSHOPS = {
   // le guet : il s'apprend en travaillant au Corps de garde ; défendre le château pendant une invasion compte double (la main ne se rouille pas)
   guet:    { room: 'garde', at: 'au Corps de garde', de: 'des sentinelles', trade: 'sentinelle', team: 'Les sentinelles', ico: 'shield', sp: { gargouille: 2, squelette: 2, golem: 1, troll: 1, orque: 1, mimique: 1, nainsombre: 1 },
              live: () => 'chaque sentinelle tirée pour défendre se bat mieux, où qu’elle défende : +3 PV par grade, +4 de parade au premier tour de chaque combat dès compagnon·ne, +1 en attaque en maître·sse',
-             ranks: { 2: { t: 'Le chemin de ronde', d: () => `chaque créature a ${Math.round((typeof INV_TUNE !== 'undefined' ? INV_TUNE.rondeP : .1) * 100)} points de chances en plus d’être tirée pour défendre une pièce` }, 3: { t: 'Les meurtrières', d: () => `une défenseuse de plus au Cœur (${(typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3) + 1} au lieu de ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3})` } } },
+             ranks: { 2: { t: 'Le chemin de ronde', d: () => `chaque pièce du parcours a ${Math.round((typeof INV_TUNE !== 'undefined' ? INV_TUNE.rondeP : .1) * 100)} points de chances en plus d’être défendue` }, 3: { t: 'Les meurtrières', d: () => `une défenseuse de plus au Cœur (${(typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3) + 1} au lieu de ${typeof INV_TUNE !== 'undefined' ? INV_TUNE.heartCap : 3})` } } },
 };
 function craftLvl(n) { let l = 0; CRAFT_LVLS.forEach((L, i) => { if (n >= L.n) l = i; }); return l; }
 const craftOf = (c, w) => (c && c.craft && c.craft[w]) || 0;

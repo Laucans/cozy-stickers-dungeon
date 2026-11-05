@@ -8,7 +8,7 @@
 // les mots des fiches, et l'article du Grimoire qui les explique
 const AIDE_TERMS = [
   [/^loyaute/, 'loyaute', 'la loyauté'], [/^epanouissement|epanouit/, 'loyaute', 'l’épanouissement'], [/^humeur/, 'humeur', 'l’humeur'],
-  [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie/, 'paie', 'le salaire'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et la défense'],
+  [/^experience|^niveau/, 'niveaux', 'les niveaux'], [/^salaire|jour de paie|^gages|ardoise/, 'paie', 'le salaire et les gages'], [/^postes?\b|^gardes?\b/, 'postes', 'les postes et la défense'],
   [/^combat/, 'combat', 'le combat'], [/^competence/, 'creatures', 'les compétences'], [/^caractere|^occupation/, 'caracteres', 'le caractère'],
   [/^reves? secrets?|^envies?\b/, 'missions', 'les envies et les rêves secrets'], [/^reputation/, 'reputation', 'la réputation'], [/^renommee/, 'renommee', 'la renommée'],
   [/^ambiance/, 'ambiance', 'l’ambiance'], [/^lits?\b|^repas/, 'lits_repas', 'les lits et les repas'], [/^calamite/, 'calamite', 'la Calamité'], [/^menace/, 'menace', 'la Menace'],
@@ -18,6 +18,7 @@ const AIDE_TERMS = [
   [/^factions?\b|^territoires?\b/, 'factions', 'les factions'], [/^oeufs?\b/, 'oeufs', 'les œufs'], [/^metiers?\b|^artisanat/, 'artisanat', 'les métiers'], [/^risques?\b/, 'risques', 'les risques'],
   [/^raids?\b/, 'raids', 'les raids'], [/^pieges?\b|^verrous?\b/, 'pieges', 'les pièges'], [/^invasions?\b/, 'invasion', 'les invasions'], [/^prisonniers?\b|^oubliettes?\b/, 'prisonniers', 'les prisonniers'],
   [/^intrigues?\b/, 'intrigues', 'les intrigues'], [/^cuisine|^garde-manger/, 'cuisine', 'la cuisine'],
+  [/^(le )?concours/, 'concours', 'le concours du Val'], [/^(le )?mecenat|^embellissements?\b/, 'mecenat', 'le mécénat'], [/^caravanes?\b/, 'caravanes', 'les caravanes'],
 ];
 const aideNorm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/^[^a-z]+/, '').trim();
 const aideTerm = t => { const n = aideNorm(t); return AIDE_TERMS.find(([re]) => re.test(n)); };

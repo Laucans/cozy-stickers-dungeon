@@ -19,7 +19,7 @@ Object.assign(CMD, {
   guard(a) {
     const c = critter(a.id); if (!c) return 'Absent·e';
     if (!a.room) { c.guard = null; return null; }
-    return 'Plus de gardes à poster : avant chaque invasion, tes défenseurs sont tirés au sort par palier de force';
+    return 'Plus de gardes à poster : avant chaque invasion, tes défenseurs sont tirés au sort par palier de force (reposées, elles défendent mieux ; des pièges à la porte des pièces, un repas, un mercenaire aident aussi)';
   },
 });
 // le combat lit maintenant les postes de garde

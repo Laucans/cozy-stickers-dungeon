@@ -23,22 +23,27 @@ Object.assign(CRAWL_EN, {
 if (typeof CRAWL_LOOK !== 'undefined') ['paysan', 'voleuse', 'elfe', 'mage', 'paladin', 'barbare'].forEach(k => { CRAWL_LOOK['h_' + k] = ['hero', k]; });
 // les réglages (l'équilibrage se fait ici, par simulation)
 const INV_TUNE = {
-  lvlK: 1.3, lvl: -10, rank: 0, tier: 7, glow: 400, lvlMin: 2.2,   // le niveau de la bande : × celui des expéditions, + base, par rang, par palier, un point par tranche de rayonnement, jamais sous lvlMin (le rang pèse déjà par la taille et les héros de la bande)
+  lvl: 7.2, tier: .3, crew: .28, crewCap: 34, champ: .35, glow: 400, lvlMin: 2.2, crus: 6, rank: 0,   // le niveau de la bande grandit avec le château, sans marche : base, par palier, par créature (crewCap au plus), par niveau de tes champions (celui des expéditions), un point par tranche de rayonnement, la croisade en plus ; jamais sous lvlMin
   trapK: 2,          // un piège frappe comme au temps des couloirs, à l'échelle des cartes
   lootPct: .04, lootPctS: .03,   // ce qu'une pièce pillée leur rapporte : une part de ton or et de ton bois
   buff: 1,           // +1 aux coups de toute la bande par pièce pillée
-  bounty: .4,        // la prime d'une bande repoussée : une part de ce qu'elle avait pillé (en plus de le récupérer), plus 2 💰 par héros et par rang
+  bounty: .5,        // la prime d'une bande repoussée : une part de ce qu'elle avait pillé (en plus de le récupérer), plus 2 💰 par héros et par rang
   evP: .25, evD: 9,   // dans une pièce sans défenseurs, une créature qui y travaille tente un mauvais coup : chance de base, dégâts de base (+ sa garde)
   turns: 14,         // un combat qui s'éternise : la bande force le passage
-  rout: .2, rout3: .3,   // la bande détale quand cette part des siens est à terre, arrondie au-dessus (un héros dans une bande de 2 à 5, deux au-delà ; rang 3 : deux dans une bande de 4 à 6) ; au Cœur, jusqu'au bout
+  rout: .4, rout3: .5,   // la bande détale quand cette part des siens est à terre, arrondie au-dessus (deux héros dans une bande de 3 à 5 ; rang 3 : trois dans une bande de 5 ou 6) ; au Cœur, jusqu'au bout
+  hold: 1,           // un héros à terre dans une pièce défendue : la pièce tient (ni pillage, ni coups plus forts), la bande passe à la suivante
   roomCap: 4, heartCap: 3,   // combattants au plus, dans une pièce et au Cœur (le Cœur : les plus fortes, reposées)
-  drawP: .12, teamMax: 2,    // le tirage des défenseurs d'une pièce : chaque créature de son palier de force y est prise avec cette chance (moins si elle est fatiguée), jusqu'à teamMax (+1 avec un Corps de garde, +1 si un Poste de garde borde la pièce)
-  rondeP: .1,                // le chemin de ronde (savoir des sentinelles, rang 2) : +10 points de chance d'être tirée ; les meurtrières (rang 3) : une place de plus au Cœur
+  roomP: .55, teamMax: 2,    // le tirage d'une pièce : elle est défendue avec cette chance (si son palier de force compte une créature reposée), par teamMax créatures au plus (+1 avec un Corps de garde, +1 si un Poste de garde borde la pièce) ; une fatiguée y va moins souvent
+  rondeP: .15,               // le chemin de ronde (savoir des sentinelles, rang 2) : +15 points de chance qu'une pièce soit défendue ; les meurtrières (rang 3) : une place de plus au Cœur
   rankHp: [1, .55, .55],   // les PV des héros selon le rang de la bande (1, 2, 3) : aux rangs 2 et 3, plus nombreux et mieux armés, chacun est un peu moins coriace (sinon le rang tranche tout)
+  bigBand: 12,       // un héros de plus dans la bande quand le château compte autant de créatures
+  trials: 24,        // l'estimation de l'annonce : autant d'invasions jouées d'avance en combat auto, avec tes défenseurs tirés
 };
-const INV_ROOMS = t => t >= 3 ? 9 : t >= 2 ? 6 : 3;   // palier 1 : 3 pièces, palier 2 : 6, palier 3 et plus : 9 (puis le Cœur)
-// la bande se prépare comme un donjon : à la force de tes meilleures créatures (le niveau des expéditions), plus son rang
-const invLevel = plan => Math.round(Math.max(INV_TUNE.lvlMin || 1, crawlLevel() * INV_TUNE.lvlK + INV_TUNE.lvl + INV_TUNE.rank * ((plan.rank || 1) - 1) + INV_TUNE.tier * (S.tier || 0) + (typeof radiance === 'function' ? radiance() : 0) / INV_TUNE.glow + (plan.crusade ? .5 : 0)) * 10) / 10;
+const INV_ROOMS = t => t >= 3 ? 5 : t >= 2 ? 4 : 3;   // palier 1 : 3 pièces, palier 2 : 4, palier 3 et plus : 5 (puis le Cœur)
+// la bande grandit avec le château : ton palier, le nombre de tes créatures et la force de tes champions (le niveau des expéditions), sans marche brutale
+const invLevelParts = plan => { const T = INV_TUNE, n = Math.min(T.crewCap, S.creatures.length), cl = crawlLevel(), glow = typeof radiance === 'function' ? radiance() : 0;
+  return { tier: T.tier * (S.tier || 0), crew: T.crew * n, champ: T.champ * Math.max(0, cl - 1), glow: glow / T.glow, rank: T.rank * ((plan.rank || 1) - 1), crus: plan.crusade || (plan.origin && plan.origin.crusade) ? T.crus : 0 }; };
+const invLevel = plan => { const P = invLevelParts(plan); return Math.round(Math.max(INV_TUNE.lvlMin || 1, INV_TUNE.lvl + P.tier + P.crew + P.champ + P.glow + P.rank + P.crus) * 10) / 10; };
 const invPower = c => { const p = crawler(c); return p.hp * p.atk; };
 const invRoomOf = id => S.rooms.find(o => o.id === id);
 // les pièces que la bande peut traverser (une grande salle compte une fois)
@@ -61,7 +66,9 @@ function invRoute() {
 // la fatigue des raids et des expéditions : épuisée (FAT_TIRED, 4), une créature se repose ; fatiguée, elle a moins de chances d'être tirée
 const invFatMax = () => (typeof FAT_TIRED !== 'undefined' ? FAT_TIRED : 4);
 const invTired = c => (c.fat || 0) >= invFatMax();
-const invDrawP = c => invTired(c) ? 0 : Math.max(0, Math.min(1, (INV_TUNE.drawP + (typeof craftRank === 'function' && craftRank('guet') >= 2 ? INV_TUNE.rondeP : 0)) * (1 - (c.fat || 0) / invFatMax())));
+// la chance qu'a une créature reposée d'être tirée quand sa pièce est défendue : moins elle est fatiguée, plus elle y va (épuisée : jamais)
+const invDrawP = c => invTired(c) ? 0 : Math.max(0, Math.min(1, 1 - (c.fat || 0) / invFatMax()));
+const invRoomP = () => Math.min(1, INV_TUNE.roomP + (typeof craftRank === 'function' && craftRank('guet') >= 2 ? INV_TUNE.rondeP : 0));
 const invHeartN = () => INV_TUNE.heartCap + (typeof craftRank === 'function' && craftRank('guet') >= 3 ? 1 : 0);
 // les places d'une pièce : teamMax, +1 avec un Corps de garde bâti, +1 si un Poste de garde borde la pièce (roomCap au plus)
 const invHasPost = r => !!r && invTrapsNear(r).some(d => DEFS[d.t] && DEFS[d.t].post);
@@ -72,7 +79,7 @@ function invHeartPick(pool) {
   return (rested.length ? rested : pool).slice(-n).reverse();
 }
 // le tirage : le Cœur d'abord, puis les autres reposées découpées en autant de paliers contigus que de pièces (du plus faible au plus fort) ;
-// pour la pièce i, chaque créature du palier i est prise avec sa chance (drawP, moins la fatigue), dans la limite des places.
+// la pièce i est défendue avec sa chance (roomP, plus le chemin de ronde) par des créatures de son palier (une fatiguée y va moins souvent), dans la limite des places.
 // rooms[k] : les défenseurs tirés pour I.route[k] (vide pour le Cœur) ; une créature ne défend qu'une pièce par invasion.
 function invLineup(I) {
   const pool = S.creatures.filter(fitToFight).sort((a, b) => invPower(a) - invPower(b) || (a.id < b.id ? -1 : 1));
@@ -82,6 +89,7 @@ function invLineup(I) {
   const rooms = I.route.map(() => []), n = slots.length;
   slots.forEach(([id, k], i) => {
     const tier = rest.slice(Math.floor(i * rest.length / n), Math.floor((i + 1) * rest.length / n)), seats = invSeats(invRoomOf(id));
+    if (!tier.length || Math.random() >= invRoomP()) return;
     shuffle(tier.slice()).forEach(c => { if (rooms[k].length < seats && Math.random() < invDrawP(c)) rooms[k].push(c.id); });
   });
   return { rooms, heart: heart.map(c => c.id) };
@@ -100,7 +108,7 @@ const invRoomName = r => !r ? '?' : r.t === 'coeur' ? 'le Cœur du donjon' : ROO
 
 /* ---------- l'état d'une invasion ---------- */
 function invNew(plan) {
-  const I = { plan, lvl: invLevel(plan), route: plan.route || invRoute(), idx: 0, ev: [], guardHit: new Set(), bag: { g: 0, s: 0, items: [] }, pow: 0, looted: 0, fights: 0, sprung: new Set(), disarmed: false, out: null, lines: [], hurt: new Set(), fought: new Set(), kos: {}, log: [] };
+  const I = { plan, lvl: invLevel(plan), route: plan.route || invRoute(), idx: 0, ev: [], guardHit: new Set(), bag: { g: 0, s: 0, items: [] }, pow: 0, looted: 0, fights: 0, rec: [], tired: S.creatures.filter(c => fitToFight(c) && invTired(c)).map(c => c.name), meal: !!(S.meal && (S.meal.hp || S.meal.atk || S.meal.tok)), away: S.creatures.filter(c => c.raid || c.away).map(c => c.name), sprung: new Set(), disarmed: false, out: null, lines: [], hurt: new Set(), fought: new Set(), kos: {}, log: [] };
   I.foes = plan.party.map((h, i) => { const k = CRAWL_EN['h_' + h.k] ? 'h_' + h.k : 'h_paysan', f = crawlFoe(k, 1, i, I.lvl, 1); f.name = String(h.name || f.name).replace(/ de légende$/, ''); f.j = i; if (S.world && S.world.decoy) { f.hp = f.max = Math.max(1, Math.round(f.hp * .75)); } return f; });
   const rh = (INV_TUNE.rankHp || [])[Math.min(3, Math.max(1, plan.rank || 1)) - 1] || 1; if (rh !== 1) I.foes.forEach(f => { f.hp = f.max = Math.max(1, Math.round(f.hp * rh)); });
   I.lineup = invLineup(I); I.g0 = I.lineup.rooms.filter(l => l.length).length; I.h0 = I.lineup.heart.length;
@@ -122,18 +130,21 @@ function invFightR(I, info) {
 }
 // avant chaque combat : la bande garde ses blessures, mais pas ses parades ; ses coups grandissent avec le butin
 function invFoesForFight(I) { const up = invUp(I); up.forEach(f => { f.block = 0; f.st = f.stunNext ? { stun: 1 } : {}; f.stunNext = 0; f.buff = I.pow; f.ai = Math.floor(Math.random() * CRAWL_EN[f.k].acts.length); }); return up; }
-// dans le combat : la bande détale dès qu'assez des siens sont à terre ; un combat trop long, elle force le passage
+// dans le combat : la bande détale dès qu'assez des siens sont à terre ; un héros à terre dans une pièce, elle renonce à la piller (la pièce tient) ;
+// un combat trop long, elle force le passage
 function invHook(I, B, heart) {
-  const chk = B.check; B.check = () => { if (!B.over && !heart && invBroken(I)) B.over = 'won'; return chk(); };   // au Cœur, la bande se bat jusqu'au bout
+  const ko0 = I.foes.filter(f => f.hp <= 0).length;
+  const chk = B.check; B.check = () => { if (!B.over && !heart) { if (invBroken(I)) B.over = 'won'; else if (INV_TUNE.hold && I.foes.filter(f => f.hp <= 0).length > ko0) B.over = 'held'; } return chk(); };   // au Cœur, la bande se bat jusqu'au bout
   const st = B.startTurn; B.startTurn = () => { st(); if (!B.over && B.turn > INV_TUNE.turns) B.over = 'push'; };
 }
 function invAfterFight(I, info, R, res) {
-  I.fights++;
+  I.fights++; { const rc = invRec(I, info); rc.kind = 'fight'; rc.def = info.def.map(c => c.name); rc.res = res; rc.koH = I.foes.filter(f => f.hp <= 0 && !f.koSeen).length; rc.koD = R.party.filter(p => p.ko).length; if (info.heart) { rc.hpIn = I.heartHp; rc.powIn = I.pow; } }
   const ko = I.foes.filter(f => f.hp <= 0 && !f.koSeen); ko.forEach(f => { f.koSeen = true; const p = pick(R.party.filter(x => !x.ko)) || pick(R.party); if (p && critter(p.id)) I.kos[p.id] = (I.kos[p.id] || 0) + 1; }); I.log.push({ heart: info.heart, n: info.def.length, res, pow: I.pow });
   R.party.forEach(p => { I.fought.add(p.id); if (p.ko && res !== 'won') I.hurt.add(p.id); });
   if (res === 'won') { I.out = 'repelled'; return [['🛡️', `Dans ${info.name}, ${info.def.map(c => c.name).join(', ')} ${info.def.length > 1 ? 'mettent' : 'met'} la bande en déroute !`, 'good']]; }
+  if (res === 'held') return [['🛡️', `${info.def.map(c => c.name).join(', ')} ${info.def.length > 1 ? 'tiennent' : 'tient'} ${info.name} : un héros à terre, la bande renonce à la piller et passe son chemin.`, 'good']];
   if (info.heart) { I.out = 'robbed'; return [['💔', 'Le Cœur tombe : la bande se sert.', 'bad']]; }
-  const L = invLoot(I, info, res === 'push' ? .5 : 1);
+  const L = invLoot(I, info, res === 'push' ? .5 : 1); invRec(I, info).loot = L;
   return [[res === 'push' ? '🏃' : '⚔️', `${res === 'push' ? 'Le combat s’éternise : la bande force le passage' : `${info.def.map(c => c.name).join(', ')} ${info.def.length > 1 ? 'tombent' : 'tombe'}`} dans ${info.name}. ${invLootText(L)}`, 'bad']];
 }
 // la bande pille la pièce : or, bois, parfois un meuble… et elle en sort plus forte
@@ -149,7 +160,7 @@ function invLoot(I, info, k = 1) {
 const invLootText = L => { const p = [L.g && `${L.g} 💰`, L.s && `${L.s} 🪵`, L.item && FURN[L.item.t] && FURN[L.item.t].name].filter(Boolean); return p.length ? `Ils emportent ${p.join(', ')}, et frappent plus fort.` : 'Rien à emporter, mais ils frappent plus fort.'; };
 // les pièges qui bordent la pièce (chacun ne sert qu'une fois par invasion ; la voleuse en désamorce un)
 function invTraps(I, info) {
-  const out = [];
+  const out = [], hp0 = invHpLeft(I), ko0 = invUp(I).length;
   invTrapsNear(info.r).forEach(d => {
     const D = DEFS[d.t]; if (!D || I.out || I.sprung.has(d.id) || (!D.str && !D.lost)) return; I.sprung.add(d.id);
     const up = invUp(I); if (!up.length) return;
@@ -163,6 +174,7 @@ function invTraps(I, info) {
   const gs = groupOf(info.r).rooms.reduce((a, o) => a + (rstat(o, 'guard') || 0), 0), up2 = invUp(I);
   if (gs > 0 && up2.length && !I.out && !I.guardHit.has(info.r.id)) { I.guardHit.add(info.r.id); const f = up2[0], dmg = Math.round(gs * INV_TUNE.trapK); f.hp = Math.max(0, f.hp - dmg); out.push(['🛡️', `${info.name.charAt(0).toUpperCase() + info.name.slice(1)} se défend : −${dmg} PV à ${f.name}${f.hp <= 0 ? ' (K.O. !)' : ''}.`, 'good']); }
   if (!I.out && invBroken(I)) { I.out = 'repelled'; out.push(['🛡️', 'Trop de blessés : la bande détale !', 'good']); }
+  if (out.length) { const rc = invRec(I, info); rc.trapD = hp0 - invHpLeft(I); rc.trapKO = ko0 - invUp(I).length; rc.trapN = out.filter(l => l[0] === '🪤').length; rc.disarm = out.some(l => l[0] === '🗝️'); rc.guard = out.some(l => l[0] === '🛡️' && /se défend/.test(l[1])); if (I.out) rc.end = I.out; }
   return out;
 }
 // une pièce sans défenseurs tirés : les créatures qui y travaillent agissent à leur idée (caractère, loyauté, humeur)
@@ -184,19 +196,21 @@ function invEvent(I, info) {
     } else out.push(['🫣', `${c.name} se cache et les laisse passer.`, '']);
   });
   if (!crew.length) out.push(['👀', `Personne dans ${info.name} : la bande fouille tranquillement.`, '']);
-  if (!I.out && invBroken(I)) { I.out = 'repelled'; out.push(['🛡️', 'Trop de blessés : la bande détale !', 'good']); return out; }
-  if (I.out) return out;
-  const L = invLoot(I, { ...info, half: hidden }, k); out.push(['🎒', `${info.name.charAt(0).toUpperCase() + info.name.slice(1)} est pillé·e. ${invLootText(L)}`, 'bad']);
+  { const rc = invRec(I, info); rc.kind = 'event'; rc.ev = out.slice(); }
+  if (!I.out && invBroken(I)) { I.out = 'repelled'; out.push(['🛡️', 'Trop de blessés : la bande détale !', 'good']); invRec(I, info).end = 'repelled'; return out; }
+  if (I.out) { invRec(I, info).end = I.out; return out; }
+  const L = invLoot(I, { ...info, half: hidden }, k); invRec(I, info).loot = L; out.push(['🎒', `${info.name.charAt(0).toUpperCase() + info.name.slice(1)} est pillé·e. ${invLootText(L)}`, 'bad']);
   return out;
 }
 // une pièce, sans écran : pièges, puis combat (joué par l'ordinateur) ou rencontre
 function invRoomAuto(I, info) {
   I.lines.push(...invTraps(I, info)); if (I.out) return;
   if (info.def.length) {
+    if (info.heart) I.heartHp = invHpLeft(I);
     const R = invFightR(I, info), B = crawlBattle(R, invFoesForFight(I)); invHook(I, B, info.heart);
     for (let g = 0; g < 60 && !B.over; g++) { B.startTurn(); if (B.over) break; crawlAutoTurn(B); if (B.over) break; B.endTurn(); B.enemyTurn(); }
     I.lines.push(...invAfterFight(I, info, R, B.over || 'push'));
-  } else if (info.heart) { I.out = 'robbed'; I.lines.push(['💔', 'Personne pour défendre le Cœur : la bande se sert.', 'bad']); }
+  } else if (info.heart) { I.out = 'robbed'; I.heartHp = invHpLeft(I); invRec(I, info).kind = 'empty'; I.lines.push(['💔', 'Personne pour défendre le Cœur : la bande se sert.', 'bad']); }
   else I.lines.push(...invEvent(I, info));
 }
 // le résultat, au format des invasions d'avant (les stickers, les sagas, le némésis, les quêtes le lisent)
@@ -210,7 +224,102 @@ function invResolve(plan) {
   return invFinish(I);
 }
 
+/* ---------- le carnet de l'invasion, et son résumé (écran de fin, chronique, ligne de commande) ---------- */
+const invHpLeft = I => I.foes.reduce((a, f) => a + Math.max(0, f.hp), 0);
+const invHpMax = I => I.foes.reduce((a, f) => a + f.max, 0);
+// ce qui s'est passé dans la pièce en cours : pièges, combat ou rencontre, butin
+function invRec(I, info) { const k = I.idx, L = I.rec || (I.rec = []); return L[k] || (L[k] = { k, name: info.name, heart: !!info.heart, kind: 'event', def: [], res: null, loot: null, ev: [] }); }
+const invAnd = l => l.length > 1 ? l.slice(0, -1).join(', ') + ' et ' + l[l.length - 1] : l[0] || '';
+const invCap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const invLootBits = L => !L ? '' : [L.g && `${L.g} 💰`, L.s && `${L.s} 🪵`, L.item && FURN[L.item.t] && FURN[L.item.t].name].filter(Boolean).join(', ');
+// une ligne par pièce, puis les défenseurs, le bilan et, si le Cœur est tombé, pourquoi
+function invSummary(I, outcome) {
+  const out = [], rec = (I.rec || []).filter(Boolean), out0 = outcome || I.out;
+  rec.forEach((rc, i) => {
+    const bits = [];
+    if (rc.trapN) bits.push(`🪤 ${rc.trapN > 1 ? rc.trapN + ' pièges' : 'un piège'} : −${rc.trapD} PV${rc.trapKO ? `, ${rc.trapKO} héros K.O.` : ''}`);
+    else if (rc.guard && rc.trapD) bits.push(`🛡️ la pièce se défend : −${rc.trapD} PV`);
+    if (rc.disarm) bits.push('🗝️ un piège désamorcé');
+    if (rc.kind === 'fight') {
+      const who = invAnd(rc.def);
+      bits.push(`⚔️ ${who} : ${rc.res === 'won' ? 'la bande est mise en déroute' : rc.res === 'held' ? `la pièce tient (${rc.koH || 1} héros à terre)` : rc.heart ? 'le Cœur tombe' : rc.res === 'push' ? 'le combat s’éternise, la bande force le passage' : `${rc.def.length > 1 ? 'tombent' : 'tombe'}${rc.koH ? ` (${rc.koH} héros à terre)` : ''}`}`);
+    } else if (rc.kind === 'empty') bits.push('personne pour le défendre');
+    else if (!rc.trapN || rc.loot || rc.ev.length) { const acts = rc.ev.filter(l => l[0] !== '👀' && l[0] !== '🛡️').map(l => l[1].replace(/\.$/, '')); bits.push(acts.length ? `👀 rencontre : ${acts.slice(0, 2).join(' ; ')}` : '👀 personne n’y travaille, la bande fouille'); }
+    if (rc.end === 'repelled' && rc.kind !== 'fight') bits.push('la bande détale');
+    if (rc.end === 'lost') bits.push('la bande rebrousse chemin');
+    if (rc.loot && invLootBits(rc.loot)) bits.push(`pillée : ${invLootBits(rc.loot)}`);
+    out.push([rc.heart ? '❤️' : '▫️', `${rc.heart ? 'Le Cœur' : `${i + 1}. ${invCap(rc.name)}`} — ${bits.join(' ; ') || 'rien à signaler'}.`, rc.heart && out0 === 'robbed' ? 'bad' : rc.kind === 'fight' && rc.res !== 'won' && rc.res !== 'held' ? 'bad' : '']);
+  });
+  const fought = [...I.fought].map(critter).filter(Boolean).map(c => c.name);
+  out.push(['🛡️', `Défenseurs : ${fought.length ? `${fought.length} créature${fought.length > 1 ? 's' : ''} ${fought.length > 1 ? 'se sont battues' : 's’est battue'} (${invAnd(fought.slice(0, 8))}${fought.length > 8 ? '…' : ''})` : 'personne ne s’est battu'}${I.tired && I.tired.length ? ` ; épuisée${I.tired.length > 1 ? 's' : ''}, ${invAnd(I.tired.slice(0, 5))} ${I.tired.length > 1 ? 'se reposaient' : 'se reposait'}` : ''}.`, '']);
+  const nf = rec.filter(r => r.kind === 'fight').length, ne = rec.filter(r => r.kind === 'event' && r.ev.length).length, down = I.foes.filter(f => f.hp <= 0).length;
+  out.push(['📋', `Bilan : ${nf} combat${nf > 1 ? 's' : ''} aux cartes, ${ne} rencontre${ne > 1 ? 's' : ''}, ${I.looted} pièce${I.looted > 1 ? 's' : ''} pillée${I.looted > 1 ? 's' : ''}, ${down} héros à terre sur ${I.foes.length}${invLootBits({ g: I.bag.g, s: I.bag.s }) ? ` ; leur sac : ${invLootBits({ g: I.bag.g, s: I.bag.s })}${I.bag.items.length ? `, ${I.bag.items.length} meuble${I.bag.items.length > 1 ? 's' : ''}` : ''} (${out0 === 'robbed' ? 'perdu' : 'repris'})` : ''}.`, out0 === 'robbed' ? 'bad' : 'good']);
+  if (out0 === 'robbed') { const why = invWhy(I); if (why.length) out.push(['❓', `Pourquoi c’est perdu : ${why.join(' ; ')}.`, 'bad']); }
+  return out;
+}
+// les raisons d'un Cœur pillé, de la plus parlante à la moins parlante (trois au plus)
+function invWhy(I) {
+  const out = [], h = (I.rec || []).find(r => r && r.heart), hp = I.heartHp != null ? I.heartHp : invHpLeft(I), mx = invHpMax(I) || 1;
+  if (!h || h.kind === 'empty') out.push('personne n’a pu défendre le Cœur (épuisées, sonnées ou parties)');
+  else out.push(`la bande est arrivée au Cœur avec ${Math.round(100 * hp / mx)} % de ses PV${h.powIn ? ` et +${h.powIn} à ses coups (${h.powIn} pièce${h.powIn > 1 ? 's' : ''} pillée${h.powIn > 1 ? 's' : ''} en chemin)` : ''}`);
+  if (I.tired && I.tired.length) out.push(`${I.tired.length} créature${I.tired.length > 1 ? 's' : ''} épuisée${I.tired.length > 1 ? 's' : ''} n’${I.tired.length > 1 ? 'ont' : 'a'} pas défendu`);
+  if (I.away && I.away.length) out.push(`${invAnd(I.away.slice(0, 4))}${I.away.length > 4 ? '…' : ''} ${I.away.length > 1 ? 'étaient parties' : 'était partie'} (raid, expédition ou mission)`);
+  const bare = I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur' && !invTrapsNear(r).some(d => DEFS[d.t] && (DEFS[d.t].str || DEFS[d.t].lost)));
+  if (bare.length) out.push(`aucun piège ne bordait ${bare.length > 1 ? `${bare.length} des ${I.route.length - 1} pièces` : 'une des pièces'} du parcours`);
+  if (h && h.kind === 'fight' && out.length < 3 && !I.meal && invMealsReady().length) out.push(`pas de repas de veille pour les défenseurs (${invMealsReady().map(k => RECIPES[k].name).join(', ')} : de quoi cuisiner)`);
+  return out.slice(0, 3);
+}
+
+/* ---------- avant l'assaut : l'estimation, la force des deux camps, des conseils ---------- */
+// des invasions jouées d'avance en combat auto, avec les défenseurs déjà tirés (rien ne bouge au château)
+function invForecast(plan, I, n = INV_TUNE.trials) {
+  const o = { repelled: 0, lost: 0, robbed: 0, n: 0, fights: 0 }, rnd = Math.random;
+  try {
+    for (let i = 0; i < n; i++) {
+      if (typeof oddsRand === 'function') Math.random = oddsRand(7919 * i + 31 * (S.night || 0) + 17);
+      const P = { ...plan, I: null, res: null, party: plan.party.map(h => ({ ...h })), route: (I ? I.route : plan.route || []).slice() }, T = invNew(P);
+      if (I && I.lineup) { T.lineup = I.lineup; T.g0 = I.g0; T.h0 = I.h0; }
+      for (; T.idx < T.route.length && !T.out; T.idx++) { const info = invInfo(T, T.route[T.idx]); if (info.r) invRoomAuto(T, info); }
+      o[T.out || 'robbed']++; o.n++; o.fights += T.fights;
+    }
+  } catch (e) { o.err = String(e); } finally { Math.random = rnd; }
+  o.rob = o.n ? o.robbed / o.n : 0;
+  return o;
+}
+const invRiskWord = p => p < .08 ? 'faible' : p < .2 ? 'réel' : p < .4 ? 'sérieux' : 'grand';
+// la force des deux camps : la bande (PV, coups), tes défenseurs du Cœur et des pièces
+function invBalance(I) {
+  const hit = f => { const a = CRAWL_EN[f.k].acts.filter(x => x[1] && x[0] !== 'block' && x[0] !== 'heal'); return (a.length ? a.reduce((s, x) => s + x[1] * (x[0] === 'multi' ? x[2] || 2 : 1), 0) / a.length : 4) + (f.plus || 0); };
+  const h = I.route.map(id => invInfo(I, id)).find(x => x.heart), heart = h ? h.def.map(c => { try { return crawler(c); } catch (e) { return { hp: 10, atk: 2 }; } }) : [];
+  return { band: { n: I.foes.length, hp: invHpLeft(I), hit: Math.round(I.foes.reduce((s, f) => s + hit(f), 0) / Math.max(1, I.foes.length)) }, heart: { names: h ? h.def.map(c => c.name) : [], hp: heart.reduce((s, p) => s + p.hp, 0), atk: heart.length ? Math.round(heart.reduce((s, p) => s + p.atk, 0) / heart.length * 10) / 10 : 0 },
+    rooms: I.lineup ? I.lineup.rooms.filter(l => l.length).length : 0, roomsN: I.route.length - 1, defs: I.lineup ? I.lineup.rooms.reduce((s, l) => s + l.length, 0) : 0 };
+}
+// les leviers à portée de main, du plus utile au moins utile (I : l'invasion annoncée, sinon le château tel qu'il est)
+function invAdvice(I, max = 4) {
+  const out = [], fit = S.creatures.filter(fitToFight), tired = fit.filter(invTired), weary = fit.filter(c => !invTired(c) && (c.fat || 0) >= 2), hurt = S.creatures.filter(c => !isOut(c) && injured(c));
+  if (tired.length) out.push(['😴', `${tired.length} créature${tired.length > 1 ? 's' : ''} épuisée${tired.length > 1 ? 's' : ''} (${invAnd(tired.slice(0, 4).map(c => c.name))}${tired.length > 4 ? '…' : ''}) ne défendr${tired.length > 1 ? 'ont' : 'a'} pas : pas de raid ni d’expédition pour elles la veille d’une invasion.`]);
+  else if (weary.length >= 2) out.push(['🥱', `${weary.length} créatures fatiguées défendront moins souvent : une nuit de repos leur rend des forces.`]);
+  if (hurt.length) out.push(['🤕', `${invAnd(hurt.slice(0, 3).map(c => c.name))} ${hurt.length > 1 ? 'sont sonnées' : 'est sonnée'} et ne défendr${hurt.length > 1 ? 'ont' : 'a'} rien cette nuit.`]);
+  if (S.raid && S.raid.team && S.raid.team.length) { const t = S.raid.team.map(critter).filter(Boolean); if (t.length) out.push(['🗺️', `Ton ${S.raid.crawl ? 'expédition' : 'raid'} emmène ${invAnd(t.slice(0, 4).map(c => c.name))} : ${t.length > 1 ? 'ils ne défendront' : 'elle ne défendra'} pas le château cette nuit.`]); }
+  const rooms = I ? I.route.map(invRoomOf).filter(r => r && r.t !== 'coeur') : invCandidates(), bare = rooms.filter(r => !invTrapsNear(r).some(d => DEFS[d.t] && (DEFS[d.t].str || DEFS[d.t].lost)));
+  if (bare.length) out.push(['🪤', `${I ? 'Sur leur parcours, pas' : 'Pas'} de piège autour ${bare.length > 3 ? `de ${bare.length} pièces sur ${rooms.length}` : `de : ${invAnd(bare.map(r => ROOMS[r.t].name))}`}. Un piège posé dans un couloir qui borde une pièce frappe la bande à l’entrée et donne sa carte au combat.`]);
+  if (builtCount('garde') === 0 && S.tier >= 1 && !availability('room', 'garde')) out.push(['🛡️', 'Un Corps de garde (4 💰, 4 🪵) : une place de défenseur de plus dans chaque pièce, et le métier du guet pour tes sentinelles.']);
+  { const M = S.meal || {}, ready = invMealsReady(); if (ready.length && !(M.hp || M.atk || M.tok)) out.push(['🍲', `Pas de repas de veille, et de quoi cuisiner : ${ready.map(k => `${RECIPES[k].name} (${{ poisson: '+5 PV aux défenseurs', gateau: '+1 énergie au Cœur', brochettes: '+1 à leurs coups' }[k]})`).join(', ')}.`]); }
+  if (!(S.world && S.world.merc > S.night) && typeof SHOPS !== 'undefined' && typeof settlements === 'function') { const t = settlements().find(s => siteKnown(s) && (SHOPS[s.kind] || []).some(sh => sh.items.includes('merco'))); if (t) out.push(['🗡️', `Un mercenaire (taverne de ${t.name}, ${typeof shopPrice === 'function' ? shopPrice(t, 'merco') : 10} 💰) défendrait le Cœur pendant 3 nuits.`]); }
+  const sulky = fit.filter(c => (c.mood || 0) <= 1); if (sulky.length >= 2) out.push(['😠', `${sulky.length} créatures boudeuses frappent moins fort (−1) ; ravies (4 cœurs), elles frapperaient plus fort (+1).`]);
+  if (typeof craftRank === 'function' && builtCount('labo') && craftRank('labo') < 2) out.push(['⚗️', 'Les alchimistes du Labo (rang 2) ajoutent une Brume soporifique à chaque combat d’invasion.']);
+  return out.slice(0, max);
+}
+// les repas de veille qu'on peut cuisiner tout de suite
+const invMealsReady = () => typeof RECIPES === 'undefined' || typeof hasKitchen !== 'function' || !hasKitchen() ? [] : ['poisson', 'gateau', 'brochettes'].filter(k => RECIPES[k] && canCook(k));
+// la rançon : jamais contre la croisade de Mirebrume (la finale de la Légende se combat)
+const invRansomBan = plan => plan && (plan.crusade || (plan.origin && plan.origin.crusade)) ? 'Les croisés de Mirebrume ne se vendent pas : la croisade se combat.' : '';
+
 /* ---------- la bande : plus de chemin ni de but, le Cœur au bout des pièces ---------- */
+// la taille de la bande suit le château : un héros de plus au palier 1, et un autre quand le château compte une douzaine de créatures
+// (avant : dès 80 de rayonnement, même dans un château presque vide)
+const partyPreviewInv = partyPreview;
+partyPreview = function () { const p = partyPreviewInv(), o = p.origin, rank = p.rank || 1; p.size = Math.min(5, 1 + rank + (S.tier >= 1 ? 1 : 0) + (S.creatures.length >= INV_TUNE.bigBand ? 1 : 0)); return p; };
 planInvasion = function () { const p = planInvasionOuter(); p.goal = { k: 'coeur' }; p.prep = 1; p.v2 = true; p.crusade = !!(p.crusade || (p.origin && p.origin.crusade)); p.route = invRoute(); return p; };
 // à la fin : le butin de la bande revient au château si elle est repoussée (avec une prime), sinon elle l'emporte
 const applyInvasionV1 = applyInvasion;
